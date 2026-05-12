@@ -55,6 +55,8 @@ Every code or document change — even one character — follows:
 
 WIP naming: `{skill}-문서` for doc work, `{skill}-작업` for code work. Never combine code and doc into one WIP.
 
+**Codex variant** (when `plan-enterprise --codex` / `plan-enterprise-os --codex` is invoked): the work WIP name appends `-codex` at the end → `plan-enterprise-<N>-<slug>-작업-codex`. The downstream patch-note WIP (Claude-authored after Codex completes) stays as `-문서` without the codex suffix.
+
 Default branch is currently `main`. `i-dev` does not exist yet — do not create it preemptively. The first skill that needs it creates it.
 
 ### 6. No prevention treadmill

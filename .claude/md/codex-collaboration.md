@@ -1,5 +1,39 @@
 # Codex Collaboration v1 — Design Doc (not yet implemented)
 
+> ⚠️ **OUTDATED — pending rewrite via Codex iteration build (2026-05-13)**
+>
+> 본 문서는 초기 elaborate design (5 defense-in-depth gates / packet builder / worktree / lock_uuid) 으로 작성됐으나, master 의 **simplified design** (2026-05-13) 으로 대체될 예정. 본 문서 아래 내용은 historical reference only.
+>
+> ### Master simplified design 요약 (Codex iteration 으로 본 문서가 재작성될 spec)
+> 1. **단일 통합 지점** — `plan-enterprise` / `plan-enterprise-os` 의 `--codex` 옵션만.
+> 2. **호출 형태** — `/plan-enterprise <leader> <description> --codex`.
+> 3. **분기점** — ExitPlanMode 후 plan issue 생성 + Codex 용 프롬프트 출력 + halt. 마스터 보고.
+> 4. **마스터가 다리** — Codex 에게 작업 지시 (manual paste).
+> 5. **재진입 트리거** — 마스터가 `코덱스 완료, {Codex 보고}` 또는 `코덱스 실패, {보고}` 입력.
+> 6. **그 이후 절차** — Step 8 (advisor #2) → Step 9 (패치노트) → Step 10 (머지) → Step 11 (PENDING gate per completion-gate-procedure) 동일 적용.
+> 7. **Codex 역할** — 작업만 (페이즈 분할 받음, fact-only 보고, "완료 선언" 권한 없음).
+> 8. **WIP 시스템** — Codex 가 자체 WIP 구축, Claude 가 검증. WIP 명에 `-codex` suffix (예: `plan-enterprise-<N>-<slug>-작업-codex`).
+>
+> ### 마스터 5 결정 (2026-05-13)
+> - **Q1 "코덱스 완료" 통보 형식**: `코덱스 완료, {Codex 자유 보고}` — Claude 가 자유 텍스트 파싱
+> - **Q2 phase 분할 정보**: Codex 프롬프트에 전체 phase 분할 포함, Codex 가 페이즈별 commit
+> - **Q3 Codex 작업 시작 브랜치**: i-dev (Claude 가 부트스트랩 보장 후 위임)
+> - **Q4 Codex 실패 보고**: `코덱스 실패, {Codex 보고}` — Claude halt + master 결정 대기
+> - **Q5 advisor 호출**: 기존 동일 (계획 시 #1, 완료 시 #2) — Codex 결과물에도 같은 5 관점 적용
+>
+> ### 폐기된 elaborate design 요소 (본 문서 아래 historical 부분)
+> - 5 gate verify-codex-*.sh 스크립트
+> - codex-packet-builder agent
+> - worktree 격리 모델 (`/tmp/codex-worktrees/<task_id>/`)
+> - `lock_uuid` 동시성 방지
+> - JSON work-packet schema + execution-report schema (replaced by master-mediated text bridge)
+>
+> Codex iteration build (next step) 이 본 문서를 simplified design 으로 재작성할 예정.
+
+---
+
+## Historical reference (v1 design — to be replaced)
+
 External LLM (Codex / GPT-5.5 / similar) integration for I2. **Design only** at v1 — no scripts or skill wiring yet. This document defines the architecture so a future implementation unit can build straight from spec.
 
 Rationale per `README.md` §E-3: "GPT-5.5 의 토큰 비용 감소와 성능 우수 + Opus 4.7 의 성능 저하와 비용 증가가 동시에 발생하면서 협업 시스템은 필수적." External-LLM cost/quality leverage is the value proposition.
