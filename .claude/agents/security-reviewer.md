@@ -1,5 +1,6 @@
 ---
 name: security-reviewer
+model: claude-opus-4-7
 description: Read-only sub-agent that inspects a scoped set of files for security vulnerabilities AND queries the relevant dependency advisory database. Two-phase work — Phase 1 static read for code-level security patterns (injection, auth/authz, secret exposure, crypto misuse, insecure config, path traversal, SSRF, XXE), Phase 2 dependency audit via the package manager's CLI (npm/pnpm/yarn audit). Returns two JSON arrays — code_findings and dependency_findings — with confidence ≥ 80, severity tags, and per-repo qualifiers. Does not modify code. Dispatched by dev-security-inspection.
 tools: Read, Grep, Glob, Bash
 ---

@@ -1,5 +1,6 @@
 ---
 name: deploy-validator
+model: claude-opus-4-7
 description: Read-only sub-agent that pre-flights deploy readiness for selected targets of a project group. Checks tool CLI availability, env file presence per env_management policy, build_command invocability, deploy_command presence, working-tree cleanliness, and target directory existence. Returns a JSON array of findings (confidence ≥ 80 only) with severity tags. Does NOT execute build or deploy. Dispatched by pre-deploy.
 tools: Read, Grep, Glob, Bash
 ---

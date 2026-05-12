@@ -1,4 +1,5 @@
 {
+  "advisorModel": "claude-sonnet-4-6",
   "statusLine": {
     "type": "command",
     "command": "$CLAUDE_PROJECT_DIR/.claude/scripts/statusline.sh",

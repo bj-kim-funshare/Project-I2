@@ -29,10 +29,20 @@ The unit of work is a skill, not a persona. Flow: master invokes a skill → ski
 
 When master prompts the main session **without** invoking a skill: main session does read-only work + may dispatch read-only sub-agents for cross-validation. No writes.
 
-### 4. Model split (§G)
+### 4. Model split (§G + master 2026-05-13 lock)
 
-- **Planning** (main session, Opus / Opus-1M sub-agents): design, decisions, advisor consultation, verification.
-- **Execution** (Sonnet sub-agents): code/doc work. **Always split into phases or smaller units** — never hand a Sonnet sub-agent the whole task at once (its context window is too small). Parallel phases are fine.
+| Layer | Model | Where declared |
+|---|---|---|
+| Main session | Master's choice via `/model` | Not pinned in `settings.json` — master sets at runtime |
+| `advisor()` tool | `claude-sonnet-4-6` | `.claude/settings.json` → `advisorModel` |
+| 7 read-only reviewers (planning agents) | `claude-opus-4-7` (200k, not 1M) | Agent frontmatter `model:` field |
+| 4 write-capable executors (work agents) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
+
+**Planning agents** (`bug-detector`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`): receive complex code/diff/scope inputs, produce reasoning-heavy findings. Opus 4.7 for quality of judgment.
+
+**Work agents** (`code-fixer`, `phase-executor`, `db-migration-author`, `db-data-author`): take a defined task description, execute mechanically (write code / SQL files, commit). Sonnet 4.6 for cost efficiency. **Always split into phases or smaller units** — never hand a Sonnet sub-agent the whole task at once (its context window is too small).
+
+**Advisor inversion (deliberate trade-off, 2026-05-13)**: with main session typically on Opus 4.7, advisor on Sonnet is a weak→strong inversion against the tool's "stronger reviewer model" default. Master's choice — cost efficiency on high-frequency advisor calls. Rollback to stronger advisor model possible if quality issues emerge.
 
 ### 5. WIP & merge protocol (§G)
 

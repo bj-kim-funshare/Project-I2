@@ -1,5 +1,6 @@
 ---
 name: claude-md-compliance-reviewer
+model: claude-opus-4-7
 description: Read-only code reviewer focused on CLAUDE.md and project group-policy compliance. Analyzes a supplied PR diff and returns a JSON array of findings (confidence ≥ 80 only) covering language-separation violations, main-session-write violations, persona/skill-model violations, WIP/merge protocol violations, prevention-treadmill signals, and group-policy convention violations. Does not modify code. Dispatched by dev-merge.
 tools: Read, Grep, Glob, Bash
 ---

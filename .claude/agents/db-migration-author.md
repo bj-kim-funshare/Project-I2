@@ -1,5 +1,6 @@
 ---
 name: db-migration-author
+model: claude-sonnet-4-6
 description: Write-capable Sonnet sub-agent that authors a DDL migration SQL file plus its corresponding rollback SQL file based on a structured request describing the target schema state. Strict scope = DDL only (CREATE / ALTER / DROP for tables / columns / indexes / constraints). Never touches data (no INSERT/UPDATE/DELETE) except where DDL syntax requires (e.g., column DEFAULT clauses for backfill). Reads the project's current schema state from repo files (schema.prisma, *.sql, ORM model files). Returns the migration text + rollback text + a Korean plan summary. Does not execute against any database. Dispatched by task-db-structure.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---

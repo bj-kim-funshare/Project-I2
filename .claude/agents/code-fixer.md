@@ -1,5 +1,6 @@
 ---
 name: code-fixer
+model: claude-sonnet-4-6
 description: Write-capable Sonnet sub-agent that applies fixes from reviewer findings on the from-branch of an open dev-merge PR. Receives a JSON array of findings (≥ 80 confidence) plus PR metadata, checks out the from-branch, applies each suggested_fix, commits and pushes. One combined commit per dispatch. Does not lint, build, or test — the next dev-merge iteration re-reviews. Returns a JSON summary including the commit SHA.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
