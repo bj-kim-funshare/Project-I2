@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>I2 Monitoring</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>아이OS 토큰 모니터링</h1>
+    <div id="meta" class="meta"></div>
+    <button id="refresh-btn">새로고침</button>
+  </header>
+
+  <section id="error" class="error" hidden></section>
+
+  <section class="totals">
+    <h2>전체 합계</h2>
+    <div id="totals" class="totals-grid"></div>
+  </section>
+
+  <section>
+    <h2>모델별</h2>
+    <div id="by-model" class="table-wrap"></div>
+  </section>
+
+  <section>
+    <h2>스킬별</h2>
+    <div id="by-skill" class="table-wrap"></div>
+  </section>
+
+  <section>
+    <h2>일자별</h2>
+    <div id="by-day" class="table-wrap"></div>
+  </section>
+
+  <section>
+    <h2>세션별 (최근 50)</h2>
+    <div id="by-session" class="table-wrap"></div>
+  </section>
+
+  <footer>
+    <p>외부 의존 0 — 로컬 <code>~/.claude/projects/.../*.jsonl</code> 만 읽음. 가격 추정은 <code>scripts/collect.py</code> 내부 PRICING 표 기준.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
