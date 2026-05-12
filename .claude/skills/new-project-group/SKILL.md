@@ -34,7 +34,7 @@ The leader name will never be `아이OS` — that target is handled by `plan-ent
 
 1. `.claude/project-group/<leader>/` must **not** already exist.
 2. Every repository path must exist on disk.
-3. Current branch = `i-dev` (or `main` for i-dev bootstrap), per `CLAUDE.md` §5 convention used across the harness.
+3. Current branch = `main` (always exists for I-OS — no bootstrap needed), per `CLAUDE.md` §5 convention used across the harness.
 
 ## Pre-scan
 
@@ -219,10 +219,9 @@ No "이전" pointer (this is the first file).
 
 Single WIP — all writes are docs.
 
-- **i-dev bootstrap** — if missing, branch from `main` HEAD. Report in completion table.
-- **WIP branch** — `new-project-group-<leader>-문서`, branched from `i-dev`.
+- **WIP branch** — `new-project-group-<leader>-문서`, branched from `main`.
 - **Commit message** (Korean) — `new-project-group: {leader} 그룹 신규 등록`.
-- **Merge to i-dev** — preserve both on conflict; halt only if mutually exclusive (extremely unlikely for a brand-new folder).
+- **Merge to main** — preserve both on conflict; halt only if mutually exclusive (extremely unlikely for a brand-new folder).
 - No push, no tag, no remote operations.
 
 ## Reporting
@@ -240,8 +239,7 @@ Korean output after merge:
 | 정책 파일 | dev.md / deploy.md / db.md / group.md |
 | 초기 패치노트 | patch-note/patch-note-001.md |
 | WIP 브랜치 | new-project-group-{leader}-문서 |
-| i-dev 머지 | ✅ |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
+| main 머지 | ✅ |
 | advisor 검증 | ✅ (concerns: {count} non-blocker) |
 ```
 
@@ -257,10 +255,10 @@ Immediate Korean report + halt. No retry.
 | Leader name `아이OS` | `"아이OS 는 그룹 등록 대상 아님 — plan-enterprise-os 로 처리"` |
 | Repository path missing | `"저장소 경로 부재: <path>"` |
 | Path argument is relative | `"절대경로 필요: <path>"` |
-| Current branch not `i-dev` (and not `main` for bootstrap) | `"i-dev 브랜치에서만 호출 가능 (i-dev 부재 시 main 허용). 현재: <branch>"` |
+| Current branch not `main` | `"main 브랜치에서만 호출 가능. 현재: <branch>"` |
 | Master invocation lacks repository entries | `"멤버 저장소 1개 이상 필요. 예: /new-project-group data-craft fe=/path/dc-fe,be=/path/dc-be"` |
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 
 ## Scope (v1)
 
@@ -269,7 +267,7 @@ In scope:
 - 4-area policy collection with hybrid structured + free-text input.
 - Single advisor validation pass before write.
 - Initial `patch-note-001.md` matching `patch-update` template.
-- Single WIP commit-and-merge to `i-dev`.
+- Single WIP commit-and-merge to `main`.
 
 Out of scope:
 - Modifying existing groups (use `/group-policy`).

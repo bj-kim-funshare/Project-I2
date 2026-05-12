@@ -19,7 +19,7 @@ The description in master's invocation is free-form Korean. The skill clarifies 
 
 1. `.claude/project-group/<leader>/` exists (group must be registered first).
 2. cwd is the Project-I2 repo (the harness itself — where `.claude/skills/` lives).
-3. Current branch = `i-dev` (or `main` for bootstrap).
+3. Current branch = `main` (always exists for I-OS — no bootstrap needed).
 4. `gh` CLI installed and authenticated for the Project-I2 GitHub remote.
 
 ## Lifecycle
@@ -35,7 +35,7 @@ Auto mode:
   Step 5 — GitHub issue creation on Project-I2 repo
   Step 6 — WIP branch creation
   Step 7 — write the new SKILL.md to disk
-  Step 8 — commit + merge to i-dev
+  Step 8 — commit + merge to main
   Step 9 — completion report
 ```
 
@@ -148,7 +148,7 @@ Capture issue number `N`.
 ## Step 6 — WIP branch
 
 ```bash
-git checkout i-dev
+git checkout main
 git checkout -b create-custom-project-skill-<N>-문서
 git push -u origin create-custom-project-skill-<N>-문서
 ```
@@ -171,7 +171,7 @@ Verify the file exists and contains the expected content.
 git add .claude/skills/<leader>-<slug>/SKILL.md
 git commit -m "create-custom-project-skill: <leader>-<slug> 스킬 신설 (#<N>)"
 git push origin create-custom-project-skill-<N>-문서
-git checkout i-dev
+git checkout main
 git merge --no-ff create-custom-project-skill-<N>-문서
 ```
 
@@ -189,10 +189,9 @@ Korean output to master:
 | 신규 스킬 | <leader>-<slug> |
 | 파일 | .claude/skills/<leader>-<slug>/SKILL.md |
 | 플랜 이슈 | #<N> (<URL>) |
-| WIP | create-custom-project-skill-<N>-문서 (i-dev 머지 ✅) |
+| WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
 | advisor 검증 | PASS |
 | 참조 sub-agent | <list or "없음"> |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
 Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session).
@@ -208,14 +207,14 @@ Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Co
 | Advisor BLOCK | `"advisor 차단: <reason>. 마스터 수정 또는 중단 결정 필요."` (Step 4 ExitPlanMode 직전에 발생) |
 | Master rejects in ExitPlanMode | (return to Step 1 with revision feedback) |
 | `gh issue create` failure | `"gh issue create 실패: <error>. 스킬 파일 생성 보류."` |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 
 ## Scope (v1)
 
 In scope:
 - Authoring a new project-group-scoped skill at `.claude/skills/{leader}-{slug}/SKILL.md`.
 - Reference to any of the existing 14 sub-agents (`bug-detector`, `code-fixer`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`, `db-migration-author`, `db-data-author`, `phase-executor` + the 3 built-in Claude Code agents `Explore`/`general-purpose`/`Plan`).
-- Single doc WIP, single merge to i-dev.
+- Single doc WIP, single merge to main.
 - 5-perspective advisor including Treadmill check.
 - Issue on Project-I2 repo as the plan record.
 

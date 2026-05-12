@@ -28,7 +28,7 @@ Parse rule:
 ## Pre-conditions
 
 1. cwd is the Project-I2 repo (the harness itself).
-2. Current branch = `i-dev` (or `main` for bootstrap).
+2. Current branch = `main` (always exists for I-OS — no bootstrap needed).
 3. `.claude/plan-roadmap/` exists or can be created on first run (lazy-create per `README.md` §G design).
 4. (Edit mode only) The target roadmap file exists.
 
@@ -160,12 +160,12 @@ For edit mode: overwrite the existing file. The existing file's prior content is
 Single WIP (doc work):
 
 ```bash
-git checkout i-dev
+git checkout main
 git checkout -b plan-roadmap-{N}-{slug}-문서
 git add .claude/plan-roadmap/Roadmap-{N}-{slug}.md
 git commit -m "plan-roadmap: Roadmap-{N}-{slug} {create|update}"
 git push origin plan-roadmap-{N}-{slug}-문서
-git checkout i-dev
+git checkout main
 git merge --no-ff plan-roadmap-{N}-{slug}-문서
 ```
 
@@ -184,9 +184,8 @@ Korean output to master:
 | 파일 | .claude/plan-roadmap/Roadmap-{N}-{slug}.md |
 | 프롬프트 수 | <count> (🔴 <n> / 🟡 <n> / 🟢 <n>) |
 | 병렬 그룹 | <list of group numbers and their member counts> |
-| WIP | plan-roadmap-{N}-{slug}-문서 (i-dev 머지 ✅) |
+| WIP | plan-roadmap-{N}-{slug}-문서 (main 머지 ✅) |
 | advisor 검증 | PASS |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
 The roadmap is now ready for master to consult. Status updates on individual prompts happen via subsequent `plan-roadmap` edit-mode invocations or via direct master edit of the file (no auto-update on prompt execution in v1).
@@ -202,7 +201,7 @@ The roadmap is now ready for master to consult. Status updates on individual pro
 | Advisor BLOCK | `"advisor 차단: <reason>. 마스터 수정 또는 중단 결정 필요."` |
 | ExitPlanMode rejection | (return to Step 3 with master's revision) |
 | `mkdir` / `git` / write failure | verbatim error in Korean report |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 
 ## Scope (v1)
 
@@ -211,7 +210,7 @@ In scope:
 - Edit existing roadmaps — add / remove / reorder / regroup prompts, change status icons, append/replace description.
 - Local sequential numbering (max+1).
 - 5-perspective advisor verification.
-- Single doc WIP and single merge to i-dev.
+- Single doc WIP and single merge to main.
 - All status icons in new roadmaps default to 🔴 per spec.
 
 Out of scope (v1):

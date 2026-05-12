@@ -17,7 +17,7 @@
 > ### 마스터 5 결정 (2026-05-13)
 > - **Q1 "코덱스 완료" 통보 형식**: `코덱스 완료, {Codex 자유 보고}` — Claude 가 자유 텍스트 파싱
 > - **Q2 phase 분할 정보**: Codex 프롬프트에 전체 phase 분할 포함, Codex 가 페이즈별 commit
-> - **Q3 Codex 작업 시작 브랜치**: i-dev (Claude 가 부트스트랩 보장 후 위임)
+> - **Q3 Codex 작업 시작 브랜치**: target repo 의 integration branch — `plan-enterprise` (외부 프로젝트) = `i-dev` (Claude 가 부트스트랩 보장 후 위임), `plan-enterprise-os` (I-OS 하네스) = `main` (master 2026-05-13 lock: I-OS 는 i-dev 불사용)
 > - **Q4 Codex 실패 보고**: `코덱스 실패, {Codex 보고}` — Claude halt + master 결정 대기
 > - **Q5 advisor 호출**: 기존 동일 (계획 시 #1, 완료 시 #2) — Codex 결과물에도 같은 5 관점 적용
 >

@@ -1,6 +1,6 @@
 ---
 name: plan-enterprise-os
-description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into i-dev.
+description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into main.
 ---
 
 # plan-enterprise-os
@@ -27,7 +27,7 @@ Open-form description, optionally referencing an existing issue on this repo.
 ## Pre-conditions
 
 1. cwd is the Project-I2 repo (CLAUDE.md at root).
-2. Current branch = `i-dev` (or `main` for bootstrap — `i-dev` is created from `main` HEAD on first invocation).
+2. Current branch = `main` (always exists for I-OS — no bootstrap needed).
 3. `gh` CLI installed and authenticated for this repo's GitHub remote.
 4. `MEMORY.md` and the memory directory are accessible (used for the Treadmill Audit context).
 
@@ -45,7 +45,7 @@ Auto mode:
   Step 7 — phase execution loop (phase-executor with harness_context)
   Step 8 — final advisor call #2 (6-perspective)
   Step 9 — WIP B branch (-문서) + patch-note authoring at root patch-note/
-  Step 10 — merge A then B into i-dev
+  Step 10 — merge A then B into main
   Step 11 — completion report
 ```
 
@@ -112,7 +112,7 @@ Issue body template extends `plan-enterprise`'s with one section:
 ### Step 6 — WIP A
 
 ```bash
-git checkout i-dev
+git checkout main
 git checkout -b plan-enterprise-os-<N>-<slug>-작업
 git push -u origin plan-enterprise-os-<N>-<slug>-작업
 ```
@@ -143,7 +143,7 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
 
-1. `git checkout i-dev` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical.
+1. `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical.
 2. `git checkout -b plan-enterprise-os-<N>-<slug>-문서`.
 3. Patch-note path: `patch-note/patch-note-{NNN}.md` (repo root, NOT under `.claude/`). Parse for max `K`; new entry = `v{NNN}.{K+1}.0`.
 
@@ -169,11 +169,11 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
    <PASS or NOT APPLICABLE; if PASS, restate Q3 in one line — what was retired>
    ```
 
-5. Commit on doc WIP, merge to i-dev.
+5. Commit on doc WIP, merge to main.
 
 ### Step 10 — Merge
 
-Identical to `plan-enterprise` Step 10. Both WIPs merged to i-dev. Issue stays open through Step 11.
+Identical to `plan-enterprise` Step 10. Both WIPs merged to main. Issue stays open through Step 11.
 
 ### Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
 
@@ -223,14 +223,13 @@ Same as `plan-enterprise`. Skill state remains open; master can re-invoke later 
 |------|-----|
 | 플랜 이슈 | #<N> closed ✅ |
 | 총 페이즈 수 | <N> + 핫픽스 <count> |
-| WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (i-dev 머지 ✅) |
-| WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (i-dev 머지 ✅) |
+| WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (main 머지 ✅) |
+| WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (main 머지 ✅) |
 | 패치노트 최종 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 (6 관점) | PASS |
 | advisor 완료 (6 관점) | PASS (최종 핫픽스 포함) |
 | Treadmill Audit | PASS / NOT APPLICABLE |
 | 페이즈 재시도 | <count>/총 가능 <(N+hotfix)*3> |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
 End of skill invocation.

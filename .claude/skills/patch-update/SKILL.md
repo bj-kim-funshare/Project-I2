@@ -54,10 +54,9 @@ Content for the `v{next}.1.0` section is filled in later by `patch-confirmation`
 
 Standard pattern from `CLAUDE.md` §5. Skill-specific values:
 
-- **i-dev bootstrap** — if branch `i-dev` does not exist locally, branch it from `main` HEAD. Report the bootstrap fact in the completion table.
-- **WIP branch** — `patch-update-{next}-문서`, branched from `i-dev`.
+- **WIP branch** — `patch-update-{next}-문서`, branched from `main`.
 - **Commit message** (Korean per `CLAUDE.md` §1) — `patch-update: patch-note-{next}.md 생성 ({target})`.
-- **Merge** — merge WIP into `i-dev`. On conflict, analyze both sides and merge preserving both. Halt and report to the user only if the two sides are genuinely mutually exclusive.
+- **Merge** — merge WIP into `main`. On conflict, analyze both sides and merge preserving both. Halt and report to the user only if the two sides are genuinely mutually exclusive.
 - **No push, no tag, no remote ops.** WIP branch is left alone after merge.
 
 ## Reporting
@@ -72,8 +71,7 @@ Korean output to the user after merge:
 | 신규 파일 | patch-note-{next}.md |
 | 이전 파일 | patch-note-{prev}.md (수정 없음) |
 | WIP 브랜치 | patch-update-{next}-문서 |
-| i-dev 머지 | ✅ |
-| i-dev 부트스트랩 | (해당 시에만) main → i-dev 신규 분기 |
+| main 머지 | ✅ |
 ```
 
 Then halt. No "다음 스킬" suggestion.
@@ -88,14 +86,13 @@ Immediate Korean report + halt on any failure. No retry, no recovery, no log inv
 | `patch_dir` missing (아이OS case) | `"patch-note/ 부재 — patch-note-001.md 수동 생성 필요"` |
 | `patch_dir` exists but no `patch-note-*.md` | `"<patch_dir> 에 patch-note-NNN.md 없음 — 초기 파일 (001) 수동 생성 필요"` |
 | Filename `NNN` parse failure | `"파일명 NNN 파싱 실패: <filename>"` |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 
 ## Scope (v1)
 
 In scope:
 - One-step major-version bump (file number).
 - Minimal template (header, previous pointer, single empty `v{N}.1.0` slot).
-- WIP/merge protocol enforcement with explicit i-dev bootstrap.
 
 Out of scope:
 - Content analysis, classification, statistics, Release Highlights authoring.

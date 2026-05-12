@@ -60,7 +60,12 @@ WIP naming: `{skill}-문서` for doc work, `{skill}-작업` for code work. Never
 
 **Codex variant** (when `plan-enterprise --codex` / `plan-enterprise-os --codex` is invoked): the work WIP name appends `-codex` at the end → `plan-enterprise-<N>-<slug>-작업-codex`. The downstream patch-note WIP (Claude-authored after Codex completes) stays as `-문서` without the codex suffix.
 
-Default branch is currently `main`. `i-dev` does not exist yet — do not create it preemptively. The first skill that needs it creates it.
+**Integration branch — repo-specific (master 2026-05-13 lock)**:
+- **I-OS harness repo (this repo, Project-I2)**: use `main` directly. NO `i-dev` branch. All harness-targeting skills (`plan-enterprise-os`, `new-project-group`, `group-policy`, `plan-roadmap`, `create-custom-project-skill`, `patch-update`, `patch-confirmation`) work directly on `main`.
+- **External project repos** (data-craft, PinLog, etc.): use `i-dev` (lazy-created from `main` on first skill that needs it). Code/doc work in external repos goes through WIP → i-dev (the long-running integration branch). `plan-enterprise`, `task-db-structure`, `task-db-data` operate here.
+- **Variable** (master-supplied branch): `dev-merge` (from-branch / to-branch master-specified), `pre-deploy` Branch B (executes deploy command, no integration branch involved).
+
+Skills' spec text uses concrete branch names where invocations are scoped (e.g., `plan-enterprise-os` says `main` since it only runs in I-OS repo). For dual-target skills (`patch-confirmation`, `patch-update` — work on `아이OS` or leader patch-notes), the integration branch is always `main` because the patch-note files themselves live in this I-OS repo regardless of which leader they describe.
 
 ### 6. No prevention treadmill
 
