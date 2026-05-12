@@ -150,11 +150,100 @@ If master's next message is not a recognized trigger:
 
 ## Merge (on `머지 완료` / `플랜 완료`)
 
+### Pre-merge mergeable check
+
+Before running `gh pr merge`, check the PR's mergeable state:
+
+```bash
+state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable + " " + .mergeStateStatus')
+```
+
+- `MERGEABLE CLEAN` → proceed to merge command.
+- `CONFLICTING <any>` → enter **Conflict-PENDING** (next section).
+- `UNKNOWN <any>` → wait 2 seconds, retry the check once. Still UNKNOWN → enter Conflict-PENDING (treat as conflict for safety).
+- Anything else (`BLOCKED` etc. — branch protection, required checks not passed) → halt with the verbatim state in the error report. PR stays open.
+
+### Merge command
+
+When mergeable check passes (`MERGEABLE CLEAN`):
+
 ```bash
 gh pr merge <PR-num> --merge --delete-branch=false
 ```
 
 `--merge` selects merge-commit method, producing a non-fast-forward merge commit per master's lock — preserves the PR's scope visibly in history. `--delete-branch=false` keeps the from-branch in place; master decides cleanup separately.
+
+If `gh pr merge` itself fails despite the mergeable check passing (rare — concurrent push intercepted the merge), retry the mergeable check once. Re-check → CONFLICTING means a concurrent push happened, enter Conflict-PENDING. Re-check → other failure means transient issue, halt with verbatim error.
+
+## Conflict-PENDING (PR 머지 충돌 처리)
+
+`gh pr merge` 충돌은 보통 의미적 (semantic) — 양쪽이 같은 코드 영역에 서로 다른 변경. 자동 "양측 보존" 시도는 잘못된 결합 위험이 크므로 master 결정을 default 로 한다 (CLAUDE.md §5 일반 규칙의 dev-merge 특화 carve-out).
+
+### Conflict-PENDING 메시지
+
+Output and halt:
+
+```
+### /dev-merge 충돌 — PR #<num>
+
+`gh pr merge` 충돌 감지. PR mergeable=CONFLICTING.
+
+| 항목 | 값 |
+|------|-----|
+| from → to | <from> → <to> |
+| 충돌 상태 | <gh pr view --json mergeable,mergeStateStatus output> |
+| 핫픽스 커밋 (자동 iter) | <count> |
+| master-supervised 커밋 | <count> |
+
+마스터 입력 대기:
+  - `핫픽스 <resolution hint>` → code-fixer 가 hint + 충돌 마커 + 양측 diff 받아 해결
+                                  → push → mergeable 재확인 → PENDING/Conflict-PENDING 분기
+  - `수동 머지 완료` → master 가 오프라인 해결 완료 알림
+                       skill 이 gh pr view 로 상태 재확인
+                         → state=MERGED → 정상 완료 보고 + 종료
+                         → state=OPEN, mergeable=MERGEABLE → 자동 gh pr merge 시도 → 종료
+                         → state=OPEN, mergeable=CONFLICTING → Conflict-PENDING 재진입
+  - `중단` → halt, PR open 유지, 자동 해결 시도 안 함
+  - (다른 입력) → 본 PR 미머지 유지, 마스터 자유 진입
+```
+
+### Conflict 핫픽스 path (`핫픽스 <resolution hint>` in Conflict-PENDING)
+
+Differs from the normal HOTFIX path — the input task is conflict resolution, not new feature fix.
+
+1. Pull the latest to-branch:
+   ```bash
+   git fetch origin <to-branch>
+   git checkout <from-branch>
+   git pull --rebase=false origin <to-branch>
+   ```
+   This produces working-tree conflict markers in the from-branch.
+2. Synthesize a finding for code-fixer:
+   - `confidence: 100`
+   - `category: "conflict"`
+   - `message`: `"PR #<num> merge conflict — master hint: <resolution hint>"`
+   - `suggested_fix`: master's hint verbatim
+   - Affected files: list parsed from `git status --porcelain` showing `UU` / `AA` / `DU` etc. conflict states.
+3. Dispatch `code-fixer` with the synthetic finding. Code-fixer must:
+   - Read each conflict file, identify `<<<<<<< / ======= / >>>>>>>` markers.
+   - Apply master's hint to resolve each marker (keep one side / merge per hint).
+   - `git add` resolved files.
+   - `git commit -m "dev-merge: conflict resolution per master hint (PR #<num>)"`.
+   - `git push origin <from-branch>`.
+4. After code-fixer's resolution commit pushes, re-check mergeable via `gh pr view`:
+   - `MERGEABLE CLEAN` → return to normal PENDING gate (master can issue `머지 완료` to merge, or another `핫픽스`).
+   - Still `CONFLICTING` → re-enter Conflict-PENDING (resolution incomplete; master provides more hint or switches to `수동 머지 완료`).
+
+### `수동 머지 완료` verification
+
+```bash
+state=$(gh pr view <PR-num> --json state,mergeable --jq '.state + " " + .mergeable')
+```
+
+- `MERGED <any>` → success report (using merge SHA from `gh pr view --json mergeCommit`), end of skill.
+- `OPEN MERGEABLE` → master resolved offline but didn't merge. Skill runs `gh pr merge` automatically, then success report.
+- `OPEN CONFLICTING` → master claim doesn't match state. Re-enter Conflict-PENDING with note that master's resolution did not land.
+- `CLOSED <any>` (not merged) → halt with error: PR was closed without merging. Master decides next.
 
 ## Reporting
 
@@ -204,7 +293,10 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | Reviewer agent dispatch failure | `"리뷰어 sub-agent 디스패치 실패: <error>. PR #<num> 보존."` |
 | code-fixer dispatch failure | `"code-fixer 디스패치 실패: <error>. PR 및 이전 핫픽스 커밋 보존."` |
 | Iteration cap reached with findings remaining | (cap-exhausted report above) |
-| `gh pr merge` failure | `"gh pr merge 실패: <error>. PR #<num> 보존."` |
+| `gh pr merge` failure (non-conflict — branch protection / required checks / etc.) | `"gh pr merge 실패 (비-충돌): <error>. PR #<num> 보존."` |
+| `gh pr merge` failure (conflict detected via mergeable check) | Conflict-PENDING 진입 (see PENDING gate section) |
+| Conflict-PENDING `핫픽스 <hint>` resolution still fails after code-fixer | "충돌 해결 미완 — code-fixer 가 마스터 hint 로 해결 못함. 추가 핫픽스 또는 수동 해결 필요." (Conflict-PENDING 재진입) |
+| `수동 머지 완료` claimed but PR state=CLOSED unmerged | "PR #<num> CLOSED (unmerged). 수동 머지 완료 trigger 와 불일치. 마스터 확인 필요." |
 
 ## Scope (v1)
 
