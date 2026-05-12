@@ -289,12 +289,9 @@ COST_FMT=$(fmt_cost "$COST")
 TOK_FMT=$(fmt_tokens "$TOTAL_TOK")
 CTX_BAR=$(ctx_bar "$PCT")
 
-# Line 1 — Identity + limits: cwd · branch · model · effort · cc-ver · 5h · 7d · ext badges
-LINE1=$(printf '%s%s%s' "$MAGENTA" "$CWD_BASE" "$RESET")
-if [ -n "$GIT_BRANCH" ]; then
-  LINE1+=" · ${BLUE}⎇ ${GIT_BRANCH}${GIT_DIRTY}${RESET}"
-fi
-LINE1+=" · ${CYAN}${MODEL}${RESET} · ${EFFORT_BADGE}${VERSION_SUFFIX}"
+# Line 1 — Identity + limits: model · effort · cc-ver · 5h · 7d · ext badges
+# (cwd / git branch 표기는 마스터 지시로 제거 — 2026-05-12)
+LINE1=$(printf '%s%s%s · %s%s' "$CYAN" "$MODEL" "$RESET" "$EFFORT_BADGE" "$VERSION_SUFFIX")
 LINE1+=" · ${SES_COLOR}🕐 5h ${SES_DISPLAY}${RESET}"
 LINE1+=" · ${WK_COLOR}📅 7d ${WK_DISPLAY}${RESET}"
 [ -n "$EXT_BADGES" ] && LINE1+="${EXT_BADGES}"
