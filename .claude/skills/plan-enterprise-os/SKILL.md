@@ -171,26 +171,69 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 
 5. Commit on doc WIP, merge to i-dev.
 
-### Step 10–11 — Cleanup + report
+### Step 10 — Merge
 
-Identical structure to `plan-enterprise`'s completion report, with these field substitutions:
+Identical to `plan-enterprise` Step 10. Both WIPs merged to i-dev. Issue stays open through Step 11.
+
+### Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
+
+Identical semantics to `plan-enterprise` Step 11 with the same trigger keywords (`플랜 완료` / `핫픽스 <description>` / `중단` / other). Output the PENDING message and halt:
 
 ```
-### /plan-enterprise-os 완료 — #<N> <plan title>
+### /plan-enterprise-os 대기 — 이슈 #<N> <plan title>
+
+작업 머지 완료. 루트 patch-note/ 에 v<NNN>.<K+1>.0 추가됨. advisor 계획/완료 6 관점 모두 PASS.
 
 | 항목 | 값 |
 |------|-----|
 | 플랜 이슈 | #<N> (<URL>) |
-| 페이즈 수 | <N>/<N> |
+| 페이즈 수 (지금까지) | <N>/<N> + 핫픽스 <count> |
+| 패치노트 마지막 | v<NNN>.<K+1>.0 |
+| Treadmill Audit | PASS / NOT APPLICABLE |
+
+마스터 입력 대기:
+  - `플랜 완료` → 이슈 close (Step 12) + 최종 종료
+  - `핫픽스 <description>` → 추가 phase 1개 작성 → Step 7 재진입
+  - `중단` → 이슈 open 유지, halt
+  - (다른 입력) → 본 플랜 미종결 유지
+```
+
+#### HOTFIX re-entry path
+
+Identical to `plan-enterprise` Step 11's HOTFIX path with two differences:
+- The new phase's verification ritual includes the Treadmill-aware check (Step 7's "additional check specific to harness work") — if the hotfix adds/modifies a rule/hook/agent/skill, main session verifies Q3 trade-out is honored.
+- The new patch-note entry `v<NNN>.<K+2>.0` includes the Treadmill Audit subsection per the harness patch-note shape.
+
+#### Other input handling
+
+Same as `plan-enterprise`. Skill state remains open; master can re-invoke later or close the issue manually.
+
+### Step 12 — FINALIZE (on `플랜 완료`)
+
+1. Close the plan issue on this repo:
+   ```bash
+   gh issue close <N> --comment "/plan-enterprise-os: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+   ```
+2. Korean terminal report:
+
+```
+### /plan-enterprise-os 완료 — 이슈 #<N> <plan title>
+
+| 항목 | 값 |
+|------|-----|
+| 플랜 이슈 | #<N> closed ✅ |
+| 총 페이즈 수 | <N> + 핫픽스 <count> |
 | WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (i-dev 머지 ✅) |
 | WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (i-dev 머지 ✅) |
-| 패치노트 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+1>.0 추가 |
+| 패치노트 최종 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 (6 관점) | PASS |
-| advisor 완료 (6 관점) | PASS |
+| advisor 완료 (6 관점) | PASS (최종 핫픽스 포함) |
 | Treadmill Audit | PASS / NOT APPLICABLE |
-| 페이즈 재시도 | <count>/총 가능 <N*3> |
+| 페이즈 재시도 | <count>/총 가능 <(N+hotfix)*3> |
 | i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
+
+End of skill invocation.
 
 ## Failure policy
 

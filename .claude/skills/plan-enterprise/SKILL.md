@@ -251,29 +251,86 @@ After the final advisor passes:
 5. `git add <patch-note-path> && git commit -m "plan-enterprise #<N>: patch-note v<NNN>.<K+1>.0 추가"`.
 6. `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`.
 
-## Step 10 — Skip / merged
+## Step 10 — Merge
 
-Both WIPs are now merged. The plan issue stays open until master decides to close it (the skill does not auto-close — closure is a master signal that the work is fully accepted).
+Both WIPs are now merged into i-dev. The plan issue stays open through Step 11's gate; closure happens in Step 12 (FINALIZE) only on master's explicit `플랜 완료`.
 
-## Step 11 — Completion report
+## Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
+
+After Step 10's merge succeeds, output the PENDING message and halt. The plan issue, WIP branches (now merged), and i-dev state are all preserved as-is.
 
 Korean output to master:
 
 ```
-### /plan-enterprise 완료 — #<N> <plan title>
+### /plan-enterprise 대기 — 이슈 #<N> <plan title>
+
+작업 머지 완료. 패치노트 v<NNN>.<K+1>.0 추가됨. advisor 계획/완료 모두 PASS.
 
 | 항목 | 값 |
 |------|-----|
 | 플랜 이슈 | #<N> (<URL>) |
-| 페이즈 수 | <N>/<N> |
+| 페이즈 수 (지금까지) | <N>/<N> + 핫픽스 <count> |
+| 패치노트 마지막 | v<NNN>.<K+1>.0 |
+
+마스터 입력 대기:
+  - `플랜 완료` → 이슈 close (Step 12) + 최종 종료
+  - `핫픽스 <description>` → 추가 phase 1개 작성 → Step 7 재진입
+  - `중단` → 이슈 open 유지, halt (자유롭게 수동 처리 가능)
+  - (다른 입력) → 본 플랜 미종결 유지, 마스터 자유 진입
+```
+
+Then halt. Next master message routes per the gate parse rule.
+
+### HOTFIX re-entry path
+
+When master types `핫픽스 <description>`:
+
+1. Treat `<description>` as a single new phase metadata. Main session infers `affected_files`:
+   - From `<description>` semantically.
+   - If unclear, ask master one sharpening question (text, no card).
+2. The new phase number = `prior_max_phase + 1` (cumulative across the plan; first hotfix on a 5-phase plan = phase 6).
+3. Re-enter Step 7 with this single phase:
+   - **default flow**: dispatch `phase-executor` (1 phase, 3-iter cap reset).
+   - **--codex flow**: generate a Codex prompt for just this hotfix phase (same packet shape, single phase). Output + halt. Master returns `코덱스 완료, {보고}` or `코덱스 실패, {보고}`.
+4. After phase-executor returns success (or Codex result accepted):
+   - **Step 8 advisor #2** re-runs on the hotfix commits only.
+   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor). Previous entries are not modified. The new entry summarizes only the hotfix phase.
+   - **Step 10 merge** the hotfix WIPs into i-dev.
+5. Return to **Step 11 PENDING**. Master may issue more `핫픽스` or finalize.
+
+Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.
+
+### Other input handling
+
+If master's next message is not a recognized trigger (`플랜 완료` / `핫픽스 <...>` / `중단`):
+- Treat as master moving on. Skill state remains open: issue #<N> stays open, no further action.
+- Master can finalize later by re-invoking `/plan-enterprise <leader> <empty-or-resume-description>` referencing `#<N>` — the skill recognizes the existing issue and re-enters at Step 11.
+
+## Step 12 — FINALIZE (on `플랜 완료`)
+
+1. Close the plan issue:
+   ```bash
+   gh issue close <N> --comment "/plan-enterprise: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+   ```
+2. Korean terminal report:
+
+```
+### /plan-enterprise 완료 — 이슈 #<N> <plan title>
+
+| 항목 | 값 |
+|------|-----|
+| 플랜 이슈 | #<N> closed ✅ |
+| 총 페이즈 수 | <N> + 핫픽스 <count> |
 | WIP 작업 | plan-enterprise-<N>-<slug>-작업 (i-dev 머지 ✅) |
 | WIP 문서 | plan-enterprise-<N>-<slug>-문서 (i-dev 머지 ✅) |
-| 패치노트 | v<NNN>.<K+1>.0 추가됨 |
+| 패치노트 최종 | v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 | PASS |
-| advisor 완료 | PASS |
-| 페이즈 재시도 | <count>/총 가능 <N*3> |
+| advisor 완료 | PASS (최종 핫픽스 포함) |
+| 페이즈 재시도 | <count>/총 가능 <(N+hotfix)*3> |
 | i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
+
+End of skill invocation.
 
 ## Failure policy
 

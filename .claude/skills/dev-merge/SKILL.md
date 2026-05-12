@@ -95,9 +95,60 @@ If the combined findings array is non-empty:
 
 On cap exhaustion: halt with a full Korean report of remaining findings. PR is left open. Master decides next step (manual fix, abandon PR, …).
 
-## Merge
+## PENDING gate (before merge — per `.claude/md/completion-gate-procedure.md`)
 
-When both reviewers return `[]` (within the iteration cap):
+When both reviewers return `[]` (within the iteration cap), the automated review is clean. **Do NOT auto-merge yet.** Master gets a final intervention chance before the merge commit is created.
+
+Output the PENDING message and halt:
+
+```
+### /dev-merge 대기 — PR #<num>
+
+자동 리뷰 통과 (<n>/3 라운드, 게시 finding <count>건, 핫픽스 커밋 <count>건).
+머지 직전 — 마스터 최종 확인.
+
+| 항목 | 값 |
+|------|-----|
+| from → to | <from> → <to> |
+| 저장소 | <owner>/<repo> |
+| PR | #<num> |
+| 핫픽스 커밋 | <count> |
+
+마스터 입력 대기:
+  - `머지 완료` (또는 `플랜 완료`) → `gh pr merge` 실행 → 종료
+  - `핫픽스 <description>` → master 힌트로 code-fixer 재dispatch (4번째 iter+, master-supervised)
+                              → 리뷰어 재dispatch → PENDING 재진입
+  - `중단` → 머지 안 함, PR open 유지, halt
+  - (다른 입력) → 본 PR 미머지 상태 유지, 마스터 자유 진입
+```
+
+Then halt.
+
+### HOTFIX re-entry path (`핫픽스 <description>`)
+
+Master's `<description>` is a hint — typically "L42 의 null 처리 추가" / "환경변수 검증 없음" / etc. Main session:
+
+1. Synthesize a **single high-confidence finding** from master's hint with `confidence: 100`, `category: "compliance"` (or `"bug"` based on hint language), file/line extracted from the hint or marked as `null` if hint doesn't specify.
+2. Post the synthetic finding as a PR review comment so the audit trail shows the master-initiated fix.
+3. Dispatch `code-fixer` with the synthetic finding as input. The dispatcher labels this iteration as `master-supervised` rather than the auto-iter counter.
+4. After code-fixer commits + pushes, re-dispatch the 2 reviewers on the updated diff (same as automated loop).
+5. When reviewers return `[]` again → return to **PENDING gate**. Master may issue more `핫픽스` or finalize.
+
+Master-supervised iterations have no internal cap (unlike the automated 3-iter cap). Master controls the loop via PENDING.
+
+### Cap-exhausted case (iter ≥ 3 with findings remaining)
+
+When the automated iter loop hits the 3-cap with findings still present, the skill halts with the existing cap-exhausted report (no PENDING). Master decides next steps manually (review the open PR, resolve outside the skill, or re-invoke `/dev-merge` after master-side fixes).
+
+The PENDING gate is only entered after a CLEAN automated loop result.
+
+### Other input handling
+
+If master's next message is not a recognized trigger:
+- Skill returns control. PR stays open, unmerged.
+- Master may finalize later by re-invoking `/dev-merge <from> <to>` — the skill detects the existing open PR and re-enters at the PENDING gate (skipping new PR creation + auto-iter).
+
+## Merge (on `머지 완료` / `플랜 완료`)
 
 ```bash
 gh pr merge <PR-num> --merge --delete-branch=false
