@@ -128,16 +128,55 @@ If the request requires multiple DML statements (e.g., DELETE + INSERT to replac
 1. **Read schema**: locate and parse schema files to understand column types, PKs, FKs of affected tables.
 2. **Resolve request**: translate Korean description into concrete DML statements with explicit `WHERE` clauses.
 3. **Author capture.sql, forward.sql, rollback.sql** per the templates above.
-4. **Write files** to `<repo>/db-data-changes/{YYYYMMDDHHMMSS}_{slug}/`.
+4. **Write SQL files** to `<repo>/db-data-changes/{YYYYMMDDHHMMSS}_{slug}/`.
 5. **Tag risky operations** at the top of `forward.sql`:
    - `-- DESTRUCTIVE: DELETE without WHERE` (would never pass advisor; emit only if request explicitly asks for it).
    - `-- WIDE_UPDATE: <estimated affected rows>` for UPDATE statements affecting > 10000 rows (estimate via `EXPLAIN` if possible; otherwise mark `unknown`).
-6. **Return JSON summary**:
+6. **Write `plan.md` (initial draft)** in the same directory `<repo>/db-data-changes/{YYYYMMDDHHMMSS}_{slug}/plan.md`:
+
+   ```markdown
+   # task-db-data — {leader} #{issue or "직접 설명"}
+
+   > 작성일: {ISO8601}
+   > execution_id: {dispatcher 가 제공한 id}
+   > 엔진: {mysql|postgres}
+
+   ## 요청
+   {dispatcher 에서 받은 request 본문 verbatim}
+
+   ## 영향 테이블 / DML 요약
+   - {table_name}: {statement type, 예상 row 수}
+
+   ## 위험 태그
+   - DESTRUCTIVE: {detail} (해당 시)
+   - WIDE_UPDATE: {예상 row count} (해당 시 — > 10000 rows)
+   - 동시 writer 가정: 본 작업은 capture 와 forward 사이 다른 writer 가 영향 row 를 건드리지
+     않는다는 전제로 동작. 장기 실행 트래픽 환경이면 freeze/downtime/lock 사전 조율 필요.
+
+   ## 롤백 전략
+   - capture 테이블: `_rollback_<table>_<execution_id>` 형식, regular tables (TEMP X — CLI session 종료 시 사라짐)
+   - forward 파일: {forward path}
+   - rollback 파일: {rollback path}
+   - 성공 시 cleanup: capture 테이블 DROP
+   - 실패 시 cleanup 보류: 마스터 forensic 검토 후 수동 DROP
+
+   ## advisor 검증
+   - (dispatcher 의 Phase 2 advisor 결과가 들어갈 자리 — placeholder)
+
+   ## 환경별 실행 결과
+   - (dispatcher 의 Phase 4 실행 후 채울 자리 — placeholder)
+
+   ## 미정리 잔여
+   - (실패 시 dispatcher 가 채울 자리 — 보존된 _rollback_* 테이블 명 등)
+   ```
+
+7. **Return JSON summary**:
    ```json
    {
      "capture_path": "<repo-relative>",
      "forward_path": "<repo-relative>",
      "rollback_path": "<repo-relative>",
+     "plan_path": "<repo-relative to plan.md>",
      "engine": "mysql" | "postgres",
      "statement_count": <int>,
      "tables_touched": ["<name>", ...],

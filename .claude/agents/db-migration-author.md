@@ -55,15 +55,52 @@ If the request requires data manipulation (e.g., "rename column AND copy old dat
    -- DESTRUCTIVE: <한 줄 설명>
    ```
    The dispatcher's advisor pass detects these tags.
-6. **Write files** to the framework-conventional paths:
+6. **Write SQL files** to the framework-conventional paths:
    - `raw-sql`: `<repo>/migrations/{YYYYMMDDHHMMSS}_{slug}.up.sql` and `{...}.down.sql`.
    - `prisma`: `<repo>/prisma/migrations/{YYYYMMDDHHMMSS}_{slug}/migration.sql` for the up; rollback at `<repo>/prisma/migrations/{YYYYMMDDHHMMSS}_{slug}/rollback.sql` (Prisma's CLI does not natively run rollback; the dispatcher invokes it manually).
    - `knex` / `sequelize`: emit framework-conformant migration file with `up()` and `down()`. Slug per framework's convention.
-7. **Return a JSON summary** to the dispatcher:
+
+7. **Write `plan.md` (initial draft)** in the same directory as the SQL files (or as a sibling for raw-sql: `<repo>/migrations/{YYYYMMDDHHMMSS}_{slug}.plan.md`):
+
+   ```markdown
+   # task-db-structure — {leader} #{issue or "직접 설명"}
+
+   > 작성일: {ISO8601}
+   > 엔진: {mysql|postgres} / 프레임워크: {raw-sql|prisma|knex|sequelize}
+
+   ## 요청
+   {dispatcher 에서 받은 request 본문 verbatim}
+
+   ## 영향 테이블 / 변경 요약
+   - {table_name}: {change description}
+
+   ## 위험 태그
+   - DESTRUCTIVE: {detail} (해당 시 — DROP COLUMN, DROP TABLE, MODIFY COLUMN <type> 등)
+   - 데이터 복구 불가 항목: {detail — 예: "DROP COLUMN 의 데이터는 rollback 으로 복원 불가, 사전 mysqldump 필요"}
+
+   ## 롤백 전략
+   - 롤백 SQL: {rollback path}
+   - 트랜잭션 wrap: {yes/no — NON-TRANSACTIONAL 이면 이유 명시}
+   - 복구 한계: {복구 가능한 것 / 안 되는 것 명시}
+
+   ## advisor 검증
+   - (dispatcher 의 Phase 2 advisor 결과가 들어갈 자리 — 본 sub-agent 출력에는 placeholder)
+
+   ## 환경별 실행 결과
+   - (dispatcher 의 Phase 4 실행 후 채울 자리 — 본 sub-agent 출력에는 placeholder)
+
+   ## 미정리 잔여
+   - (실패 시 dispatcher 가 채울 자리)
+   ```
+
+   `plan.md` 의 advisor / 환경별 실행 / 미정리 잔여 섹션은 placeholder 로 둔다. dispatcher (task-db-structure) 가 Phase 2 (advisor 후) + Phase 4 (실행 후) 에 plan.md 를 read + edit + 재커밋한다.
+
+8. **Return a JSON summary** to the dispatcher:
    ```json
    {
      "migration_path": "<repo-relative path>",
      "rollback_path": "<repo-relative path>",
+     "plan_path": "<repo-relative path to plan.md>",
      "framework": "raw-sql" | "prisma" | "knex" | "sequelize",
      "engine": "mysql" | "postgres",
      "destructive_op_count": <int>,

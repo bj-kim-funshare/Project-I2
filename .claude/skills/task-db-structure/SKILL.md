@@ -1,13 +1,13 @@
 ---
 name: task-db-structure
-description: Plan and execute DDL changes (CREATE/ALTER/DROP TABLE/COLUMN/INDEX/CONSTRAINT) against a project group's databases according to the group's db.md policy. Authors paired migration + rollback SQL via db-migration-author sub-agent, advisor-reviews for safety, opens a PR, then sequentially executes against each environment (dev → staging → prod) with a master approval gate per environment and automatic rollback on failure. Never touches data — strict DDL scope. v1 supports MySQL and PostgreSQL.
+description: Plan and execute DDL changes (CREATE/ALTER/DROP TABLE/COLUMN/INDEX/CONSTRAINT) against a project group's databases according to the group's db.md policy. Authors paired migration + rollback SQL + plan.md audit doc via db-migration-author sub-agent, advisor-reviews for safety, commits to a local WIP branch (no PR), then sequentially executes against each environment (dev → staging → prod) with master approval gate per environment and automatic rollback on failure. After execution, appends results to plan.md and auto-merges WIP to i-dev (CLAUDE.md §5 universal — preserve both on conflict). Never touches data — strict DDL scope. v1 supports MySQL and PostgreSQL.
 ---
 
 # task-db-structure
 
 DDL execution skill for a project group's databases. Replaces the structural half of the old `task-db` skill (data half goes to `task-db-data`).
 
-This skill changes real databases. The full pipeline includes paired migration + rollback authoring, advisor safety review, PR commit, and per-environment execution with master gates and auto-rollback on failure. Master picked the full-environment scope (2026-05-12) — dev / staging / prod all execute, gated by master approval per environment.
+This skill changes real databases. The full pipeline includes paired migration + rollback authoring with plan.md audit, advisor safety review, local WIP commit, per-environment execution with master gates and auto-rollback on failure, plan.md result append, and auto-merge to i-dev. Master picked the full-environment scope (2026-05-12) — dev / staging / prod all execute, gated by master approval per environment. PR step polished out the same day (post-execution PR was redundant codification ceremony).
 
 ## Invocation
 
@@ -27,7 +27,7 @@ This skill changes real databases. The full pipeline includes paired migration +
    - Environment connection info — by environment variable name. v1 expects standard names: `DEV_DATABASE_URL`, `STAGING_DATABASE_URL`, `PROD_DATABASE_URL`. Missing env → that environment is skipped (with master notice).
 3. The target repo (the one with DB code in the group) is identifiable. If the group has multiple repos, the skill asks via `AskUserQuestion` which repo carries the DB.
 4. Current branch = `i-dev` (or `main` for bootstrap). The skill creates a WIP from there.
-5. `gh` CLI installed and authenticated (for PR creation).
+5. `gh` CLI 의존성은 없음 (PR 단계 폐기됨, 2026-05-12 master 결정). git CLI 만 사용.
 6. DB CLIs available: `mysql` (or `psql` for postgres) on PATH. v1 invokes the CLI directly; framework migration tools (`prisma migrate deploy` etc.) are NOT used in v1 — the skill applies SQL files explicitly.
 
 ## Phase 1 — Plan authoring
@@ -73,15 +73,16 @@ This skill changes real databases. The full pipeline includes paired migration +
 
    This is a tight contract — advisor must explicitly write `BLOCK: <reason>` when it wants to halt. Soft worries are reported but do not halt. The token rule is documented for advisor's awareness in the dispatcher's advisor invocation prompt.
 
-## Phase 3 — PR commit
+## Phase 3 — WIP commit (no PR — master 2026-05-12 결정)
+
+PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification 이라 PR 머지 게이트는 의미 약함. WIP→i-dev 자동 머지 (Phase 5) 로 대체. 모든 audit 컨텍스트는 `plan.md` 에 기록.
 
 7. **WIP / merge protocol**:
    - i-dev bootstrap if missing (from `main`).
    - WIP branch: `task-db-structure-<issue-or-timestamp>-작업`, branched from i-dev.
-   - Commit migration + rollback files. Korean commit message: `task-db-structure: <leader> 마이그레이션 + 롤백 작성 (#<issue or "직접 설명">)`.
-   - Push branch.
-8. **Open PR** via `gh pr create --base i-dev --head <wip-branch>`. PR body includes the plan summary + advisor result + the migration / rollback paths.
-9. Capture PR number for the execution phase's report and for any failure-issue creation later.
+   - **Update `plan.md` advisor section** — dispatcher reads the agent-emitted plan.md, replaces the advisor placeholder with the Phase 2 advisor result prose.
+   - Commit migration + rollback + plan.md (initial draft + advisor 결과 포함). Korean commit message: `task-db-structure: <leader> 마이그레이션 + 롤백 + 계획 초안 (#<issue or "직접 설명">)`.
+   - No push yet. No PR. WIP stays local until Phase 5 auto-merge.
 
 ## Phase 4 — Execute per environment
 
@@ -94,7 +95,7 @@ This skill changes real databases. The full pipeline includes paired migration +
     Options:
       - 진행 (dry-run + 실 적용 + 검증)
       - 건너뛰기 (이 환경 스킵, 다음 환경 진행)
-      - 중단 (전체 파이프라인 정지, PR 보존)
+      - 중단 (전체 파이프라인 정지, WIP 보존, i-dev 미머지)
     ```
 
     **b. Connect**: read `${ENV_UPPER}_DATABASE_URL` env var. Missing → skip environment with master notice; offer to halt or continue to next.
@@ -126,25 +127,56 @@ This skill changes real databases. The full pipeline includes paired migration +
 
     **e. Post-execution verification**: re-introspect the schema to confirm the migration's intended state holds. For raw-sql: spot-check via `SHOW COLUMNS` / `\d table`. For frameworks: prefer the framework's introspection (`prisma db pull`, etc.). Mismatch → auto-rollback + halt.
 
-12. After all environments succeed (or were explicitly skipped by master): **proceed to Phase 5**.
+12. **After each environment** (success or explicit skip), accumulate the result in memory. After ALL environments complete (or pipeline halts on failure):
 
-## Phase 5 — Completion
+    **Update `plan.md` 환경별 실행 결과 section** — dispatcher reads plan.md, replaces the placeholder with a Korean results table:
+    ```markdown
+    ## 환경별 실행 결과
 
-13. Korean report:
+    | 환경 | dry-run | 실 적용 | 검증 | rollback 발생 |
+    |------|---------|---------|------|---------------|
+    | dev | ✅ | ✅ | ✅ | — |
+    | staging | ✅ | ✅ | ✅ | — |
+    | prod | ✅ | ❌ exit 1 | — | ✅ 자동 |
+
+    실행 종료 사유: {success | partial-failure-rollback | partial-failure-rollback-failed | aborted-by-master}
+    ```
+
+    If failure occurred and rollback tables/files were preserved, also fill the `## 미정리 잔여` section.
+
+    Commit plan.md update on the WIP branch with message: `task-db-structure: <leader> 환경별 실행 결과 기록 (#<issue or "직접 설명">)`.
+
+13. **Proceed to Phase 5** (regardless of success/failure — both cases need WIP merge or master-decision halt).
+
+## Phase 5 — Completion + WIP → i-dev 자동 머지
+
+14. **WIP → i-dev 자동 머지** (CLAUDE.md §5 universal — preserve both on conflict, halt on mutually exclusive):
+    ```bash
+    git checkout i-dev
+    git merge --no-ff task-db-structure-<id>-작업 -m "Merge task-db-structure WIP for <leader> #<issue>"
+    ```
+    충돌 시:
+    - 자동 양측 보존 시도 (§5)
+    - 상호 배타적 conflict 시 → halt with conflict report, WIP 보존
+
+15. Korean 완료 보고:
     ```
     ### /task-db-structure 완료 — <leader>
 
     | 항목 | 값 |
     |------|-----|
-    | 마이그레이션 PR | #<pr-num> |
+    | WIP | task-db-structure-<id>-작업 (i-dev 머지 ✅) |
+    | 마이그레이션 파일 | <migration_path> |
+    | 롤백 파일 | <rollback_path> |
+    | 계획 + 결과 audit | <plan_path> |
     | 파괴적 ops | <count>건 |
-    | dev | ✅ 적용 / ⏭ 건너뜀 / ❌ 롤백 (<reason>) |
+    | dev | ✅ 적용 / ⏭ / ❌ 롤백 |
     | staging | ✅ / ⏭ / ❌ |
     | prod | ✅ / ⏭ / ❌ |
-    | i-dev 머지 | (Phase 4 모두 ✅ 시) PR 머지 진행 안 함 — 마스터 결정 |
+    | 잔여 _rollback_* 테이블 | (실패 시) <list> — 마스터 forensic 후 수동 DROP |
     ```
 
-14. PR is left open for master's manual merge. The skill does NOT auto-merge — the structural change has already been applied to live databases; merging the PR is a separate codification step.
+16. End of skill invocation. 마스터가 plan.md 의 audit 컨텍스트를 git log 로 추적 가능.
 
 ## Failure policy
 
@@ -158,7 +190,7 @@ Immediate Korean report + halt.
 | Framework not in v1 support | `"프레임워크 <framework> v1 미지원. v1: raw-sql, prisma, knex, sequelize"` |
 | `db-migration-author` returns error | `"db-migration-author <error_type>: <details_ko>"` |
 | Master rejects plan in Phase 1 | (re-dispatch with revision) |
-| Advisor `BLOCK:` token detected | `"advisor 차단: <reason>. PR 미생성, 작업 보존."` (files stay on local branch, master decides) |
+| Advisor `BLOCK:` token detected | `"advisor 차단: <reason>. WIP 미생성, 작업 파일 미커밋 보존."` (master decides) |
 | Dry-run failure in any env | `"<env> dry-run 실패: <error>. 파이프라인 중단, 후속 환경 미실행."` |
 | Real execution failure → auto-rollback succeeded | `"<env> 실 적용 실패: <error>. 자동 롤백 완료. 파이프라인 중단."` |
 | Real execution failure → auto-rollback ALSO failed | `"<env> 실 적용 실패 + 자동 롤백 실패. DB 상태 불확정. 마스터 긴급 점검 필요. 적용 에러: <err1>. 롤백 에러: <err2>."` |
@@ -184,6 +216,5 @@ Out of scope (v1):
 - Protected-table enforcement (`db.md` lacks the `protected_tables` field in v1).
 - Multi-step migrations within one invocation (one migration per invocation).
 - Cross-DB migrations within a single invocation (one DB at a time per environment).
-- Auto-merge of the PR after successful execution (master decision).
 - Concurrent / parallel env execution (always sequential).
 - Online-schema-change tools (pt-osc, gh-ost) — deferred.
