@@ -95,9 +95,67 @@ If the combined findings array is non-empty:
 
 On cap exhaustion: halt with a full Korean report of remaining findings. PR is left open. Master decides next step (manual fix, abandon PR, …).
 
-## PENDING gate (before merge — per `.claude/md/completion-gate-procedure.md`)
+## Lint gate (after auto review iter clean, before PENDING gate)
 
-When both reviewers return `[]` (within the iteration cap), the automated review is clean. **Do NOT auto-merge yet.** Master gets a final intervention chance before the merge commit is created.
+When both reviewers return `[]` (within the iter cap), run the lint gate before PENDING.
+
+### Determine targets affected by the PR
+
+From the PR diff, identify which `dev.md` `targets[]` are affected:
+- For each changed file, find the `target` whose `cwd` contains the file (longest-prefix match).
+- Collect the set of affected targets.
+- For targets without `lint_command` (or empty), skip — master signaled no lint check desired.
+
+### Dispatch `gate-runner` per affected target
+
+For each affected target with `lint_command`, dispatch `gate-runner` (Haiku 4.5) via Task tool:
+
+```
+gate-runner input:
+  gate_type: "lint"
+  command: <target.lint_command>
+  cwd: <target.cwd>
+  timeout_ms: 120000
+```
+
+Run sequentially (rare to have many — usually 1–2 targets per PR; parallel adds complexity without much speedup).
+
+### Decision
+
+- All lint runs return `exit_code: 0` → lint gate PASS → proceed to PENDING gate.
+- Any lint run returns non-zero exit → lint gate FAIL → enter **lint hotfix iter loop**.
+
+### Lint hotfix iter loop (up to 3 iter, independent from review iter)
+
+On lint fail:
+
+1. Synthesize a finding for each failing lint run:
+   - `confidence: 100`
+   - `category: "lint"`
+   - `message: "lint 실패 (target=<name>): <gate-runner summary>"`
+   - `suggested_fix: "<target.lint_command> 통과를 위해 수정. failure excerpt: <첫 N 줄>"`
+2. Dispatch `code-fixer` with the synthesized findings. Code-fixer applies fixes, commits, pushes.
+3. Re-dispatch `gate-runner` for the same targets. Recompute lint pass/fail.
+4. If still failing → iter counter += 1, repeat from step 1 (up to 3 total iters).
+5. Iter cap reached with lint still failing → halt with **lint cap-exhausted report**:
+   ```
+   ### /dev-merge 중단 — PR #<num> (lint cap 도달)
+
+   | 항목 | 값 |
+   |------|-----|
+   | lint 라운드 | 3/3 |
+   | 실패 타겟 | <list> |
+   | 마지막 failure excerpt | <text> |
+   | PR 상태 | open (수동 처리 대기) |
+
+   master 가 직접 lint 수정 후 재호출 또는 `--codex` 등 다른 경로 검토.
+   ```
+
+Lint hotfix iter is INDEPENDENT from the review iter — review iter (3) and lint iter (3) are separate budgets. Total max iter per PR = 6 (3 review + 3 lint), reasonable upper bound.
+
+## PENDING gate (after lint clean, before merge — per `.claude/md/completion-gate-procedure.md`)
+
+When both reviewers return `[]` AND lint gate passes (within respective iter caps), the automated review + lint is clean. **Do NOT auto-merge yet.** Master gets a final intervention chance before the merge commit is created.
 
 Output the PENDING message and halt:
 

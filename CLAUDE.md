@@ -37,10 +37,13 @@ When master prompts the main session **without** invoking a skill: main session 
 | `advisor()` tool | `claude-sonnet-4-6` | `.claude/settings.json` → `advisorModel` |
 | 7 read-only reviewers (planning agents) | `claude-opus-4-7` (200k, not 1M) | Agent frontmatter `model:` field |
 | 4 write-capable executors (work agents) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
+| 1 gate-runner (mechanical executor) | `claude-haiku-4-5` | Agent frontmatter `model:` field |
 
 **Planning agents** (`bug-detector`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`): receive complex code/diff/scope inputs, produce reasoning-heavy findings. Opus 4.7 for quality of judgment.
 
 **Work agents** (`code-fixer`, `phase-executor`, `db-migration-author`, `db-data-author`): take a defined task description, execute mechanically (write code / SQL files, commit). Sonnet 4.6 for cost efficiency. **Always split into phases or smaller units** — never hand a Sonnet sub-agent the whole task at once (its context window is too small).
+
+**Gate-runner** (`gate-runner`): purely mechanical — runs a shell command, captures output, returns JSON. No reasoning. Haiku 4.5 for speed/cost on high-frequency lint/build invocations. Used by `dev-merge` (lint gate), `plan-enterprise` (per-phase lint gate), and `dev-build` (build utility).
 
 **Advisor inversion (deliberate trade-off, 2026-05-13)**: with main session typically on Opus 4.7, advisor on Sonnet is a weak→strong inversion against the tool's "stronger reviewer model" default. Master's choice — cost efficiency on high-frequency advisor calls. Rollback to stronger advisor model possible if quality issues emerge.
 

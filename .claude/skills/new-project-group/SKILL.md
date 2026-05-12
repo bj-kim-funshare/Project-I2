@@ -72,7 +72,10 @@ Master may write `~` shortcuts; skill expands to absolute paths before saving. M
 
 ### Round 1 — dev
 
-Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`. These map 1:1 to the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract — that schema is the single source of truth; this skill emits conforming output.
+Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`, `type`, `lint_command`. These extend the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract.
+
+- `type`: `"project"` or `"monorepo"`. Master picks per target. Used by `dev-build` skill to surface monorepo selections.
+- `lint_command`: optional. Shell command for lint gate (used by `dev-merge` and `plan-enterprise` per-phase lint gate). Examples: `pnpm typecheck`, `pnpm lint`, `npx tsc --noEmit`, `cargo check`. Empty/omitted = lint gate skipped for that target (master signals no lint check desired).
 
 ### Round 2 — deploy
 
@@ -155,10 +158,12 @@ YAML frontmatter conforming to `dev-start` contract, free-text body below:
 targets:
   - name: {name1}
     cwd: {abs-path}
+    type: project          # "project" or "monorepo"
     dev_command: {command}
     port: {int}
     cache_paths:
       - {path}
+    lint_command: {command or empty}   # lint gate (omit/empty = skipped)
   - name: {name2}
     ...
 ---

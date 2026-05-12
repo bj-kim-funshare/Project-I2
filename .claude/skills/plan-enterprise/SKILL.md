@@ -168,10 +168,18 @@ This is the load-bearing verification — advisor does NOT run per phase. The ri
 3. `git diff <prev_commit>..<commit_sha>` — inspect the actual code change. Read the diff, not just the agent's summary.
 4. Verify the diff substantively implements `<phase_description>` (not a no-op, not an over-implementation that creeps into the next phase's territory).
 5. Verify `blockers` field — if non-empty, decide whether they require master attention before the next phase or can be deferred.
+6. **Lint gate (NEW, 2026-05-13)** — for each `dev.md` target whose `cwd` contains any file changed in this phase, if the target has a non-empty `lint_command`, dispatch `gate-runner` (Haiku 4.5) with `gate_type: "lint"` + `command: <lint_command>` + `cwd: <target.cwd>`. Targets without `lint_command` are skipped (master signaled no lint check). Behavior on result:
+   - All lint runs `exit_code: 0` → lint gate PASS → proceed to next phase.
+   - Any non-zero exit → lint gate FAIL → enter **per-phase lint hotfix iter** (independent from phase iter):
+     a. Synthesize lint findings (same shape as `dev-merge`'s synthesis — confidence 100, category lint, failure excerpt as suggested_fix).
+     b. Dispatch `code-fixer` with the synthesized findings. Code-fixer applies + commits + pushes on the same WIP branch.
+     c. Re-dispatch `gate-runner`. Re-evaluate.
+     d. Up to 3 iter independent. Cap exhausted with failing lint → halt for master with cap-exhausted report; phase iter does NOT count this against the 3-attempt phase budget.
 
-Pass → comment on the issue (see 7d) and proceed to the next phase.
+Pass (all 6 steps) → comment on the issue (see 7d) and proceed to the next phase.
 
-Fail → see decision tree.
+Fail (steps 1–5) → see decision tree.
+Fail (step 6, lint) → handled by per-phase lint hotfix iter above; cap exhaustion halts for master.
 
 ### 7d. Per-phase issue comment
 
