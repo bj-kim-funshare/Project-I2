@@ -279,6 +279,7 @@ function applyDeltaBadgesFromValues(prev, current) {
 }
 
 function applyDeltaBadges(data) {
+  clearDeltaBadges();
   const SNAPSHOT_KEY = 'monitoring:last-snapshot';
   const current = computeKpiSnapshot(data);
 
