@@ -54,7 +54,7 @@ files=$(git -C <cwd> log --since="$since" --name-only --pretty=format: | sort -u
 
 ## Sub-agent
 
-`code-inspector` (read-only). Single dispatch covering all selected repos. Input includes the per-repo scope objects (built by Step 4 of the procedure), `CLAUDE.md`, and group-policy files.
+`code-inspector` (read-only). Single dispatch covering all selected repos. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): per-repo scope objects are not inlined. Main session writes them to `.claude/inspection-runs/<timestamp>-dev-inspection.json` and passes only that path plus `leader name` to code-inspector. Code-inspector reads the scope JSON, `CLAUDE.md`, and group-policy files itself.
 
 ## Focus area (for sub-agent prompt)
 

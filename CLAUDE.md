@@ -81,6 +81,8 @@ While the harness is under construction: one unit at a time, master describes �
 
 Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md`; specialized content goes in `.claude/md/*` loaded on-demand by the skills and agents that reference them. If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.
 
+Sub-agent dispatch prompt bodies are governed by `.claude/md/sub-agent-prompt-budget.md` — recommended 5–15k tokens, absolute hard cap 100k tokens. Do not inline pre-assembled context (PR diffs, policy files, prior-phase summaries, scope object collections, advisor output); save it to a permanent document (issue body, plan.md, audit md) and pass only the path or identifier so the sub-agent reads it itself.
+
 ## Folder map
 
 | Path | Role |

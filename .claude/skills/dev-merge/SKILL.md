@@ -48,17 +48,16 @@ git worktree add "${wt_from}" <from-branch>   # checkout existing branch, no -b
 
 ## Context preparation (main session, no sub-agent)
 
-Before dispatching reviewers, main session collects context inline via Bash/gh. No sub-agent isolation is needed for fetching information — that overhead is wasted on retrieval.
+Before dispatching reviewers, main session confirms the PR exists and collects only identifiers:
 
-| Context | Source |
+| Info | Source |
 |---|---|
-| PR diff | `gh pr diff <PR-num>` |
-| Recent git log on from-branch | `git log --oneline -30 <from-branch>` |
-| Prior PR review comments (if iterating) | `gh pr view <PR-num> --json reviews,comments` |
-| CLAUDE.md text | Read |
-| Group-policy files (if cwd resolves to a registered group) | Read `.claude/project-group/<leader>/{dev,deploy,db,group}.md` |
+| PR number | `gh pr list --head <from-branch> --json number` |
+| Group leader (if any) | cwd matched against `targets[].cwd` in `.claude/project-group/*/dev.md` — leader name only |
 
-Group resolution: if cwd matches any `targets[].cwd` entry inside `.claude/project-group/*/dev.md`, the matching `<leader>` is identified and its four policy files are loaded. If no match, group-policy is omitted from the context bundle.
+PR diff, git log, prior PR review comments, CLAUDE.md text, and group-policy file contents are NOT pre-fetched and NOT inlined in reviewer dispatch prompts. Reviewers fetch what they need directly. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): PR diffs, prior-round findings JSON, and git logs are not inlined in dispatch prompts. Reviewers call `gh pr diff <PR#>` and `gh pr view <PR#> --json reviews,comments` themselves; code-fixer reads PR review comments via `gh pr view <PR#> --json reviews,comments` or `gh api repos/{owner}/{repo}/pulls/<PR#>/comments` — so code-fixer's input is the PR number alone.
+
+Group resolution: if cwd matches any `targets[].cwd` entry inside `.claude/project-group/*/dev.md`, the matching `<leader>` name is captured (for passing to reviewers as an identifier). If no match, group-policy is omitted.
 
 ## Reviewer dispatch (parallel)
 
@@ -67,7 +66,7 @@ Two read-only sub-agents, dispatched in a single message via the Task tool so th
 - **`claude-md-compliance-reviewer`** — diff vs CLAUDE.md and group-policy conventions.
 - **`bug-detector`** — logic bugs, null/undefined, off-by-one, race conditions, error handling, type holes.
 
-Each agent receives the same context bundle as a Task `prompt`. They form judgments independently — neither sees the other's findings — which is the actual reason for parallel dispatch.
+Each reviewer receives only: `PR number`, `from-branch`, `to-branch`, `worktree_cwd`, and (if resolved) `leader name`. Reviewers fetch the PR diff and prior review comments from GitHub directly. They form judgments independently — neither sees the other's findings — which is the actual reason for parallel dispatch.
 
 ## Finding contract
 
@@ -103,9 +102,9 @@ Each comment includes the SHA hash + line range so the user (and the next iterat
 
 If the combined findings array is non-empty:
 
-1. Dispatch `code-fixer` (write-capable Sonnet sub-agent) via Task, with the findings array and PR metadata.
-2. `code-fixer` reads `worktree_cwd` from input, runs all `git` operations as `git -C <worktree_cwd>` (no local `git checkout`), applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
-3. Main session re-fetches PR diff (now reflecting the new commit), re-collects prior PR comments (now including the just-posted ones), re-dispatches the 2 reviewers.
+1. Dispatch `code-fixer` (write-capable Sonnet sub-agent) via Task, with `PR number`, `from-branch`, and `worktree_cwd`. Code-fixer reads its own fix context from PR review comments via `gh pr view <PR#> --json reviews,comments`.
+2. `code-fixer` runs all `git` operations as `git -C <worktree_cwd>` (no local `git checkout`), applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
+3. Main session re-dispatches the 2 reviewers (passing the same PR number and branch identifiers — reviewers fetch the updated diff themselves).
 4. Loop until both reviewers return `[]`, OR iteration cap is hit.
 
 **Iteration cap = 3.** Rationale: caps the auto-fix loop short enough that master sees a non-converging problem quickly. Three rounds is empirically the point where mechanical fixes have either resolved or revealed they can't. More rounds = chasing a bug the fixer cannot grasp.

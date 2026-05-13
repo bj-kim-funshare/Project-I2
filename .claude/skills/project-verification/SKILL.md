@@ -32,7 +32,7 @@ Same per-repo derivation as `dev-inspection`:
 
 ## Sub-agent
 
-`refactoring-analyzer` (read-only). Single dispatch covering all selected repos. Input includes per-repo scope objects, `CLAUDE.md`, and group-policy files.
+`refactoring-analyzer` (read-only). Single dispatch covering all selected repos. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): per-repo scope objects are not inlined. Main session writes them to `.claude/inspection-runs/<timestamp>-project-verification.json` and passes only that path plus `leader name` to refactoring-analyzer. Refactoring-analyzer reads the scope JSON, `CLAUDE.md`, and group-policy files itself.
 
 ## Focus area (for sub-agent prompt)
 

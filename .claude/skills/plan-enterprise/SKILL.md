@@ -154,7 +154,9 @@ For each phase in order:
 
 ### 7a. Dispatch `phase-executor`
 
-Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number, phase metadata (number / title / type / description / affected_files), WIP branch name, group-policy summary, prior-phases summary, `worktree_cwd` = absolute path of the WIP A worktree (`<wt_a>` resolved). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
+Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number (`#N`), leader name, WIP branch name, `worktree_cwd` (absolute path of the WIP A worktree), and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
+
+Dispatch follows `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k). Do NOT inline `group-policy summary` or accumulate `prior-phases summary` into the prompt — phase-executor reads `gh issue view <N>` for the plan body and completed-phase comments, and reads `.claude/project-group/{leader}/{dev,deploy,db,group}.md` from disk on its own.
 
 ### 7b. Receive sub-agent's JSON report
 

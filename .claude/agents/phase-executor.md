@@ -12,16 +12,18 @@ Execute exactly one phase. Stay inside the declared scope. Report honestly.
 
 ## Input
 
-The dispatcher (`plan-enterprise`) provides via prompt:
+The dispatcher (`plan-enterprise` / `plan-enterprise-os`) provides via prompt:
 
-- `<plan_issue_number>` — GitHub issue carrying the full plan.
-- `<phase_number>` — which phase (1-indexed).
-- `<phase_title>`, `<phase_type>` (feat / fix / refactor / chore / test / docs), `<phase_description>` (multi-sentence).
-- `<affected_files>` — array of paths the phase is expected to touch.
+- `<plan_issue_number>` — GitHub issue number carrying the full plan.
 - `<wip_branch>` — name of the WIP branch the dispatcher created.
 - `<worktree_cwd>` — absolute path to the worktree the dispatcher created via `git worktree add` (already on `<wip_branch>`). All git ops use `git -C <worktree_cwd>`; all file reads/writes use absolute paths under this dir.
-- `<group_policy_summary>` — short Korean summary of the relevant group-policy locks (for plan-enterprise) OR `<harness_context>` — short Korean summary of relevant CLAUDE.md hard rules + memory entries (for plan-enterprise-os). Dispatcher picks the appropriate field; phase-executor reads whichever is supplied.
-- `<prior_phases_summary>` — short Korean summary of phases 1..N-1 outcomes (empty for phase 1).
+- `<leader>` — project group leader name (external plans) OR the harness marker `'os'` (harness self-modifying plans via `plan-enterprise-os`).
+- Phase metadata: `<phase_number>` (1-indexed), `<phase_title>`, `<phase_type>` (feat / fix / refactor / chore / test / docs), `<phase_description>` (multi-sentence), `<affected_files>` (array of paths).
+
+**Prior-phases summary, group-policy file contents, harness_context summary, and CLAUDE.md excerpts are NOT received inline.** Read them yourself:
+- Plan body + completed-phase comments: `gh issue view <plan_issue_number>`
+- Group-policy files (external plans): `.claude/project-group/{leader}/{dev,deploy,db,group}.md`
+- Harness rules (harness plans): `CLAUDE.md`, `.claude/md/*`, and `~/.claude/projects/.../memory/MEMORY.md`
 
 ## Process
 
@@ -96,3 +98,17 @@ On any error: do NOT commit. The dispatcher inspects the error and decides re-di
 > Worktree lifecycle and conventions: see `.claude/md/worktree-lifecycle.md`.
 
 Return only the JSON object as agent's final output. No prose around it.
+
+## Input size self-defense
+
+Per `.claude/md/sub-agent-prompt-budget.md`, estimate prompt body size on entry using the byte heuristic (English/code ≈ 4 bytes/token, Korean ≈ 2 bytes/token). If the estimate exceeds the absolute hard cap of 100k tokens (roughly 400 KB English / 200 KB Korean), do NOT perform the work. Return immediately:
+
+```json
+{
+  "error": "prompt_body_exceeds_budget",
+  "policy": ".claude/md/sub-agent-prompt-budget.md",
+  "action": "dispatcher must convert inline context to file paths and re-dispatch"
+}
+```
+
+This guards against automatic 1M-tier routing (which the Sonnet 1M extra-usage billing guard blocks for write-capable agents).

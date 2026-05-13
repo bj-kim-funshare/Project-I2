@@ -12,15 +12,17 @@ Author a paired migration + rollback for one DDL change request. You write files
 
 ## Input
 
-The dispatcher provides via prompt:
+The dispatcher (`task-db-structure`) provides via prompt:
 
-- `<leader>` — project group leader.
-- `<repo>` — target repository (the one containing DB code).
-- `<worktree_cwd>` — absolute path to the worktree the dispatcher created (already on the WIP branch). All file reads/writes use absolute paths under this dir; the agent does not run git commands.
-- `<request>` — Korean description of the intended schema change. May come from a GitHub issue body, master's direct description, or a combined source.
+- `<leader>` — project group leader name.
+- `<repo>` — target repository identifier (the one containing DB code).
+- `<request>` — short DDL change description (Korean or English). May come from a GitHub issue body or master's direct description.
 - `<framework>` — declared migration framework from `db.md` (e.g., `prisma`, `knex`, `sequelize`, `raw-sql`). When unspecified, default to `raw-sql`.
 - `<engine>` — `mysql` or `postgres` (v1 supported). Read from `db.md`; fail back to dispatcher if missing.
-- Current schema files: paths to read (e.g., `prisma/schema.prisma`, repo's `schema.sql`, ORM model directory).
+- `<worktree_cwd>` — absolute path to the worktree the dispatcher created (already on the WIP branch). All file reads/writes use absolute paths under this dir; the agent does not run git commands.
+- `<schema_file_paths>` — a short list of repo-relative paths to schema files (e.g., `prisma/schema.prisma`, `schema.sql`). NOT inlined contents.
+
+**Schema file CONTENTS are NOT received inline.** Read the listed paths yourself via `Read` (resolving them as absolute paths under `<worktree_cwd>`).
 
 ## Scope (strict)
 
@@ -136,3 +138,17 @@ If unable to author safely:
 - Engine unknown (not mysql/postgres for v1) → return `{"error": "engine_unsupported", "details_ko": "..."}`.
 
 The dispatcher handles the error response by surfacing to master and halting.
+
+## Input size self-defense
+
+Per `.claude/md/sub-agent-prompt-budget.md`, estimate prompt body size on entry using the byte heuristic (English/code ≈ 4 bytes/token, Korean ≈ 2 bytes/token). If the estimate exceeds the absolute hard cap of 100k tokens (roughly 400 KB English / 200 KB Korean), do NOT perform the work. Return immediately:
+
+```json
+{
+  "error": "prompt_body_exceeds_budget",
+  "policy": ".claude/md/sub-agent-prompt-budget.md",
+  "action": "dispatcher must convert inline context to file paths and re-dispatch"
+}
+```
+
+This guards against automatic 1M-tier routing (which the Sonnet 1M extra-usage billing guard blocks for write-capable agents).

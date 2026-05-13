@@ -40,6 +40,8 @@ This skill changes real databases. The full pipeline includes paired migration +
    - `framework` and `engine` from `db.md`.
    - Paths to current schema files.
    - `worktree_cwd`: the absolute path of the WIP worktree (established in Phase 3; passed so the agent writes all output files under `<wt>/...`).
+
+   Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): schema file contents are not inlined — only paths. Db-migration-author reads the schema files itself.
 3. **Receive the agent's JSON summary**. On `error` response → halt with Korean report to master.
 4. **Master plan approval gate (1/4)** — show via Korean conversational summary (NOT `AskUserQuestion` card, since this is content review rather than option selection):
    ```

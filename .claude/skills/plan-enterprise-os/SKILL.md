@@ -126,12 +126,9 @@ git -C "${wt_a}" push -u origin "${wip_a}"
 
 ### Step 7 — Phase execution
 
-Phase-executor receives `harness_context` instead of `group_policy_summary`. `harness_context` is the main session's short Korean summary of:
+Phase-executor receives: plan issue number (`#N`), `worktree_cwd` (absolute path of the WIP A worktree), harness marker `'os'`, and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
 
-- Relevant CLAUDE.md hard rules (which apply to this phase).
-- Relevant memory entries (which behavioral norms apply).
-- Relevant shared-md content (e.g., if a phase touches inspection-procedure consumers, the procedure md itself is in context).
-- `worktree_cwd` = absolute path of the WIP A worktree (`<wt_a>` resolved). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
+Dispatch follows `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k). The previous `harness_context` inline summary pattern — inlining CLAUDE.md hard-rule excerpts, memory excerpts, and shared-md content — is retired. Phase-executor reads `gh issue view <N>`, `CLAUDE.md`, `.claude/md/*`, and `MEMORY.md` from the worktree itself.
 
 Per-phase main-session verification ritual is identical to `plan-enterprise`'s 5-step ritual, with a fetch step prepended:
 
