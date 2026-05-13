@@ -32,6 +32,8 @@ This skill changes real databases. The full pipeline includes paired migration +
 5. `gh` CLI 의존성은 없음 (PR 단계 폐기됨, 2026-05-12 master 결정). git CLI 만 사용.
 6. DB CLIs available: `mysql` (or `psql` for postgres) on PATH. v2 invokes the CLI directly; framework migration tools (`prisma migrate deploy` etc.) are NOT used in v2 — the skill applies SQL files explicitly.
 
+> 본 스킬은 mysql / psql CLI 를 직접 호출하므로 `.claude/settings.json` 의 `permissions.allow` 에 `Bash(mysql *)`, `Bash(psql *)` 가 등록되어 있어야 하며 `autoMode.environment` / `autoMode.allow` 에 본 스킬의 DB 접속 인가 prose 가 등록되어 있어야 한다. 미등록 시 Phase 4 의 첫 호출에서 classifier 가 "Production Read" 로 차단함.
+
 ## Phase 1 — Plan authoring
 
 1. **Receive request**:

@@ -7,7 +7,19 @@
       "Bash(gh issue create *)",
       "Bash(gh issue close *)",
       "Bash(gh issue comment *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(mysql *)",
+      "Bash(psql *)"
+    ]
+  },
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "task-db-structure 와 task-db-data 스킬은 group-policy 의 db.md 에 등록된 dev/staging/prod DB 에 mysql/psql CLI 로 직접 접속해 schema/data 마이그레이션을 수행한다. 접속 호스트는 ${ENV}_DATABASE_URL 환경변수 기반으로 동적."
+    ],
+    "allow": [
+      "$defaults",
+      "task-db-structure 와 task-db-data 스킬의 Phase 4 (capture / dry-run / 실 적용 / 검증) 에서 수행되는 mysql/psql CLI 직접 접속은 인가됨 — 본 스킬들의 핵심 동작이며 Phase 1 advisor + Phase 4 환경별 마스터 게이트 + capture-based rollback 으로 안전망 구성."
     ]
   },
   "statusLine": {

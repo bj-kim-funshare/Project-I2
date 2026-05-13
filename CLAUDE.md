@@ -102,3 +102,5 @@ Sub-agent dispatch prompt bodies are governed by `.claude/md/sub-agent-prompt-bu
 - Working design spec: `README.md` (Korean, will be rewritten after build completion).
 - Project-I (predecessor, failed): `/Users/starbox/Documents/GitHub/Project-I` — read-only reference, consult conservatively, treat as failure case.
 - Cross-session memory: `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/memory/`.
+
+> The `.claude/settings.json` `permissions.allow` entries `Bash(mysql *)` / `Bash(psql *)` and the `autoMode.environment` / `autoMode.allow` DB-CLI prose are intended exclusively for the `task-db-structure` and `task-db-data` skills. Direct mysql/psql invocation in other contexts bypasses the classifier without intent — explicit master authorization required.
