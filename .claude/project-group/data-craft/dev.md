@@ -11,7 +11,7 @@ targets:
     cwd: /Users/starbox/Documents/GitHub/data-craft-mobile
     type: monorepo
     dev_command: pnpm dev
-    port:
+    port: 5174
     cache_paths: []
     lint_command: pnpm typecheck
   - name: data-craft-ai-preview
@@ -38,9 +38,14 @@ targets:
 - env 파일은 각 저장소에서 **git-tracked** (마스터 명시 정책).
 - 본 정책 파일에는 시크릿 값을 적재하지 않음 (I2 harness 별도 저장소이므로).
 
-## 포트 / lint 미확정 항목
+## 포트 정책 (확정)
 
-- `data-craft-mobile` 의 `port` 는 미확정. Vite 기본 5173 이 `data-craft` 와 충돌하므로 명시 지정 필요. `/group-policy` 로 확정.
+- `data-craft` = 5173 (Vite 기본).
+- `data-craft-mobile` = 5174 (리더와 충돌 회피, 마스터 명시 지정).
+- `data-craft-ai-preview` = 3000 / `data-craft-server` = 8000.
+
+## lint 미확정 항목
+
 - `data-craft` 의 `lint_command` 는 `pnpm typecheck:all` (turbo 기반 전 패키지 타입체크) 채택. `pnpm lint` (eslint) 도 패키지에 존재하므로 추후 어느 쪽을 lint gate 로 쓸지 마스터 확정 시 변경.
 
 ## 기타
