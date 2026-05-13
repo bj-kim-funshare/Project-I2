@@ -1,5 +1,21 @@
 # 아이OS — Patch Note (001)
 
+## v001.30.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #21
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `identifier_too_long` 트리거 조건 협소화 — 플랜 #19 (v001.28.0) 에서 신설된 OR 3절 트리거 ("env_or_label > 14자 또는 최장 affected_table > 32자 또는 합산 > 64자") 가 합산 안전한 케이스 (예: `_rollback_data_viewer_column_setting_data_craft_test_51ede2` = 59자) 를 부분 budget (env_or_label 15자) 만으로 오탐 거부하던 문제를 보정. `.claude/skills/task-db-data/SKILL.md` line 46 의 길이 검산 callout 을 worst-case 검산 예시 framing 으로 톤다운하고 트리거 조건을 "합산 식별자 길이 > 64자 단일" 로 명시 (개별 부분이 예시치 table 32 / env_or_label 14 를 넘어도 합산이 64자 이하면 통과). `.claude/agents/db-data-author.md` line 226 의 `identifier_too_long` failure mode 트리거 조건을 동일 단일 검사로 축소하고 `details_ko` 를 resolved 식별자 + 합산 길이 표시 형태로 단순화. 패턴 자체 (backtick 래핑 + `__ENV_OR_LABEL__` placeholder + 6자 hex `rollback_suffix`) 변경 없음.
+
+### 영향 파일
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/agents/db-data-author.md`
+
+### Treadmill Audit
+PASS — 신규 검증 axis / 훅 / 에이전트 / 스킬 추가 없음. Q3 trade-out: 플랜 #19 가 도입한 OR 트리거의 앞 두 절 (env_or_label > 14자 / 최장 table > 32자) 을 트리거 조건에서 retire — 합산 단일 검사로 단순화하고 14·32 수치는 검산 예시 prose 로만 격하. 자매 스킬 task-db-structure 는 동일 메커니즘 미사용 — sibling fix 불필요.
+
 ## v001.29.0
 
 > 통합일: 2026-05-13
