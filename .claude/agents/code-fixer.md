@@ -2,7 +2,7 @@
 name: code-fixer
 model: claude-sonnet-4-6
 effort: medium
-description: Write-capable Sonnet sub-agent that applies fixes from reviewer findings on the from-branch of an open dev-merge PR. Receives a JSON array of findings (≥ 80 confidence) plus PR metadata, checks out the from-branch, applies each suggested_fix, commits and pushes. One combined commit per dispatch. Does not lint, build, or test — the next dev-merge iteration re-reviews. Returns a JSON summary including the commit SHA.
+description: Write-capable Sonnet sub-agent that applies fixes from reviewer findings on the from-branch of an open dev-merge PR. Receives the PR number, from-branch, and worktree_cwd; reads prior-round reviewer findings from PR review comments via `gh` itself. Checks out the from-branch, applies each suggested_fix, commits and pushes. One combined commit per dispatch. Does not lint, build, or test — the next dev-merge iteration re-reviews. Returns a JSON summary including the commit SHA.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
@@ -32,7 +32,12 @@ The dispatcher (`dev-merge`) provides via prompt:
    ```
    If `--ff-only` fails (worktree branch diverged from origin), abort with a `"branch_diverged"` summary — do not force-pull. Do NOT run `git checkout` — the worktree is already on the correct branch.
 
-2. **Apply fixes** — for each finding in input order:
+2. **Fetch and apply fixes** — fetch prior-round reviewer findings from PR review comments:
+   ```bash
+   gh pr view <pr_number> --json reviews,comments
+   # or: gh api repos/{owner}/{repo}/pulls/<pr_number>/comments
+   ```
+   Parse the returned JSON to extract each finding. Then, for each finding in the order returned:
    - `Read` the file at `line_start..line_end` to confirm current state matches the finding's expectation.
    - Apply `suggested_fix` via `Edit`. If `suggested_fix` is concrete and unambiguous, apply it verbatim semantically. If ambiguous, apply the most faithful interpretation that addresses `message`.
    - On any failure (file not found, lines have moved, fix conflicts with another), skip and record the index in `skipped`.
