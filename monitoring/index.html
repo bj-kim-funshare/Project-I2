@@ -11,6 +11,23 @@
 <body>
   <header class="topbar">
     <h1>아이OS 토큰 모니터링</h1>
+    <div class="period-selector">
+      <label for="period-unit">기간:</label>
+      <select id="period-unit">
+        <option value="all" selected>전체</option>
+        <option value="weekly">주간</option>
+        <option value="monthly">월간</option>
+        <option value="quarterly">분기</option>
+        <option value="half">반기</option>
+        <option value="yearly">년간</option>
+      </select>
+      <select id="period-key" disabled>
+        <option value="">—</option>
+      </select>
+      <label class="compare-toggle">
+        <input type="checkbox" id="period-compare" disabled> 비교
+      </label>
+    </div>
     <div id="meta" class="meta"></div>
     <button id="refresh-btn" type="button">새로고침</button>
   </header>
@@ -22,17 +39,23 @@
     <!-- KPI -->
     <section class="kpi-grid" aria-label="핵심 지표">
       <article class="kpi-card" id="kpi-messages">
-        <h3>전체 메시지</h3>
+        <h3>전체 메시지 <span class="kpi-delta" id="kpi-delta-msgs"></span></h3>
         <div class="big-number" id="kpi-messages-val">—</div>
         <div class="kpi-meta">처리된 세션 <span id="kpi-sessions">—</span> 개</div>
+        <div class="kpi-extras">
+          <div><span class="lbl">일평균</span><span class="val" id="kpi-msgs-avg-day">—</span></div>
+          <div><span class="lbl">세션당</span><span class="val" id="kpi-msgs-avg-session">—</span></div>
+          <div><span class="lbl">최근 24h</span><span class="val" id="kpi-msgs-24h">—</span></div>
+          <div><span class="lbl">24h 비율</span><span class="val" id="kpi-msgs-24h-pct">—</span></div>
+        </div>
       </article>
 
       <article class="kpi-card kpi-tokens" id="kpi-tokens">
         <h3>전체 토큰</h3>
         <div class="big-split" aria-label="비-캐시 / 캐시 분리">
-          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span>
+          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span><span class="kpi-delta" id="kpi-delta-noncache"></span>
           <span class="big-divider" aria-hidden="true">/</span>
-          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span>
+          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span><span class="kpi-delta" id="kpi-delta-cache"></span>
         </div>
         <div class="kpi-unit">non-cache / cache</div>
         <dl class="kpi-breakdown">
@@ -44,7 +67,7 @@
       </article>
 
       <article class="kpi-card kpi-gauge" id="kpi-cache-eff">
-        <h3>캐시 효율</h3>
+        <h3>캐시 효율 <span class="kpi-delta" id="kpi-delta-cache-hit-ratio"></span></h3>
         <div class="gauge-wrap">
           <svg viewBox="0 0 120 70" class="gauge">
             <path class="gauge-bg" d="M10 60 A50 50 0 0 1 110 60"/>
@@ -53,15 +76,29 @@
           <span class="gauge-value" id="kpi-cache-eff-val">—</span>
         </div>
         <div class="kpi-meta">cache_read / 전체 입력 토큰</div>
+        <div class="kpi-extras">
+          <div><span class="lbl">cache read 량</span><span class="val" id="kpi-cache-read-abs">—</span></div>
+          <div><span class="lbl">캐시 히트율</span><span class="val" id="kpi-cache-hit-ratio">—</span></div>
+          <div><span class="lbl">캐시 절감</span><span class="val" id="kpi-cache-saved-usd">—</span></div>
+          <div><span class="lbl">미사용 가정</span><span class="val" id="kpi-cache-no-cache-cost">—</span></div>
+        </div>
       </article>
 
       <article class="kpi-card" id="kpi-cost">
-        <h3>추정 비용</h3>
+        <h3>추정 비용 <span class="kpi-delta" id="kpi-delta-cost"></span></h3>
         <div class="big-number" id="kpi-cost-val">—</div>
         <div class="kpi-unit">USD</div>
         <div class="kpi-meta">
           <span class="kpi-hint" title="Claude Code 의 prompt caching 으로 cache_read 가 전체 토큰의 70~95% 를 차지하는 것은 정상이다. cache_read 는 input 단가의 ~10% (opus 기준 $1.5/M vs $15/M) 로 청구되므로 표시 비용의 실제 부담은 캐시 비중만큼 낮다.">ⓘ 캐시는 별도 단가 — 호버 시 설명</span>
         </div>
+        <div class="kpi-extras">
+          <div><span class="lbl">일평균</span><span class="val" id="kpi-cost-daily-avg">—</span></div>
+          <div><span class="lbl">캐시 절감</span><span class="val" id="kpi-cost-saved">—</span></div>
+          <div><span class="lbl">input</span><span class="val" id="kpi-cost-input">—</span></div>
+          <div><span class="lbl">output</span><span class="val" id="kpi-cost-output">—</span></div>
+          <div><span class="lbl">cache</span><span class="val" id="kpi-cost-cache">—</span></div>
+        </div>
+        <div class="kpi-cost-top-models" id="kpi-cost-top-models"></div>
       </article>
     </section>
 
@@ -75,16 +112,19 @@
       <article class="chart-card" id="chart-model-donut">
         <h3>모델 분포 (전체 토큰)</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-model-list" hidden></div>
       </article>
 
       <article class="chart-card" id="chart-skill-donut">
         <h3>스킬 점유 (Top 8 + 기타)</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-skill-list" hidden></div>
       </article>
 
       <article class="chart-card" id="chart-cache-donut">
         <h3>캐시 vs 비-캐시 비중</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-cache-list" hidden></div>
       </article>
 
       <article class="chart-card wide" id="chart-session-bar">
@@ -96,31 +136,60 @@
         <h3>일자별 추정 비용</h3>
         <div class="chart-body"><canvas></canvas></div>
       </article>
+
+      <article class="chart-card wide" id="chart-prompt-bar">
+        <h3>프롬프트별 토큰 소모 (Top 30)</h3>
+        <div class="chart-wrap"><canvas></canvas></div>
+      </article>
     </section>
 
     <!-- 보조 테이블 -->
     <section class="tables-section">
       <h2>상세 테이블</h2>
 
-      <details class="table-block" open>
-        <summary>모델별</summary>
-        <div id="by-model" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>모델별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-model"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-model" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>스킬별</summary>
-        <div id="by-skill" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>스킬별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-skill"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-skill" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>일자별</summary>
-        <div id="by-day" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>일자별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-day"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-day" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>세션별 (최근 50)</summary>
-        <div id="by-session" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>세션별 (최근 50)</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-session"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-session" class="table-wrap"></div>
+        </details>
+      </section>
     </section>
 
   </main>
