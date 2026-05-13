@@ -72,7 +72,7 @@ All other failures are handled by the shared procedure.
 In scope:
 - Code-level security pattern review across `version`-scoped or `today`-scoped changes per member repo.
 - Dependency advisory audit per repo with a detected package manager.
-- One-issue-per-skill on the first selected target's repo for block findings.
+- One-issue-per-skill hosted on the leader repo (`dev.md` `targets[]` entry where `name == <leader>`) for block findings. See `.claude/md/inspection-procedure.md` §"Cross-repo coordination — leader repo 단일 호스트".
 
 Out of scope (v1):
 - `all` mode (full-history audit).
