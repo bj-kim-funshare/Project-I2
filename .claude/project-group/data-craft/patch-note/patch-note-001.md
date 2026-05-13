@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.7.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 2, cumulative phase 8)
+
+### Hotfix 결과
+
+마스터 요구: "사용자 타입 보드 위젯은 항상 주어진 영역 안에서 중앙에 정렬되도록."
+
+- **Phase 8** (`f028e196`): `PaginatedUserGrid.tsx` 66~75번 라인 영역의 카드 그리드 컨테이너 인라인 스타일에서 `justifyContent` / `alignContent` 값을 각각 `'start'` → `'center'` 로 변경 (2-line 변경). vertical · horizontal · grid 3종 layout 모두에서 사용자 카드 블록이 위젯 영역의 수평·수직 중앙에 배치된다. iter 1 에서 `UserListWidget.tsx` 단독 변경이 효과 없음 (PaginatedUserGrid 가 실제 정렬 결정) 을 발견 후 scope 확장 승인.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/PaginatedUserGrid.tsx` (Phase 8)
+
+### 검증 결과
+
+- advisor #2 (hotfix 5-perspective): PASS — 마스터 요구 "항상 중앙 정렬" 의 plain reading 충족. 마지막-페이지 partial row 가 행 내부에서도 가운데로 모이는 edge case 는 의도된 해석 (option 1) 으로 수용.
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. `pnpm dev` → 데이터 뷰어 → 대시보드뷰. 사용자 목록 위젯 (UserListWidget) 의 vertical / horizontal / grid 3종 layout 모두에서 사용자 카드 블록 전체가 위젯 영역 수평·수직 중앙에 위치하는지 확인.
+2. **Edge case**: 사용자 목록이 페이지를 가득 채우지 못해 마지막 페이지에 적은 카드만 있는 경우 — 그 카드들이 행 내에서도 가운데로 모이는지 확인 (의도된 동작). 시각상 어색하면 추후 hotfix 로 "블록 전체 중앙 + 카드 내부 좌측 정렬" 로 변경 가능.
+
 ## v001.6.0
 
 > 통합일: 2026-05-13
