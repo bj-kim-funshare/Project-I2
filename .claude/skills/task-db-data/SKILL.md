@@ -35,7 +35,7 @@ Same as `task-db-structure`:
 
 1. **Receive request** — via `gh issue view` or inline master prompt.
 2. **Generate `execution_id`** — `dml-<YYYYMMDDHHMMSS>-<6-char-random>`. Used to namespace rollback tables.
-3. **Dispatch `db-data-author`** (write-capable Sonnet) with leader/repo/request/engine/execution_id and `worktree_cwd` (the absolute path of the WIP worktree, established in Phase 3; agent writes all output files under `<wt>/...`).
+3. **Dispatch `db-data-author`** (write-capable Sonnet) with leader/repo/request/engine/execution_id and `worktree_cwd` (the absolute path of the WIP worktree, established in Phase 3; agent writes all output files under `<wt>/...`). Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): schema and existing data are not inlined — only paths/identifiers. Db-data-author reads the schema files itself.
 4. **Receive agent's JSON summary**. On `error` response → halt:
    - `needs_schema_change` → suggest `/task-db-structure` to master.
    - other errors → standard halt with Korean report.

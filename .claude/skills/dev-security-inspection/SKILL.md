@@ -37,7 +37,7 @@ In addition, the dispatcher pre-computes each repo's `package_manager` field by 
 
 ## Sub-agent
 
-`security-reviewer` (read-only). Single dispatch covering all selected repos. Input includes the per-repo scope objects (with `package_manager` added), `CLAUDE.md`, and group-policy files (with extra emphasis on `db.md` and `group.md` for DB security context and env-management policy).
+`security-reviewer` (read-only). Single dispatch covering all selected repos. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): per-repo scope objects (including `package_manager`) are not inlined. Main session writes them to `.claude/inspection-runs/<timestamp>-dev-security-inspection.json` and passes only that path plus `leader name` to security-reviewer. Security-reviewer reads the scope JSON, `CLAUDE.md`, and group-policy files (including `db.md` and `group.md`) itself.
 
 ## Focus area (for sub-agent prompt)
 

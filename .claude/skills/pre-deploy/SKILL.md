@@ -30,12 +30,11 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 
 ## Context preparation (main session)
 
-Before dispatching the validator, load:
+Before dispatching the validator, main session collects the selected-target list and per-target branch state:
 
-- `.claude/project-group/<leader>/deploy.md` — full content, then filter to selected targets.
-- `.claude/project-group/<leader>/group.md` and other policy files — env management context.
-- `CLAUDE.md`.
 - For each selected target: `git -C <cwd> rev-parse --abbrev-ref HEAD` (current branch) + `git -C <cwd> status --porcelain` (working tree state).
+
+Main session writes the selected-target list and per-target branch state to `.claude/inspection-runs/<timestamp>-pre-deploy.json`, then passes that path plus `leader name` to deploy-validator. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): `deploy.md` and other policy files are not inlined. Deploy-validator reads `deploy.md`, `group.md`, and `CLAUDE.md` itself.
 
 ## Prior-issue lookup (before dispatch)
 
