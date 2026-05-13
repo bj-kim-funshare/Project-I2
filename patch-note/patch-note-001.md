@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.29.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #20
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/skills/dev-security-inspection/SKILL.md` Scope (v1) `In scope` 3번째 항목 정정 — "One-issue-per-skill on the first selected target's repo for block findings." 표현을 제거하고 "One-issue-per-skill hosted on the leader repo (`dev.md` `targets[]` entry where `name == <leader>`) for block findings. See `.claude/md/inspection-procedure.md` §"Cross-repo coordination — leader repo 단일 호스트"." 로 교체. `#10` (leader repo 이슈 호스트 통일, 2026-05-13 13:22 머지) 이 inspection-procedure.md 본문은 통일했으나 본 SKILL.md Scope 절 1줄을 누락했고, 같은 날 17:05 dev-security-inspection 실행이 이 잔여 표현을 따라 work repo (`funshare-inc/data-craft-server`) 에 이슈 #7 을 생성하는 재발이 발생. 본 페이즈로 슬립 채널 폐쇄.
+
+### 영향 파일
+- `.claude/skills/dev-security-inspection/SKILL.md`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙·훅·에이전트·스킬·검증축 추가 없음. `#10` 의 누락된 1줄 보정.
+
 ## v001.28.0
 
 > 통합일: 2026-05-13
