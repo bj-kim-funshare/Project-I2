@@ -17,8 +17,23 @@ All reports follow a four-block structure:
 
 Icons in the heading indicate the moment category. Additional icons decorate table rows and closing lines to aid rapid scanning. Do not pile multiple icons on one line.
 
+### Narrow-safe table rules
+
+All tables in completion reports must be narrow-safe to avoid Claude Code CLI's stacked-fallback rendering (triggered by wide terminals that cannot accommodate multi-column layout):
+
+- **Always 2-col** (`항목 | 값`). Multi-value data (e.g., `targets[]`, `env_results`, `members[]`) goes into a **separate sub-table** placed after the main table; the sub-table uses ≤4 columns with short cells. Scalar repeats (e.g., two WIP merges) use repeated `항목` key rows in the main table.
+- **`<br>` line-breaks** inside a single cell when the value exceeds ~30 characters (e.g., `treadmill_audit_result`, `block_reason`, `result_summary`, `error_detail`).
+- **Rationale**: Claude Code CLI converts tables to per-row stacked fallback when terminal width is insufficient. Fewer columns and shorter cells lower the threshold width, preventing fallback.
+
+**Scalar-repeat example (two WIP merges):**
+```
+| 🔀 WIP 머지 | plan-enterprise-os-15-작업 ✅ |
+| 🔀 WIP 머지 | plan-enterprise-os-15-문서 ✅ |
+```
+
 ### Minimal example (Tier C, `skill_finalize`)
 
+narrow-safe 예시 (2열·짧은 셀):
 ```
 ### /patch-update 완료 🏁 — 아이OS
 
@@ -123,6 +138,8 @@ Tier A2 (multi-env DB execution): `task-db-structure`, `task-db-data`
 Tier B (inspection / pre-deploy): `pre-deploy`, `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification`
 Tier C (single-finalize doc/utility): `patch-confirmation`, `patch-update`, `group-policy`, `new-project-group`, `dev-start`, `dev-build`, `plan-roadmap`, `create-custom-project-skill`
 
+**Long-value `<br>` rule (all schemas)**: whenever a `값` cell may exceed ~30 characters, use `<br>` to split the value across lines. Fields most likely to trigger this: `treadmill_audit_result` (e.g., `"FAIL: <long reason>"`), `block_reason`, `result_summary` (multi-sentence), `error_detail`. Apply `<br>` proactively rather than waiting for overflow.
+
 ---
 
 ### Tier A schemas
@@ -199,7 +216,7 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `work_complete`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`
 - Optional: `leader`, `findings_breakdown` (`{compliance, bug, lint}`), `conflict_status`, `post_action_hints[]`
-- Recommended table columns: 항목 | 값 (from→to, 저장소, PR, 리뷰 라운드, 게시 finding, 핫픽스 커밋)
+- Recommended table columns: 항목 | 값 — rows: from→to, 저장소, PR 번호, 리뷰 라운드, 게시 finding, 핫픽스 커밋
 - Notes: `work_complete` fires at PENDING gate (before merge). Heading notes "머지 직전 — 마스터 최종 확인."
 
 ##### `hotfix_complete`
@@ -210,13 +227,13 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `skill_finalize`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`
 - Optional: `leader`, `findings_breakdown`, `conflict_resolution_commits`
-- Recommended table columns: from→to, 저장소, PR 번호, 리뷰 라운드, 게시 finding, 핫픽스 커밋, 머지 방식, 머지 SHA
+- Recommended table columns: 항목 | 값 — rows: from→to, 저장소, PR 번호, 리뷰 라운드, 게시 finding, 핫픽스 커밋, 머지 방식, 머지 SHA
 - Notes: Heading uses 🏁. `merge_sha` is the full SHA from `gh pr merge`.
 
 ##### `skill_finalize.blocked`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (`"review_cap_exhausted"` | `"lint_cap_exhausted"` | `"merge_conflict"` | `"branch_protection"` | `"other"`)
 - Optional: `leader`, `remaining_findings[]`, `lint_failure_targets[]`
-- Recommended table columns: PR, 라운드, 잔여 finding, PR 상태
+- Recommended table columns: 항목 | 값 — rows: PR 번호, 라운드, 잔여 finding 수, PR 상태. `remaining_findings[]` renders as a sub-table after the main table: `파일:라인 | 카테고리 | 메시지` (≤3 cols, short cells).
 - Notes: Heading uses ⛔. `remaining_findings[]` renders as a sub-table (file:line / category / message).
 
 ---
@@ -228,7 +245,7 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (dynamic mapping: environment name → `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"`; key set is dispatcher-determined — 분리 분기 관례: `{dev, staging, prod}`, 공유 분기: 마스터 라벨링한 단일 키)
 - Optional: `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`
-- Recommended table columns: WIP | migration_file | rollback_file | plan_file | 파괴적 ops | one column per `env_results` key (dispatcher-determined)
+- Recommended table columns: 항목 | 값 — rows: WIP, migration_file, rollback_file, plan_file, 파괴적 ops. `env_results` keys render as repeated `항목` key rows (one row per env, e.g., `| 실행 결과 (dev) | ✅ |`).
 - Notes: Heading uses 🏁. Rollback tables listed if present.
 
 ##### `skill_finalize.blocked`
@@ -267,13 +284,13 @@ All five inspection/pre-deploy skills follow the same moment set: `skill_finaliz
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`)
 - Optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`
-- Recommended table columns: 타겟 | role | tool | build | deploy | URL
+- Recommended table columns: 항목 | 값 — rows: 리더, 결과 요약, 타겟 수. `targets[]` renders as a sub-table after the main table: `타겟 | build | deploy | URL` (≤4 cols, URL cells short or `<br>`-wrapped if long).
 - Notes: 🏁 heading. If `prior_issue_closed: true`, closing includes "이전 차단 이슈 #N close ✅."
 
 ##### `skill_finalize.blocked`
 - Required: `leader`, `block_reason`, `block_finding_count`, `issue_url`, `issue_number`
 - Optional: `warn_count`, `warn_findings[]`, `severity_breakdown`, `repos_targeted[]`, `prior_issue_reused`
-- Recommended table columns: 타겟 | check | 메시지 (block findings); 타겟 | 메시지 (warn findings)
+- Recommended table columns: 항목 | 값 — rows: 차단 finding 수, 이슈 URL, block_type. Block findings render as a sub-table after the main table: `타겟 | check | 메시지` (≤3 cols); warn findings similarly if present.
 - Notes: ⛔ heading. `prior_issue_reused: true` means the finding was appended to an existing issue (not new).
 
 ---
@@ -283,12 +300,12 @@ All five inspection/pre-deploy skills follow the same moment set: `skill_finaliz
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `scope` (`"version"` | `"today"`), `repos_inspected[]`, `finding_count_total`, `warn_count`
 - Optional: `warn_findings[]`
-- Recommended table columns: 리더 | scope | 검수 repos | 총 finding | 경고
+- Recommended table columns: 항목 | 값 — rows: 리더, scope, 검수 repos, 총 finding, 경고
 
 ##### `skill_finalize.blocked`
 - Required: `leader`, `scope`, `block_finding_count`, `issue_url`, `issue_number`, `severity_breakdown` (`{block, warn}`)
 - Optional: `warn_count`, `affected_repos[]`, `warn_findings[]`
-- Recommended table columns: repo | file | line | category | 메시지
+- Recommended table columns: 항목 | 값 — rows: 리더, scope, 차단 finding 수, 이슈 URL. Findings render as a sub-table after the main table: `repo | file:line | category | 메시지` (≤4 cols, short cells).
 
 ---
 
@@ -346,7 +363,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `target`, `result_summary`, `new_patch_note_file`, `prev_patch_note_file`, `wip_branch`
 - Optional: (none)
-- Recommended table columns: 신규 파일 | 이전 파일 | WIP | main 머지
+- Recommended table columns: 항목 | 값 — rows: 신규 파일, 이전 파일, WIP, main 머지
 
 ---
 
@@ -355,7 +372,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `modified_areas[]` (e.g., `["dev", "deploy"]`), `wip_branch`
 - Optional: `advisor_concerns_count`, `changed_files[]`
-- Recommended table columns: 수정된 영역 | 변경 파일 | WIP | main 머지 | advisor 검증
+- Recommended table columns: 항목 | 값 — rows: 리더, WIP, main 머지, advisor 검증, 수정된 영역. `modified_areas[]` items as repeated `| 수정 영역 | <area> |` rows when multiple.
 - Notes: When no areas changed (no-op short-circuit), `result_summary` is `"변경사항 없음"` and `modified_areas` is `[]`; the table is omitted and the closing paragraph contains only the no-op message.
 
 ---
@@ -365,7 +382,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `member_count`, `policy_files_created[]`, `wip_branch`
 - Optional: `advisor_concerns_count`
-- Recommended table columns: 리더 | 멤버 수 | 폴더 | 정책 파일 | 초기 패치노트 | WIP | main 머지 | advisor 검증
+- Recommended table columns: 항목 | 값 — rows: 리더, 멤버 수, 폴더, 초기 패치노트, WIP, main 머지, advisor 검증. `policy_files_created[]` renders as repeated `| 정책 파일 | <filename> |` rows.
 
 ---
 
@@ -374,7 +391,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `targets[]` (each: `{name, port, pid, cache_paths_cleared[]}`)
 - Optional: (none)
-- Recommended table columns: 멤버 | 포트 | 상태 | PID | 캐시 정리
+- Recommended table columns: 항목 | 값 — rows: 리더, 결과 요약. `targets[]` renders as a sub-table after the main table: `멤버 | 포트 | 상태 | PID` (≤4 cols); cache_paths_cleared as a prose note or additional rows if short.
 - Notes: 🏁 heading. Only selected FE targets appear.
 
 ##### `skill_finalize.blocked`
@@ -389,7 +406,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `targets[]` (each: `{name, type, build_status, elapsed_seconds, exit_code}`)
 - Optional: (none)
-- Recommended table columns: 타겟 | type | build | 시간 | exit
+- Recommended table columns: 항목 | 값 — rows: 리더, 결과 요약. `targets[]` renders as a sub-table after the main table: `타겟 | build | 시간 | exit` (≤4 cols).
 
 ##### `skill_finalize.blocked`
 - Required: `leader`, `block_reason`, `failed_target`, `exit_code`
@@ -403,7 +420,7 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `skill_finalize`
 - Required: `result_summary`, `mode` (`"create"` | `"edit"`), `roadmap_file`, `prompt_count`, `parallel_group_count`, `wip_branch`
 - Optional: `status_breakdown` (`{waiting, in_progress, done}`)
-- Recommended table columns: 모드 | 파일 | 프롬프트 수 | 병렬 그룹 | WIP | advisor 검증
+- Recommended table columns: 항목 | 값 — rows: 모드, 파일, 프롬프트 수, 병렬 그룹, WIP, advisor 검증
 - Notes: 🏁 heading. No `leader` field (plan-roadmap is harness-scoped).
 
 ---
@@ -413,13 +430,13 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `work_complete`
 - Required: `leader`, `skill_name` (full prefixed name, e.g., `"data-craft-deploy-check"`), `issue_number`, `issue_url`, `result_summary`, `wip_branch`
 - Optional: `referenced_subagents[]`, `advisor_result`
-- Recommended table columns: 신규 스킬 | 파일 | 플랜 이슈 | WIP | advisor 검증 | 참조 sub-agent
+- Recommended table columns: 항목 | 값 — rows: 신규 스킬, 파일, 플랜 이슈, WIP, advisor 검증. `referenced_subagents[]` as repeated `| 참조 sub-agent | <name> |` rows.
 - Notes: `work_complete` fires at Step 9 (after merge), before PENDING gate (Step 10). Issue stays OPEN.
 
 ##### `skill_finalize`
 - Required: `leader`, `skill_name`, `issue_number`, `issue_url`, `result_summary`, `issue_close_status`, `wip_branch`
 - Optional: `referenced_subagents[]`
-- Recommended table columns: 신규 스킬 | 플랜 이슈 | WIP
+- Recommended table columns: 항목 | 값 — rows: 신규 스킬, 플랜 이슈, WIP, 이슈 종료 상태
 - Notes: 🏁 heading. `issue_close_status` should be `"closed ✅"` on normal finalize.
 
 ---
