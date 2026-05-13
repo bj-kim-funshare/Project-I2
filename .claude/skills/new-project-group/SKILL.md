@@ -72,9 +72,10 @@ Master may write `~` shortcuts; skill expands to absolute paths before saving. M
 
 ### Round 1 — dev
 
-Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`, `type`, `lint_command`. These extend the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract.
+Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`, `type`, `role`, `lint_command`. These extend the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract.
 
 - `type`: `"project"` or `"monorepo"`. Master picks per target. Used by `dev-build` skill to surface monorepo selections.
+- `role`: `"FE"` or `"BE"` (closed choice). Master picks per target. dev-start 가 FE 타겟만 기동 대상으로 삼는다. BE 도 매니페스트에는 포함되어 dev-build 등 다른 스킬이 사용한다. deploy.md 의 role 과 동일 값이어야 한다 (수동 일치 — v1 검증 없음).
 - `lint_command`: optional. Shell command for lint gate (used by `dev-merge` and `plan-enterprise` per-phase lint gate). Examples: `pnpm typecheck`, `pnpm lint`, `npx tsc --noEmit`, `cargo check`. Empty/omitted = lint gate skipped for that target (master signals no lint check desired).
 
 ### Round 2 — deploy
@@ -159,6 +160,7 @@ targets:
   - name: {name1}
     cwd: {abs-path}
     type: project          # "project" or "monorepo"
+    role: FE               # "FE" or "BE" — dev-start 가 FE 만 기동
     dev_command: {command}
     port: {int}
     cache_paths:
