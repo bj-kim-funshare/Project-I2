@@ -1,5 +1,65 @@
 # 아이OS — Patch Note (001)
 
+## v001.6.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2 (핫픽스2)
+> 대상: 아이OS — 이슈 lifecycle close 정합 (handoff orphan 폐기)
+
+### 페이즈 결과
+
+- **Phase 3 — handoff 스킬 lifecycle close 절차 추가**: pre-deploy 와 create-custom-project-skill 의 SKILL.md 에 이슈 close 단계 명시. 두 스킬 모두 자기 이슈를 자기 lifecycle 안에서 close 하도록 책임 귀속.
+
+### 변경 요약
+
+#### pre-deploy/SKILL.md
+
+(본 핫픽스2 작업물 일부 — 사이클 도중 commit 이 별도 세션 브랜치에 잘못 안착했고, 그 세션이 v001.4.0 머지로 흡수해 main 에 이미 존재. 본 entry 는 사이클 audit trail 보존 목적.)
+
+- Prior-issue lookup section 신설 — `pre-deploy: <leader> 배포 차단` title prefix 매칭으로 재호출 결정적 식별
+- Branch A: 첫 호출 신규 생성 / 재호출 기존 이슈 comment append + open 유지
+- Branch B: 모든 타겟 배포 성공 + prior_issue_number 존재 시 합격 보고서 comment + `gh issue close`. 부분 실패 시 open 유지
+- Failure policy: lookup / comment / close 실패 케이스 명시
+- Scope: 다른 스킬 이슈 close 금지 명시
+
+#### create-custom-project-skill/SKILL.md
+
+- Lifecycle 에 Step 10 (PENDING gate) + Step 11 (FINALIZE on `플랜 완료`) 신설
+- Step 9 → "작업 완료" 보고 (mechanical creation summary, 이슈 OPEN)
+- frontmatter description 갱신 — "Owns its issue lifecycle"
+- Scope: "Issue lifecycle ownership" 명시
+
+머지 시 v001.4.0 의 worktree 격리 변경과 같은 파일에서 자동 양측 보존 (ort strategy) — 두 변경의 hunk 가 겹치지 않아 conflict 없이 통합.
+
+### 영향 파일
+
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/skills/create-custom-project-skill/SKILL.md`
+- `patch-note/patch-note-001.md` (본 entry)
+
+### Treadmill Audit
+
+| Q | 답 |
+|---|---|
+| Q1 재발 사고? | YES — handoff 스킬 이슈 누적 / close 책임 부재 |
+| Q2 새 엣지 케이스? | pre-deploy 재호출 시 validator 가 다른 차단 발견 → 옛 이슈에 comment append + open 유지 (중복 이슈 회피). create-custom `중단` 입력 → 이슈 open 유지 |
+| Q3 retire | **"handoff orphan"** 패턴 — "다른 스킬이 close 한다" 는 암묵 가정. 본 변경으로 close 권한·책임이 이슈 생성 스킬 자체에 귀속. inspection 4 스킬은 본 retire 대상 아님 (그들은 open 유지가 의도된 동작) |
+
+### 사후 ratification 메모
+
+본 핫픽스2 는 이슈 #2 의 Step 11 PENDING 게이트에서 마스터의 `핫픽스, ...` 입력으로 진입. 작업 절차 중 working tree 공유로 인한 cross-session 격리 부재가 노출되어 commit 이 다른 세션 브랜치에 잘못 안착하는 사고 발생. 이는 별도 사이클 (이슈 #4 v001.4.0) 에서 `git worktree` 격리 도입으로 구조적 해결됨 — 본 v001.6.0 의 머지는 그 worktree 격리 도입 후 첫 양측 보존 머지 검증 케이스.
+
+본 핫픽스의 일부였던 메모리 `feedback_no_pre_session_collision_check.md` 는 v001.4.0 시점에 폐기됨 (Q3 retire — worktree 격리로 의미 상실). MEMORY.md 인덱스에서도 이미 제거됨.
+
+### 커밋
+
+- `beab4ad` hotfix(pre-deploy): 이슈 lifecycle close 절차 추가 (cherry-pick 안착, 내용은 main 에 이미 흡수됨)
+- `be1fcf0` hotfix(create-custom-project-skill): lifecycle close 절차 추가
+- `0567743` merge: main 통합 (worktree 격리 도입 v001.4.0 흡수, ort 자동 양측 보존)
+- 본 v001.6.0 entry 작성 commit (`-문서-핫픽스2` WIP)
+
+---
+
 ## v001.5.0
 
 > 통합일: 2026-05-13
