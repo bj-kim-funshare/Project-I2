@@ -2,7 +2,7 @@
 
 Common procedure for skills that dispatch a single read-only sub-agent, then either create a GitHub issue (when blocking findings exist) or report cleanly. Consumed by `dev-inspection`, `dev-security-inspection`, `db-security-inspection` (and any future inspection skill following the same pattern). `pre-deploy` Branch A follows a similar shape but is not yet refactored to reference this file.
 
-**v1 loading**: each consuming skill manually `Read`s this file at entry and follows it. A future hook (per `CLAUDE.md` §D-24) may auto-load it when an inspection-pattern skill is invoked; until that hook exists, the manual Read is the contract.
+**Loading**: each consuming skill manually `Read`s this file at entry and follows it. Manual Read is the contract — there is no auto-load mechanism for `.claude/md/*` (specialized rules are loaded on-demand by referencing skills/agents, per CLAUDE.md §8).
 
 This file is markdown only (no frontmatter). md/ files are referenced by path, not name-matched, so frontmatter is unnecessary.
 
