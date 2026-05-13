@@ -1,5 +1,33 @@
 # 아이OS — Patch Note (001)
 
+## v001.26.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #15 (hotfix 3 — architectural rewrite)
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Hotfix 3 — narrative-as-sections rewrite (H1/H2 table-row 메커니즘 폐기)**: v001.25.0 H2 적용 후 hotfix_complete 보고가 narrow 터미널에서 여전히 stacked 로 렌더된다는 마스터 보고. A/B/C 결정적 테스트로 trigger 재진단:
+  - A (5행 모두 ≤30자 단일 줄, br 없음) → 표 렌더 ✅
+  - B (셀 하나에 br 로 짧은 두 조각) → 표 렌더 ✅
+  - C (셀 하나에 ~200자 단일 줄) → stacked ❌
+
+  결론: `<br>` 자체는 fallback trigger 아님. **셀 내 가장 긴 single-line** 이 결정적 — H1+H2 의 "br 로 narrative 셀 좁힘 → fit" 가정 empirical 무효 (다줄 셀의 longest fragment 가 ~50 Korean 자 = 시각 ~100열 이면 ~110-120 col 터미널 초과 ⇒ fallback). H1+H2 가 도입한 narrative-into-table 메커니즘 자체가 잘못된 가정 기반.
+
+  아키텍처 reversal 적용: narrative 는 표가 아니라 `####` Markdown section + paragraph 로 (CLI 가 일반 텍스트 정상 렌더). 표는 짧은 scalar (메타 한 줄, 짧은 deliverable 파일 행, sub-table) 전용.
+  - `.claude/md/completion-reporter-contract.md` §2 universal template 4 블록 → 5 블록 재작성 (#### narrative sections 신설, 표 ~30 시각 컬럼 이하 short-scalar 전용 명시 + minimal example 갱신).
+  - §6 의 전 스킴 (Tier A 12 + Tier A2 4 + Tier B 10 + Tier C 12 = 38 schema 섹션) "Recommended table columns" → "Narrative sections (emit per payload)" + "Table rows (short-scalar only)" 이중 라인으로 교체.
+  - §6 preamble `<br>` 규칙 → short-scalar-only 규칙 교체.
+  - §4 아이콘 사전에 🎯 📋 🔍 💥 추가 (narrative section heading 용도).
+  - `.claude/agents/completion-reporter.md` Output rules §3 3 블록 → 5 블록 전면 재작성, "Critical: 내러티브 콘텐츠를 표 셀에 절대 넣지 말라" 금지 규칙 명시.
+
+### 영향 파일
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/agents/completion-reporter.md`
+
+### Treadmill Audit
+PASS — Q3 폐기 1건: **H1 (Tier A/A2 narrative-into-table) + H2 (universal narrative-into-table) 의 표-셀 narrative 강제 메커니즘** 전체 retired (가정 empirically 무효 확인 — A/B/C 테스트). 대체: narrative-as-section + short-scalar-only-table architecture. 신규 메커니즘 추가 아니라 **잘못된 가정 기반 메커니즘의 empirical reversal** — 본 단일 hotfix 가 두 hotfix 누적 메커니즘 흡수. advisor 의 "treadmill pattern" 우려는 H1/H2 의 가정이 empirically 무효임이 확인된 후의 reversal 이므로 패턴 미해당 (가설 검증 → 폐기 → 대체 architecture 적용).
+
 ## v001.25.0
 
 > 통합일: 2026-05-13
