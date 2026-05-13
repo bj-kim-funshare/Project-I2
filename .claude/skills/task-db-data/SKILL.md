@@ -74,7 +74,7 @@ Master picked the full-environment scope (2026-05-12) — dev / staging / prod a
 
    - (a) `forward.sql` and `rollback.sql` both wrap statements in `BEGIN; ... COMMIT;` (or carry `-- NON-TRANSACTIONAL:` annotation).
    - (b) Every `WHERE` clause in `forward.sql` matches its corresponding `WHERE` in `capture.sql` exactly (textual equality after whitespace normalization). Divergence here means rollback would touch the wrong rows.
-   - (c) `rollback.sql` references the rollback tables created by `capture.sql` with the supplied `<execution_id>` — name match is exact (backtick 래핑 + `<rollback_suffix>` 사용).
+   - (c) `rollback.sql` references the rollback tables created by `capture.sql` with the supplied `<rollback_suffix>` — name match is exact, backtick 래핑된 식별자 전체가 byte-for-byte 일치.
    - (d) No DDL (`CREATE TABLE` exceptions: only `` CREATE TABLE `_rollback_*_<rollback_suffix>` `` is allowed). Any other DDL → block.
    - (e) For each `UPDATE` and `DELETE`, the `WHERE` clause is not a degenerate "match all" (`WHERE 1=1`, no `WHERE`, etc.) unless the request explicitly states "all rows" with the `DESTRUCTIVE` tag.
    - (f) `risk_tags` includes appropriate warnings for the statement shapes.
