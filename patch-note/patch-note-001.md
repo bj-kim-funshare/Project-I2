@@ -1,5 +1,30 @@
 # 아이OS — Patch Note (001)
 
+## v001.16.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #10
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/md/inspection-procedure.md` Step 6 Branch A 의 호스트 결정을 "first selected target's cwd" → **리더 저장소 (leader repo = `dev.md` targets[] 중 name==<leader> 항목의 cwd)** 로 교체. Step 2 Pre-conditions 표에 리더 저장소 식별 행 추가, Cross-repo coordination 절을 "리더 단일 호스트" 표현으로 갱신. dev-inspection / dev-security-inspection / db-security-inspection / project-verification 4개 스킬이 이 파일을 직접 참조하므로 자동 커버.
+- **Phase 2**: `.claude/skills/plan-enterprise/SKILL.md` 에 leader/work repo 분리를 6개 변경(A~F)으로 반영. Pre-conditions 분리, Step 5 `gh issue create --repo <leader-owner-repo>` + 본문 헤더에 leader/work repo 배너, Step 7d 페이즈 코멘트에 literal `Phase N WIP: {repo}:{branch}` + `gh issue comment --repo <leader-owner-repo>` 명시, Step 9 패치노트 영향 파일 `<repo>:<path>` 형식, Step 12 close `--repo <leader>`, Failure policy 2행.
+- **Phase 3**: `.claude/skills/plan-enterprise-os/SKILL.md` 의 Pre-conditions 와 Step 5 에 "leader repo = work repo = Project-I2 (자기 자신)" 일관성 blockquote 2줄 추가. 단일 저장소라 실효 분기 없으나 다른 6개 스킬과 어휘 동일화로 독자 혼동 제거.
+- **Phase 4**: `.claude/skills/pre-deploy/SKILL.md` 전체에서 `<first-target-cwd>` → `<leader-cwd>` 통일. Pre-conditions 리더 식별 항목 + Context preparation blockquote + Prior-issue lookup·Branch A 생성/append·Branch B close 모두 리더 단일 호스트 기준, WIP rule note·Failure policy (리더 식별 실패 / 원격 없음 fallback 2행)·Scope v1 (리더 저장소 정의) 갱신.
+- **Phase 5**: `.claude/skills/new-project-group/SKILL.md` + `.claude/skills/group-policy/SKILL.md` 에 리더 저장소 컨벤션 LOCK ("`targets[]` 첫 항목 = 리더 저장소, name 이 그룹 식별자와 일치") 명문화. new-project-group: Round 1 dev LOCK blockquote, YAML 첫 항목 LOCK 코멘트, Advisor validation #2 Contract conformance 에 리더 컨벤션 narrowing (트레드밀 Q3 폐기: 기존 schema-only 표현), Failure policy 1행. group-policy: 보존 가드 blockquote + Failure policy 1행.
+- **Phase 6 (Phase 2 보완)**: `plan-enterprise/SKILL.md` L90 "Create the GitHub issue on the work repo" 1줄을 leader repo 표현으로 교체. Phase 2 가 정비한 Pre-conditions·코드블록·템플릿과 Step 5 본문 첫 줄 일관성 회복.
+
+### 영향 파일
+- Project-I2:`.claude/md/inspection-procedure.md`
+- Project-I2:`.claude/skills/plan-enterprise/SKILL.md`
+- Project-I2:`.claude/skills/plan-enterprise-os/SKILL.md`
+- Project-I2:`.claude/skills/pre-deploy/SKILL.md`
+- Project-I2:`.claude/skills/new-project-group/SKILL.md`
+- Project-I2:`.claude/skills/group-policy/SKILL.md`
+
+### Treadmill Audit
+PASS — 기존 "first selected target's cwd" 규칙을 완전히 폐기하고 leader-repo (targets[] 중 name==<leader>) 규칙으로 **대체**. Phase 5 의 advisor validation #2 변경도 새 axis 추가가 아닌 기존 #2 텍스트 narrowing. grep 으로 stale 표현 잔존 0건 확인.
+
 ## v001.15.0
 
 > 통합일: 2026-05-13
