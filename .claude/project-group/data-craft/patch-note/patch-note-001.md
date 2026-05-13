@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.12.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 7, cumulative phase 13)
+
+### Hotfix 결과
+
+마스터 요구 2개:
+1. 파이 위젯 중앙 빈 공간에 열 제목 + 총 수치값 (K/M/B 압축 포맷, 카드 위젯과 동일 방식).
+2. 헤더 top + 좌우 패딩 추가 5px 씩 (현재 5px → 10px). 하단은 유지.
+
+- **Phase 13** (`cc7484b6`):
+  - **A. 파이 중앙 텍스트 (`PieChartWidget.tsx`)** — `formatCompactNumber` import 추가, 도넛 SVG 내 중앙 좌표 (cx=50, cy=50) 에 두 줄 `<text>` 삽입.
+    - 윗줄: `valueColumnField` 가 가리키는 컬럼의 title (fontSize 4.5, textMuted 색). 열 제목이 빈 문자열이면 미렌더 조건부.
+    - 아랫줄: chartData 전체 value 합을 `formatCompactNumber` 압축 포맷 (fontSize 8, bold, textPrimary 색).
+  - **B. 헤더 패딩 (`WidgetContainer.tsx`)** — 헤더 padding 을 `'5px 5px 4px 5px'` → `'10px 10px 4px 10px'` (top + 좌·우 각 5px 추가, 하단 4px 유지).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/PieChartWidget.tsx` (도넛 중앙 텍스트)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx` (헤더 padding 10/10/4/10)
+
+### 검증 결과
+
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 파이 위젯 — 도넛 중앙에 두 줄 표기 (윗줄 작은 폰트 회색 열 제목, 아랫줄 큰 굵은 폰트 총합 K/M/B 포맷) 노출 확인. 열 제목 미설정 시 윗줄 자동 비표시.
+2. 위젯 헤더 — top·좌·우 패딩 10px (5px 추가) 시각 확인.
+
 ## v001.11.0
 
 > 통합일: 2026-05-13
