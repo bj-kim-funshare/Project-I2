@@ -43,13 +43,17 @@ The agent writes three SQL files in the target repo's data-change directory (def
 
 All three are wrapped in `BEGIN; ... COMMIT;` unless the engine forbids transactions for a specific statement (rare for DML — flag at top with `-- NON-TRANSACTIONAL: <reason>` if needed).
 
+## Placeholder convention
+
+All SQL templates emit the literal token `__ENV_OR_LABEL__` (double-underscore both sides) wherever the environment or label name appears in rollback table names (e.g., `_rollback_<table>___ENV_OR_LABEL___<execution_id>`). The dispatcher substitutes this token via `sed` immediately before each per-env CLI execution in Phase 4 — the agent never substitutes it. Token format rationale: `${...}` collides with postgres dollar-quoting and mysql user-defined variables; `__ENV_OR_LABEL__` is a normal SQL identifier segment, syntactically safe even before substitution.
+
 ## Capture / forward / rollback templates per statement type
 
 ### UPDATE
 
 `capture.sql`:
 ```sql
-CREATE TABLE _rollback_<table>_<execution_id> AS
+CREATE TABLE _rollback_<table>___ENV_OR_LABEL___<execution_id> AS
 SELECT * FROM <table> WHERE <forward WHERE clause>;
 ```
 
@@ -63,7 +67,7 @@ WHERE <forward WHERE clause>;
 `rollback.sql` (mysql):
 ```sql
 UPDATE <table> t
-JOIN _rollback_<table>_<execution_id> r ON t.<pk> = r.<pk>
+JOIN _rollback_<table>___ENV_OR_LABEL___<execution_id> r ON t.<pk> = r.<pk>
 SET t.<col1> = r.<col1>, t.<col2> = r.<col2>, ...;  -- all columns the forward touched
 ```
 
@@ -71,7 +75,7 @@ SET t.<col1> = r.<col1>, t.<col2> = r.<col2>, ...;  -- all columns the forward t
 ```sql
 UPDATE <table> t
 SET <col1> = r.<col1>, <col2> = r.<col2>, ...
-FROM _rollback_<table>_<execution_id> r
+FROM _rollback_<table>___ENV_OR_LABEL___<execution_id> r
 WHERE t.<pk> = r.<pk>;
 ```
 
@@ -79,7 +83,7 @@ WHERE t.<pk> = r.<pk>;
 
 `capture.sql`:
 ```sql
-CREATE TABLE _rollback_<table>_<execution_id> AS
+CREATE TABLE _rollback_<table>___ENV_OR_LABEL___<execution_id> AS
 SELECT * FROM <table> WHERE <forward WHERE clause>;
 ```
 
@@ -90,7 +94,7 @@ DELETE FROM <table> WHERE <forward WHERE clause>;
 
 `rollback.sql`:
 ```sql
-INSERT INTO <table> SELECT * FROM _rollback_<table>_<execution_id>;
+INSERT INTO <table> SELECT * FROM _rollback_<table>___ENV_OR_LABEL___<execution_id>;
 ```
 
 Note: if the table has auto-increment PK and the insert tries to reuse the captured PKs, the engine must allow PK reinsertion. Both mysql and postgres do, but constraints (e.g., FK targets that were deleted in cascade) may fail. The agent flags this in the plan summary.
@@ -99,7 +103,7 @@ Note: if the table has auto-increment PK and the insert tries to reuse the captu
 
 `capture.sql`:
 ```sql
-CREATE TABLE _rollback_<table>_<execution_id> (
+CREATE TABLE _rollback_<table>___ENV_OR_LABEL___<execution_id> (
   pk_value <pk_type>  -- column type of the table's PK
 );
 ```
@@ -107,7 +111,7 @@ CREATE TABLE _rollback_<table>_<execution_id> (
 `forward.sql` (mysql — multi-row INSERT capture via LAST_INSERT_ID range, requires no concurrent inserters):
 ```sql
 INSERT INTO <table> (...) VALUES (...);
-INSERT INTO _rollback_<table>_<execution_id> (pk_value)
+INSERT INTO _rollback_<table>___ENV_OR_LABEL___<execution_id> (pk_value)
   SELECT <pk>
   FROM <table>
   WHERE <pk> BETWEEN LAST_INSERT_ID() AND LAST_INSERT_ID() + ROW_COUNT() - 1;
@@ -118,14 +122,14 @@ INSERT INTO _rollback_<table>_<execution_id> (pk_value)
 WITH inserted AS (
   INSERT INTO <table> (...) VALUES (...) RETURNING <pk>
 )
-INSERT INTO _rollback_<table>_<execution_id> (pk_value)
+INSERT INTO _rollback_<table>___ENV_OR_LABEL___<execution_id> (pk_value)
   SELECT <pk> FROM inserted;
 ```
 
 `rollback.sql`:
 ```sql
 DELETE FROM <table>
-WHERE <pk> IN (SELECT pk_value FROM _rollback_<table>_<execution_id>);
+WHERE <pk> IN (SELECT pk_value FROM _rollback_<table>___ENV_OR_LABEL___<execution_id>);
 ```
 
 ### Multi-statement change set
@@ -163,7 +167,8 @@ If the request requires multiple DML statements (e.g., DELETE + INSERT to replac
      않는다는 전제로 동작. 장기 실행 트래픽 환경이면 freeze/downtime/lock 사전 조율 필요.
 
    ## 롤백 전략
-   - capture 테이블: `_rollback_<table>_<execution_id>` 형식, regular tables (TEMP X — CLI session 종료 시 사라짐)
+   - capture 테이블: `_rollback_<table>_<env_or_label>_<execution_id>` 형식, regular tables (TEMP X — CLI session 종료 시 사라짐)
+   - SQL 파일 내 `__ENV_OR_LABEL__` 토큰은 dispatcher 가 Phase 4 의 각 env iteration 직전 치환
    - forward 파일: {forward path}
    - rollback 파일: {rollback path}
    - 성공 시 cleanup: capture 테이블 DROP
@@ -200,7 +205,7 @@ If the request requires multiple DML statements (e.g., DELETE + INSERT to replac
 - Korean in plan summary and SQL comments. SQL keywords, identifiers verbatim.
 - No execution. The dispatcher runs the SQL.
 - Match `WHERE` clauses **exactly** between capture and forward — any divergence is a correctness bug.
-- Use the `<execution_id>` provided by the dispatcher in every rollback table name. Do not generate your own.
+- Use the `<execution_id>` provided by the dispatcher in every rollback table name. Do not generate your own. Emit the literal token `__ENV_OR_LABEL__` in every rollback table name — do not substitute it; the dispatcher substitutes it per-env in Phase 4.
 - All three files wrapped in `BEGIN; ... COMMIT;` per engine.
 - Do not emit TRUNCATE (out of scope) or any DDL.
 - Return only the JSON summary as final agent output. The three files are written via Write tool; their content is not duplicated in the summary.
