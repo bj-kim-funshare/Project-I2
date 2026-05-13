@@ -78,6 +78,8 @@ Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`, `type`, `role`,
 - `role`: `"FE"` or `"BE"` (closed choice). Master picks per target. dev-start 가 FE 타겟만 기동 대상으로 삼는다. BE 도 매니페스트에는 포함되어 dev-build 등 다른 스킬이 사용한다. deploy.md 의 role 과 동일 값이어야 한다 (수동 일치 — v1 검증 없음).
 - `lint_command`: optional. Shell command for lint gate (used by `dev-merge` and `plan-enterprise` per-phase lint gate). Examples: `pnpm typecheck`, `pnpm lint`, `npx tsc --noEmit`, `cargo check`. Empty/omitted = lint gate skipped for that target (master signals no lint check desired).
 
+> **리더 저장소 컨벤션 (LOCK)**: `targets[]` 의 **첫 항목은 리더 저장소** 이며 그 `name` 은 그룹 식별자 (`<leader-name>`) 와 정확히 일치해야 한다. 모든 GitHub 이슈 작업(plan-enterprise / inspection 스킬 / pre-deploy)이 이 항목의 cwd → GitHub 원격을 단일 호스트로 사용한다. 마스터가 첫 항목 name 을 leader 와 다르게 입력하면 advisor 검증에서 차단된다.
+
 ### Round 2 — deploy
 
 Fields per project:
@@ -109,7 +111,7 @@ Single free-text section. Anything not captured by dev/deploy/db: commit convent
 After all four rounds, before any file write, call `advisor()` once. The call's purpose is sharp:
 
 1. **Coverage** — every repository path supplied at invocation has a dev-section entry. No project silently dropped.
-2. **Contract conformance** — every dev field type matches the `dev-start` YAML schema (`port` is int, `cache_paths` is list, `dev_command` is shell string, `cwd` is absolute path).
+2. **Contract conformance** — every dev field type matches the `dev-start` YAML schema (`port` is int, `cache_paths` is list, `dev_command` is shell string, `cwd` is absolute path) **AND** the leader-repo convention (LOCK) holds: `targets[]` 의 첫 항목이 존재하고 그 `name == <leader-name>`. 일치하지 않으면 blocker-level concern 으로 차단.
 3. **Internal consistency** — deploy answers don't contradict themselves (e.g., tool says `docker` but `build_command` is `pnpm run deploy:gh-pages`).
 4. **Language adherence** — free-text content is Korean per the `.claude/project-group/` content language lock (release/operational artifact). YAML keys and closed-choice values stay Latin.
 
@@ -157,7 +159,7 @@ YAML frontmatter conforming to `dev-start` contract, free-text body below:
 ```markdown
 ---
 targets:
-  - name: {name1}
+  - name: {name1}          # <-- LOCK: 첫 항목 = 리더 저장소; name == <leader-name>
     cwd: {abs-path}
     type: project          # "project" or "monorepo"
     role: FE               # "FE" or "BE" — dev-start 가 FE 만 기동
@@ -287,6 +289,7 @@ Immediate Korean report + halt. No retry.
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
+| `targets[]` 첫 항목 name 이 leader 와 불일치 (리더 저장소 식별 불가) | `"리더 저장소 컨벤션 위반 — targets[] 첫 항목의 name 은 leader (<leader-name>) 와 일치해야 함. 현재: <first-target-name>. 입력 재확인 필요."` |
 
 ## Scope (v1)
 
