@@ -2,6 +2,7 @@
 targets:
   - name: data-craft
     cwd: /Users/starbox/Documents/GitHub/data-craft
+    role: FE
     type: monorepo
     dev_command: pnpm dev
     port: 5173
@@ -9,6 +10,7 @@ targets:
     lint_command: pnpm typecheck:all && pnpm lint
   - name: data-craft-mobile
     cwd: /Users/starbox/Documents/GitHub/data-craft-mobile
+    role: FE
     type: monorepo
     dev_command: pnpm dev
     port: 5174
@@ -16,6 +18,7 @@ targets:
     lint_command: pnpm typecheck
   - name: data-craft-ai-preview
     cwd: /Users/starbox/Documents/GitHub/data-craft-ai-preview
+    role: FE
     type: project
     dev_command: npm run dev
     port: 3000
@@ -23,6 +26,7 @@ targets:
     lint_command: npm run lint
   - name: data-craft-server
     cwd: /Users/starbox/Documents/GitHub/data-craft-server
+    role: BE
     type: project
     dev_command: pnpm dev
     port: 8000
