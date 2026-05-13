@@ -114,6 +114,16 @@ function renderKpi(data) {
     gaugeFg.style.strokeDashoffset = `${100 - cacheRatio * 100}`;
   }
 
+  const bd = (t.cost_breakdown) || {};
+  const hypothetical = bd.hypothetical_no_cache || 0;
+  const cacheSaved = Math.max(0, hypothetical - (t.cost_usd || 0));
+  const cacheHitRatio = (cwrite + cread) > 0 ? cread / (cwrite + cread) : 0;
+
+  $('#kpi-cache-read-abs').textContent = fmtKMB(cread);
+  $('#kpi-cache-hit-ratio').textContent = `${(cacheHitRatio * 100).toFixed(1)}%`;
+  $('#kpi-cache-saved-usd').textContent = USD(cacheSaved);
+  $('#kpi-cache-no-cache-cost').textContent = USD(hypothetical);
+
   $('#kpi-cost-val').textContent = USD(t.cost_usd);
 }
 

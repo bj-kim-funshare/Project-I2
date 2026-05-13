@@ -65,6 +65,40 @@ def cost_of(model: str, record: dict[str, int]) -> float:
     ) / 1_000_000
 
 
+def cost_breakdown_of(model: str, record: dict[str, int]) -> dict[str, float]:
+    """Return per-component cost breakdown in USD.
+
+    cache_write collapses 5m and 1h at their actual prices (not a simplified 1.25x).
+    All five fields sum to the same value as cost_of(model, record).
+    """
+    p = PRICING.get(model)
+    if not p:
+        return {
+            "input": 0.0,
+            "output": 0.0,
+            "cache_write": 0.0,
+            "cache_read": 0.0,
+            "hypothetical_no_cache": 0.0,
+        }
+    input_cost = record["input"] * p["input"] / 1_000_000
+    output_cost = record["output"] * p["output"] / 1_000_000
+    cwrite_cost = (
+        record["cache_creation_5m"] * p["cache_write_5m"]
+        + record["cache_creation_1h"] * p["cache_write_1h"]
+    ) / 1_000_000
+    cread_cost = record["cache_read"] * p["cache_read"] / 1_000_000
+    all_as_input = (
+        record["input"] + record["cache_creation_5m"] + record["cache_creation_1h"] + record["cache_read"]
+    ) * p["input"] / 1_000_000 + output_cost
+    return {
+        "input": round(input_cost, 6),
+        "output": round(output_cost, 6),
+        "cache_write": round(cwrite_cost, 6),
+        "cache_read": round(cread_cost, 6),
+        "hypothetical_no_cache": round(all_as_input, 6),
+    }
+
+
 def parse_jsonl(path: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     try:
@@ -91,6 +125,9 @@ def collect() -> dict[str, Any]:
     by_session: dict[str, dict[str, Any]] = {}
     by_day: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_day_cost: dict[str, float] = defaultdict(float)
+    by_day_breakdown: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"input": 0.0, "output": 0.0, "cache_write": 0.0, "cache_read": 0.0, "hypothetical_no_cache": 0.0}
+    )
     total: dict[str, int] = empty_token_record()
 
     files_processed = 0
@@ -145,6 +182,10 @@ def collect() -> dict[str, Any]:
             msg_record = empty_token_record()
             add_usage(msg_record, usage)
             by_day_cost[day_key] += cost_of(model, msg_record)
+            msg_bd = cost_breakdown_of(model, msg_record)
+            day_bd = by_day_breakdown[day_key]
+            for k in day_bd:
+                day_bd[k] += msg_bd[k]
 
             model_counts[model] += 1
             session_record["skills"].add(skill)
@@ -169,6 +210,7 @@ def collect() -> dict[str, Any]:
             "model": m,
             **r,
             "cost_usd": round(cost_of(m, r), 4),
+            "cost_breakdown": cost_breakdown_of(m, r),
         }
         for m, r in sorted(by_model.items(), key=lambda kv: -sum([kv[1]["input"], kv[1]["output"], kv[1]["cache_creation_5m"], kv[1]["cache_creation_1h"], kv[1]["cache_read"]]))
     ]
@@ -184,18 +226,31 @@ def collect() -> dict[str, Any]:
     ]
 
     by_day_out = [
-        {"day": d, **r, "cost_usd": round(by_day_cost.get(d, 0.0), 4)}
+        {
+            "day": d,
+            **r,
+            "cost_usd": round(by_day_cost.get(d, 0.0), 4),
+            "cost_breakdown": {k: round(v, 6) for k, v in by_day_breakdown.get(d, {"input": 0.0, "output": 0.0, "cache_write": 0.0, "cache_read": 0.0, "hypothetical_no_cache": 0.0}).items()},
+        }
         for d, r in sorted(by_day.items())
     ]
 
     total_cost = sum(cost_of(m, r) for m, r in by_model.items())
+
+    # Build total cost_breakdown by summing across models.
+    total_breakdown: dict[str, float] = {"input": 0.0, "output": 0.0, "cache_write": 0.0, "cache_read": 0.0, "hypothetical_no_cache": 0.0}
+    for m, r in by_model.items():
+        bd = cost_breakdown_of(m, r)
+        for k in total_breakdown:
+            total_breakdown[k] += bd[k]
+    total_breakdown = {k: round(v, 6) for k, v in total_breakdown.items()}
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "session_dir": str(SESSION_DIR),
         "files_processed": files_processed,
         "files_skipped": files_skipped,
-        "total": {**total, "cost_usd": round(total_cost, 4)},
+        "total": {**total, "cost_usd": round(total_cost, 4), "cost_breakdown": total_breakdown},
         "by_model": by_model_out,
         "by_skill": by_skill_out,
         "by_session": by_session_out,
