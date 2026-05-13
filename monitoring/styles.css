@@ -1,4 +1,4 @@
-/* I2 monitoring — minimal v1 styles. */
+/* I2 monitoring — v2 시각화 대시보드. */
 
 * { box-sizing: border-box; }
 
@@ -8,21 +8,24 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 14px;
   color: #222;
-  background: #fafafa;
+  background: #f5f6f8;
 }
 
-header {
-  padding: 16px 24px;
+.topbar {
+  padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
   gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-header h1 {
+.topbar h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -44,20 +47,6 @@ button {
 button:hover { background: #1d5ad6; }
 button:disabled { background: #aaa; cursor: not-allowed; }
 
-section {
-  padding: 16px 24px;
-  margin: 0;
-}
-
-section h2 {
-  margin: 16px 0 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #555;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .error {
   background: #fff5f5;
   color: #b00020;
@@ -68,38 +57,213 @@ section h2 {
   white-space: pre-wrap;
 }
 
-.totals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
+.layout {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.card {
+/* ---------- KPI ---------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.kpi-card {
   background: #fff;
   border: 1px solid #e5e5e5;
-  border-radius: 6px;
-  padding: 12px 16px;
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 130px;
 }
 
-.card-label {
+.kpi-card h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.big-number {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #222;
+}
+
+.big-split {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.big-number-half {
+  font-size: 18px;
+  font-weight: 700;
+}
+.big-divider {
+  font-size: 18px;
+  color: #aaa;
+}
+.kpi-noncache { color: #2a6df4; }
+.kpi-cachepart { color: #d6851d; }
+
+.kpi-unit {
   font-size: 11px;
   color: #888;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.card-val {
-  font-size: 18px;
-  font-weight: 600;
-  margin-top: 4px;
+.kpi-meta {
+  font-size: 11px;
+  color: #888;
+  margin-top: auto;
+}
+
+.kpi-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 11px;
+  color: #666;
+}
+.kpi-row {
+  display: flex;
+  justify-content: space-between;
+  border-left: 2px solid transparent;
+  padding-left: 6px;
+}
+.kpi-row dt { margin: 0; }
+.kpi-row dd { margin: 0; font-variant-numeric: tabular-nums; }
+.kpi-row-noncache { border-left-color: #2a6df4; }
+.kpi-row-cache { border-left-color: #d6851d; }
+
+.kpi-hint {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* gauge */
+.gauge-wrap {
+  position: relative;
+  width: 140px;
+  height: 80px;
+}
+.gauge {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.gauge-bg {
+  fill: none;
+  stroke: #eee;
+  stroke-width: 10;
+}
+.gauge-fg {
+  fill: none;
+  stroke: #2ea44f;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  transition: stroke-dashoffset 0.5s ease;
+}
+.gauge-value {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Charts ---------- */
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-card.wide {
+  grid-column: 1 / -1;
+}
+
+.chart-card h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.chart-body {
+  position: relative;
+  height: 260px;
+}
+.chart-body-tall {
+  height: 380px;
+}
+
+/* ---------- Tables ---------- */
+
+.tables-section h2 {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table-block {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.table-block summary {
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fafafa;
+  list-style: none;
+  user-select: none;
+}
+.table-block summary::-webkit-details-marker { display: none; }
+.table-block summary::before {
+  content: '▸ ';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 0.15s ease;
+}
+.table-block[open] summary::before {
+  transform: rotate(90deg);
 }
 
 .table-wrap {
   overflow-x: auto;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 6px;
 }
 
 table {
@@ -115,8 +279,7 @@ thead th {
   padding: 8px 12px;
   font-weight: 600;
   border-bottom: 1px solid #e5e5e5;
-  position: sticky;
-  top: 0;
+  border-top: 1px solid #e5e5e5;
 }
 
 tbody td {
@@ -127,14 +290,17 @@ tbody td {
 tbody td:nth-child(n+2) {
   text-align: right;
 }
+/* 첫 컬럼이 식별자(모델/스킬/일자/session/skills 등)인 표 — 두 번째 컬럼이 시각 텍스트인 세션 표는 별도 좌측정렬 보정이 필요하면 추가. */
 
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #f9fafe; }
 
-footer {
+.footer {
   padding: 16px 24px;
   color: #888;
   font-size: 12px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
 }
 
 code {
