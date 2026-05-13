@@ -6,7 +6,7 @@ targets:
     dev_command: pnpm dev
     port: 5173
     cache_paths: []
-    lint_command: pnpm typecheck:all
+    lint_command: pnpm typecheck:all && pnpm lint
   - name: data-craft-mobile
     cwd: /Users/starbox/Documents/GitHub/data-craft-mobile
     type: monorepo
@@ -44,9 +44,11 @@ targets:
 - `data-craft-mobile` = 5174 (리더와 충돌 회피, 마스터 명시 지정).
 - `data-craft-ai-preview` = 3000 / `data-craft-server` = 8000.
 
-## lint 미확정 항목
+## lint 정책 (확정)
 
-- `data-craft` 의 `lint_command` 는 `pnpm typecheck:all` (turbo 기반 전 패키지 타입체크) 채택. `pnpm lint` (eslint) 도 패키지에 존재하므로 추후 어느 쪽을 lint gate 로 쓸지 마스터 확정 시 변경.
+- `data-craft` lint gate = `pnpm typecheck:all && pnpm lint` (직렬 — 타입체크 + eslint 둘 다, 마스터 명시).
+- 타입체크 실패 시 eslint 미실행 (직렬 `&&` 단락 평가).
+- 나머지 3개 프로젝트 lint 는 기존 유지.
 
 ## 기타
 
