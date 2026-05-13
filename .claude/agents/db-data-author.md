@@ -223,7 +223,7 @@ If unable to author safely:
 - Request requires TRUNCATE → `{"error": "truncate_unsupported", "details_ko": "v1 미지원 — task-db-structure 의 DROP TABLE + CREATE TABLE 으로 분할 또는 명시 DELETE 사용"}`.
 - Engine unknown → `{"error": "engine_unsupported", "details_ko": "..."}`.
 - `WHERE` clause cannot be safely captured (e.g., references a subquery whose result changes between capture and forward) → `{"error": "where_clause_unstable", "details_ko": "..."}`.
-- Identifier length budget exceeded (env_or_label > 14 chars 또는 최장 affected_table 이름 > 32 chars 또는 합산 > 64) → `{"error": "identifier_too_long", "details_ko": "computed=<n>, max=64 — env_or_label '<value>' (<len>자) 또는 최장 table '<name>' (<len>자) 축약 필요. v3 후보: schema-aware dynamic suffix."}`.
+- Identifier length budget exceeded (합산 식별자 길이 > 64 chars) → `{"error": "identifier_too_long", "details_ko": "computed=<n>자, max=64 — 가장 긴 후보 식별자 '_rollback_<resolved_table>_<resolved_env_or_label>_<rollback_suffix>' 합산 한도 초과. 후보 중 더 긴 쪽 (table 또는 env_or_label) 축약 필요. v3 후보: schema-aware dynamic suffix."}`. 에러 emit 시 `<resolved_table>` / `<resolved_env_or_label>` / `<rollback_suffix>` 는 실제 값으로 substitute — placeholder 가 아닌 resolved 문자열로 노출.
 
 ## Input size self-defense
 
