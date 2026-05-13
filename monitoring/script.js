@@ -98,8 +98,6 @@ function renderChartDayTokens(data) {
       datasets: [
         { label: 'input', data: days.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '66', stack: 's', fill: 'origin' },
         { label: 'output', data: days.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '66', stack: 's', fill: '-1' },
-        { label: 'cache write', data: days.map(d => (d.cache_creation_5m || 0) + (d.cache_creation_1h || 0)), borderColor: COLORS.cacheWrite, backgroundColor: COLORS.cacheWrite + '66', stack: 's', fill: '-1' },
-        { label: 'cache read', data: days.map(d => d.cache_read || 0), borderColor: COLORS.cacheRead, backgroundColor: COLORS.cacheRead + '66', stack: 's', fill: '-1' },
       ],
     },
     options: {
