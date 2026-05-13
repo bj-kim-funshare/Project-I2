@@ -38,6 +38,7 @@ When master prompts the main session **without** invoking a skill: main session 
 | 7 read-only reviewers (planning agents) | `claude-opus-4-7` (200k, not 1M) | Agent frontmatter `model:` field |
 | 4 write-capable executors (work agents) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
 | 1 gate-runner (mechanical executor) | `claude-haiku-4-5` | Agent frontmatter `model:` field |
+| 1 completion-reporter (read-only, sonnet) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
 
 **Planning agents** (`bug-detector`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`): receive complex code/diff/scope inputs, produce reasoning-heavy findings. Opus 4.7 for quality of judgment.
 
@@ -45,9 +46,11 @@ When master prompts the main session **without** invoking a skill: main session 
 
 **Gate-runner** (`gate-runner`): purely mechanical — runs a shell command, captures output, returns JSON. No reasoning. Haiku 4.5 for speed/cost on high-frequency lint/build invocations. Used by `dev-merge` (lint gate), `plan-enterprise` (per-phase lint gate), and `dev-build` (build utility).
 
+**Completion reporter** (`completion-reporter`): read-only + Sonnet because report-text formatting is a low-reasoning-burden task where consistency of output template matters more than judgment depth. Formats standardized Korean completion reports for skills based on a structured payload and the contract doc `.claude/md/completion-reporter-contract.md`.
+
 **Advisor model = main-or-stronger (API 가드, 2026-05-13)**: Anthropic API enforces that the advisor model cannot be weaker than the main session model — Sonnet advisor + Opus main returns `400 ... 'cannot be used as an advisor when the request model is ...'`. The 2026-05-13 attempt at a Sonnet-advisor cost-saving inversion was reverted the same day after the guard was hit at runtime. Operational rule: advisor mirrors the main session's tier from above. If master drops main to Sonnet, advisor may drop to Sonnet in tandem.
 
-**Effort = medium (master 2026-05-13 lock)**: all 12 sub-agents run at `effort: medium`, declared per-agent in `.claude/agents/<name>.md` frontmatter `effort:` field (Claude Code official supported field, values `low`/`medium`/`high`/`xhigh`/`max`). Uniform policy — when adding a new sub-agent, set `effort: medium` unless a deliberate exception is locked.
+**Effort = medium (master 2026-05-13 lock)**: all 13 sub-agents run at `effort: medium`, declared per-agent in `.claude/agents/<name>.md` frontmatter `effort:` field (Claude Code official supported field, values `low`/`medium`/`high`/`xhigh`/`max`). Uniform policy — when adding a new sub-agent, set `effort: medium` unless a deliberate exception is locked.
 
 ### 5. WIP & merge protocol (§G)
 
