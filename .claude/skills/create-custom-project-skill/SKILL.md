@@ -187,22 +187,12 @@ On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
 ## Step 9 — Completion report (mechanical creation summary)
 
-Korean output to master:
+Dispatch `completion-reporter` with:
+- `skill_type: "create-custom-project-skill"`
+- `moment: "work_complete"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `create-custom-project-skill` `work_complete` schema. Required: `leader`, `skill_name` (full prefixed name, e.g., `"data-craft-deploy-check"`), `issue_number`, `issue_url`, `result_summary`, `wip_branch`; optional: `referenced_subagents[]`, `advisor_result`.
 
-```
-### /create-custom-project-skill 작업 완료 — <leader>-<slug>
-
-| 항목 | 값 |
-|------|-----|
-| 신규 스킬 | <leader>-<slug> |
-| 파일 | .claude/skills/<leader>-<slug>/SKILL.md |
-| 플랜 이슈 | #<N> OPEN (<URL>) |
-| WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
-| advisor 검증 | PASS |
-| 참조 sub-agent | <list or "없음"> |
-```
-
-The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session). Proceed to Step 10.
+Relay the agent's response verbatim to master, then proceed to Step 10.
 
 ## Step 10 — PENDING gate
 
@@ -227,19 +217,12 @@ Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master fin
    gh issue close <N> --comment "/create-custom-project-skill: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
    ```
 
-2. Korean final report:
+2. Dispatch `completion-reporter` with:
+   - `skill_type: "create-custom-project-skill"`
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `create-custom-project-skill` `skill_finalize` schema. Required: `leader`, `skill_name`, `issue_number`, `issue_url`, `result_summary`, `issue_close_status`, `wip_branch`; optional: `referenced_subagents[]`.
 
-   ```
-   ### /create-custom-project-skill 완료 — <leader>-<slug>
-
-   | 항목 | 값 |
-   |------|-----|
-   | 신규 스킬 | <leader>-<slug> |
-   | 플랜 이슈 | #<N> closed ✅ |
-   | WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
-   | advisor 검증 | PASS |
-   | 참조 sub-agent | <list or "없음"> |
-   ```
+   Relay the agent's response verbatim to master.
 
 End of skill invocation.
 

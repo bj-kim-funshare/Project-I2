@@ -116,29 +116,21 @@ done
 
 ## Reporting
 
-After every target succeeds, output a single table to the user (Korean, per language separation rule):
+After every target succeeds, dispatch `completion-reporter` with:
+- `skill_type: "dev-start"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-start` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, port, pid, cache_paths_cleared[]}`).
 
-```
-### /dev-start 완료 — <leader>
-
-| 멤버 | 포트 | 상태 | PID | 캐시 정리 |
-|------|------|------|-----|-----------|
-| <name> | <port> | ✅ http://localhost:<port> | <pid> | <paths> |
-```
-
-선택된 타겟만 표기 — 비선택 멤버는 누락.
-
-Then halt. No "next skill" suggestion, no follow-up prompt.
+Relay the agent's response verbatim to master. Then halt. No "next skill" suggestion, no follow-up prompt.
 
 ## Failure policy
 
-Any failure — manifest missing, malformed YAML, target not found, kill error, cache rm error, dev command not found, port timeout — produces an immediate Korean report to the user with:
+Any failure — manifest missing, malformed YAML, target not found, kill error, cache rm error, dev command not found, port timeout — dispatches `completion-reporter` with:
+- `skill_type: "dev-start"`
+- `moment: "skill_finalize.blocked"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-start` `skill_finalize.blocked` schema. Required: `leader`, `block_reason`, `failed_target`, `failed_step`; optional: `error_detail` (verbatim error text).
 
-1. Which target failed.
-2. Which step failed.
-3. The exact error text (verbatim, not paraphrased).
-
-Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. Do not suggest fixes beyond the literal failure. The user re-invokes `/dev-start` after addressing the cause.
+Relay the agent's response verbatim to master. Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. Do not suggest fixes beyond the literal failure. The user re-invokes `/dev-start` after addressing the cause.
 
 ### Specific failure messages
 

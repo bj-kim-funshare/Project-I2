@@ -186,20 +186,12 @@ On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
 ### Step 9 — Completion report
 
-Korean output to master:
+Dispatch `completion-reporter` with:
+- `skill_type: "plan-roadmap"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `plan-roadmap` `skill_finalize` schema. Required: `result_summary`, `mode` (`"create"` or `"edit"`), `roadmap_file`, `prompt_count`, `parallel_group_count`, `wip_branch`; optional: `status_breakdown` (`{waiting, in_progress, done}`).
 
-```
-### /plan-roadmap 완료 — Roadmap-{N}-{title} ({create|update})
-
-| 항목 | 값 |
-|------|-----|
-| 모드 | 신규 / 편집 |
-| 파일 | .claude/plan-roadmap/Roadmap-{N}-{slug}.md |
-| 프롬프트 수 | <count> (🔴 <n> / 🟡 <n> / 🟢 <n>) |
-| 병렬 그룹 | <list of group numbers and their member counts> |
-| WIP | plan-roadmap-{N}-{slug}-문서 (main 머지 ✅) |
-| advisor 검증 | PASS |
-```
+Relay the agent's response verbatim to master.
 
 The roadmap is now ready for master to consult. Status updates on individual prompts happen via subsequent `plan-roadmap` edit-mode invocations or via direct master edit of the file (no auto-update on prompt execution in v1).
 

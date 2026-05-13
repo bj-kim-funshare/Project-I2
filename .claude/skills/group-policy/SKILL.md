@@ -121,21 +121,14 @@ git worktree add -b "${wip}" "${wt}" main
 
 ## Reporting
 
-Korean output after merge:
+If no-op short-circuit fired, output the short message `"변경사항 없음 — 작업 진행 안 함"` and nothing else.
 
-```
-### /group-policy 완료 — {leader}
+Otherwise, after merge, dispatch `completion-reporter` with:
+- `skill_type: "group-policy"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `group-policy` `skill_finalize` schema. Required: `leader`, `result_summary`, `modified_areas[]`, `wip_branch`; optional: `advisor_concerns_count`, `changed_files[]`.
 
-| 항목 | 값 |
-|------|-----|
-| 수정된 영역 | {comma-separated changed areas, e.g. "dev, deploy"} |
-| 변경 파일 | {file list} |
-| WIP 브랜치 | group-policy-{leader}-문서 |
-| main 머지 | ✅ |
-| advisor 검증 | ✅ (concerns: {count} non-blocker) |
-```
-
-If no-op short-circuit fired, the report is the short message `"변경사항 없음 — 작업 진행 안 함"` and nothing else.
+Relay the agent's response verbatim to master.
 
 ## Failure policy
 

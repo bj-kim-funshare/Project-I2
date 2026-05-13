@@ -255,24 +255,12 @@ git worktree add -b "${wip}" "${wt}" main
 
 ## Reporting
 
-Korean output after merge:
+After merge, dispatch `completion-reporter` with:
+- `skill_type: "new-project-group"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `new-project-group` `skill_finalize` schema. Required: `leader`, `result_summary`, `member_count`, `policy_files_created[]`, `wip_branch`; optional: `advisor_concerns_count`.
 
-```
-### /new-project-group 완료 — {leader}
-
-| 항목 | 값 |
-|------|-----|
-| 리더 | {leader} |
-| 멤버 수 | {count} |
-| 폴더 | .claude/project-group/{leader}/ |
-| 정책 파일 | dev.md / deploy.md / db.md / group.md |
-| 초기 패치노트 | patch-note/patch-note-001.md |
-| WIP 브랜치 | new-project-group-{leader}-문서 |
-| main 머지 | ✅ |
-| advisor 검증 | ✅ (concerns: {count} non-blocker) |
-```
-
-Then halt.
+Relay the agent's response verbatim to master. Then halt.
 
 ## Failure policy
 

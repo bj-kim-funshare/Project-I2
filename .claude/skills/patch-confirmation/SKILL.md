@@ -131,28 +131,12 @@ Pushes the two merge commits to origin in a single push. Push failure is alarm-v
 
 ## Reporting
 
-Korean output after both merges succeed:
+After both merges (and push attempt) complete, dispatch `completion-reporter` with:
+- `skill_type: "patch-confirmation"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `patch-confirmation` `skill_finalize` schema. Required: `target`, `result_summary`, `patch_note_version`, `patch_note_file`, `analyzed_file_count`, `wip_branches_merged[]`, `push_status` (`"success"` or `"failed"`); optional: `file_breakdown` (`{added, modified, deleted}`).
 
-```
-### /patch-confirmation 완료 — {target}
-
-| 항목 | 값 |
-|------|-----|
-| origin/main push | ✅ |
-| 분석된 변경 파일 | {count} (추가 X / 수정 Y / 삭제 Z) |
-| 신규 패치노트 버전 | v{N}.{K+1}.0 |
-| 패치노트 파일 | patch-note-{N}.md |
-| 작업 WIP | patch-confirmation-{N}.{K+1}-작업 (main 머지 ✅) |
-| 문서 WIP | patch-confirmation-{N}.{K+1}-문서 (main 머지 ✅) |
-```
-
-On push failure, replace the `origin/main push` row with:
-
-```
-| 🚨 origin/main push 실패 | <reason> — 마스터 수동 push 필요 |
-```
-
-Then halt. No "다음 스킬" suggestion.
+Relay the agent's response verbatim to master. Then halt. No "다음 스킬" suggestion.
 
 ## Failure policy
 
