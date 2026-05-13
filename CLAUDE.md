@@ -86,7 +86,7 @@ Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + 
 | Path | Role |
 |---|---|
 | `.claude/md/` | Specialized rules. Loaded on-demand by skills and agents that reference them. |
-| `.claude/skills/` | The 17 skills. See `README.md` §G for inventory. |
+| `.claude/skills/` | The 18 skills. See `README.md` §G for inventory. |
 | `.claude/agents/` | Sub-agent definitions. Added when a skill first needs one (§D-27: only what the agent must always know goes inline; the rest goes in `md/` referenced from the agent). |
 | `.claude/scripts/` | All `.sh` scripts (§D-9). |
 | `.claude/project-group/{leader}/` | Project-group manifests. Lazy-created by `new-project-group`. |
