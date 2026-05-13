@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.17.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 11, cumulative phase 17)
+
+### Hotfix 결과 (Hotfix 10 결함 정정)
+
+마스터 진단: Hotfix 10 적용 후에도 파이 범례 stacked 전환이 실제로 일어나지 않음 — 라벨은 시각상 truncate 되지만 stacked layout 으로 전환 안 됨.
+
+**Root cause** (main session 직접 코드 점검): `PieChartWidget.tsx` 에 두 개의 useLayoutEffect 가 있었는데, **Effect 1 (measure)** 가 측정 후 `setIsAnyTruncated(true)` 를 호출하면 바로 뒤이어 실행되는 **Effect 2 (reset)** 가 `setIsAnyTruncated(false)` + `labelRefs.current = []` 로 덮어쓰는 구조. 결과: 측정 결과가 매번 false 로 reset 되고 ref 배열이 비워져 ResizeObserver 재측정도 무력화됨.
+
+- **Phase 17** (`1bc51d59`):
+  - Effect 2 (reset useLayoutEffect) 완전 제거.
+  - Effect 1 안에 `prevKeyRef = useRef(chartDataKey)` 추가 — chartDataKey 변경 시 `setIsAnyTruncated(false)` 한 번 호출 후 다음 렌더에서 측정. 동일 키 재실행 시에는 reset 건너뜀.
+  - `labelRefs.current = []` 수동 클리어 제거 — React 의 ref 콜백이 새 렌더 시 자동 재할당하므로 불필요.
+  - 결과: 단일 useLayoutEffect 로 데이터 변경 reset + 측정 + ResizeObserver 일관 처리. measure → setState → re-render → measure 의 정상 사이클 복구.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/PieChartWidget.tsx` (+7 / -7)
+
+### 검증 결과
+
+- TSC delta: 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 파이 위젯 — 긴 라벨 1개라도 → 전체 stacked 2줄 layout 전환 **실제 적용 확인**.
+2. 위젯 폭 변경 — ResizeObserver 재측정 정상 동작.
+3. 데이터 변경 시 stacked → inline 자동 복귀 (prevKeyRef 가 chartDataKey 변경 감지해 reset).
+
 ## v001.16.0
 
 > 통합일: 2026-05-13
