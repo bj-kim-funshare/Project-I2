@@ -87,7 +87,7 @@ On approval → immediately proceed to Step 5 in the same response. Do NOT wait 
 
 ## Step 5 — Issue creation (Auto mode)
 
-Create the GitHub issue on the work repo. Issue body template:
+Create the GitHub issue on **the leader repo** (`<leader-owner-repo>` — `dev.md` `targets[]` 중 `name == <leader>` 인 항목의 GitHub 원격). work repo 가 다를 수 있다는 점은 본문 / 페이즈 코멘트의 `Phase N WIP: {repo}:{branch}` 줄로 추적된다. Issue body template:
 
 ```markdown
 # <plan title>
