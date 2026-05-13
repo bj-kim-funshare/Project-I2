@@ -6,6 +6,31 @@ const NUM = new Intl.NumberFormat('ko-KR');
 const USD = (n) => `$${(n || 0).toFixed(2)}`;
 const fmtNum = (n) => NUM.format(n || 0);
 
+function fmtKMB(n, opts) {
+  if (n == null || (typeof n === 'number' && isNaN(n))) return '—';
+  const { precision = 1, hideZeroDecimal = true } = opts || {};
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  let value, suffix;
+  if (abs >= 1_000_000_000) {
+    value = abs / 1_000_000_000;
+    suffix = 'B';
+  } else if (abs >= 1_000_000) {
+    value = abs / 1_000_000;
+    suffix = 'M';
+  } else if (abs >= 1_000) {
+    value = abs / 1_000;
+    suffix = 'K';
+  } else {
+    return sign + String(abs);
+  }
+  const fixed = value.toFixed(precision);
+  const display = (hideZeroDecimal && fixed.endsWith('.' + '0'.repeat(precision)))
+    ? String(Math.round(value))
+    : fixed;
+  return sign + display + suffix;
+}
+
 const COLORS = {
   noncache: '#3b82f6',
   input: '#3b82f6',
