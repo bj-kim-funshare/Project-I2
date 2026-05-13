@@ -1,6 +1,6 @@
 ---
 name: patch-confirmation
-description: Analyze uncommitted product changes for either this harness (아이OS) or a registered project group, then append a new minor-version entry (v{N}.K+1.0) to the latest patch-note describing those changes. Commits both the code (작업 WIP) and the patch-note update (문서 WIP) to main. Fails fast on missing prerequisites — no retries, no auto-recovery. Committed-but-unpushed changes are not analyzed.
+description: Analyze uncommitted product changes for either this harness (아이OS) or a registered project group, then append a new minor-version entry (v{N}.K+1.0) to the latest patch-note describing those changes. Commits both the code (작업 WIP) and the patch-note update (문서 WIP) to main. Fails fast on missing prerequisites — no retries, no auto-recovery. Committed-but-unpushed changes are not analyzed. After both merges succeed, pushes origin/main to publish; push failure is alarm-visible in the report but does not roll back the merges.
 ---
 
 # patch-confirmation
@@ -120,6 +120,15 @@ git merge --no-ff "${wip_d}"
 git worktree remove "${wt_d}"
 ```
 
+### Final push
+
+```bash
+# After both merges complete and both worktrees are removed
+git push origin main
+```
+
+Pushes the two merge commits to origin in a single push. Push failure is alarm-visible, not fail-fast — both merges already succeeded locally.
+
 ## Reporting
 
 Korean output after both merges succeed:
@@ -129,11 +138,18 @@ Korean output after both merges succeed:
 
 | 항목 | 값 |
 |------|-----|
+| origin/main push | ✅ |
 | 분석된 변경 파일 | {count} (추가 X / 수정 Y / 삭제 Z) |
 | 신규 패치노트 버전 | v{N}.{K+1}.0 |
 | 패치노트 파일 | patch-note-{N}.md |
 | 작업 WIP | patch-confirmation-{N}.{K+1}-작업 (main 머지 ✅) |
 | 문서 WIP | patch-confirmation-{N}.{K+1}-문서 (main 머지 ✅) |
+```
+
+On push failure, replace the `origin/main push` row with:
+
+```
+| 🚨 origin/main push 실패 | <reason> — 마스터 수동 push 필요 |
 ```
 
 Then halt. No "다음 스킬" suggestion.
@@ -155,6 +171,7 @@ Immediate Korean report + halt. No retry, no recovery.
 | `git merge --no-ff` of 작업 WIP fails | `"main ← 작업 WIP 머지 실패: <error>. WIP 브랜치와 사용자 변경 그대로 보존."` (문서 WIP 진입 X) |
 | `git merge --no-ff` of 문서 WIP fails | `"main ← 문서 WIP 머지 실패: <error>. 코드 커밋 완료, patch-note 미반영."` |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| `git push origin main` failure | `"🚨 main 머지 완료, push 실패: <reason>. 마스터 직접 git push origin main 필요."` — alarm-visible; skill exits success (commits and merges already complete). Push failure row is placed at the top of the completion table so it is not missed. |
 
 ## Scope (v1)
 
@@ -166,7 +183,7 @@ In scope:
 Out of scope:
 - Semantic change summarization (no LLM-authored description of intent).
 - Committed-but-unpushed change analysis.
-- Push, tag, or release operations.
+- Tag or release operations.
 - 8-section schema, 10-category classification, Release Highlights authoring.
 - Auto-creation of `patch-note-001.md` or `main` removal of leftover branches.
 - Selective file inclusion — `git add -A` commits everything `git status` shows.
