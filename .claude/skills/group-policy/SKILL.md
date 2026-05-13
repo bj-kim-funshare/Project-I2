@@ -74,6 +74,15 @@ Resolution:
 
 Same rule for deploy/db/group. The free-text addition slot in each area follows additive semantics — new free-text appends to existing free-text (unless master explicitly writes "자유 입력 슬롯 전체 교체: ..." to replace). The skill flags ambiguous responses (e.g., field name not matching any current key, project name not matching any existing member) and asks master once to clarify.
 
+## DB area — standard value recognition
+
+The `db` area has two fields with known standard values that drive downstream skill behavior. When master's modification response targets these fields, apply the following rules (partial-update principle — "change only what is mentioned" — still holds; no other db fields are touched):
+
+- **`dev_prod_separation`**: standard values are `분리` and `공유`. When master explicitly requests a transition between standard values (e.g., `분리` → `공유`), apply directly without confirmation.
+- **`connection_style`**: standard values are `DATABASE_URL` and `DB_* 환경변수`. When master explicitly requests a transition between standard values, apply directly.
+- **Free-text → standard normalization**: if master requests normalizing an existing free-text value to a standard value (e.g., `같은 DB 사용 (분리 없음)` → `공유`, or `mysql2 직접 연결` → `DB_* 환경변수`), apply as stated.
+- Fields other than `dev_prod_separation` and `connection_style` are unaffected by this section.
+
 ## No-op short-circuit
 
 If master responds `유지` to **all four areas**: halt immediately with the message `"변경사항 없음 — 작업 진행 안 함"`. **No worktree creation. No WIP branch creation. No commit. No merge. No report.** This check runs before any git operation — worktree add is not reached. Empty WIPs and empty merge commits are never produced by this skill.
