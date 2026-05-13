@@ -154,6 +154,35 @@ function renderKpi(data) {
   }
 }
 
+// ---------- Plugin ----------
+
+const pieLabelsPlugin = {
+  id: 'pieLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx, data } = chart;
+    const ds = chart.getDatasetMeta(0);
+    if (!ds || !ds.data) return;
+    const total = data.datasets[0].data.reduce((a, b) => a + (b || 0), 0);
+    if (total <= 0) return;
+    ds.data.forEach((arc, i) => {
+      const value = data.datasets[0].data[i] || 0;
+      const pct = (value / total) * 100;
+      if (pct < 10) return;
+      const { x, y } = arc.tooltipPosition();
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(pct.toFixed(0) + '%', x, y - 7);
+      ctx.fillText(fmtKMB(value), x, y + 7);
+      ctx.restore();
+    });
+  },
+};
+
 // ---------- Charts ----------
 
 function renderChartDayTokens(data) {
@@ -211,6 +240,7 @@ function renderChartModelDonut(data) {
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
+    plugins: [pieLabelsPlugin],
   });
 }
 
@@ -241,6 +271,7 @@ function renderChartSkillDonut(data) {
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
+    plugins: [pieLabelsPlugin],
   });
 }
 
@@ -266,6 +297,7 @@ function renderChartCacheDonut(data) {
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
+    plugins: [pieLabelsPlugin],
   });
 }
 
