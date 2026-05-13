@@ -18,16 +18,16 @@ The dispatcher (`dev-merge`) provides a single prompt containing:
 - `from_branch`: the branch to fix.
 - `pr_number`: the PR number (for commit message).
 - `iteration`: the iteration number, 1–3 (for commit message).
+- `worktree_cwd`: absolute path to the worktree the dispatcher created via `git worktree add` (already on `from_branch`). All git ops use `git -C <worktree_cwd>`; all file reads/edits use absolute paths under this dir.
 
 ## Procedure
 
 1. **Sync local branch state**:
    ```bash
-   git fetch origin
-   git checkout <from_branch>
-   git pull --ff-only origin <from_branch>
+   git -C <worktree_cwd> fetch origin
+   git -C <worktree_cwd> pull --ff-only origin <from_branch>
    ```
-   If `--ff-only` fails (local diverged), abort with a `"branch_diverged"` summary — do not force-pull.
+   If `--ff-only` fails (worktree branch diverged from origin), abort with a `"branch_diverged"` summary — do not force-pull. Do NOT run `git checkout` — the worktree is already on the correct branch.
 
 2. **Apply fixes** — for each finding in input order:
    - `Read` the file at `line_start..line_end` to confirm current state matches the finding's expectation.
@@ -37,9 +37,9 @@ The dispatcher (`dev-merge`) provides a single prompt containing:
 
 3. **Commit and push** — only if at least one fix was applied:
    ```bash
-   git add -A
-   git commit -m "dev-merge: 핫픽스 (PR #<pr_number>, iteration <iteration>)"
-   git push origin <from_branch>
+   git -C <worktree_cwd> add -A
+   git -C <worktree_cwd> commit -m "dev-merge: 핫픽스 (PR #<pr_number>, iteration <iteration>)"
+   git -C <worktree_cwd> push origin <from_branch>
    ```
 
 4. **Return JSON summary** to the dispatcher:
@@ -71,5 +71,7 @@ The dispatcher (`dev-merge`) provides a single prompt containing:
 | `git push` rejected | Apply all fixes succeeded locally, but push failed. Return `{"commit_sha": "<local sha>", "fixed": <count>, "skipped": [], "notes": "push_rejected: <error>. 로컬 커밋만 존재."}` — dispatcher decides next step. |
 
 ## Output discipline
+
+> Worktree lifecycle and conventions: see `.claude/md/worktree-lifecycle.md`.
 
 Return only the JSON summary, no prose. Dispatcher parses programmatically.
