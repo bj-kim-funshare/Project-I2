@@ -79,18 +79,16 @@ While the harness is under construction: one unit at a time, master describes �
 
 ### 8. Token budget (§F-1)
 
-Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md` / `rules/`; specialized content goes in `.claude/md/*` loaded conditionally by hook (§D-24). If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.
+Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md`; specialized content goes in `.claude/md/*` loaded on-demand by the skills and agents that reference them. If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.
 
 ## Folder map
 
 | Path | Role |
 |---|---|
-| `.claude/rules/` | Universal lightweight rules. Always loaded. |
-| `.claude/md/` | Specialized rules. Loaded conditionally by hook. |
+| `.claude/md/` | Specialized rules. Loaded on-demand by skills and agents that reference them. |
 | `.claude/skills/` | The 17 skills. See `README.md` §G for inventory. |
 | `.claude/agents/` | Sub-agent definitions. Added when a skill first needs one (§D-27: only what the agent must always know goes inline; the rest goes in `md/` referenced from the agent). |
 | `.claude/scripts/` | All `.sh` scripts (§D-9). |
-| `.claude/hooks/` | Hooks — primarily for conditional `md/` loading per §D-24. |
 | `.claude/project-group/{leader}/` | Project-group manifests. Lazy-created by `new-project-group`. |
 | `.claude/plan-roadmap/` | Roadmap docs. Lazy-created by `plan-roadmap`. |
 
