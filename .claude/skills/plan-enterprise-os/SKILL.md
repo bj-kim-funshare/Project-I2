@@ -31,6 +31,8 @@ Open-form description, optionally referencing an existing issue on this repo.
 3. `gh` CLI installed and authenticated for this repo's GitHub remote.
 4. `MEMORY.md` and the memory directory are accessible (used for the Treadmill Audit context).
 
+> **Leader/work repo 분리 일관성**: 본 harness 는 단일 저장소이므로 **leader repo = work repo = Project-I2 (자기 자신)**. plan-enterprise / pre-deploy / inspection-procedure 의 leader-repo 어휘와 동일한 형식으로 표현되지만 실효 분기는 없다.
+
 ## Lifecycle (mirrors plan-enterprise, 11 steps)
 
 ```
@@ -90,6 +92,8 @@ The plan structure is the same as `plan-enterprise` (overall goal, phase breakdo
 Identical.
 
 ### Step 5 — Issue creation on this repo
+
+> 본 repo 가 곧 leader repo — `gh issue create` 는 cwd 의 origin 으로 자동 라우팅된다. 명시적 `--repo` 플래그는 불필요하나 외부 스킬과 일관성 위해 첨부해도 무해.
 
 ```bash
 gh issue create \
