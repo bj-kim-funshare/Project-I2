@@ -34,7 +34,7 @@ When master prompts the main session **without** invoking a skill: main session 
 | Layer | Model | Where declared |
 |---|---|---|
 | Main session | Master's choice via `/model` | Not pinned in `settings.json` — master sets at runtime |
-| `advisor()` tool | `claude-sonnet-4-6` | `.claude/settings.json` → `advisorModel` |
+| `advisor()` tool | `claude-opus-4-7` | `.claude/settings.json` → `advisorModel` |
 | 7 read-only reviewers (planning agents) | `claude-opus-4-7` (200k, not 1M) | Agent frontmatter `model:` field |
 | 4 write-capable executors (work agents) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
 | 1 gate-runner (mechanical executor) | `claude-haiku-4-5` | Agent frontmatter `model:` field |
@@ -45,7 +45,7 @@ When master prompts the main session **without** invoking a skill: main session 
 
 **Gate-runner** (`gate-runner`): purely mechanical — runs a shell command, captures output, returns JSON. No reasoning. Haiku 4.5 for speed/cost on high-frequency lint/build invocations. Used by `dev-merge` (lint gate), `plan-enterprise` (per-phase lint gate), and `dev-build` (build utility).
 
-**Advisor inversion (deliberate trade-off, 2026-05-13)**: with main session typically on Opus 4.7, advisor on Sonnet is a weak→strong inversion against the tool's "stronger reviewer model" default. Master's choice — cost efficiency on high-frequency advisor calls. Rollback to stronger advisor model possible if quality issues emerge.
+**Advisor model = main-or-stronger (API 가드, 2026-05-13)**: Anthropic API enforces that the advisor model cannot be weaker than the main session model — Sonnet advisor + Opus main returns `400 ... 'cannot be used as an advisor when the request model is ...'`. The 2026-05-13 attempt at a Sonnet-advisor cost-saving inversion was reverted the same day after the guard was hit at runtime. Operational rule: advisor mirrors the main session's tier from above. If master drops main to Sonnet, advisor may drop to Sonnet in tandem.
 
 ### 5. WIP & merge protocol (§G)
 
