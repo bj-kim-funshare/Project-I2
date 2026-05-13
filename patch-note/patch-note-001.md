@@ -1,5 +1,47 @@
 # 아이OS — Patch Note (001)
 
+## v001.20.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #13
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/agents/completion-reporter.md` 신규 — read-only Sonnet 4.6 / effort medium / tools Read 단일. 입력 계약 (skill_type + moment enum + structured data, 100k 상한), 출력 규칙 (제목 → 짧은 부연 → 표 → 마무리 설명, 핵심 정보는 표 안, 아이콘 활용, 한국어 단일), 금지 사항 (추측 / 쓰기 / 영구 문서 / preamble), Read 도구는 contract md 만 허용.
+- **Phase 2**: `.claude/md/completion-reporter-contract.md` 신규 (454행) — 보편 출력 템플릿 4 블록, moment enum 4값 (`work_complete` / `hotfix_complete` / `skill_finalize` / `skill_finalize.blocked`), 아이콘 사전 14개, `post_action_hints` 5종 분기 룰, 18 스킬 × 적용 시점 페이로드 schema (Tier A 3 + Tier A2 2 + Tier B 5 + Tier C 8), 분기 출력 규칙 (clean / blocked / hotfix), 폴백 룰 (`(정보 없음)` + 누락 알림), v1 버전 정보.
+- **Phase 3**: `CLAUDE.md` §4 모델 split 표에 `1 completion-reporter (read-only, sonnet)` 행 추가. sub-agent 분류 단락에 Completion reporter 단락 신규 (low-reasoning-burden 사유 명시). 카운트 12 → 13, effort lock 문장 갱신.
+- **Phase 3.5**: contract md §6 preamble 에 dispatcher 의 보편 필드 sourcing 가이드 표 추가 — `master_intent_summary` / `result_summary` / `root_cause_summary` / `solution_summary` / `manual_test_scenarios[]` / `next_action_guidance` / `post_action_hints[]` / `advisor_*_result` / `treadmill_audit_result` 각각의 출처 명시. Phase 4 schema_mismatch_notes 후속 보강.
+- **Phase 4**: `plan-enterprise` / `plan-enterprise-os` SKILL.md 의 Step 11 PENDING (work_complete / hotfix_complete 분기) + Step 12 FINALIZE (skill_finalize) 인라인 보고 블록을 dispatch 지시문으로 치환. 마스터 입력 게이트 키워드 (`플랜 완료` / `핫픽스 X` / `중단`) 는 그대로 유지.
+- **Phase 5**: `dev-merge` 5개 시점 (PENDING work_complete / hotfix_complete / Conflict-PENDING work_complete + conflict_status / 머지 성공 skill_finalize / cap 소진 skill_finalize.blocked) + `task-db-structure` / `task-db-data` Phase 5 완료 skill_finalize 인라인 보고 치환. 실패 정책 테이블 셀은 보고 템플릿 아니므로 유지.
+- **Phase 6**: `inspection-procedure.md` Branch A (skill_finalize.blocked) / Branch B (skill_finalize) + `pre-deploy/SKILL.md` 양 분기 치환. 4 inspection SKILL.md 는 공유 md 위임 구조라 자체 편집 불요 (사전 탐색 확인).
+- **Phase 7**: 단순 스킬 8 종 (patch-confirmation / patch-update / group-policy / new-project-group / dev-start / dev-build / plan-roadmap / create-custom-project-skill) skill_finalize 인라인 보고 치환. dev-start / dev-build 는 실패 경로 skill_finalize.blocked 도 추가. create-custom-project-skill 은 Step 9 work_complete + Step 11 skill_finalize 2 시점.
+- **Phase 8**: `README.md` 의 sub-agent 카운트 3 곳 (Effort 정책, 폴더맵 주석, 빌드 산출물) 12 → 13 갱신. `.claude/md/sub-agent-prompt-budget.md` 는 카운트/인벤토리 언급 없어 무수정.
+- **정리**: `create-custom-project-skill` Step 10 PENDING 의 중복 `### /skill 대기` 헤딩 제거 (Step 9 dispatch 가 이미 생성). `inspection-procedure.md` preamble 의 stale "pre-deploy not yet refactored" 문구 갱신, project-verification consumer 명단 추가.
+
+### 영향 파일
+- `.claude/agents/completion-reporter.md` (신규)
+- `.claude/md/completion-reporter-contract.md` (신규)
+- `.claude/md/inspection-procedure.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/skills/dev-merge/SKILL.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/skills/patch-confirmation/SKILL.md`
+- `.claude/skills/patch-update/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/dev-start/SKILL.md`
+- `.claude/skills/dev-build/SKILL.md`
+- `.claude/skills/plan-roadmap/SKILL.md`
+- `.claude/skills/create-custom-project-skill/SKILL.md`
+- `CLAUDE.md`
+- `README.md`
+
+### Treadmill Audit
+PASS — Q3 trade-out: 9개 SKILL.md + 1 공유 md (inspection-procedure.md) 에 흩어진 9 종 인라인 보고 템플릿 (이중 표 + 코드펜스 헤딩) 을 contract md 단일 lock 으로 흡수. byte 단위 size reduction 이 아닌 "scattered → centralized" 유지보수 부담 축소가 trade-out 의 실체. 새 sub-agent 1 개 (completion-reporter) 추가에 대한 net-positive 충족.
+
 ## v001.19.0
 
 > 통합일: 2026-05-13
