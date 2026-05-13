@@ -90,25 +90,12 @@ After receiving the findings array:
 
      Reuse `prior_issue_number` as the report's `issue_number`. **Do NOT close.** Do NOT create a duplicate issue.
 
-4. Korean halt report to master:
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "pre-deploy"`
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize.blocked` schema. Required: `leader`, `block_reason`, `block_finding_count`, `issue_url`, `issue_number`; optional: `warn_count`, `warn_findings[]`, `severity_breakdown`, `repos_targeted[]`, `prior_issue_reused` (`true` when appended to an existing open issue).
 
-   ```
-   ### /pre-deploy 중단 — <leader>
-
-   차단 finding <block_count> 건. 깃허브 이슈 (open 유지): <issue_url>
-   <"신규 생성" 또는 "기존 이슈에 사유 append (재호출 #<count>)">
-
-   해결은 /plan-enterprise (또는 동등 스킬) 로 진행 후 재호출.
-
-   | 타겟 | check | 메시지 |
-   |------|-------|--------|
-   | ... | ... | ... |
-
-   경고 finding (있을 시):
-   | 타겟 | 메시지 |
-   |------|--------|
-   | ... | ... |
-   ```
+   Relay the agent's response verbatim to master.
 
 5. **No build. No deploy. Issue stays open.** Skill exits.
 
@@ -135,26 +122,14 @@ After receiving the findings array:
 
    If `prior_issue_number` is null (first invocation, clean validator), nothing to close — proceed to report.
 
-4. Korean completion report:
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "pre-deploy"`
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`); optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`.
 
-   ```
-   ### /pre-deploy 완료 — <leader>
+   Relay the agent's response verbatim to master.
 
-   | 타겟 | role | tool | build | deploy | URL |
-   |------|------|------|-------|--------|-----|
-   | ... | FE | gh-pages | ✅ | ✅ | https://... |
-   | ... | BE | docker | ✅ | ❌ exit 1 | — |
-
-   <if prior_issue_number was closed: "이전 차단 이슈 #<num> close ✅"
-    if prior_issue_number was kept open due to partial failure: "이전 차단 이슈 #<num> open 유지 (부분 실패)"
-    if prior_issue_number was null: omit this line>
-
-   경고 finding (있을 시):
-   | 타겟 | 메시지 |
-   |------|--------|
-   ```
-
-   If any target's build or deploy failed: the report ends with `"<target> 후속 타겟 중단됨. 마스터 결정 필요 (롤백 자동 X)."`
+   If any target's build or deploy failed: append `"<target> 후속 타겟 중단됨. 마스터 결정 필요 (롤백 자동 X)."` after relaying the reporter's output.
 
 ## WIP rule note
 

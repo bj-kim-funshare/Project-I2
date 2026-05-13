@@ -122,33 +122,23 @@ After receiving findings:
      --title "<skill-name>: <leader> 차단 finding (<block_count>건)" \
      --body-file <tmpfile>
    ```
-4. Korean halt report:
-   ```
-   ### /<skill-name> 중단 — <leader>
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "<invoking-skill>"` (the skill that invoked this procedure substitutes its own name; one of: `dev-inspection` / `dev-security-inspection` / `db-security-inspection` / `project-verification`)
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `<invoking-skill>` `skill_finalize.blocked` schema. Required: `leader`, `scope`, `block_finding_count`, `issue_url`, `issue_number`, `severity_breakdown`; optional: `warn_count`, `affected_repos[]`, `warn_findings[]` (and `finding_categories[]` for `dev-security-inspection`).
 
-   차단 finding <block_count>건. 깃허브 이슈 생성: <issue_url>
-
-   해결은 /plan-enterprise (또는 동등 스킬) 로 진행 후 재호출.
-
-   <findings table>
-
-   경고 finding (있을 시):
-   <warn findings table>
-   ```
+   Relay the agent's response verbatim to master.
 5. Skill exits. (Skills with a post-clean extension like `pre-deploy` Branch B skip the extension on Branch A — verify before extending.)
 
 #### Branch B — only `warn` findings or empty array
 
 1. (warn findings only) Carry them through to the report.
-2. Korean completion report:
-   ```
-   ### /<skill-name> 완료 — <leader>
+2. Dispatch `completion-reporter` with:
+   - `skill_type: "<invoking-skill>"` (the skill that invoked this procedure substitutes its own name; one of: `dev-inspection` / `dev-security-inspection` / `db-security-inspection` / `project-verification`)
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `<invoking-skill>` `skill_finalize` schema. Required: `leader`, `result_summary`, `scope`, `repos_inspected[]`, `finding_count_total`, `warn_count`; optional: `warn_findings[]` (and `dependency_audit_repos[]`, `dep_advisory_count` for `dev-security-inspection`; `db_files_inspected_count`, `empty_scope` for `db-security-inspection`).
 
-   <skill-specific result table>
-
-   경고 finding (있을 시):
-   <warn findings table>
-   ```
+   Relay the agent's response verbatim to master.
 3. Skills with a post-clean extension proceed to their own continuation (defined in skill file). Skills without an extension exit here.
 
 ### Step 7 — WIP rule note
