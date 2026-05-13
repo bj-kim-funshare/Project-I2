@@ -7,7 +7,19 @@
       "Bash(gh issue create *)",
       "Bash(gh issue close *)",
       "Bash(gh issue comment *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(mysql *)",
+      "Bash(psql *)"
+    ]
+  },
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "The task-db-structure and task-db-data skills connect directly to the dev/staging/prod databases registered in each project group's db.md policy via the mysql/psql CLI to perform schema and data migrations. Connection hosts are dynamic, sourced from the ${ENV}_DATABASE_URL environment variable."
+    ],
+    "allow": [
+      "$defaults",
+      "Direct mysql/psql CLI invocation during Phase 4 (capture / dry-run / apply / verify) of the task-db-structure and task-db-data skills is authorized — this is the core operation of these skills, with safety provided by the Phase 1 advisor review, per-environment master approval gates at Phase 4, and capture-based rollback."
     ]
   },
   "statusLine": {
