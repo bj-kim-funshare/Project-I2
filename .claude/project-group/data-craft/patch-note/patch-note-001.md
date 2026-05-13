@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.9.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 4, cumulative phase 10)
+
+### Hotfix 결과
+
+마스터 요구 3개:
+1. 카드 sparkline 은 카드 비율 유지하면서 표시 (현재는 공간을 더 잡아먹음).
+2. 선 그래프 우측 95% 활용, 좌측은 Y축 단위 고려해서 95% 활용.
+3. 카드 숫자 K/M/B 포맷 + 단위 개행 → 값 바로 옆 (인라인).
+
+- **Phase 10 iter 1** (`e0d7a30d`):
+  - **A. 카드 sparkline 압축** — CardWidget 을 flex column 7:3 비율 분할로 재구성. sparkline 활성/비활성 여부와 무관하게 카드 외부 height 불변. sparkline 영역은 카드 폭 거의 가득, 좌우 padding 최소.
+  - **B. 선 그래프 좌우 활용** — LineChartWidget 의 가로 inset 을 좌 90→20px, 우 10px 비대칭 축소. Y축 라벨 컬럼 max-w-[64px] 제한으로 차트 SVG 가 위젯 가로 영역의 ~95% 활용.
+  - **C. K/M/B 포맷 + 단위 인라인** — `formatCompactNumber` 헬퍼를 `dashboard-data-utils.ts` 에 신규 (1K~999K / 1M~999M / 1B~, 정확한 정수는 소수 생략, < 1000 은 toLocaleString). CardWidget 단위는 숫자와 같은 flex row baseline 에 13px 보조 폰트 인라인 (`unitPosition` 좌/우 옵션 존중).
+- **Phase 10 iter 2** (lint hotfix `60865322`): CardWidget IIFE 반환 union narrowing 결함 정정 — ternary fallback 을 `displayData.value !== null ? formatCompactNumber(value) : '-'` 패턴으로 단순화해 TS2339 해소.
+- **Phase 10 iter 3** (`07f30850`): advisor 지적 — K/M/B 포맷이 서버 집계 경로에서도 일관 적용되도록 IIFE 의 서버 분기 반환을 `{ value: serverResult.value, formattedValue: '-' }` 로 통일. 출력 단계의 `formatCompactNumber(value)` + 단위 인라인 한 경로에서 클라이언트·서버 양 경로 모두 처리.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx` (iter 1, 2, 3 — 비율 분할 + 포맷 + 서버 경로 통일)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/LineChartWidget.tsx` (iter 1 — inset 축소)
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/dashboard-data-utils.ts` (iter 1 — `formatCompactNumber` 헬퍼 신규)
+
+### 검증 결과
+
+- advisor #2 (hotfix 5-perspective): PASS (iter 3 정정 후) — iter 1 직후 server-aggregation 경로의 K/M/B 미적용 갭을 advisor 가 사전 지적, iter 3 에서 출력 단계 통일로 해소.
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건 (iter 2 의 narrowing 정정 포함).
+
+### 마스터 수동 회귀 시나리오
+
+1. **카드 비율** — sparkline 활성 카드와 비활성 카드의 외부 height 가 같은지 확인. 활성 시 내부 7:3 분할로 sparkline 이 카드 하단 약 30% 영역 차지.
+2. **카드 K/M/B** — 작은 수 (< 1000) 은 천 단위 콤마, 1K~999K / 1M~999M / 1B 이상은 압축 포맷, 정확한 정수는 소수 생략 확인. 클라이언트 모드·서버 집계 모드 양쪽 모두 적용.
+3. **카드 단위 인라인** — `config.unit` 설정 시 숫자 바로 좌·우 (unitPosition) 에 작은 폰트로 한 줄 표시, 개행 없음 확인.
+4. **선 그래프 좌우 95%** — 위젯 영역 전체 폭 대비 차트 SVG 영역이 우측 거의 끝까지, 좌측은 Y축 라벨 64px 이내 + 추가 inset 20px 안에서 95% 활용 확인. 1월/12월 같은 끝 데이터 포인트가 Y축 라벨 컬럼에 가려지지 않는지 시각 체크.
+5. **선 그래프 X 회전 라벨 가독성** — Y라벨 cap 64px 와 inset 20/10 px 변경으로 회전 X 라벨이 차트 영역을 약간 벗어날 수 있음 — 긴 라벨(8자 이상) 의 truncate 동작 확인.
+
 ## v001.8.0
 
 > 통합일: 2026-05-13
