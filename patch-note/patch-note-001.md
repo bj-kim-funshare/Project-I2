@@ -1,5 +1,22 @@
 # 아이OS — Patch Note (001)
 
+## v001.28.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #19
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/skills/task-db-data/SKILL.md` v2 식별자 안전성 보정 — 9개 surgical edit. Phase 1 §2 에 `rollback_suffix` (exec_id 마지막 하이픈 이후 6자 hex) 도출 단계 추가, §3 dispatch 파라미터에 `rollback_suffix` 추가. Placeholder convention 예시를 backtick 래핑 + `<rollback_suffix>` 축약 형태 (`` `_rollback_form_data___ENV_OR_LABEL___<rollback_suffix>` ``) 로 갱신 + 3개 파일 (capture/forward/rollback) backtick 일관 적용 의무화. 식별자 길이 검산 callout 신설 (`_rollback_` (10) + table (max 32) + `_` + env_or_label (max 14) + `_` + suffix (6) = max 64 MySQL identifier limit). Phase 2 advisor checklist (c)(d) 의 `<execution_id>` 참조를 `<rollback_suffix>` + backtick 으로 갱신. Phase 4 §11c 의 rollback 테이블 명 prose 동기 갱신. Phase 4 §11f cleanup 의 shell-expansion 패턴 폐기 → SQL-side per-table `` DROP TABLE IF EXISTS `_rollback_<table>_<env_or_label>_<rollback_suffix>`; `` 로 교체 (dispatcher 가 capture.sql 의 생성 테이블 목록을 iterate 하여 DROP 문 emit). Out of scope / orphan note (Known v2 limits) 의 `_rollback_*_<execution_id>` 참조 및 mysql LIKE 패턴 동기 갱신.
+- **Phase 2**: `.claude/agents/db-data-author.md` 식별자 패턴 보정 — 6개 edit + 2개 fixup. Input 섹션에 `<rollback_suffix>` 항목 신설 (6자 hex, dispatcher 공급, SQL 식별자 본문 전용 / `<execution_id>` 는 file path · plan.md 헤더 · git commit 메시지 전용). Placeholder convention 단락에 backtick 래핑 의무 + 3개 파일 byte-for-byte 일관성 문장 추가. UPDATE / DELETE / INSERT 3종 statement × capture / forward / rollback 3개 파일 전수 SQL 템플릿 (9개 식별자 surface) 에서 `_rollback_<table>___ENV_OR_LABEL___<execution_id>` → `` `_rollback_<table>___ENV_OR_LABEL___<rollback_suffix>` `` 일괄 교체. Process §6 plan.md 템플릿의 capture 테이블 형식 한 줄 동기 갱신. Discipline 섹션에 rollback_suffix 전용 사용 (full exec_id 금지) + 3-file backtick 일관성 2줄 추가. Failure modes 에 `identifier_too_long` 항목 신설 (env_or_label > 14자 또는 최장 affected_table > 32자 또는 합산 > 64자 트리거).
+
+### 영향 파일
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/agents/db-data-author.md`
+
+### Treadmill Audit
+PASS — 신규 검증 axis / 훅 / 에이전트 / 스킬 추가 없음. 실측 결함 (`/task-db-data data-craft`, exec=`dml-20260513164104-51ede2`, 71자 ERROR 1059) 에 대한 v2 명세 보정. Q3 trade-out: 풀 exec_id (`dml-YYYYMMDDHHMMSS-<6hex>`, 25자) 가 SQL 식별자 본문에서 retire, 6자 hex `rollback_suffix` 로 대체. 자매 스킬 task-db-structure 는 동일 메커니즘 미사용 (DDL 롤백은 live `SHOW CREATE` capture 기반) — sibling fix 불필요.
+
 ## v001.27.0
 
 > 통합일: 2026-05-13
