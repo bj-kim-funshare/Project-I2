@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.25.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #15 (hotfix 1 + hotfix 2)
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Hotfix 1 — narrative-first 보고 양식 복원**: v001.22.0 main 작업 직후 Step 11 work_complete 보고가 stat-only 메타 행만 표에 노출하고 명령원문 / 요구사항 / 원인 / 해결방법 / 결과 / 시나리오 narrative 를 모두 누락한다는 마스터 지적. 원인은 contract md §6 의 Tier A `work_complete` 추천 행이 메타 통계 7행 (이슈 #, 리더, 페이즈 수, 영향 파일, 패치노트, advisor 계획·완료) 만 권장했기 때문. 이슈 #13 본문의 enum 표 ("요구사항 / 원인 / 해법 / 결과 / 수동테스트") 와 contract diverge. `.claude/md/completion-reporter-contract.md` §2 에 "Narrative-first rule" 단락 신설, §6 의 Tier A / A2 narrative-bearing schemas (plan-enterprise / plan-enterprise-os / dev-merge / task-db-structure / task-db-data / create-custom-project-skill 각 moments) 추천 행을 narrative-first 로 재정의. `.claude/agents/completion-reporter.md` Output rules §3 동기 보강.
+- **Hotfix 2 — narrative-first 규칙 전수 확장**: H1 직후 마스터 "전수 검증" 지시에 따른 audit. H1 이 규칙을 Tier A / A2 11개 moment 로 좁게 한정해 30개 moment 가 누락 (`.blocked` 5, Tier B 10, Tier C 9). 적용:
+  - §2 narrative-first rule 의 적용 범위를 모든 18개 스킬 × 모든 moment 로 확장 (tier 별 narrative depth 가이드만 차등 유지 — Tier A/A2 full set, Tier B 검수 narrative, Tier C utility narrative, `.blocked` 통합 템플릿: 🎯 명령원문 · 🔍 차단 원인 · 💥 영향 · 🛠 권고 · 압축 메타).
+  - §6 의 모든 미적용 schema 24개 moment Recommended table columns 재작성 (Tier A blocked 3, Tier A2 blocked 2, Tier B finalize 5 + blocked 5, Tier C finalize 7, Tier C blocked 2 = 24).
+  - `.claude/agents/completion-reporter.md` Output rules §3 "For Tier A / A2 dispatches" → "For every dispatch" 로 확장.
+  전수 검증: 37개 "Recommended table columns" 라인 모두 narrative-first 적용 grep 으로 확인.
+
+### 영향 파일
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/agents/completion-reporter.md`
+
+### Treadmill Audit
+PASS — Q3 폐기 2건 명시: (a) H1 — §6 의 Tier A `work_complete` 메타-통계 우선 추천 행 (7행 stat block) → narrative-first 표 본문 + 압축 메타 한 줄로 대체. (b) H2 — §2 narrative-first rule 의 "Tier A / Tier A2 한정" 적용 범위 → 모든 18개 스킬 × 모든 moment 적용 범위 (universal) 로 확장. 신규 메커니즘 추가 아니라 v001.22.0 의 spec tightening 미흡분 보강 (Q3 의 폐기-신설 1:1 매핑 충족).
+
 ## v001.24.0
 
 > 통합일: 2026-05-13
