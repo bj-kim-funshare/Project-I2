@@ -956,10 +956,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (_autoRefreshInFlight) return;
       _autoRefreshInFlight = true;
       try {
-        _aggregateCache = null;
-        const unit = unitEl.value;
-        const key = keyEl.value || null;
-        await applyPeriodSelection(unit, key, periodsIndex);
+        await refresh();
+      } catch (_) {
+        // 자동 새로고침 실패는 조용히 무시 (수동 버튼은 사용자에게 노출)
       } finally {
         _autoRefreshInFlight = false;
       }
