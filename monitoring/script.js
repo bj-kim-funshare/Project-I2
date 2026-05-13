@@ -561,6 +561,55 @@ function renderChartSessionBar(data, opts) {
   });
 }
 
+function renderChartPromptBar(data) {
+  destroyChart('promptBar');
+  const items = (data.by_prompt || []).slice(0, 30);
+  const ctx = $('#chart-prompt-bar canvas');
+  if (!ctx || !items.length) return;
+  charts.promptBar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: items.map(p => p.prompt_preview || ''),
+      datasets: [{
+        label: '총 토큰',
+        data: items.map(p => (p.input_tokens || 0) + (p.output_tokens || 0) + (p.cache_read || 0) + (p.cache_write || 0)),
+        backgroundColor: '#6366f1',
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const p = (data.by_prompt || [])[items[0].dataIndex];
+              return p ? p.prompt_preview : '';
+            },
+            label: (c) => {
+              const p = (data.by_prompt || [])[c.dataIndex];
+              if (!p) return fmtKMB(c.parsed.x);
+              return [
+                `총 토큰: ${fmtKMB(c.parsed.x)}`,
+                `input: ${fmtKMB(p.input_tokens)}`,
+                `output: ${fmtKMB(p.output_tokens)}`,
+                `cache read: ${fmtKMB(p.cache_read)}`,
+                `cache write: ${fmtKMB(p.cache_write)}`,
+                `비용: $${(p.cost_usd || 0).toFixed(4)}`,
+                `세션: ${(p.session_id || '').slice(0, 8)}`,
+                `시각: ${shortTime(p.timestamp)}`,
+              ];
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 function renderChartDayCost(data) {
   destroyChart('dayCost');
   const days = (data.by_day || []);
@@ -673,6 +722,7 @@ function renderAll(data, compareData) {
   renderChartCacheDonut(data);
   renderChartSessionBar(data);
   renderChartDayCost(data);
+  renderChartPromptBar(data);
 
   renderChartModelDonut(data, { chartKey: 'modelDonutDetail', canvasSel: '#chart-detail-model' });
   renderChartSkillDonut(data, { chartKey: 'skillDonutDetail', canvasSel: '#chart-detail-skill' });

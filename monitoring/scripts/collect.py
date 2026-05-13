@@ -10,6 +10,7 @@ No external dependencies — Python 3.9+ stdlib only.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -100,6 +101,182 @@ def cost_breakdown_of(model: str, record: dict[str, int]) -> dict[str, float]:
     }
 
 
+SHORT_TRIGGER_KEYWORDS = {
+    "플랜 완료", "플랜완료", "핫픽스", "중단",
+    "푸시", "네", "응", "ok", "yes", "y", "예", "확인",
+    "진행", "계속", "stop", "n", "no", "아니",
+}
+
+BY_PROMPT_TOP_N = 100
+
+
+def _extract_content_text(content: Any) -> str:
+    """Extract plain text from a message content field (str or list of blocks)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list) and content:
+        first = content[0]
+        if isinstance(first, dict) and first.get("type") == "text":
+            return first.get("text", "")
+    return ""
+
+
+def _is_master_prompt(rec: dict[str, Any]) -> bool:
+    """Return True when rec is a master (non-tool-result) user message."""
+    if rec.get("type") != "user":
+        return False
+    if rec.get("isSidechain") is True:
+        return False
+    msg = rec.get("message") or {}
+    if msg.get("role") != "user":
+        return False
+    content = msg.get("content")
+    if isinstance(content, list) and content:
+        if content[0].get("type") == "tool_result":
+            return False
+    return True
+
+
+def _is_short_trigger(text: str) -> bool:
+    """Return True when text is a short continuation command (merge into prior body)."""
+    stripped = text.strip()
+    if len(stripped) <= 10:
+        return True
+    lower = stripped.lower()
+    for kw in SHORT_TRIGGER_KEYWORDS:
+        if lower.startswith(kw.lower()):
+            return True
+    return False
+
+
+def build_by_prompt(
+    records: list[dict[str, Any]],
+    session_id: str,
+) -> list[dict[str, Any]]:
+    """Build per-master-prompt token aggregation for one session file."""
+    # First pass: collect master prompts in order
+    master_prompts: list[dict[str, Any]] = []
+    for rec in records:
+        if _is_master_prompt(rec):
+            msg = rec.get("message") or {}
+            content = msg.get("content")
+            text = _extract_content_text(content)
+            master_prompts.append({
+                "_rec": rec,
+                "_text": text,
+                "prompt_id": rec.get("uuid", ""),
+                "session_id": session_id,
+                "timestamp": rec.get("timestamp", ""),
+                "prompt_preview": text[:60],
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_read": 0,
+                "cache_write": 0,
+                "cost_usd": 0.0,
+                "_model_counts": {},
+            })
+
+    if not master_prompts:
+        return []
+
+    # Merge short-trigger prompts into prior body prompts
+    # `body_idx` tracks index of the last non-short prompt
+    merged: list[dict[str, Any]] = []
+    body_idx: int | None = None
+    for item in master_prompts:
+        text = item["_text"]
+        if _is_short_trigger(text) and body_idx is not None:
+            # Accumulate tokens into the body prompt (filled in next pass)
+            # Mark this item so we can link it during the assistant scan
+            item["_merge_into"] = body_idx
+            merged.append(item)
+        else:
+            body_idx = len(merged)
+            item["_merge_into"] = None
+            merged.append(item)
+
+    # Build a uuid→merge_target_idx map for assistant scan
+    uuid_to_merged_idx: dict[str, int] = {}
+    for i, item in enumerate(merged):
+        uuid = item["prompt_id"]
+        if uuid:
+            target = item["_merge_into"] if item["_merge_into"] is not None else i
+            uuid_to_merged_idx[uuid] = target
+
+    # Identify master-prompt boundaries (by record position) to pair assistants
+    # Build position index for each master rec
+    rec_pos: dict[str, int] = {}  # uuid→index in records list
+    for idx, rec in enumerate(records):
+        uid = rec.get("uuid", "")
+        if uid:
+            rec_pos[uid] = idx
+
+    master_positions: list[int] = []
+    for item in merged:
+        uid = item["prompt_id"]
+        if uid in rec_pos:
+            master_positions.append(rec_pos[uid])
+        else:
+            master_positions.append(-1)
+
+    # For each master prompt window [pos[i], pos[i+1]), collect assistant records
+    for win_i, item in enumerate(merged):
+        start = master_positions[win_i]
+        end = master_positions[win_i + 1] if win_i + 1 < len(merged) else len(records)
+        if start < 0:
+            continue
+        # target item (may be self or a prior body)
+        target_i = item["_merge_into"] if item["_merge_into"] is not None else win_i
+        target = merged[target_i]
+        for rec in records[start:end]:
+            if rec.get("type") != "assistant":
+                continue
+            msg = rec.get("message") or {}
+            usage = msg.get("usage") or {}
+            if not usage:
+                continue
+            raw_model = msg.get("model") or "unknown"
+            if raw_model == "<synthetic>":
+                model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
+            else:
+                model = raw_model
+            target["input_tokens"] += usage.get("input_tokens", 0) or 0
+            target["output_tokens"] += usage.get("output_tokens", 0) or 0
+            target["cache_read"] += usage.get("cache_read_input_tokens", 0) or 0
+            cc = usage.get("cache_creation", {}) or {}
+            target["cache_write"] += (cc.get("ephemeral_5m_input_tokens", 0) or 0) + (cc.get("ephemeral_1h_input_tokens", 0) or 0)
+            # per-message cost using actual model
+            msg_rec = empty_token_record()
+            add_usage(msg_rec, usage)
+            target["cost_usd"] += cost_of(model, msg_rec)
+            target["_model_counts"][model] = target["_model_counts"].get(model, 0) + 1
+
+    # Collect only body (non-merged) prompts; sorted by total tokens desc, top 100
+    body_items = [item for item in merged if item["_merge_into"] is None]
+    for item in body_items:
+        mc = item["_model_counts"]
+        item["model_primary"] = max(mc.items(), key=lambda kv: kv[1])[0] if mc else "unknown"
+        item["cost_usd"] = round(item["cost_usd"], 6)
+        # clean internal fields
+        del item["_rec"], item["_text"], item["_merge_into"], item["_model_counts"]
+
+    return body_items
+
+
+def finalize_by_prompt(
+    all_items: list[dict[str, Any]],
+    top_n: int = BY_PROMPT_TOP_N,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Sort by total tokens desc, keep top_n. Return (kept, meta)."""
+    def total(item: dict[str, Any]) -> int:
+        return item["input_tokens"] + item["output_tokens"] + item["cache_read"] + item["cache_write"]
+
+    total_count = len(all_items)
+    sorted_items = sorted(all_items, key=total, reverse=True)
+    kept = sorted_items[:top_n]
+    return kept, {"total_count": total_count, "kept_top_n": len(kept)}
+
+
 def parse_jsonl(path: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     try:
@@ -153,6 +330,7 @@ def new_period_state() -> dict[str, Any]:
             lambda: {"input": 0.0, "output": 0.0, "cache_write": 0.0, "cache_read": 0.0, "hypothetical_no_cache": 0.0}
         ),
         "total": empty_token_record(),
+        "by_prompt_items": [],  # accumulates master-prompt items for this period
     }
 
 
@@ -209,12 +387,17 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
             total_breakdown[k] += bd[k]
     total_breakdown = {k: round(v, 6) for k, v in total_breakdown.items()}
 
+    period_by_prompt_items = state.get("by_prompt_items", [])
+    period_by_prompt, period_by_prompt_meta = finalize_by_prompt(period_by_prompt_items)
+
     return {
         "total": {**total, "cost_usd": round(total_cost, 4), "cost_breakdown": total_breakdown},
         "by_model": by_model_out,
         "by_skill": by_skill_out,
         "by_session": by_session_out,
         "by_day": by_day_out,
+        "by_prompt": period_by_prompt,
+        "by_prompt_meta": period_by_prompt_meta,
     }
 
 
@@ -235,6 +418,8 @@ def collect() -> dict[str, Any]:
     # period_agg[period_type][period_key] = period_state
     period_types = ("weekly", "monthly", "quarterly", "half", "yearly")
     period_agg: dict[str, dict[str, Any]] = {pt: defaultdict(new_period_state) for pt in period_types}
+
+    all_prompt_items: list[dict[str, Any]] = []
 
     files_processed = 0
     files_skipped = 0
@@ -355,6 +540,18 @@ def collect() -> dict[str, Any]:
         session_record["skills"] = sorted(session_record["skills"])
         by_session[session_id] = session_record
 
+        # Build per-master-prompt aggregation for this session
+        session_prompt_items = build_by_prompt(records, session_id)
+        all_prompt_items.extend(session_prompt_items)
+
+        # Distribute prompt items into period buckets by master prompt timestamp
+        for item in session_prompt_items:
+            prompt_date = parse_ts(item.get("timestamp"))
+            if prompt_date is not None:
+                pkeys = period_keys_for(prompt_date)
+                for pt, pk in pkeys.items():
+                    period_agg[pt][pk]["by_prompt_items"].append(copy.copy(item))
+
         # Finalize per-period session records for this file
         for (pt, pk), psr in period_session_records.items():
             # Determine model_primary from what was accumulated in this period
@@ -412,6 +609,8 @@ def collect() -> dict[str, Any]:
     # Build periods_index
     periods_index = {pt: sorted(period_agg[pt].keys()) for pt in period_types}
 
+    by_prompt, by_prompt_meta = finalize_by_prompt(all_prompt_items)
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "session_dir": str(SESSION_DIR),
@@ -422,6 +621,8 @@ def collect() -> dict[str, Any]:
         "by_skill": by_skill_out,
         "by_session": by_session_out,
         "by_day": by_day_out,
+        "by_prompt": by_prompt,
+        "by_prompt_meta": by_prompt_meta,
         "periods_index": periods_index,
         "_period_agg": period_agg,  # internal — stripped before writing aggregate.json
     }
