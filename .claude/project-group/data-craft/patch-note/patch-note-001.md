@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.18.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 12, cumulative phase 18)
+
+### Hotfix 결과
+
+마스터 결정: 두 문제 동시 처리 + 카드 sparkline 은 **옵션 2 (단일 batch request 안에 서버 contract 변경 없이 통합)** 로 진행.
+
+#### 결함 A — 파이 stacked layout 미적용 (effect logic)
+
+`PieChartWidget.tsx` 의 `useLayoutEffect` 가 chartDataKey 변경 시 isAnyTruncated 가 이미 false 인 경우 `setIsAnyTruncated(false)` 한 번 호출 후 early return — React 가 false → false setter 를 no-op 처리해 재렌더 없음 → effect 재실행 없음 → 측정 영구 스킵.
+
+**Fix**: isAnyTruncated 가 false 면 early return 하지 않고 같은 effect 호출 안에서 measure 진행. measure 호출은 `requestAnimationFrame` 으로 deferring 해 layout 안정화 후 측정. ResizeObserver callback 도 rAF wrap.
+
+#### 결함 B — 카드 sparkline 서버 데이터 미수신 (architecture)
+
+`FsDashboard.tsx` 의 Write 모드 + batch aggregation 경로가 `requestDashboardBatchAggregation` 만 호출 → rows 미반환 → preprocessedRows 빈 상태. CardWidget 의 sparkline 이 `groupRowsByMonth` (preprocessedRows 기반) 사용해 buckets empty → null.
+
+**Fix (옵션 2, 서버 변경 없이 기존 groupedAggregation 인프라 재사용)**:
+- `buildWidgetBatchParams.ts`: 기존 `buildWidgetBatchParam` 단수 함수를 shim 유지하고 `buildWidgetBatchParams` (배열 반환) 신규. card 의 `sparklineConfig` 활성 시 `widgetId: <원본id>__sparkline` + `groupByColumnId: dateColumnField` 의 별도 param 동봉 → 단일 batch request 안에서 처리.
+- `FsDashboard.tsx`: emission 루프를 params (배열) 기반으로 전환. 응답 분배 시 `__sparkline` 접미사 widget 결과의 `groupedAggregation` 을 base widget 결과의 `sparkline` 필드로 fold. `getWidgetDataKey` card 분기에 sparklineConfig 포함해 변경 감지.
+- `paging.types.ts`: `WidgetBatchAggregationData` 에 `sparkline?: Record<string, Record<number, ServerAggregationResult>>` 필드 추가.
+- `CardWidget.tsx`: sparkline 계산을 `aggregationData?.sparkline` (서버 groupedAggregation) 기반으로 전환. raw date 키를 YYYY-MM 으로 reduce + 최근 N개월 키 화이트리스트 필터 + 시간순 정렬. `groupRowsByMonth` (preprocessedRows 의존) 제거.
+
+결과: Write 모드 batch aggregation 만으로도 sparkline 정상 렌더. **추가 서버 요청 없음** — 단일 batch request 의 widget 배열에 sparkline 위젯 entry 가 동봉되어 함께 처리.
+
+- **Phase 18** (`5b3659a5`).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/PieChartWidget.tsx` (effect 정정 + rAF)
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/buildWidgetBatchParams.ts` (단수 → 배열 반환 + sparkline param 동봉)
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx` (emission/응답 분배 + __sparkline fold)
+- `packages/fs-data-viewer/src/entities/paging.types.ts` (WidgetBatchAggregationData.sparkline 필드)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx` (sparkline 계산 source 전환)
+
+### 검증 결과
+
+- TSC delta (변경 파일): 신규 typecheck 에러 0건.
+- `pnpm build` (root, packages 빌드 후): `✓ built in 17.20s` 통과.
+- 서버 contract / endpoint 변경 없음 — batch aggregation 의 widgets 배열에 sparkline entry 만 추가됨.
+
+### 마스터 수동 회귀 시나리오
+
+1. 카드 sparkline 옵션 활성 + 날짜 컬럼 + 개월 수 설정 → 대시보드 Write 모드에서 카드 본체 하단에 미니 선 그래프 + 증감율 노출.
+2. Network 탭의 dashboard-aggregation 요청 1회만 발생 (추가 fetch 없음). 요청 body 의 widgets 배열에 sparkline 활성 카드는 두 entry (base + __sparkline) 포함되는지 확인.
+3. 파이 위젯에서 라벨 1개라도 truncate 발생 → 전체 stacked layout 으로 즉시 전환 확인.
+4. 파이 데이터 변경 시 stacked → inline 자동 복귀.
+5. dev server HMR 재시작 + 강력 새로고침 권장.
+
 ## v001.17.0
 
 > 통합일: 2026-05-13
