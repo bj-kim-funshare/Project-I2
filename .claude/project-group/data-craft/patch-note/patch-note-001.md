@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.6.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 1, cumulative phase 7)
+
+### Hotfix 결과
+
+마스터의 4개 핫픽스 요구사항을 단일 페이즈로 적용 후 default 색 보정 iter 1 추가.
+
+- **Phase 7 iter 1** (`40623ca2`):
+  - **(1) 아이콘 배경 흰색 금지** — IconSettingsSection 의 8색 팔레트는 본래 흰색 미포함, 팔레트 변경 없이 유지.
+  - **(2) 아이콘 흰색 고정** — `WidgetContainer.tsx` 의 `<IconComponent>` 에 `color="#ffffff"` 추가, 배경 어떤 색이든 아이콘은 항상 흰색.
+  - **(3) 파이 내부 라벨 제거** — `PieChartWidget.tsx` 에서 `getSliceCenter`, `wrapLabelToLines`, `internalSlices`, `MIN_ANGLE_FOR_INTERNAL_LABEL`, SVG 내부 text 블록 일괄 제거. `showLabels` 옵션이 dead-option 이 되어 `PieChartSettings.tsx` 의 해당 ToggleSwitch 도 제거.
+  - **(4) 파이 우측 범례 = `값 (% 수치)` 형식** — `${value.toLocaleString()} (${(percentage*100).toFixed(1)}%)` 로 통일 (천 단위 콤마 + 백분율 소수 1자리). row title 툴팁도 동일 형식.
+- **Phase 7 iter 2** (`dca8f3f1`):
+  - 아이콘 배경 default 보정 — `ICON_BG_DEFAULT` 를 밝은 회색 `#e5e7eb` → 인디고 `#6366F1` (IconSettingsSection 팔레트 첫 색) 으로 변경. 흰색 아이콘과 대비 확보.
+  - `resolvedBgColor` 헬퍼 도입 — `'#fff' | '#ffffff' | 'white' | 'rgb(255,255,255)'` 4개 리터럴 입력 시 `ICON_BG_DEFAULT` 로 자동 치환. 흰색 배경 조합 자체 차단.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx` (Phase 7 iter 1, iter 2)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/PieChartWidget.tsx` (Phase 7 iter 1)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/PieChartSettings.tsx` (Phase 7 iter 1)
+
+### 검증 결과
+
+- advisor #2 (hotfix 5-perspective): PASS — 4개 요구사항 모두 코드에 반영. iter 1 직후 advisor 가 default 색 미보정 갭을 지적해 iter 2 로 정정.
+- TSC delta: hotfix 변경 파일 3개에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. `pnpm dev` → 데이터 뷰어 → 대시보드뷰. 아이콘 옵션 활성화된 위젯에서 아이콘 자체가 항상 흰색으로 렌더되는지, 배경색 선택 시 흰색 옵션 자체가 부재한지 확인.
+2. 위젯 설정에서 아이콘은 활성화하되 배경색을 따로 고르지 않은 경우 인디고 (`#6366F1`) 로 표시되는지 확인.
+3. 파이 차트: 파이 조각 내부에 라벨/수치 텍스트가 사라졌는지, 우측 범례가 `[정사각형 마커] [라벨] 값 (백분율%)` 형식인지 확인.
+
 ## v001.5.0
 
 > 통합일: 2026-05-13
