@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.14.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 9, cumulative phase 15)
+
+### Hotfix 결과 (회귀 결함 정정)
+
+마스터 진단: 카드 위젯의 sparkline 옵션을 활성화하고 dateColumnField 까지 정상 설정해도 sparkline 이 렌더되지 않음. 데이터 계층 / DB column_setting / 위젯 config 모두 확인 결과 정상.
+
+**Root cause** (main session 직접 코드 확인): `packages/fs-data-viewer/src/widgets/dashboard/collectWidgetColumns.ts` 의 card/gauge 분기가 `config.columnField` 만 collect 하고 `sparklineConfig.dateColumnField` 를 누락. Phase 4 (`22a65f3d`) 에서 sparklineConfig 필드를 추가했으나 이 collect 함수 업데이트를 빼먹은 회귀. 결과: 서버 fetch 요청에 날짜 컬럼 ID 가 포함되지 않음 → 응답 row 에 해당 셀이 없음 → preprocessedRows cellMap 에 키 부재 → `groupRowsByMonth` 의 `cellMap.get(dateColumnField)` 모두 undefined → bucketMap empty → buckets.length === 0 ≤ 1 → sparkline = null → UI 미렌더.
+
+- **Phase 15** (`468498bf`):
+  - `collectWidgetColumns.ts` 의 card/gauge 분기에 `config.type === 'card' && config.sparklineConfig?.dateColumnField != null` 가드 + `columns.push(config.sparklineConfig.dateColumnField)` 3줄 추가.
+  - `!= null` 사용으로 0 인 columnField 값도 정상 수집. gauge 타입에는 sparklineConfig 가 없으므로 타입 가드 안전망.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/collectWidgetColumns.ts` (+3 / -0)
+
+### 검증 결과
+
+- TSC delta: 0 (테스트 파일의 사전 부채 1건은 본 변경 무관, baseline 에 이미 존재).
+
+### 마스터 수동 회귀 시나리오
+
+1. 카드 위젯의 sparkline 옵션 활성 → 날짜 컬럼 선택 → 개월 수 7 → 저장.
+2. 대시보드 진입 시 카드 본체 하단에 미니 선 그래프 + 증감율이 정상 렌더되는지 확인.
+3. dev server HMR 잔존 가능성 — 적용 후에도 안 보이면 강력 새로고침 1회 또는 dev server 재시작 권장.
+
 ## v001.13.0
 
 > 통합일: 2026-05-13
