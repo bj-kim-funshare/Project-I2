@@ -500,8 +500,8 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 
 ### `skill_finalize.blocked`
 
-- Use ⛔ icon in the heading: `### /{skill} 중단 ⛔ — <context id>`
-- Opening 부연 states: "차단 종료 — <block_type 한국어 설명>. 이슈 핸드오프." (or "cap 도달." or "실패." depending on context)
+- Use ⛔ icon in the heading: `### /{skill} 완료 — 결과 차단 ⛔ — <context id>`
+- Opening 부연 states: "정상 종료 — 결과 차단: <block_type 한국어 설명>. 이슈 핸드오프." (or "정상 종료 — 결과 차단: cap 도달." or "정상 종료 — 결과 차단: 실패." depending on context)
 - Table includes `issue_url` row when a handoff issue was created.
 - Closing paragraph directs master: "해결은 /plan-enterprise (또는 동등 스킬) 로 진행 후 재호출." (for inspection-type blocks) or the skill-specific next step.
 
