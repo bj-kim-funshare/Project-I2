@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.10.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 5, cumulative phase 11)
+
+### Hotfix 결과
+
+마스터 요구 4개:
+1. 세로/가로 막대 그래프 — 주어진 공간 균등 배분 (현재 한쪽으로 몰림).
+2. UserListWidget — 한 카드에 다 들어가면 좌우/상하 이동 버튼 미표시.
+3. WidgetContainer 헤더 — top + 좌·우 여백 5px 씩.
+4. WidgetContainer 헤더 — 아이콘+제목 둘 다 있을 때 둘 사이 5px gap.
+
+- **Phase 11** (`b544bfac`):
+  - **A. 막대 균등 분배 (`BarChartWidget.tsx`)** — 가로 막대 차트의 행 스크롤 컨테이너와 세로 막대 차트의 열 컨테이너에 각각 `justify-evenly` 추가. 데이터 개수가 적어도 막대가 위젯 가용 공간을 균등하게 채워 배치.
+  - **B. UserList nav 조건부 (`PaginatedUserGrid.tsx`)** — `totalPages <= 1` 일 때 화살표 (이전/다음) 버튼을 미렌더링. 추가로 카드 그리드 패딩을 32px → 8px 로 축소해 회수된 여유 공간을 카드 영역에 반환.
+  - **C. WidgetContainer 헤더 패딩 (`WidgetContainer.tsx`)** — 헤더 wrapper 의 padding 을 `5px 5px 4px 5px` (top/right/bottom/left) 로 변경. top·좌·우 5px, 하단은 차트 영역과의 시각 균형 위해 4px 유지.
+  - **D. 헤더 슬롯 gap (`WidgetContainer.tsx`)** — flex 헤더의 `gap` 을 4px → 5px 로 변경. 3-slot 고정 width 구조 (좌끝 icon | flex-1 title | 우끝 icon) 특성상 빈 placeholder 슬롯과의 gap 은 시각적으로 무효, 아이콘과 제목이 둘 다 존재할 때만 시각적으로 5px 간격으로 나타남 → 마스터 요구 "둘 다 있을 때 둘 사이 5px" 자동 충족.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx` (justify-evenly 적용)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/PaginatedUserGrid.tsx` (totalPages ≤ 1 nav 미렌더 + 카드 그리드 padding 축소)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx` (헤더 padding + gap 5px)
+
+### 검증 결과
+
+- advisor #2 (hotfix 5-perspective): PASS — 헤더 gap 의 "둘 다 있을 때만" 조건이 3-slot 고정 width 구조로 시각적 자동 충족 확인.
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. **막대 그래프 (가로/세로 모두)** — 데이터 행/열 수가 적은 케이스에서도 위젯 영역 전체에 막대가 균등 분배되는지 확인 (이전: 한쪽 몰림).
+2. **UserListWidget** — 사용자 카드가 한 페이지에 다 들어가는 경우 (totalPages ≤ 1) 좌우/상하 이동 버튼이 비표시되는지 확인. 카드 영역이 더 넓어진 것도 확인.
+3. **헤더 패딩** — 모든 위젯 헤더에서 상단/좌/우 각 5px 여백 확인.
+4. **헤더 아이콘-제목 gap** — 아이콘 + 제목 둘 다 설정한 위젯에서 둘 사이에 5px 간격 확인. 한쪽만 있을 때는 시각 차이 없는지 확인 (placeholder 슬롯이 gap 의 시각 효과를 흡수).
+
 ## v001.9.0
 
 > 통합일: 2026-05-13
