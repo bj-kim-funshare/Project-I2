@@ -1,4 +1,6 @@
 ---
+engine: mysql
+framework: raw-sql
 dev_prod_separation: 공유
 env_management: git-tracked
 migration_approach: 수동 SQL (ORM 미사용)
