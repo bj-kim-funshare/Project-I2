@@ -147,11 +147,19 @@ Slug = master-provided title normalized — lowercase Latin/digits allowed, Hang
 
 ### Step 7 — Write the roadmap file
 
+> Worktree 절차: `.claude/md/worktree-lifecycle.md`.
+
 ```bash
-mkdir -p .claude/plan-roadmap
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+git worktree list   # report unrelated leftovers to master
+
+wip="plan-roadmap-{N}-{slug}-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
 ```
 
-Write the drafted content to `.claude/plan-roadmap/Roadmap-{N}-{slug}.md`.
+Write the drafted content to `<wt>/.claude/plan-roadmap/Roadmap-{N}-{slug}.md` (create `<wt>/.claude/plan-roadmap/` if not present). Main session does not change cwd. Counter `N` is determined in Step 6 by reading `.claude/plan-roadmap/` in the main cwd before the worktree is created.
 
 For edit mode: overwrite the existing file. The existing file's prior content is not preserved separately — `git log` is the only history (per spec "폐기되는 프롬프트는 따로 보존하지 않음").
 
@@ -160,14 +168,20 @@ For edit mode: overwrite the existing file. The existing file's prior content is
 Single WIP (doc work):
 
 ```bash
+git -C <wt> add .claude/plan-roadmap/Roadmap-{N}-{slug}.md
+git -C <wt> commit -m "plan-roadmap: Roadmap-{N}-{slug} {create|update}"
+git -C <wt> push -u origin plan-roadmap-{N}-{slug}-문서
+```
+
+Merge from main working tree (main cwd):
+
+```bash
 git checkout main
-git checkout -b plan-roadmap-{N}-{slug}-문서
-git add .claude/plan-roadmap/Roadmap-{N}-{slug}.md
-git commit -m "plan-roadmap: Roadmap-{N}-{slug} {create|update}"
-git push origin plan-roadmap-{N}-{slug}-문서
-git checkout main
+git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff plan-roadmap-{N}-{slug}-문서
 ```
+
+머지 성공 후: `git worktree remove <wt>`
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
@@ -202,6 +216,7 @@ The roadmap is now ready for master to consult. Status updates on individual pro
 | ExitPlanMode rejection | (return to Step 3 with master's revision) |
 | `mkdir` / `git` / write failure | verbatim error in Korean report |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 
 ## Scope (v1)
 

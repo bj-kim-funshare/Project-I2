@@ -217,11 +217,37 @@ No "이전" pointer (this is the first file).
 
 ## WIP / merge protocol
 
+> Worktree 절차: `.claude/md/worktree-lifecycle.md`.
+
 Single WIP — all writes are docs.
 
-- **WIP branch** — `new-project-group-<leader>-문서`, branched from `main`.
+```bash
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+git worktree list   # report unrelated leftovers to master
+
+wip="new-project-group-<leader>-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
+```
+
+- **Disk writes** — all new files are written under `<wt>/.claude/project-group/{leader}/`:
+  - `<wt>/.claude/project-group/{leader}/Index.md`
+  - `<wt>/.claude/project-group/{leader}/dev.md`
+  - `<wt>/.claude/project-group/{leader}/deploy.md`
+  - `<wt>/.claude/project-group/{leader}/db.md`
+  - `<wt>/.claude/project-group/{leader}/group.md`
+  - `<wt>/.claude/project-group/{leader}/patch-note/patch-note-001.md`
+- All git commands use `git -C <wt> add <relative-path>` and `git -C <wt> commit ...` form. Main session does not change cwd.
 - **Commit message** (Korean) — `new-project-group: {leader} 그룹 신규 등록`.
-- **Merge to main** — preserve both on conflict; halt only if mutually exclusive (extremely unlikely for a brand-new folder).
+- **Merge to main** — from main working tree (main cwd):
+  ```
+  git checkout main
+  git pull --ff-only origin main 2>/dev/null || true
+  git merge --no-ff <wip>
+  ```
+- 머지 성공 후: `git worktree remove <wt>`
+- 충돌 시 §5 4단계 양측 보존; 상호 배타적이면 마스터에게 halt (신규 폴더이므로 충돌 극히 드묾).
 - No push, no tag, no remote operations.
 
 ## Reporting
@@ -259,6 +285,7 @@ Immediate Korean report + halt. No retry.
 | Master invocation lacks repository entries | `"멤버 저장소 1개 이상 필요. 예: /new-project-group data-craft fe=/path/dc-fe,be=/path/dc-be"` |
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
