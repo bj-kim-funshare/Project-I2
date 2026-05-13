@@ -11,6 +11,20 @@
 <body>
   <header class="topbar">
     <h1>아이OS 토큰 모니터링</h1>
+    <div class="period-selector">
+      <label for="period-unit">기간:</label>
+      <select id="period-unit">
+        <option value="all" selected>전체</option>
+        <option value="weekly">주간</option>
+        <option value="monthly">월간</option>
+        <option value="quarterly">분기</option>
+        <option value="half">반기</option>
+        <option value="yearly">년간</option>
+      </select>
+      <select id="period-key" disabled>
+        <option value="">—</option>
+      </select>
+    </div>
     <div id="meta" class="meta"></div>
     <button id="refresh-btn" type="button">새로고침</button>
   </header>

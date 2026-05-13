@@ -51,6 +51,34 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   backdrop-filter: blur(8px);
 }
 .topbar h1 { flex: 0 0 auto; }
+
+/* ================= PERIOD SELECTOR ================= */
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.period-selector label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.period-selector select {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.period-selector select:hover { border-color: var(--accent); }
+.period-selector select:focus { border-color: var(--accent); }
+.period-selector select:disabled { opacity: 0.45; cursor: default; }
 .meta {
   flex: 1;
   font-size: 12px;

@@ -154,6 +154,18 @@ function renderKpi(data) {
   }
 }
 
+// ---------- Delta badge clear ----------
+
+function clearDeltaBadges() {
+  const ids = ['kpi-delta-msgs', 'kpi-delta-noncache', 'kpi-delta-cache', 'kpi-delta-cache-hit-ratio', 'kpi-delta-cost'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.textContent = '';
+    el.className = 'kpi-delta';
+  }
+}
+
 // ---------- Delta badges ----------
 
 function applyDeltaBadges(data) {
@@ -485,22 +497,33 @@ function renderBySession(rows) {
 
 // ---------- Orchestration ----------
 
-async function loadData() {
+let _aggregateCache = null;
+
+async function loadAggregate() {
+  if (_aggregateCache) return _aggregateCache;
   const r = await fetch('data/aggregate.json', { cache: 'no-store' });
   if (!r.ok) throw new Error(`failed to load aggregate.json: ${r.status}`);
+  _aggregateCache = await r.json();
+  return _aggregateCache;
+}
+
+async function loadPeriodData(unit, key) {
+  const r = await fetch(`data/periods/${unit}/${key}.json`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`failed to load period data: ${unit}/${key} (${r.status})`);
   return r.json();
 }
 
-function render(data) {
-  $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
-
-  if (data.error) {
-    const err = $('#error');
-    err.hidden = false;
-    err.textContent = data.error;
-    return;
+function updateUrl(unit, key) {
+  const params = new URLSearchParams();
+  if (unit && unit !== 'all') {
+    params.set('period', unit);
+    if (key) params.set('key', key);
   }
+  const qs = params.toString();
+  history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+}
 
+function renderAll(data) {
   renderKpi(data);
   renderChartDayTokens(data);
   renderChartModelDonut(data);
@@ -513,8 +536,62 @@ function render(data) {
   $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);
   $('#by-day').innerHTML = renderByDay(data.by_day || []);
   $('#by-session').innerHTML = renderBySession(data.by_session || []);
+}
 
+function render(data) {
+  $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
+
+  if (data.error) {
+    const err = $('#error');
+    err.hidden = false;
+    err.textContent = data.error;
+    return;
+  }
+
+  renderAll(data);
   applyDeltaBadges(data);
+}
+
+function populatePeriodKeys(periodsIndex, unit) {
+  const keyEl = $('#period-key');
+  keyEl.innerHTML = '';
+  if (!unit || unit === 'all') {
+    keyEl.disabled = true;
+    keyEl.innerHTML = '<option value="">—</option>';
+    return;
+  }
+  const keys = ((periodsIndex || {})[unit] || []).slice().sort().reverse();
+  if (!keys.length) {
+    keyEl.disabled = true;
+    keyEl.innerHTML = '<option value="">—</option>';
+    return;
+  }
+  keyEl.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
+  keyEl.disabled = false;
+}
+
+async function applyPeriodSelection(unit, key) {
+  const err = $('#error');
+  err.hidden = true;
+  try {
+    if (!unit || unit === 'all') {
+      const data = await loadAggregate();
+      $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
+      renderAll(data);
+      applyDeltaBadges(data);
+      updateUrl('all', null);
+    } else {
+      const data = await loadPeriodData(unit, key);
+      const agg = await loadAggregate();
+      $('#meta').textContent = `기간: ${key} | 생성일: ${shortTime(agg.generated_at)}`;
+      clearDeltaBadges();
+      renderAll(data);
+      updateUrl(unit, key);
+    }
+  } catch (e) {
+    err.hidden = false;
+    err.textContent = `기간 데이터 로딩 실패: ${e.message}`;
+  }
 }
 
 async function refresh() {
@@ -527,8 +604,10 @@ async function refresh() {
       const body = await r.text().catch(() => '');
       throw new Error(`refresh failed: ${r.status} ${body}`);
     }
-    const data = await loadData();
-    render(data);
+    _aggregateCache = null;
+    const unit = $('#period-unit').value;
+    const key = $('#period-key').value;
+    await applyPeriodSelection(unit, key);
   } catch (e) {
     const err = $('#error');
     err.hidden = false;
@@ -539,11 +618,61 @@ async function refresh() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   $('#refresh-btn').addEventListener('click', refresh);
-  loadData().then(render).catch((e) => {
+
+  try {
+    const agg = await loadAggregate();
+
+    const urlParams = new URLSearchParams(location.search);
+    const initUnit = urlParams.get('period') || 'all';
+    const initKey = urlParams.get('key') || '';
+
+    const periodsIndex = agg.periods_index || {};
+
+    const unitEl = $('#period-unit');
+    const keyEl = $('#period-key');
+
+    unitEl.value = initUnit;
+    populatePeriodKeys(periodsIndex, initUnit);
+
+    if (initUnit !== 'all' && initKey) {
+      const validKeys = (periodsIndex[initUnit] || []);
+      if (validKeys.includes(initKey)) {
+        keyEl.value = initKey;
+      } else {
+        unitEl.value = 'all';
+        populatePeriodKeys(periodsIndex, 'all');
+      }
+    }
+
+    unitEl.addEventListener('change', () => {
+      const unit = unitEl.value;
+      populatePeriodKeys(periodsIndex, unit);
+      if (unit === 'all') {
+        applyPeriodSelection('all', null);
+      } else {
+        const key = keyEl.value;
+        if (key) applyPeriodSelection(unit, key);
+      }
+    });
+
+    keyEl.addEventListener('change', () => {
+      const unit = unitEl.value;
+      const key = keyEl.value;
+      if (unit !== 'all' && key) applyPeriodSelection(unit, key);
+    });
+
+    const currentUnit = unitEl.value;
+    const currentKey = keyEl.value;
+    if (currentUnit !== 'all' && currentKey) {
+      await applyPeriodSelection(currentUnit, currentKey);
+    } else {
+      render(agg);
+    }
+  } catch (e) {
     const err = $('#error');
     err.hidden = false;
     err.textContent = `초기 로딩 실패: ${e.message}. monitoring/data/aggregate.json 부재일 수 있음 — 'python3 monitoring/scripts/collect.py' 또는 'python3 monitoring/scripts/serve.py' 실행 필요.`;
-  });
+  }
 });
