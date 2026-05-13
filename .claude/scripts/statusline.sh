@@ -14,7 +14,7 @@
 # Line layout (master directive 2026-05-13):
 #   L1 — Identity + limits: cwd · branch · model · effort · 5h · 7d
 #   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
-#   L3 — Last user prompt: 💬 (max 5 lines × 105 chars/line; wraps; isMeta + 제어 키워드 제외)
+#   L3 — Last user prompt: 💬 (max 5 lines × 105 display-units/line — CJK=2, ASCII=1; wraps; isMeta + 제어 키워드 제외)
 #
 # Mandatory items (always shown with placeholder fallback):
 #   📊 ctx% / 🧠 effort / 🕐 5h / 📅 7d
@@ -220,7 +220,7 @@ fi
 LAST_PROMPT=""
 if [ -f "$SESSION_JSONL" ] && command -v python3 >/dev/null 2>&1; then
   LAST_PROMPT=$(python3 - "$SESSION_JSONL" <<'PY' 2>/dev/null
-import json, sys
+import json, sys, unicodedata
 from pathlib import Path
 
 path = Path(sys.argv[1])
@@ -278,15 +278,40 @@ for line in reversed(lines):
     if text == "핫픽스" or text.startswith("핫픽스 "):
         continue
 
-    # Wrap to LINE_WIDTH × up to MAX_LINES; truncate overflow with "...".
-    wrapped = [text[i:i + LINE_WIDTH] for i in range(0, len(text), LINE_WIDTH)]
+    # Display width: East Asian wide/fullwidth chars (Korean/Chinese/Japanese, fullwidth ASCII) count as 2.
+    def cwidth(ch):
+        return 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+
+    # Wrap to LINE_WIDTH (display-weight) × up to MAX_LINES.
+    wrapped = []
+    cur = ""
+    cur_w = 0
+    for ch in text:
+        w = cwidth(ch)
+        if cur_w + w > LINE_WIDTH:
+            wrapped.append(cur)
+            cur = ch
+            cur_w = w
+        else:
+            cur += ch
+            cur_w += w
+    if cur:
+        wrapped.append(cur)
+
     if len(wrapped) > MAX_LINES:
         wrapped = wrapped[:MAX_LINES]
         last = wrapped[-1]
-        if len(last) >= 3:
-            wrapped[-1] = last[:-3] + "..."
-        else:
-            wrapped[-1] = "..."
+        target_w = LINE_WIDTH - 3  # "..." consumes 3 display units
+        truncated = ""
+        tw = 0
+        for ch in last:
+            w = cwidth(ch)
+            if tw + w > target_w:
+                break
+            truncated += ch
+            tw += w
+        wrapped[-1] = truncated + "..."
+
     sys.stdout.write("\n".join(wrapped))
     break
 PY
