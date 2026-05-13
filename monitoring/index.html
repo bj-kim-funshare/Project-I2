@@ -136,25 +136,49 @@
     <section class="tables-section">
       <h2>상세 테이블</h2>
 
-      <details class="table-block" open>
-        <summary>모델별</summary>
-        <div id="by-model" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>모델별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-model"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-model" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>스킬별</summary>
-        <div id="by-skill" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>스킬별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-skill"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-skill" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>일자별</summary>
-        <div id="by-day" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>일자별</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-day"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-day" class="table-wrap"></div>
+        </details>
+      </section>
 
-      <details class="table-block">
-        <summary>세션별 (최근 50)</summary>
-        <div id="by-session" class="table-wrap"></div>
-      </details>
+      <section class="detail-section">
+        <h3>세션별 (최근 50)</h3>
+        <div class="detail-chart">
+          <canvas id="chart-detail-session"></canvas>
+        </div>
+        <details class="table-block">
+          <summary>표 보기</summary>
+          <div id="by-session" class="table-wrap"></div>
+        </details>
+      </section>
     </section>
 
   </main>

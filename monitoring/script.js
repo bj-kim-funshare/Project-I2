@@ -255,13 +255,15 @@ const pieLabelsPlugin = {
 
 // ---------- Charts ----------
 
-function renderChartDayTokens(data) {
-  destroyChart('dayTokens');
+function renderChartDayTokens(data, opts) {
+  const chartKey = (opts && opts.chartKey) || 'dayTokens';
+  const canvasSel = (opts && opts.canvasSel) || '#chart-day-tokens canvas';
+  destroyChart(chartKey);
   const days = (data.by_day || []);
   const labels = days.map(d => d.day);
-  const ctx = $('#chart-day-tokens canvas');
+  const ctx = $(canvasSel);
   if (!ctx || !days.length) return;
-  charts.dayTokens = new Chart(ctx, {
+  charts[chartKey] = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
@@ -289,14 +291,16 @@ function totalTokens(r) {
   return (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0);
 }
 
-function renderChartModelDonut(data) {
-  destroyChart('modelDonut');
+function renderChartModelDonut(data, opts) {
+  const chartKey = (opts && opts.chartKey) || 'modelDonut';
+  const canvasSel = (opts && opts.canvasSel) || '#chart-model-donut canvas';
+  destroyChart(chartKey);
   const rows = (data.by_model || []).slice();
-  const ctx = $('#chart-model-donut canvas');
+  const ctx = $(canvasSel);
   if (!ctx || !rows.length) return;
   const labels = rows.map(r => r.model);
   const values = rows.map(r => totalTokens(r));
-  charts.modelDonut = new Chart(ctx, {
+  charts[chartKey] = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
@@ -314,10 +318,12 @@ function renderChartModelDonut(data) {
   });
 }
 
-function renderChartSkillDonut(data) {
-  destroyChart('skillDonut');
+function renderChartSkillDonut(data, opts) {
+  const chartKey = (opts && opts.chartKey) || 'skillDonut';
+  const canvasSel = (opts && opts.canvasSel) || '#chart-skill-donut canvas';
+  destroyChart(chartKey);
   const rows = (data.by_skill || []).slice().sort((a, b) => totalTokens(b) - totalTokens(a));
-  const ctx = $('#chart-skill-donut canvas');
+  const ctx = $(canvasSel);
   if (!ctx || !rows.length) return;
   const top = rows.slice(0, 8);
   const others = rows.slice(8);
@@ -327,7 +333,7 @@ function renderChartSkillDonut(data) {
     labels.push('기타');
     values.push(others.reduce((a, r) => a + totalTokens(r), 0));
   }
-  charts.skillDonut = new Chart(ctx, {
+  charts[chartKey] = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
@@ -371,16 +377,18 @@ function renderChartCacheDonut(data) {
   });
 }
 
-function renderChartSessionBar(data) {
-  destroyChart('sessionBar');
+function renderChartSessionBar(data, opts) {
+  const chartKey = (opts && opts.chartKey) || 'sessionBar';
+  const canvasSel = (opts && opts.canvasSel) || '#chart-session-bar canvas';
+  destroyChart(chartKey);
   const rows = (data.by_session || [])
     .filter(s => (s.tokens && s.tokens.messages) > 0)
     .slice()
     .sort((a, b) => totalTokens(b.tokens) - totalTokens(a.tokens))
     .slice(0, 10);
-  const ctx = $('#chart-session-bar canvas');
+  const ctx = $(canvasSel);
   if (!ctx || !rows.length) return;
-  charts.sessionBar = new Chart(ctx, {
+  charts[chartKey] = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: rows.map(r => shortSha(r.session_id)),
@@ -531,6 +539,11 @@ function renderAll(data) {
   renderChartCacheDonut(data);
   renderChartSessionBar(data);
   renderChartDayCost(data);
+
+  renderChartModelDonut(data, { chartKey: 'modelDonutDetail', canvasSel: '#chart-detail-model' });
+  renderChartSkillDonut(data, { chartKey: 'skillDonutDetail', canvasSel: '#chart-detail-skill' });
+  renderChartDayTokens(data, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day' });
+  renderChartSessionBar(data, { chartKey: 'sessionBarDetail', canvasSel: '#chart-detail-session' });
 
   $('#by-model').innerHTML = renderByModel(data.by_model || []);
   $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);

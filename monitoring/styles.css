@@ -385,6 +385,25 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:nth-child(even) { background: var(--surface-2); }
 tbody tr:hover { background: var(--surface-3); }
 
+/* ================= DETAIL SECTIONS ================= */
+.detail-section {
+  margin-bottom: 24px;
+}
+.detail-section > h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.detail-chart {
+  position: relative;
+  height: 280px;
+}
+.detail-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* ================= FOOTER ================= */
 .footer {
   padding: 16px 24px;
