@@ -99,12 +99,12 @@ function renderKpi(data) {
   $('#kpi-msgs-24h').textContent = fmtNum(last24hMsgs);
   $('#kpi-msgs-24h-pct').textContent = messages > 0 ? ((last24hMsgs / messages) * 100).toFixed(1) + '%' : '—';
 
-  $('#kpi-noncache').textContent = fmtNum(noncache);
-  $('#kpi-cache').textContent = fmtNum(cache);
-  $('#kpi-input').textContent = fmtNum(input);
-  $('#kpi-output').textContent = fmtNum(output);
-  $('#kpi-cwrite').textContent = fmtNum(cwrite);
-  $('#kpi-cread').textContent = fmtNum(cread);
+  $('#kpi-noncache').textContent = fmtKMB(noncache);
+  $('#kpi-cache').textContent = fmtKMB(cache);
+  $('#kpi-input').textContent = fmtKMB(input);
+  $('#kpi-output').textContent = fmtKMB(output);
+  $('#kpi-cwrite').textContent = fmtKMB(cwrite);
+  $('#kpi-cread').textContent = fmtKMB(cread);
 
   const totalInputSide = input + cwrite + cread;
   const cacheRatio = totalInputSide > 0 ? cread / totalInputSide : 0;
