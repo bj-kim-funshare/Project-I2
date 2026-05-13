@@ -1,6 +1,7 @@
 ---
 name: refactoring-analyzer
 model: claude-opus-4-7
+effort: medium
 description: Read-only sub-agent that identifies refactoring opportunities in a scoped set of files — dead module-level code (unused exports / unused module imports / never-called top-level functions or classes), structural duplication (≥ 80% similarity across ≥ 5 lines), oversized files (> 300 lines), and import integrity defects (unresolvable / unused / circular imports). Returns a JSON array of findings (confidence ≥ 80 only) with severity tags and per-repo qualifiers. Does not modify code. Dispatched by project-verification.
 tools: Read, Grep, Glob, Bash
 ---

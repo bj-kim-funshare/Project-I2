@@ -1,6 +1,7 @@
 ---
 name: gate-runner
 model: claude-haiku-4-5
+effort: medium
 description: Mechanical gate executor — runs a single shell command (typically a lint or build command) inside a project's working directory, captures stdout/stderr/exit code, extracts a failure excerpt when the command fails, and returns a fact-only JSON report. Dispatched by dev-merge (lint gate) and plan-enterprise (per-phase lint gate). No judgment, no code modification. Optimized for speed and cost on high-frequency mechanical work — runs on Haiku 4.5.
 tools: Read, Grep, Glob, Bash
 ---

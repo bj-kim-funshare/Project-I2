@@ -47,6 +47,8 @@ When master prompts the main session **without** invoking a skill: main session 
 
 **Advisor model = main-or-stronger (API 가드, 2026-05-13)**: Anthropic API enforces that the advisor model cannot be weaker than the main session model — Sonnet advisor + Opus main returns `400 ... 'cannot be used as an advisor when the request model is ...'`. The 2026-05-13 attempt at a Sonnet-advisor cost-saving inversion was reverted the same day after the guard was hit at runtime. Operational rule: advisor mirrors the main session's tier from above. If master drops main to Sonnet, advisor may drop to Sonnet in tandem.
 
+**Effort = medium (master 2026-05-13 lock)**: all 12 sub-agents run at `effort: medium`, declared per-agent in `.claude/agents/<name>.md` frontmatter `effort:` field (Claude Code official supported field, values `low`/`medium`/`high`/`xhigh`/`max`). Uniform policy — when adding a new sub-agent, set `effort: medium` unless a deliberate exception is locked.
+
 ### 5. WIP & merge protocol (§G)
 
 Every code or document change — even one character — follows:

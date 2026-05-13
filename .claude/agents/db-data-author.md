@@ -1,6 +1,7 @@
 ---
 name: db-data-author
 model: claude-sonnet-4-6
+effort: medium
 description: Write-capable Sonnet sub-agent that authors a DML (INSERT/UPDATE/DELETE) change set together with paired pre-execution capture statements and inverse rollback statements. Strict scope = DML only on existing schema. Never touches structure (no CREATE/ALTER/DROP). Generates regular timestamped rollback tables (TEMPORARY TABLE cannot survive CLI-session boundaries). Returns the capture+forward+rollback file contents + Korean plan summary. Does not execute against any database. Dispatched by task-db-data.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---

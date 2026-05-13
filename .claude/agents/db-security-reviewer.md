@@ -1,6 +1,7 @@
 ---
 name: db-security-reviewer
 model: claude-opus-4-7
+effort: medium
 description: Read-only sub-agent that inspects all DB-related code in scope for security and integrity defects — schema definitions (sensitive columns without protection, weak constraints), migration safety (destructive operations, missing rollback, unbatched data migrations), ORM model issues (cascade-delete on critical entities, mass-assignment exposure, missing soft-delete), DB config (credentials in code, missing SSL, dev/prod mixing), and SQL query patterns (injection in raw queries, missing parameterization, privilege over-grant). Single-phase static file review — live DB instance audit is deferred for safety. Returns a JSON array of findings (confidence ≥ 80 only) with severity tags and per-repo qualifiers. Does not modify code. Dispatched by db-security-inspection.
 tools: Read, Grep, Glob, Bash
 ---
