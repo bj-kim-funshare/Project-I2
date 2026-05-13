@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.16.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#10
+
+### 페이즈 결과
+
+- **Phase 1** (`1edc5ef`): `findExternalDataGroups` UNION 첫 SELECT 두 곳 보정 — (A) `groupName` 컬럼을 `CASE WHEN user_fl.form_id IS NOT NULL THEN CONCAT('[폼] ', user_fl.form_name) ELSE dg.group_name END` 로 치환 (form 분기 표시명 `[폼] {form_name}` 으로 통일), (B) WHERE 절에 widget-scoped 패턴 `^__wdata_p[0-9]+_[0-9a-f]+$` 비노출 조건 추가 (단, `user_fl.form_id IS NOT NULL` 분기로 폼 소속 그룹은 보존). 결과: 외부 데이터 탐색기(일반) 화면에서 raw `__wdata_p*` widget-scoped 카드 17건 비노출, legacy 폼 1473 의 group_name 은 raw 데이터 그대로 유지된 상태에서 표시명만 `[폼] 직원 관리` 로 노출. multi 분기 미변경.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`):
+- `src/models/externalData.model.ts` (+7 / -1)
+
+### 후속 (plan 미포함)
+
+- **C — legacy form group_name DML 정규화**: 마스터 별도 `/task-db-data data-craft` 호출 예정. `db.md` 의 DML → task-db-data 정책 + Phase 1A 의 표시 결함 해소 + phase-executor DB 미실행 사유로 본 plan 분리.
+  - 쿼리 요지: `form_list.is_deleted = 0` 이고 `dg.group_name LIKE '__wdata_p%'` 이며 `dg.group_name NOT LIKE '[폼] %'` 인 `data_group` 행을 `CONCAT('[폼] ', form_name)` 으로 UPDATE.
+  - 사전 확인: company_id 별 group_name UNIQUE 충돌 (`[폼] {form_name}` 중복) 여부.
+
+### 검증 결과
+
+- 변경 파일 `src/models/externalData.model.ts` 단독 eslint 통과 (exit=0). `pnpm lint` 전체는 6 errors + 1 warning 으로 실패하나 모두 i-dev-001 베이스라인 (`fc3a6cf`) 의 기존 결함 (auth.service / seatChange.service.test / enterprise-482 테스트 / inputStore unused-disable). Phase 1 이 도입한 lint 결함 0건 확인.
+- `form_list.form_name` 컬럼 NOT NULL (`db.sql/01-tables.sql:343` `varchar(20) NOT NULL`) — CASE WHEN 분기에서 NULL 노출 위험 없음.
+- 5-perspective advisor 통과 (계획 + 완료 시점 두 회 모두 BLOCK 없음).
+
+### 마스터 수동 회귀 시나리오
+
+1. 외부 데이터 탐색기(일반) 새로고침 — raw `__wdata_p*` 카드 17건 사라짐, `[폼] 직원 관리` 카드 1건 신규 노출, 기존 `[폼] *` 카드 20건 유지.
+2. "직원 관리" 폼 진입 — group_id (1473) / 데이터 정상 (group_name DML 미실행 상태이므로 raw 그대로지만 화면 표시는 form_name 으로 노출).
+3. 새 폼 생성 → `[폼] *` 즉시 노출 (builder.form.ts createForm 회귀 무).
+4. input/selector 위젯 저장/로드 회귀 — group_id 기반이라 영향 없음 (`inputStore.service` 경로 1회 확인).
+
 ## v001.15.0
 
 > 통합일: 2026-05-13
