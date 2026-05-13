@@ -1,5 +1,22 @@
 # 아이OS — Patch Note (001)
 
+## v001.27.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #18
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/skills/task-db-data/SKILL.md` v2 업그레이드 — `task-db-structure` v2 (v001.21.0, plan #14) 가 이미 수용한 `dev_prod_separation` / `connection_style` 두 분기 패턴을 자매 스킬 `task-db-data` 로 paritize. Pre-conditions 의 항목 2 를 engine + `dev_prod_separation` (표준 `분리` | `공유` | 커스텀) + `connection_style` (표준 `DATABASE_URL` | `DB_* 환경변수` | 커스텀) 명세로 확장 (두 필드 부재 → fail-fast 메시지 각각 `"db.md 의 dev_prod_separation 필드 부재 — group-policy 로 보정 후 재호출"` / `"db.md 의 connection_style 필드 부재 — group-policy 로 보정 후 재호출"`). Phase 4 §10 의 고정 환경 loop (`dev → staging → prod`) → `dev_prod_separation` 3-분기 (`분리` 순차 / `공유` 단일 라벨 / 커스텀 `AskUserQuestion` 확인 카드) 로 교체. Phase 4 §11.b 의 단일 contract (`${ENV_UPPER}_DATABASE_URL`) → `connection_style` 분기 (DATABASE_URL / DB_* 환경변수 mysql2 패턴 / 커스텀 마스터 확인) 로 교체. Phase 4 §11.c-e (capture / forward / rollback execution) 에 placeholder 치환 메커니즘 신규 — `db-data-author` 가 SQL 세 파일에 단일 토큰 `__ENV_OR_LABEL__` (앞뒤 더블 언더스코어) 을 emit 하고 dispatcher 가 각 env iteration 실행 직전 `sed "s/__ENV_OR_LABEL__/${env_or_label}/g"` 파이프로 치환. 토큰 형식 사유: `${...}` 는 postgres dollar-quoting / mysql user-defined variable 과 충돌 가능, `__ENV_OR_LABEL__` 은 SQL identifier 의 normal segment 로 치환 전에도 syntactically 안전. §11.f cleanup 도 `DROP TABLE _rollback_*_${env_or_label}_<execution_id>` 로 동기 갱신 (shell expansion). Failure policy 표에 두 필드 부재 fail-fast 행 2개 추가, `Known v1 limits` → `Known v2 limits` 섹션 헤더 갱신 + connection_credentials 항목 v2 분기 지원으로 갱신 + Phase 7 completion-reporter dispatch 의 `env_results` key-set 설명에 `공유` 분기 단일 라벨 키 처리 명시 (이미 v001.21.0 Phase 1b 에서 contract md 가 dispatcher-determined 키로 유연화된 정책과 정합).
+- **Phase 2**: `.claude/agents/db-data-author.md` capture-table 네이밍 토큰화 — Phase 1 의 dispatcher 치환 계약과 정합. 세 statement type (UPDATE / DELETE / INSERT) 의 capture / forward / rollback SQL 템플릿 전수에서 `_rollback_<table>_<execution_id>` 를 `_rollback_<table>___ENV_OR_LABEL___<execution_id>` 로 일괄 치환. 신규 "Placeholder convention" 서브섹션 추가 (토큰 형식 사유 + 치환 시점 명시, 에이전트는 literal token emit, dispatcher 가 per-env 치환). plan.md 템플릿의 `## 롤백 전략` 의 capture 테이블 형식 문구를 치환 후 실제 DB 이름 형식 (`_rollback_<table>_<env_or_label>_<execution_id>`) 으로 갱신 + dispatcher Phase 4 치환 시점 한 줄 주석 추가. Discipline 섹션의 `<execution_id>` 규칙에 "에이전트가 토큰을 직접 치환하지 않고 literal 로 emit" 강제 문장 추가. Input parameters 변경 없음 — dispatcher 는 `env_or_label` 을 agent 에 전달하지 않으며 분기 로직은 전적으로 dispatcher 책임.
+
+### 영향 파일
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/agents/db-data-author.md`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 추가 없음. 자매 스킬 (`task-db-structure` v2) 에 이미 plan-enterprise-os #14 (v001.21.0) 에서 수용·검증된 분기 패턴을 동일 스킬 (`task-db-data`) 로 paritize 하는 정렬 작업. placeholder 토큰 (`__ENV_OR_LABEL__`) 도 새 메커니즘이 아니라 task-db-structure v2 의 `<env_or_label>` 어휘를 Phase 3-author / Phase 4-substitute 타이밍 갭에 맞춰 SQL parser-safe 형태로 표기한 동일 contract.
+
 ## v001.26.0
 
 > 통합일: 2026-05-13
