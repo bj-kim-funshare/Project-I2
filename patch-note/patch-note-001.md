@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.23.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #16
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: DB CLI auto-mode classifier 차단 해소 — `.claude/settings.json` 의 `permissions.allow` 에 `Bash(mysql *)` / `Bash(psql *)` 두 패턴 항목을 추가해 권한 prompt 회피, 동시에 신규 `autoMode` 블록을 추가하고 `environment` / `allow` 배열에 각각 `$defaults` + task-db-* 스킬의 DB 접속 인가 영문 prose 를 등록해 분류기(classifier) 우회 가능 상태로 전환. 핫픽스 1회 적용 — 최초 한국어 prose 가 CLAUDE.md §1 (`.claude/` = English) 위반 + 분류기 영어 튜닝 가능성 두 사유로 advisor BLOCK 되어 영문 변환 (`The task-db-structure and task-db-data skills connect directly to ... ${ENV}_DATABASE_URL ...` 및 `Direct mysql/psql CLI invocation during Phase 4 ... per-environment master approval gates at Phase 4, and capture-based rollback.`). `.claude/skills/task-db-structure/SKILL.md` 와 `.claude/skills/task-db-data/SKILL.md` 의 Pre-conditions 섹션 §6 (DB CLIs available) 직후에 settings 등록 필수 안내 한국어 blockquote 추가 (기존 두 SKILL.md 의 §1~§6 한국어 운영 convention 의 연장). `CLAUDE.md` References 섹션 직후에 두 레이어 권한 prose 가 task-db-* 스킬 전용 의도임을 영문 blockquote 로 명시.
+
+### 영향 파일
+- `.claude/settings.json`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/skills/task-db-data/SKILL.md`
+- `CLAUDE.md`
+
+### Treadmill Audit
+PASS — Q3 폐기 1건 명시: classifier 의 mysql/psql 직접 호출에 대한 묵시적 deny (Production Read 분류) 가 retired → 대체 안전망 = task-db-* 스킬 내부의 다층 게이트 (Phase 1 advisor 계획 안전성 검토 + Phase 4 환경별 마스터 직접 인가 카드 + capture-based rollback). 신규 rule / hook / agent / skill 추가 없음 (settings 항목 2개 + autoMode 신규 블록 + 문서 3곳 갱신 한정). 메커니즘 효과 (분류기가 영문 prose 를 신뢰 컨텍스트로 해석하는지) 실증 검증은 본 patch-note 머지 후 마스터의 `/task-db-structure data-craft` 재진입에서 확인 — 본 시점 "검증 대기" 상태. 메커니즘 실패 시 Plan B (`.claude/scripts/db-run.sh` 래퍼 + `autoMode.allow` 에 본 스크립트 경로 명시) 로 후속 plan-enterprise-os 호출 경로 사전 등록.
+
 ## v001.22.0
 
 > 통합일: 2026-05-13
