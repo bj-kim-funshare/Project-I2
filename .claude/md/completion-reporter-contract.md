@@ -226,9 +226,9 @@ Mirrors `plan-enterprise` exactly with the following differences:
 #### `task-db-structure` — moments: `skill_finalize`, `skill_finalize.blocked`
 
 ##### `skill_finalize`
-- Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (`{dev, staging, prod}` each with value `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"`)
+- Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (dynamic mapping: environment name → `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"`; key set is dispatcher-determined — 분리 분기 관례: `{dev, staging, prod}`, 공유 분기: 마스터 라벨링한 단일 키)
 - Optional: `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`
-- Recommended table columns: WIP | migration_file | rollback_file | plan_file | 파괴적 ops | dev | staging | prod
+- Recommended table columns: WIP | migration_file | rollback_file | plan_file | 파괴적 ops | one column per `env_results` key (dispatcher-determined)
 - Notes: Heading uses 🏁. Rollback tables listed if present.
 
 ##### `skill_finalize.blocked`
@@ -246,6 +246,7 @@ Mirrors `task-db-structure` exactly with the following differences:
 - `migration_file` → `forward_file`; add `capture_file` as required field.
 - `destructive_ops_count` → `risk_tags[]` (e.g., `["DESTRUCTIVE", "WIDE_UPDATE"]`).
 - `execution_id` added as required field in both moments (namespaces rollback tables).
+- `env_results` key-set policy mirrors `task-db-structure`: 분리 분기 관례 `{dev, staging, prod}`, 공유 분기 마스터 라벨링 단일 키 — dispatcher-determined.
 
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `wip_branch`, `capture_file`, `forward_file`, `rollback_file`, `plan_file`, `execution_id`, `risk_tags[]`, `env_results`
