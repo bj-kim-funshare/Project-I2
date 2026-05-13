@@ -29,6 +29,24 @@ Both branch names required. Works against the current working directory's GitHub
 
 `README.md` §G's universal `{skill}-{이슈번호}` WIP rule does not apply to `dev-merge` literally. The from-branch supplied by master IS the work branch (its own WIP, created by an earlier skill or by master directly). The PR replaces the issue concept. Hotfix commits go onto the from-branch, not onto a nested WIP — nesting WIPs adds no isolation here and complicates the gh workflow.
 
+## Worktree 격리 (from-branch 작업)
+
+`code-fixer` 의 fix-apply 와 conflict-PENDING 의 rebase 둘 다 메인 working tree 에서 직접 수행하면 다른 세션의 HEAD 를 mutate 할 위험이 있다. 본 스킬은 호출 직후 from-branch 위에 worktree 를 만들어 모든 fix / conflict-resolve 작업을 그 worktree 안에서만 수행한다. 절차: `.claude/md/worktree-lifecycle.md`.
+
+```bash
+# Entry ritual
+git worktree prune
+git worktree list   # report unrelated leftovers to master
+
+wt_from="../$(basename "$(pwd)")-worktrees/devmerge-<from-branch>"
+git worktree add "${wt_from}" <from-branch>   # checkout existing branch, no -b
+```
+
+- `code-fixer` 디스패치마다 `worktree_cwd = <wt_from 절대경로>` 전달.
+- conflict-PENDING 의 rebase / 충돌-해결 명령은 `git -C <wt_from> ...` 으로 수행.
+- 메인 세션의 `git` / `gh` 명령은 메인 cwd 의 working tree 에서 그대로 (PR 조회, mergeable check, `gh pr merge` 등 — repo 단위 명령이라 worktree 와 무관).
+- 종료 시점 (성공 머지 또는 master halt) 에 `git worktree remove ${wt_from}`. PR mergeable check 실패로 conflict-PENDING 만 발생한 경우에도 종료할 때 동일하게 worktree 제거.
+
 ## Context preparation (main session, no sub-agent)
 
 Before dispatching reviewers, main session collects context inline via Bash/gh. No sub-agent isolation is needed for fetching information — that overhead is wasted on retrieval.
@@ -87,7 +105,7 @@ Each comment includes the SHA hash + line range so the user (and the next iterat
 If the combined findings array is non-empty:
 
 1. Dispatch `code-fixer` (write-capable Sonnet sub-agent) via Task, with the findings array and PR metadata.
-2. `code-fixer` checks out the from-branch, applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
+2. `code-fixer` reads `worktree_cwd` from input, runs all `git` operations as `git -C <worktree_cwd>` (no local `git checkout`), applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
 3. Main session re-fetches PR diff (now reflecting the new commit), re-collects prior PR comments (now including the just-posted ones), re-dispatches the 2 reviewers.
 4. Loop until both reviewers return `[]`, OR iteration cap is hit.
 
@@ -134,7 +152,7 @@ On lint fail:
    - `category: "lint"`
    - `message: "lint 실패 (target=<name>): <gate-runner summary>"`
    - `suggested_fix: "<target.lint_command> 통과를 위해 수정. failure excerpt: <첫 N 줄>"`
-2. Dispatch `code-fixer` with the synthesized findings. Code-fixer applies fixes, commits, pushes.
+2. Dispatch `code-fixer` with the synthesized findings. Dispatch input includes `worktree_cwd = <wt_from>`. Code-fixer applies fixes, commits, pushes.
 3. Re-dispatch `gate-runner` for the same targets. Recompute lint pass/fail.
 4. If still failing → iter counter += 1, repeat from step 1 (up to 3 total iters).
 5. Iter cap reached with lint still failing → halt with **lint cap-exhausted report**:
@@ -188,7 +206,7 @@ Master's `<description>` is a hint — typically "L42 의 null 처리 추가" / 
 
 1. Synthesize a **single high-confidence finding** from master's hint with `confidence: 100`, `category: "compliance"` (or `"bug"` based on hint language), file/line extracted from the hint or marked as `null` if hint doesn't specify.
 2. Post the synthetic finding as a PR review comment so the audit trail shows the master-initiated fix.
-3. Dispatch `code-fixer` with the synthetic finding as input. The dispatcher labels this iteration as `master-supervised` rather than the auto-iter counter.
+3. Dispatch `code-fixer` with the synthetic finding as input. Dispatch input includes `worktree_cwd = <wt_from>`. The dispatcher labels this iteration as `master-supervised` rather than the auto-iter counter.
 4. After code-fixer commits + pushes, re-dispatch the 2 reviewers on the updated diff (same as automated loop).
 5. When reviewers return `[]` again → return to **PENDING gate**. Master may issue more `핫픽스` or finalize.
 
@@ -233,6 +251,8 @@ gh pr merge <PR-num> --merge --delete-branch=false
 
 If `gh pr merge` itself fails despite the mergeable check passing (rare — concurrent push intercepted the merge), retry the mergeable check once. Re-check → CONFLICTING means a concurrent push happened, enter Conflict-PENDING. Re-check → other failure means transient issue, halt with verbatim error.
 
+After `gh pr merge` returns success: `git worktree remove ${wt_from}`. On failure or master halt, the worktree is preserved for forensics; master decides cleanup.
+
 ## Conflict-PENDING (PR 머지 충돌 처리)
 
 `gh pr merge` 충돌은 보통 의미적 (semantic) — 양쪽이 같은 코드 영역에 서로 다른 변경. 자동 "양측 보존" 시도는 잘못된 결합 위험이 크므로 master 결정을 default 로 한다 (CLAUDE.md §5 일반 규칙의 dev-merge 특화 carve-out).
@@ -271,11 +291,11 @@ Differs from the normal HOTFIX path — the input task is conflict resolution, n
 
 1. Pull the latest to-branch:
    ```bash
-   git fetch origin <to-branch>
-   git checkout <from-branch>
-   git pull --rebase=false origin <to-branch>
+   git -C ${wt_from} fetch origin <to-branch>
+   # from-branch 는 worktree 가 이미 checkout 한 상태 — 다시 checkout 하지 않는다
+   git -C ${wt_from} pull --rebase=false origin <to-branch>
    ```
-   This produces working-tree conflict markers in the from-branch.
+   This produces conflict markers inside ${wt_from}. All conflict-resolve commands run with `git -C ${wt_from}`.
 2. Synthesize a finding for code-fixer:
    - `confidence: 100`
    - `category: "conflict"`
@@ -343,6 +363,7 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 
 | Cause | Output |
 |---|---|
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. dev-merge 진입 보류. 마스터 결정 필요."` |
 | `gh` CLI missing or unauthenticated | `"gh CLI 미설치 또는 미인증. 사전 설치/인증 후 재호출."` |
 | Not inside a git repo | `"git 저장소 외부에서 호출됨. 대상 저장소 cwd 에서 재호출."` |
 | `<from-branch>` not found (local or remote) | `"브랜치 <from> 없음 (로컬 또는 리모트)."` |
