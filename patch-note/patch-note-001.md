@@ -1,5 +1,36 @@
 # 아이OS — Patch Note (001)
 
+## v001.7.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #3 (핫픽스 phase)
+> 대상: 아이OS — 모니터링 대시보드 일자별 토큰 차트
+
+### 페이즈 결과
+
+- **Hotfix 1 (누적 Phase 2)** — `monitoring/script.js` 의 `renderChartDayTokens()` datasets 에서 `'cache write'`, `'cache read'` 두 시리즈 제거. 남은 시리즈는 `input` (`fill: 'origin'`) + `output` (`fill: '-1'`) 2 개로 누적 영역 선 차트 유지.
+
+### 변경 요약
+
+- 차트가 4 시리즈 → 2 시리즈로 단순화 (input + output 만).
+- `type: 'line'` / `scales.{x,y}.stacked: true` / `tooltip` / `legend` / 색상 상수 / HTML / 기타 옵션 무변경.
+- 이슈 #3 의 PENDING 게이트에서 마스터 입력 `핫픽스, 선 그래프에서 캐시는 제외해줘` 로 진입.
+
+### 영향 파일
+
+- 수정: `monitoring/script.js` (datasets 2 줄 삭제)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 변경은 시각화 datasets 토글이며, 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 / invariant 추가 0.
+
+### 절차상 메모
+
+- 본 entry 는 plan-enterprise-os 핫픽스 path 의 단일 WIP (`-핫픽스1`) 안에서 코드 commit + patch-note commit 을 같은 worktree 에 묶어 진행. 새 §5 worktree 격리 규약 (v001.4.0) 적용.
+- patch-note 버전 번호는 worktree 생성 시점에 main HEAD 가 v001.5.0 이었으나 dispatch 중 다른 세션이 v001.6.0 을 머지하여, 본 entry 가 v001.7.0 으로 됨 (worktree-lifecycle.md 의 patch-note 버전 race known limitation 경로 — renumber 없이 다음 빈 슬롯으로 자연 정렬).
+
+---
+
 ## v001.6.0
 
 > 통합일: 2026-05-13
