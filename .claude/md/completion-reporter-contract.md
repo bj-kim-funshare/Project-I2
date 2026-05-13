@@ -104,6 +104,20 @@ Universal required fields: `skill_type`, `block_reason`, `issue_url` (when a han
 
 **Preamble — required vs. optional**: `Required` means the dispatcher must supply the field. If the agent finds a required field absent from the received `data`, it writes `(정보 없음)` in the corresponding table cell and appends a trailing `⚠️ 주의: 누락 필수 필드 — <field_list>` line after the closing paragraph. The agent does not reject or abort — it renders a partial report with explicit notices.
 
+**Common field sourcing (dispatcher guidance)**: The main session is the dispatcher. When assembling `data` for any skill / moment, the recurring narrative fields are sourced as follows:
+
+| Field | Source |
+|-------|--------|
+| `master_intent_summary` | Master's invocation message (the prompt that launched the skill). For hotfix re-entry, the `핫픽스 <description>` text. Compress to 1–2 Korean sentences. |
+| `result_summary` | Cumulative phase outcomes recorded in the GitHub issue body / phase comments / final advisor verdict. For non-issue skills (e.g., patch-update), the actual changes committed. 1–3 sentences. |
+| `root_cause_summary` (optional, bug-fix plans) | The `--report-summary-md` / advisor's root-cause analysis, or master's bug-report message + diagnosis. Omit for new-feature plans. |
+| `solution_summary` (optional) | What was done at the file/architecture level. Drawn from per-phase commit messages or final advisor's "what was done" summary. |
+| `manual_test_scenarios[]` | (a) Master-supplied test cases in the invocation, (b) phase-executor notes mentioning UI / API surfaces affected, or (c) main-session inference from the diff scope. Each entry is a 1-line scenario. Omit array if no meaningful manual test exists (pure refactor / doc change). |
+| `next_action_guidance` | Templated by moment — `work_complete`/`hotfix_complete`: gate keywords (`플랜 완료` / `핫픽스 <description>` / `중단`). `skill_finalize`: optional confirmation skill prompt when `push_pending: true`, or none. |
+| `post_action_hints[]` | Main-session inference based on what changed: code → `"build_required"` for compiled projects, frontend → `"hard_refresh"` and/or `"dev_server_restart"`, build artifacts → `"cache_clear"`. Pure doc/config changes typically need none. |
+| `advisor_plan_result` / `advisor_complete_result` | The verbatim PASS/BLOCK verdict from the two advisor calls (Step 3 plan + Step 8 completion). Format: `"PASS"` or `"BLOCK: <reason>"`. |
+| `treadmill_audit_result` (plan-enterprise-os) | One of `"PASS"`, `"NOT APPLICABLE"`, `"FAIL: <reason>"` — derived from the advisor's Treadmill Audit perspective verdict. |
+
 Tier A (multi-phase / hotfix): `plan-enterprise`, `plan-enterprise-os`, `dev-merge`
 Tier A2 (multi-env DB execution): `task-db-structure`, `task-db-data`
 Tier B (inspection / pre-deploy): `pre-deploy`, `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification`
