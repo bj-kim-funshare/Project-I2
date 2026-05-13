@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.11.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 6, cumulative phase 12)
+
+### Hotfix 결과
+
+마스터 요구 3개:
+1. 세로 막대 X 라벨이 균등 분배 후에도 truncate(말줄임표) 로 나타남 — 컬럼 폭을 활용해야 함.
+2. 보드 위젯 간 5px 씩 여백.
+3. 헤더 아이콘-제목 사이 5px 추가 (현재 5px → 10px).
+
+- **Phase 12** (`23819249`):
+  - **A. 세로 막대 X 라벨 폭 활용 (`BarChartWidget.tsx`)** — 각 그룹 컬럼을 `flex-shrink-0` 고정폭에서 `flex: 1 1 0` 균등 분배 방식으로 전환. X 라벨 셀이 컬럼 전체 폭을 활용. maxWidth 고정값(groupWidth px) → 100% 로 교체해 truncate 가 컬럼 폭 초과 시에만 적용.
+  - **B. 위젯 간 5px 여백 (`DashboardGrid.tsx`)** — 절대위치 기반 위젯에 calc() 인셋 (2.5px offset, 5px 크기 감소) 으로 모든 방향 5px 시각적 여백. 드롭 프리뷰도 동일 적용.
+  - **C. 헤더 gap (`WidgetContainer.tsx`)** — flex gap 5px → 10px (아이콘 ↔ 제목 간격 추가 5px 확대).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx` (X 라벨 컬럼 flex 균등)
+- `packages/fs-data-viewer/src/widgets/dashboard/DashboardGrid.tsx` (calc 인셋 위젯간 여백)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx` (gap 10px)
+
+### 검증 결과
+
+- advisor 사전 검토 없이 진행 (3 요구사항 모두 명확하고 작은 시각 조정).
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 세로 막대 — X 라벨이 막대 컬럼 폭 전체를 활용해 표시되는지 확인 (이전: 좁은 폭으로 truncate). 라벨이 컬럼 폭 초과 시에만 말줄임표 적용.
+2. 위젯 격자 — 모든 인접 위젯 사이에 5px 시각적 간격 확인 (가로/세로 모두).
+3. 헤더 — 아이콘 + 제목 둘 다 있는 위젯에서 사이 간격이 10px (이전 5px → 5px 추가) 으로 확장 확인.
+
 ## v001.10.0
 
 > 통합일: 2026-05-13
