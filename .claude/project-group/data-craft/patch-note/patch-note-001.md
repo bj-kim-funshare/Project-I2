@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.19.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 13, cumulative phase 19)
+
+### Hotfix 결과
+
+마스터 요구: 모든 보드 위젯 상세 설정의 단일 `showBorder` 토글을 (1) 상/하/좌/우 4면 개별, (2) 모서리 둥글기, (3) 콘텐츠 안쪽 / 위젯 바깥쪽 여백 위치 선택 옵션으로 확장.
+
+- **Phase 19 iter 1** (`7a5de780`):
+  - 신규 타입 `BorderConfig` (top/right/bottom/left/radius/spacing) — `entities/dashboard/types.ts`, 배럴 export 동시 갱신.
+  - 7개 *Config (Card/Pie/Line/BaseBarChart/Scatter/Gauge/UserList) 에 `borderConfig?: BorderConfig` optional 필드 추가. 기존 `showBorder` 는 deprecated 주석 + 호환 유지.
+  - 공통 `BorderSettingsSection.tsx` 신규 (4면 토글 + 둥글기 슬라이더 + inside/outside segmented).
+  - 7개 `*Settings.tsx` 모두에 BorderSettingsSection 추가.
+  - WidgetContainer 에서 borderConfig 적용 — 활성 면 1개라도 있으면 4면 개별 border + radius + spacing 적용. `spacing='outside'` 는 margin:6px 으로 격자 셀 안에서 위젯 축소.
+- **Phase 19 iter 2** (`305dabe0`):
+  - Blocker (DashboardGrid 의 기존 showBorder border 와 WidgetContainer 의 borderConfig border 중복) 정정. DashboardGrid 의 border 적용 분기에 borderConfig 활성 가드 추가 → borderConfig 가 활성이면 DashboardGrid 측 border skip, WidgetContainer 가 책임. 미설정이면 기존 showBorder 동작 fallback.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts` (`BorderConfig` 정의, 7개 *Config 에 추가)
+- `packages/fs-data-viewer/src/entities/dashboard/index.ts` (배럴 export)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/_shared/BorderSettingsSection.tsx` (신규)
+- 7개 `*Settings.tsx` — Card/Pie/Line/BarChart/Scatter/Gauge/UserList
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx` (borderConfig 시각 적용)
+- `packages/fs-data-viewer/src/widgets/dashboard/DashboardGrid.tsx` (iter 2 — border 일원화 가드)
+
+### 검증 결과
+
+- TSC delta: 신규 typecheck 에러 0건.
+- `pnpm build` ✅ `built in 16.80s`.
+
+### 마스터 수동 회귀 시나리오
+
+1. 모든 위젯 설정에 새 "테두리" 섹션 노출 — 4면 토글 / 둥글기 슬라이더 / "콘텐츠 안쪽" · "위젯 바깥쪽" 토글 확인.
+2. 4면 중 일부만 ON → 해당 면에만 border 표시.
+3. 둥글기 12px → border-radius 시각 확인.
+4. spacing='outside' → 위젯이 격자 셀 안에서 살짝 축소, 격자 셀 가장자리와 위젯 border 사이 여백 노출.
+5. 기존 showBorder=true 만 설정된 위젯 → 4면 모두 동일 border (DashboardGrid 의 fallback) 회귀 확인.
+
+### 미해결 / Post-action hints
+
+- UserListWidget 의 user-card 개별 border 는 `UserCard.tsx` / `SlotCard.tsx` / `CompareSlotCard.tsx` 에서 `showBorder` 별도 참조. 본 hotfix 의 borderConfig 는 위젯 외곽만 담당하며 user-card 수준 border 와 의미 분리 불완전 — 후속 hotfix 검토 가능.
+
 ## v001.18.0
 
 > 통합일: 2026-05-13
