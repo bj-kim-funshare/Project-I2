@@ -805,6 +805,16 @@ function updateCompareToggleState(unit, periodsIndex) {
   }
 }
 
+function updateLastRefreshDisplay() {
+  const el = document.getElementById('last-refresh-time');
+  if (!el) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  el.textContent = `마지막 새로고침: ${hh}:${mm}:${ss}`;
+}
+
 async function applyPeriodSelection(unit, key, periodsIndex) {
   const err = $('#error');
   err.hidden = true;
@@ -844,6 +854,7 @@ async function applyPeriodSelection(unit, key, periodsIndex) {
       }
       updateUrl(unit, key);
     }
+    updateLastRefreshDisplay();
   } catch (e) {
     err.hidden = false;
     err.textContent = `기간 데이터 로딩 실패: ${e.message}`;
@@ -937,6 +948,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await applyPeriodSelection(currentUnit, currentKey, periodsIndex);
     } else {
       render(agg);
+      updateLastRefreshDisplay();
     }
 
     const AUTO_REFRESH_MS = 60_000;
