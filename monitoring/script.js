@@ -690,6 +690,7 @@ function renderBySession(rows) {
 // ---------- Orchestration ----------
 
 let _aggregateCache = null;
+let _autoRefreshInFlight = false;
 
 async function loadAggregate() {
   if (_aggregateCache) return _aggregateCache;
@@ -937,6 +938,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       render(agg);
     }
+
+    const AUTO_REFRESH_MS = 60_000;
+    const autoRefreshHandle = setInterval(async () => {
+      if (_autoRefreshInFlight) return;
+      _autoRefreshInFlight = true;
+      try {
+        _aggregateCache = null;
+        const unit = unitEl.value;
+        const key = keyEl.value || null;
+        await applyPeriodSelection(unit, key, periodsIndex);
+      } finally {
+        _autoRefreshInFlight = false;
+      }
+    }, AUTO_REFRESH_MS);
+    window.addEventListener('beforeunload', () => clearInterval(autoRefreshHandle));
   } catch (e) {
     const err = $('#error');
     err.hidden = false;
