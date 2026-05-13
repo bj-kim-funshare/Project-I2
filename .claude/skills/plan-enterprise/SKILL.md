@@ -22,6 +22,7 @@ The most-used skill in the system per master's testing: the procedure that actua
 3. **Work repo 식별**: phase 가 실제로 손대는 저장소 (target cwd). 한 페이즈가 정확히 하나의 work repo 를 지정. 모호하면 `AskUserQuestion` 1회로 마스터 선택. work repo 는 leader repo 와 같을 수도 다를 수도 있다.
 4. Current branch = `i-dev` (or `main` for bootstrap — `i-dev` is created from `main` HEAD on first invocation).
 5. `gh` CLI installed and authenticated for **the leader repo's GitHub remote** (이슈 생성/comment/close 가 모두 리더 저장소 위에서 일어남).
+6. 플랜 전체는 dev.md `targets[]` 의 여러 work repo 를 가질 수 있다. 단 **한 페이즈 = 정확히 하나의 work repo**. 페이즈의 work repo 는 Step 3 플랜 형성 시 페이즈 메타데이터의 `work_repo` 필드로 명시되어 이슈 본문에 기록된다.
 
 ## Lifecycle
 
@@ -114,6 +115,7 @@ Create the GitHub issue on **the leader repo** (`<leader-owner-repo>` — `dev.m
 - 유형: <type>
 - 설명: <2-4 sentences>
 - 영향 파일: <list>
+- Phase 1 work repo: <repo-name>
 - Phase 1 WIP: {repo}:{branch}
 
 ### Phase 2: ...
@@ -126,6 +128,8 @@ Create the GitHub issue on **the leader repo** (`<leader-owner-repo>` — `dev.m
 - Command Fulfillment: PASS / FAIL — <one line>
 ```
 
+각 phase 의 `work_repo` 는 dev.md targets[].name 중 하나여야 한다.
+
 ```bash
 # leader_owner_repo = gh -C <leader-cwd> repo view --json nameWithOwner -q .nameWithOwner
 gh issue create --repo <leader-owner-repo> \
@@ -135,9 +139,15 @@ gh issue create --repo <leader-owner-repo> \
 
 Capture the issue number `N` and the issue URL.
 
-## Step 6 — WIP A branch
+## Step 6 — WIP A branch (work-repo-aware lazy 생성)
 
 Slug is a short Latin/Hangul-phonetic transliteration of the plan title (max 50 chars, no whitespace). If unclear, ask main session to derive one.
+
+이슈 본문의 모든 `Phase N work repo:` 값에서 work_repos = unique set 을 도출. N = |work_repos|.
+
+> wt_path 계산 규칙은 `.claude/md/worktree-lifecycle.md` §"Path convention" 의 `../{repo-dir-name}-worktrees/{wip}` 패턴을 그대로 따른다 (이미 repo 별).
+
+### N == 1 (단일-repo 케이스 — 기존 동작)
 
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
@@ -150,6 +160,22 @@ git worktree add -b "${wip_a}" "${wt_a}" i-dev
 git -C "${wt_a}" push -u origin "${wip_a}"
 ```
 
+### N > 1 (멀티-repo 케이스)
+
+WIP A 를 work repo 별 lazy 생성. 첫 페이즈의 work_repo X 에 대해 즉시 생성:
+
+```bash
+git worktree prune
+wip_a_x="plan-enterprise-<N>-<slug>-작업-<repo-slug>"   # repo-slug = dev.md targets[].name (해당 work repo)
+wt_a_x="../<repo-dir-name>-worktrees/${wip_a_x}"        # <repo-dir-name> = work repo 의 디렉토리명 (leader cwd 의 sibling 가정)
+git -C <repo-dir-path> worktree add -b "${wip_a_x}" "${wt_a_x}" i-dev
+git -C "${wt_a_x}" push -u origin "${wip_a_x}"
+```
+
+이후 Step 7 흐름에서 새로운 work_repo Y 의 첫 페이즈를 만나면 그 시점에 동일 패턴으로 WIP A_Y 추가 lazy 생성.
+
+**Codex 변형 + N>1**: v1 미지원 (실패 정책 참조).
+
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ## Step 7 — Phase execution loop
@@ -158,7 +184,7 @@ For each phase in order:
 
 ### 7a. Dispatch `phase-executor`
 
-Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number (`#N`), leader name, WIP branch name, `worktree_cwd` (absolute path of the WIP A worktree), and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
+Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number (`#N`), leader name, WIP branch name, `worktree_cwd` (absolute path of the WIP A worktree), and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops. 각 페이즈마다 그 페이즈의 `work_repo` 워크트리 절대 경로를 `worktree_cwd` 로 전달한다. 새 work_repo 의 첫 페이즈인 경우 디스패치 직전에 Step 6 의 N>1 lazy 생성 절차를 실행하여 그 repo 의 WIP A_Y 워크트리를 생성한 뒤 디스패치한다.
 
 Dispatch follows `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k). Do NOT inline `group-policy summary` or accumulate `prior-phases summary` into the prompt — phase-executor reads `gh issue view <N>` for the plan body and completed-phase comments, and reads `.claude/project-group/{leader}/{dev,deploy,db,group}.md` from disk on its own.
 
@@ -251,15 +277,37 @@ After all phases complete and pass per-phase verification, run advisor with the 
 
 After the final advisor passes:
 
-1. In main working tree: `git checkout i-dev` then `git merge --no-ff plan-enterprise-<N>-<slug>-작업`. (A merges first — phase commits land on i-dev before the patch-note entry references them.) On conflict → preserve both sides; halt on mutually-exclusive conflict. After merge: `git worktree remove "${wt_a}"`.
-2. Create WIP B as a worktree from i-dev:
+### 9.1 — 각 work_repo 의 WIP A 머지 (페이즈 첫 등장 순)
+
+work_repos 의 각 repo X 에 대해 (페이즈 첫 등장 순):
+
+```bash
+git -C <X-repo-dir> checkout i-dev
+git -C <X-repo-dir> pull --ff-only origin i-dev 2>/dev/null || true
+git -C <X-repo-dir> merge --no-ff <WIP-A_X>
+git worktree remove "${wt_a_x}"
+```
+
+(A merges first — phase commits land on i-dev before the patch-note entry references them.) 머지 충돌은 §5 step 4 (양측 보존; 상호 배타일 때만 마스터 보고).
+
+단일-repo 케이스 (N=1) 는 위 절차가 1회 반복으로 기존 동작과 동치:
+
+```bash
+git checkout i-dev
+git merge --no-ff plan-enterprise-<N>-<slug>-작업
+git worktree remove "${wt_a}"
+```
+
+### 9.2 — leader repo 에서 WIP B (-문서) 생성 + patch-note 작성
+
+1. Create WIP B as a worktree from i-dev:
    ```bash
    wip_b="plan-enterprise-<N>-<slug>-문서"
    wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
    git worktree add -b "${wip_b}" "${wt_b}" i-dev
    ```
-3. Resolve target patch-note path: `.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md` where `NNN` is the highest existing number. Parse the file for max `K` in `## v{NNN}.K.0` headers; new entry is `v{NNN}.K+1.0`.
-4. Author the patch-note entry inline (main session, Write/Edit to `<wt_b>/.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md`). Source: the plan issue's body + phase comments. Entry shape:
+2. Resolve target patch-note path: `.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md` where `NNN` is the highest existing number. Parse the file for max `K` in `## v{NNN}.K.0` headers; new entry is `v{NNN}.K+1.0`.
+3. Author the patch-note entry inline (main session, Write/Edit to `<wt_b>/.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md`). Source: the plan issue's body + phase comments. Entry shape:
 
    ```markdown
    ## v<NNN>.<K+1>.0
@@ -278,8 +326,11 @@ After the final advisor passes:
 
    Mechanical summary. Master may edit afterward.
 
-5. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`.
-6. In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
+4. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`.
+
+### 9.3 — leader repo i-dev 로 WIP B 머지
+
+In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
 
 ## Step 10 — Merge
 
@@ -369,10 +420,14 @@ End of skill invocation.
 | Advisor #1 BLOCK | (revise plan or halt — master decides via response to the block summary) |
 | Phase iter budget exhausted (3 per phase) | `"Phase <N> 3회 재시도 실패. 마스터 개입 필요. 이슈 #<N> 에 현 상태 코멘트됨."` |
 | Advisor #2 BLOCK | `"완료 시점 advisor 차단: <reason>. 패치노트 작성 보류, WIP 머지 보류. 마스터 결정 필요."` |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 | `git worktree add` failure | `"worktree 생성 실패: <error>. 마스터 결정 필요."` |
 | 리더 저장소 식별 실패 (`targets[]` 에 `name == <leader>` 없음) | `"리더 저장소 식별 실패 — <leader>/dev.md targets[] 에 name=<leader> 항목 없음. /group-policy 로 추가 필요."` |
 | 이슈 호스트 (leader repo) 와 work repo 불일치인데 본문 / 페이즈 코멘트에 `Phase N WIP:` 표시 누락 | `"work repo 표시 누락 — 이슈 본문 / 페이즈 코멘트 템플릿 점검 필요."` (skill 내부 self-check; 정상 경로에선 발생 안 함) |
+| work_repo `<X>` 가 `<leader>/dev.md` `targets[]` 에 미등록 | `"work repo <X> 가 <leader>/dev.md targets[] 에 없음 — /group-policy 로 추가 후 재호출."` |
+| work repo `<X>` 의 i-dev 머지 충돌 (양측 보존 불가) | `"<X> i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| codex 변형 + multi-repo 조합 | `"codex 변형 + multi-repo 조합은 v1 미지원, 마스터 결정 필요."` |
+
+iter 카운트 (페이즈당 3회 재시도) 는 페이즈별 독립 유지 — multi-repo 라도 변경 없음.
 
 ## Scope (v1)
 

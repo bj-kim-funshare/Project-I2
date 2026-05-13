@@ -175,9 +175,10 @@ Tier C (single-finalize doc/utility): `patch-confirmation`, `patch-update`, `gro
 
 ##### `skill_finalize`
 - Required: `leader`, `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `push_pending`
+- `wip_branches_merged[]` element format: 두 가지 허용. 단일-repo 케이스에서는 bare `<branch>` (예: `plan-enterprise-5-some-feature-작업`), multi-repo 케이스에서는 `<repo>:<branch>` (예: `data-craft:plan-enterprise-5-some-feature-작업-data-craft`). 조립측 (plan-enterprise 스킬) 이 케이스에 따라 형식을 선택한다.
 - Optional: `push_status` (`"success"` | `"failed"` | `"n/a"`), `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`
 - Narrative sections (emit per payload): `#### 🎯 명령원문`, `#### 🛠 해결방법`, `#### ✅ 결과`, `#### 🧪 시나리오`.
-- Table rows (short-scalar only): `| 🔀 WIP 머지 | <branch> ✅ |` (one row per branch), `| 📦 패치노트 | vNNN.K.0 |`, `| 메타 | 이슈 #N closed · 워크트리 clean · advisor 계획/완료 PASS |`.
+- Table rows (short-scalar only): `| 🔀 WIP 머지 | <element> ✅ |` (one row per branch — element 가 `<repo>:<branch>` 형식이면 그대로 출력), `| 📦 패치노트 | vNNN.K.0 |`, `| 메타 | 이슈 #N closed · 워크트리 clean · advisor 계획/완료 PASS |`.
 - Notes: Heading uses 🏁. When `push_pending: true`, closing paragraph includes: "push 미완료 — master `git push origin i-dev` 또는 명시적 push 진행 권장."
 
 ##### `skill_finalize.blocked`
@@ -214,6 +215,7 @@ Mirrors `plan-enterprise` exactly with the following differences:
 
 ##### `skill_finalize`
 - Required: `harness`, `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `treadmill_audit_result`
+- `wip_branches_merged[]` element format: 본 스킬은 N=1 고정이므로 각 원소는 bare `<branch>` 형식 (예: `plan-enterprise-os-23-some-feature-작업`).
 - Optional: `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`
 - Narrative sections (emit per payload): `#### 🎯 명령원문`, `#### 🛠 해결방법`, `#### ✅ 결과`, `#### 🧪 시나리오`.
 - Table rows (short-scalar only): `| 🔀 WIP 머지 | <branch> ✅ |` (one row per branch), `| 📦 패치노트 | vNNN.K.0 |`, `| 메타 | 이슈 #N closed · 워크트리 clean · treadmill PASS · advisor 계획/완료 PASS |`.
