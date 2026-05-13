@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.31.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #22
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/md/completion-reporter-contract.md` §7 `skill_finalize.blocked` 분기 2줄 정정. (a) heading 템플릿 `### /{skill} 중단 ⛔ — <context id>` → `### /{skill} 완료 — 결과 차단 ⛔ — <context id>` 로 교체. (b) opening 부연 `"차단 종료 — <block_type>. 이슈 핸드오프." (or "cap 도달." or "실패." …)` → `"정상 종료 — 결과 차단: <block_type>. 이슈 핸드오프." (or "정상 종료 — 결과 차단: cap 도달." or "정상 종료 — 결과 차단: 실패." …)` 로 교체. 마스터의 "스킬 정상 종료, 결과는 BLOCKED" 의도를 헤더(`완료` = status) 와 verdict (`결과 차단 ⛔` = verdict) 두 축으로 분리해 노출. contract 내부 자체 모순 (line 96 icon legend "⛔=차단" / line 504 opening "차단 종료" / line 503 heading 만 "중단") 도 동시 해소. 11개 dispatching 스킬 (plan-enterprise / plan-enterprise-os / dev-merge / task-db-structure / task-db-data / pre-deploy / dev-inspection / dev-security-inspection / db-security-inspection / project-verification / dev-start / dev-build) 의 blocked 종료 보고가 단일 템플릿을 따르므로 본 1 페이즈로 일괄 전파. 다른 줄 (icon legend / 게이트 키워드 / §6 schema / §7 clean·hotfix 분기) 미변경.
+
+### 영향 파일
+- `.claude/md/completion-reporter-contract.md`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙·훅·에이전트·스킬·검증축 추가 없음. 기존 1개 템플릿의 의미 정확성 보정.
+
 ## v001.30.0
 
 > 통합일: 2026-05-13
