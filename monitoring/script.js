@@ -176,10 +176,10 @@ function renderChartDayTokens(data) {
       maintainAspectRatio: false,
       scales: {
         x: { stacked: true },
-        y: { stacked: true, ticks: { callback: (v) => fmtNum(v) } },
+        y: { stacked: true, ticks: { callback: (v) => fmtKMB(v) } },
       },
       plugins: {
-        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtNum(c.parsed.y)}` } },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtKMB(c.parsed.y)}` } },
         legend: { position: 'bottom' },
       },
     },
@@ -292,12 +292,12 @@ function renderChartSessionBar(data) {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      scales: { x: { ticks: { callback: (v) => fmtNum(v) } } },
+      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (c) => `${fmtNum(c.parsed.x)} 토큰`,
+            label: (c) => `${fmtKMB(c.parsed.x)} 토큰`,
             afterLabel: (c) => {
               const r = rows[c.dataIndex];
               const skills = (r.skills || []).filter(s => s !== '(no-skill)');
