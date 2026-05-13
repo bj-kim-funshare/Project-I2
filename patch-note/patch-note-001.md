@@ -1,5 +1,39 @@
 # 아이OS — Patch Note (001)
 
+## v001.18.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #11
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `monitoring/scripts/collect.py` 의 by_skill 라벨 `(no-skill)` → `메인 세션`, by_model 의 `<synthetic>` 모델을 `isApiErrorMessage` 기준으로 `API 에러` / `시스템 합성` 두 라벨로 분기 매핑.
+- **Phase 2**: `monitoring/script.js` 에 공용 `fmtKMB(n, opts)` 포매터 추가 (1K/1M/1B 단위 축약, precision/hideZeroDecimal 옵션, null/NaN → "—").
+- **Phase 3**: 카드 1 (전체 메시지) 에 일평균 / 세션당 / 최근 24h / 24h 비율 4개 보조 수치 추가, `kpi-extras` 그리드 신설.
+- **Phase 4**: 카드 2 (전체 토큰) 6개 수치 (kpi-noncache/cache/input/output/cwrite/cread) 를 fmtKMB 로 교체. cwrite 키 검증 — `cache_creation_5m + cache_creation_1h` 정상.
+- **Phase 5**: `collect.py` 에 `cost_breakdown_of()` 신설 — total / by_model / by_day 각각에 input/output/cache_write/cache_read/hypothetical_no_cache 5개 USD 분해. 카드 3 (캐시 효율) 에 cache_read 절대값 / hit ratio / 절감 USD / 미사용 가정 비용 추가.
+- **Phase 6**: 카드 4 (추정 비용) 에 일평균 / 캐시 절감 / I/O/cache 비용 분해 5개 + 모델별 cost_usd top 3 동적 리스트 추가 (collect.py 무수정).
+- **Phase 7**: 일자별 토큰 스택 Y축 + 세션 Top 10 X축 ticks/툴팁 callback 을 fmtKMB 로 교체. 일자별 비용 차트는 USD 축 유지.
+- **Phase 8**: 도넛/파이 3 차트 (모델/스킬/캐시) 공통 `pieLabelsPlugin` (afterDatasetsDraw inline plugin) 추가 — 슬라이스 ≥ 10% 시 캔버스에 % + fmtKMB 2줄 라벨 렌더.
+- **Phase 9**: 새로고침 delta 강조 — `localStorage["monitoring:last-snapshot"]` 에 messages/noncache/cache/cache_hit_ratio/cost_usd 5개 저장, 변동 시 카드 우상단 ▲ 파랑 / ▼ 빨강 배지 (`.kpi-delta` CSS).
+- **Phase 10**: 기간 스냅샷 영속화 — `monitoring/data/periods/{weekly|monthly|quarterly|half|yearly}/<key>.json` (ISO 8601 월~일 주, 모든 기간 매번 atomic 재작성). `aggregate.json` 에 `periods_index` 필드 추가.
+- **Phase 11**: 기간 선택 UI — topbar 에 단위 + 키 드롭다운, URL 쿼리스트링 (`?period=&key=`) 동기화. 기간 변경 시 해당 JSON fetch 후 전 화면 재렌더. delta 배지는 `all` 모드 한정 동작.
+- **Phase 12**: `상세 테이블` 섹션 4개 영역을 `<section class="detail-section">` 구조로 재편 — 상단 차트 (chart-detail-{model|skill|day|session}, 인스턴스 분리, 280px 고정 펼침) + 하단 표 (`<details>` 접기 가능, 기본 닫힘).
+- **Phase 13**: 기간 비교 분석 뷰 — `#period-compare` 토글 (비-all 모드 한정). `prevPeriodKey()` 가 ISO 8601 주 경계 / 연도 경계 포함 직전 동등 기간 키 계산. 카드 delta 배지 (Phase 9 setBadge 코어 재사용), 일자별 스택 차트 점선 오버레이 (`borderDash [5,5]`), 파이 카드 하단 변동 ≥ 1%p 항목 최대 5개 텍스트 리스트.
+- **Phase 14**: 프롬프트별 토큰 막대 차트 — `collect.py` 에 master prompt 식별 필터 (`type=user` AND `role=user` AND content 가 str 또는 첫 요소 type ≠ tool_result) + 페어링 (다음 master prompt 직전까지 assistant usage 합산) + 단축 명령 병합 (`SHORT_TRIGGER_KEYWORDS` + 본문 ≤ 10자) 추가. `aggregate.json` 및 모든 기간 파일에 `by_prompt` (top 100) + `by_prompt_meta`. `renderChartPromptBar` (가로 바, top 30) + `chart-prompt-bar` 카드.
+- **정리**: `applyDeltaBadges()` 진입부에 `clearDeltaBadges()` 호출 추가 (스냅샷 없거나 saved_at 일치 시 비교 모드 잔존 배지 제거). `monitoring/data/periods/**/*.json` 을 `.gitignore` 에 추가하고 기존 6개 cached JSON 을 `git rm --cached` 로 제거 (collect.py 가 매 실행 재생성하는 generated artifact).
+
+### 영향 파일
+- `monitoring/scripts/collect.py`
+- `monitoring/script.js`
+- `monitoring/index.html`
+- `monitoring/styles.css`
+- `monitoring/data/periods/.gitkeep` (신규)
+- `.gitignore`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. monitoring 대시보드 UX 일괄 개편 + 기간 영속화 (데이터 파일은 git 추적 제외). 단축 명령 화이트리스트는 monitoring 화면 보기 편의용 best-effort 이며 harness invariant 가 아님.
+
 ## v001.17.0
 
 > 통합일: 2026-05-13
