@@ -1,5 +1,35 @@
 # 아이OS — Patch Note (001)
 
+## v001.9.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #6
+> 대상: 아이OS — harness audit 결과 정리 (hooks/rules placeholder + 카운트 보정 + stale 참조 sweep)
+
+### 페이즈 결과
+
+- **Phase 1**: `.claude/hooks/.gitkeep` 과 `.claude/rules/.gitkeep` 삭제 (두 디렉터리 모두 자동 로드 메커니즘 없는 aspirational placeholder — `grep -rn` 0 consumer, `settings.json` hooks 키 부재). `CLAUDE.md` §8 의 "loaded conditionally by hook (§D-24)" 를 "loaded on-demand by skills and agents that reference them" 으로 정정. folder map 에서 `.claude/rules/`, `.claude/hooks/` 두 행 삭제, `.claude/md/` 행 설명도 실제 동작으로 동기화.
+- **Phase 2**: skill·sub-agent 수 불일치 보정. `README.md` line 83 디렉터리 트리 "17 스킬"→"18 스킬", line 85 "11 sub-agent"→"12 sub-agent", line 251 빌드 정보 "17 스킬 + 11 sub-agent"→"18 스킬 + 12 sub-agent". `CLAUDE.md` folder map "The 17 skills"→"The 18 skills".
+- **Phase 3 (mid-plan 추가)**: Phase 1 의 후행 일관성 보정. `README.md` 디렉터리 트리 블록에서 `rules/`, `hooks/` 두 행 삭제 + `md/` 주석을 "특화 룰 + 공용 절차 (skill/agent 참조로 on-demand 로드)" 로 정정. 언어 분리 §7 의 `.claude/` 하위 목록에서도 `rules`, `hooks` 제거. (이슈 본문 선언은 2 페이즈였으나 댓글에 추가 페이즈 audit trail 기록.)
+- **Phase 4 (mid-plan 추가)**: advisor #2 직전 sweep blind spot 보강. `.claude/md/inspection-procedure.md` line 5 의 "v1 loading ... A future hook (per CLAUDE.md §D-24) may auto-load" 가정 문장을 현행 동작 ("Loading: manual Read 가 계약, on-demand 로드, CLAUDE.md §8 참조") 로 교체. 나머지 3개 md 파일 sweep 결과 0 stale.
+
+### 영향 파일
+
+- `.claude/hooks/.gitkeep` (delete)
+- `.claude/rules/.gitkeep` (delete)
+- `.claude/md/inspection-procedure.md`
+- `CLAUDE.md`
+- `README.md`
+
+### Treadmill Audit
+
+**PASS** — Q3 = 단일 plan 에서 6 항목 일괄 폐기: (1) `.claude/hooks/` 디렉터리, (2) `.claude/rules/` 디렉터리, (3) CLAUDE.md §8 의 "loaded conditionally by hook (§D-24)" 문구, (4) CLAUDE.md folder map 의 `.claude/rules/` + `.claude/hooks/` 2행, (5) inspection-procedure.md 의 "future hook (§D-24) auto-load" 가정 문장, (6) README 디렉터리 트리 + 언어 분리 §7 의 rules/hooks 등재. advisor #1 가 원안 plan 의 "NOT APPLICABLE" 부정직성 지적 후 PASS 로 정정.
+
+### audit 자체 부산물
+
+- 컨텍스트 효율: 30k → 약 29.5k boot (~500t 자연 감소, README/CLAUDE.md 라인 축약). README §F-1 의 50k 목표 대비 여유 20.5k 유지.
+- 미해결 항목 (본 plan 범위 외, 이후 별도 진행): 이슈 #1 (`-codex` 메타 부트스트랩 D2/D3 ~2일 대기), 이슈 #2/#3 의 PENDING 게이트 종결 추적 (audit C-4 단순 확인 항목, deferred).
+
 ## v001.8.0
 
 > 통합일: 2026-05-13
