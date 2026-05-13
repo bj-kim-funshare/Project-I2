@@ -12,8 +12,8 @@
 #   }
 #
 # Line layout (master directive 2026-05-13):
-#   L1 — Identity + limits: cwd · branch · model · effort · 5h · 7d
-#   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
+#   L1 — Identity + limits: model · effort · 5h · 7d · ⏱ duration
+#   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens
 #   L3 — Last user prompt: 💬 (max 5 lines × 105 display-units/line — CJK=2, ASCII=1; wraps; isMeta + 제어 키워드 제외)
 #
 # Mandatory items (always shown with placeholder fallback):
@@ -37,7 +37,6 @@ jraw() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
 
 MODEL=$(jget '.model.display_name' '?')
 EFFORT=$(jget '.effort.level' '')
-CC_VERSION=$(jraw '.version')
 VIM_MODE=$(jraw '.vim.mode')
 AGENT_NAME=$(jraw '.agent.name')
 PCT=$(jnum '.context_window.used_percentage')
@@ -192,9 +191,6 @@ case "$EFFORT" in
   *)      EFFORT_BADGE="🧠 ${DIM}${EFFORT}${RESET}"       ;;
 esac
 
-VERSION_SUFFIX=""
-[ -n "$CC_VERSION" ] && VERSION_SUFFIX=" · ${DIM}cc${CC_VERSION}${RESET}"
-
 EXT_BADGES=""
 [ -n "$VIM_MODE" ] && EXT_BADGES="${EXT_BADGES} ${DIM}[vim:${VIM_MODE}]${RESET}"
 [ -n "$AGENT_NAME" ] && EXT_BADGES="${EXT_BADGES} ${YELLOW}[agent:${AGENT_NAME}]${RESET}"
@@ -220,7 +216,7 @@ fi
 LAST_PROMPT=""
 if [ -f "$SESSION_JSONL" ] && command -v python3 >/dev/null 2>&1; then
   LAST_PROMPT=$(python3 - "$SESSION_JSONL" <<'PY' 2>/dev/null
-import json, sys, unicodedata
+import json, re, sys, unicodedata
 from pathlib import Path
 
 path = Path(sys.argv[1])
@@ -264,8 +260,27 @@ for line in reversed(lines):
         text = str(content)
 
     # Skip command/system output records (they share type=user but aren't master prompts).
-    if text.startswith(("<local-command-", "<system-reminder>", "<command-")):
+    if text.startswith(("<local-command-", "<system-reminder>")):
         continue
+    if text.startswith("<command-"):
+        # Slash-skill messages: extract user-supplied args if present.
+        m = re.search(r'<command-args>(.*?)</command-args>', text, re.DOTALL)
+        if m:
+            extracted = m.group(1).strip()
+            if extracted:
+                text = extracted
+            else:
+                m2 = re.search(r'<command-name>(.*?)</command-name>', text, re.DOTALL)
+                if m2:
+                    text = m2.group(1).strip()
+                else:
+                    continue
+        else:
+            m2 = re.search(r'<command-name>(.*?)</command-name>', text, re.DOTALL)
+            if m2:
+                text = m2.group(1).strip()
+            else:
+                continue
     if not text.strip():
         continue
 
@@ -331,14 +346,15 @@ COST_FMT=$(fmt_cost "$COST")
 TOK_FMT=$(fmt_tokens "$TOTAL_TOK")
 CTX_BAR=$(ctx_bar "$PCT")
 
-# Line 1 — Identity + limits: model · effort · cc-ver · 5h · 7d · ext badges
+# Line 1 — Identity + limits: model · effort · 5h · 7d · ⏱ duration · ext badges
 # (cwd / git branch 표기는 마스터 지시로 제거 — 2026-05-12)
-LINE1=$(printf '%s%s%s · %s%s' "$CYAN" "$MODEL" "$RESET" "$EFFORT_BADGE" "$VERSION_SUFFIX")
+LINE1=$(printf '%s%s%s · %s' "$CYAN" "$MODEL" "$RESET" "$EFFORT_BADGE")
 LINE1+=" · ${SES_COLOR}🕐 5h ${SES_DISPLAY}${RESET}"
 LINE1+=" · ${WK_COLOR}📅 7d ${WK_DISPLAY}${RESET}"
+LINE1+=" · ${DIM}⏱ ${DUR_FMT}${RESET}"
 [ -n "$EXT_BADGES" ] && LINE1+="${EXT_BADGES}"
 
-# Line 2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
+# Line 2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens
 LINE2=$(printf '%s📊 %d%%%s %s%s%s' "$PCT_COLOR" "$PCT" "$RESET" "$DIM" "$CTX_BAR" "$RESET")
 LINE2+=" · ${ADD_COLOR}➕ ${GIT_ADD}${RESET}"
 LINE2+=" · ${MOD_COLOR}~ ${GIT_MOD}${RESET}"
@@ -348,7 +364,6 @@ if [ "$LINES_ADD" -gt 0 ] || [ "$LINES_DEL" -gt 0 ]; then
 fi
 LINE2+=" · 💰 \$${COST_FMT}"
 LINE2+=" · 🪙 ${TOK_FMT}${DELTA_DISPLAY}"
-LINE2+=" · ${DIM}⏱ ${DUR_FMT}${RESET}"
 
 # Line 3 — Last user prompt (always shown; empty placeholder when unavailable).
 if [ -n "$LAST_PROMPT" ]; then
