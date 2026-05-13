@@ -18,19 +18,20 @@ The dispatcher (`plan-enterprise`) provides via prompt:
 - `<phase_number>` — which phase (1-indexed).
 - `<phase_title>`, `<phase_type>` (feat / fix / refactor / chore / test / docs), `<phase_description>` (multi-sentence).
 - `<affected_files>` — array of paths the phase is expected to touch.
-- `<wip_branch>` — name of the WIP branch already created by the dispatcher; checked out before dispatch.
-- `<group_policy_summary>` — short Korean summary of the relevant group-policy locks (dev/deploy/db/group), supplied by main session.
+- `<wip_branch>` — name of the WIP branch the dispatcher created.
+- `<worktree_cwd>` — absolute path to the worktree the dispatcher created via `git worktree add` (already on `<wip_branch>`). All git ops use `git -C <worktree_cwd>`; all file reads/writes use absolute paths under this dir.
+- `<group_policy_summary>` — short Korean summary of the relevant group-policy locks (for plan-enterprise) OR `<harness_context>` — short Korean summary of relevant CLAUDE.md hard rules + memory entries (for plan-enterprise-os). Dispatcher picks the appropriate field; phase-executor reads whichever is supplied.
 - `<prior_phases_summary>` — short Korean summary of phases 1..N-1 outcomes (empty for phase 1).
 
 ## Process
 
 1. **Confirm working state**:
-   - `git rev-parse --abbrev-ref HEAD` must equal `<wip_branch>`. If not → return `{"error": "wrong_branch", ...}`.
-   - `git status --porcelain` must be empty (no uncommitted leftovers from a prior run). If not → return `{"error": "dirty_tree", ...}`.
+   - `git -C <worktree_cwd> rev-parse --abbrev-ref HEAD` must equal `<wip_branch>`. If not → return `{"error": "wrong_branch", ...}`.
+   - `git -C <worktree_cwd> status --porcelain` must be empty (no uncommitted leftovers from a prior run). If not → return `{"error": "dirty_tree", ...}`.
 
 2. **Read context**:
    - The phase description, affected_files, group-policy summary, prior-phases summary.
-   - The current state of each file in `<affected_files>` (via Read).
+   - The current state of each file in `<affected_files>` (via Read). All file reads/writes use absolute paths under `<worktree_cwd>`.
    - Adjacent files only when needed to understand callers / types — do not expand context speculatively.
 
 3. **Make the changes**:
@@ -40,14 +41,14 @@ The dispatcher (`plan-enterprise`) provides via prompt:
    - Do NOT add comments unless the WHY is non-obvious. Don't reference the phase number or "added in phase N" — those belong in the commit message and issue.
 
 4. **Verify locally**:
-   - `git diff --name-only` matches `<affected_files>` (no surprise files staged).
+   - `git -C <worktree_cwd> diff --name-only` matches `<affected_files>` (no surprise files staged).
    - Re-read each modified file once to confirm the edits read correctly.
 
 5. **Commit and push**:
    ```bash
-   git add <affected_files>
-   git commit -m "plan-enterprise #<plan_issue_number> phase <phase_number>: <phase_title>"
-   git push origin <wip_branch>
+   git -C <worktree_cwd> add <affected_files>
+   git -C <worktree_cwd> commit -m "plan-enterprise #<plan_issue_number> phase <phase_number>: <phase_title>"
+   git -C <worktree_cwd> push origin <wip_branch>
    ```
    Korean phase title in the commit message body is fine; the prefix structure (English `plan-enterprise #N phase M:`) is fixed so the dispatcher and tooling can parse.
 
@@ -91,5 +92,7 @@ The dispatcher (`plan-enterprise`) provides via prompt:
 | Implementation reveals the plan is wrong (e.g., the change requested would break a load-bearing invariant) | `{"error": "plan_contradicts_code", "details_ko": "<what's wrong>"}` |
 
 On any error: do NOT commit. The dispatcher inspects the error and decides re-dispatch with revised input or halt for master.
+
+> Worktree lifecycle and conventions: see `.claude/md/worktree-lifecycle.md`.
 
 Return only the JSON object as agent's final output. No prose around it.

@@ -53,9 +53,9 @@ When master prompts the main session **without** invoking a skill: main session 
 
 Every code or document change — even one character — follows:
 
-1. WIP branch (isolation).
-2. Work.
-3. Merge into `i-dev`.
+1. **WIP worktree + branch** — `git worktree add -b <wip> ../{repo}-worktrees/<wip> <integration>`. Working-tree-level isolation: each WIP has its own HEAD so cross-session `git checkout` cannot mutate it. Procedure: `.claude/md/worktree-lifecycle.md`.
+2. Work (inside the worktree — sub-agents receive `worktree_cwd`; main-session-write skills use `git -C <wt_path>`).
+3. Merge from main working tree into integration branch (`git merge --no-ff <wip>`), then `git worktree remove <wt_path>`.
 4. On conflict: analyze both sides, merge preserving both. Pause and report to master **only** if the two sides are genuinely mutually exclusive.
 
 WIP naming: `{skill}-문서` for doc work, `{skill}-작업` for code work. Never combine code and doc into one WIP.

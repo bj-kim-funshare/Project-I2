@@ -147,10 +147,14 @@ Capture issue number `N`.
 
 ## Step 6 — WIP branch
 
+Entry ritual — see `.claude/md/worktree-lifecycle.md`.
+
 ```bash
-git checkout main
-git checkout -b create-custom-project-skill-<N>-문서
-git push -u origin create-custom-project-skill-<N>-문서
+git worktree prune
+
+wip="create-custom-project-skill-<N>-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
 ```
 
 Single WIP because this is doc work only (creating a SKILL.md file).
@@ -158,21 +162,23 @@ Single WIP because this is doc work only (creating a SKILL.md file).
 ## Step 7 — Write the new SKILL.md
 
 ```bash
-mkdir -p .claude/skills/<leader>-<slug>
+mkdir -p "${wt}/.claude/skills/<leader>-<slug>"
 ```
 
-Write the SKILL.md content (from Step 2) to `.claude/skills/<leader>-<slug>/SKILL.md`.
+Write the SKILL.md content (from Step 2) to `${wt}/.claude/skills/<leader>-<slug>/SKILL.md` (absolute worktree path).
 
 Verify the file exists and contains the expected content.
 
 ## Step 8 — Commit + merge
 
 ```bash
-git add .claude/skills/<leader>-<slug>/SKILL.md
-git commit -m "create-custom-project-skill: <leader>-<slug> 스킬 신설 (#<N>)"
-git push origin create-custom-project-skill-<N>-문서
+git -C "${wt}" add .claude/skills/<leader>-<slug>/SKILL.md
+git -C "${wt}" commit -m "create-custom-project-skill: <leader>-<slug> 스킬 신설 (#<N>)"
+git -C "${wt}" push origin "${wip}"
 git checkout main
-git merge --no-ff create-custom-project-skill-<N>-문서
+git pull --ff-only origin main 2>/dev/null || true
+git merge --no-ff "${wip}"
+git worktree remove "${wt}"
 ```
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
@@ -207,6 +213,7 @@ Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Co
 | Advisor BLOCK | `"advisor 차단: <reason>. 마스터 수정 또는 중단 결정 필요."` (Step 4 ExitPlanMode 직전에 발생) |
 | Master rejects in ExitPlanMode | (return to Step 1 with revision feedback) |
 | `gh issue create` failure | `"gh issue create 실패: <error>. 스킬 파일 생성 보류."` |
+| `git worktree add` failure | `"worktree 생성 실패: <error>. 수동 정리 후 재호출."` |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 
 ## Scope (v1)
