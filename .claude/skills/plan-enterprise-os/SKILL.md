@@ -112,10 +112,17 @@ Issue body template extends `plan-enterprise`'s with one section:
 ### Step 6 — WIP A
 
 ```bash
-git checkout main
-git checkout -b plan-enterprise-os-<N>-<slug>-작업
-git push -u origin plan-enterprise-os-<N>-<slug>-작업
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+
+# Create WIP A worktree (working-tree-level isolation)
+wip_a="plan-enterprise-os-<N>-<slug>-작업"
+wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
+git worktree add -b "${wip_a}" "${wt_a}" main
+git -C "${wt_a}" push -u origin "${wip_a}"
 ```
+
+> Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ### Step 7 — Phase execution
 
@@ -124,9 +131,11 @@ Phase-executor receives `harness_context` instead of `group_policy_summary`. `ha
 - Relevant CLAUDE.md hard rules (which apply to this phase).
 - Relevant memory entries (which behavioral norms apply).
 - Relevant shared-md content (e.g., if a phase touches inspection-procedure consumers, the procedure md itself is in context).
+- `worktree_cwd` = absolute path of the WIP A worktree (`<wt_a>` resolved). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
 
-Per-phase main-session verification ritual is identical to `plan-enterprise`'s 5-step ritual:
+Per-phase main-session verification ritual is identical to `plan-enterprise`'s 5-step ritual, with a fetch step prepended:
 
+0. `git fetch origin <wip_branch>` — 메인 working tree 에서 sub-agent push 결과 가시화 (메인 cwd 의 HEAD 는 옮기지 않음).
 1. `git show <commit_sha> --stat`
 2. `files_changed ∪ files_added ∪ files_deleted` ⊆ `affected_files`
 3. `git diff <prev_commit>..<commit_sha>` inspection
@@ -143,13 +152,18 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
 
-1. `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical.
-2. `git checkout -b plan-enterprise-os-<N>-<slug>-문서`.
+1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
+2. Create WIP B as a worktree from main:
+   ```bash
+   wip_b="plan-enterprise-os-<N>-<slug>-문서"
+   wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
+   git worktree add -b "${wip_b}" "${wt_b}" main
+   ```
 3. Patch-note path: `patch-note/patch-note-{NNN}.md` (repo root, NOT under `.claude/`). Parse for max `K`; new entry = `v{NNN}.{K+1}.0`.
 
    v1 caveat: this repo currently has no `patch-note/patch-note-001.md` — that file is master's responsibility to bootstrap on first I2 use of `patch-update`/`patch-confirmation`. If `patch-note/` is empty when this skill reaches Step 9, halt with `"patch-note/ 부재 — 마스터가 patch-note-001.md 수동 생성 후 재호출"`.
 
-4. Author the patch-note entry inline (main session, mechanical summary from issue body + comments):
+4. Author the patch-note entry inline (main session, Write/Edit to `<wt_b>/patch-note/patch-note-{NNN}.md`). Source: plan issue body + phase comments.
 
    ```markdown
    ## v<NNN>.<K+1>.0
@@ -169,7 +183,7 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
    <PASS or NOT APPLICABLE; if PASS, restate Q3 in one line — what was retired>
    ```
 
-5. Commit on doc WIP, merge to main.
+5. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise-os #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`. Then in main working tree: `git checkout main && git merge --no-ff plan-enterprise-os-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
 
 ### Step 10 — Merge
 
@@ -244,6 +258,7 @@ Inherits `plan-enterprise`'s failure modes; additions specific to OS:
 | cwd is not the Project-I2 repo | `"plan-enterprise-os 는 Project-I2 리포 cwd 에서만 호출 가능. 현재: <cwd>"` |
 | `patch-note/` (root) missing at Step 9 | `"patch-note/ 부재 — 마스터가 patch-note-001.md 수동 생성 후 재호출"` |
 | Treadmill Audit FAIL at Step 3 or Step 8 | `"Treadmill Audit 실패: <reason>. 마스터 결정 필요 (trade-out 추가 또는 계획 폐기)."` |
+| `git worktree add` failure | `"worktree 생성 실패: <error>. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
