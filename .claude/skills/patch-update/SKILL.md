@@ -78,20 +78,12 @@ git worktree remove "${wt}"
 
 ## Reporting
 
-Korean output to the user after merge:
+After merge, dispatch `completion-reporter` with:
+- `skill_type: "patch-update"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `patch-update` `skill_finalize` schema. Required: `target`, `result_summary`, `new_patch_note_file`, `prev_patch_note_file`, `wip_branch`.
 
-```
-### /patch-update 완료 — {target}
-
-| 항목 | 값 |
-|------|-----|
-| 신규 파일 | patch-note-{next}.md |
-| 이전 파일 | patch-note-{prev}.md (수정 없음) |
-| WIP 브랜치 | patch-update-{next}-문서 |
-| main 머지 | ✅ |
-```
-
-Then halt. No "다음 스킬" suggestion.
+Relay the agent's response verbatim to master. Then halt. No "다음 스킬" suggestion.
 
 ## Failure policy
 

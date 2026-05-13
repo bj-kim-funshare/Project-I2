@@ -192,20 +192,18 @@ Identical to `plan-enterprise` Step 10. Both WIPs merged to main. Issue stays op
 
 ### Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
 
-Identical semantics to `plan-enterprise` Step 11 with the same trigger keywords (`플랜 완료` / `핫픽스 <description>` / `중단` / other). Output the PENDING message and halt:
+Identical semantics to `plan-enterprise` Step 11 with the same trigger keywords (`플랜 완료` / `핫픽스 <description>` / `중단` / other). Dispatch `completion-reporter` and halt:
+
+Dispatch `completion-reporter` with:
+- `skill_type: "plan-enterprise-os"`
+- `moment`: `"work_complete"` on first arrival (initial work complete); `"hotfix_complete"` when re-entering after a HOTFIX iteration.
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `plan-enterprise-os` schema.
+  - For `work_complete`: required fields `harness` (value `"os"`), `issue_number`, `issue_url`, `master_intent_summary`, `result_summary`, `phase_count`, `affected_files_total`, `treadmill_audit_result`; optional `solution_summary`, `manual_test_scenarios[]`, `next_action_guidance`, `post_action_hints[]`, `patch_note_version`, `advisor_plan_result`, `advisor_complete_result`.
+  - For `hotfix_complete`: all `work_complete` required fields plus `current_hotfix_number`, `prior_hotfix_summaries[]` (each `{hotfix_number, summary_ko}`); optional `next_hotfix_number`.
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /plan-enterprise-os 대기 — 이슈 #<N> <plan title>
-
-작업 머지 완료. 루트 patch-note/ 에 v<NNN>.<K+1>.0 추가됨. advisor 계획/완료 6 관점 모두 PASS.
-
-| 항목 | 값 |
-|------|-----|
-| 플랜 이슈 | #<N> (<URL>) |
-| 페이즈 수 (지금까지) | <N>/<N> + 핫픽스 <count> |
-| 패치노트 마지막 | v<NNN>.<K+1>.0 |
-| Treadmill Audit | PASS / NOT APPLICABLE |
-
 마스터 입력 대기:
   - `플랜 완료` → 이슈 close (Step 12) + 최종 종료
   - `핫픽스 <description>` → 추가 phase 1개 작성 → Step 7 재진입
@@ -229,24 +227,12 @@ Same as `plan-enterprise`. Skill state remains open; master can re-invoke later 
    ```bash
    gh issue close <N> --comment "/plan-enterprise-os: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
    ```
-2. Korean terminal report:
+2. Dispatch `completion-reporter` with:
+   - `skill_type: "plan-enterprise-os"`
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `plan-enterprise-os` `skill_finalize` schema. Required: `harness` (value `"os"`), `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `treadmill_audit_result`; optional `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`.
 
-```
-### /plan-enterprise-os 완료 — 이슈 #<N> <plan title>
-
-| 항목 | 값 |
-|------|-----|
-| 플랜 이슈 | #<N> closed ✅ |
-| 총 페이즈 수 | <N> + 핫픽스 <count> |
-| WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (main 머지 ✅) |
-| WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (main 머지 ✅) |
-| WIP 핫픽스 | plan-enterprise-os-<N>-<slug>-핫픽스1..<M> (각 main 머지 ✅, 총 <M>개 / 0개 = 핫픽스 없음) |
-| 패치노트 최종 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+M>.0 (총 <M>개 entry) |
-| advisor 계획 (6 관점) | PASS |
-| advisor 완료 (6 관점) | PASS (최종 핫픽스 포함) |
-| Treadmill Audit | PASS / NOT APPLICABLE |
-| 페이즈 재시도 | <count>/총 가능 <(N+hotfix)*3> |
-```
+   Relay the agent's response verbatim to master.
 
 End of skill invocation.
 

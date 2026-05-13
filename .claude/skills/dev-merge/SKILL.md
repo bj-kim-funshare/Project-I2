@@ -153,19 +153,12 @@ On lint fail:
 2. Dispatch `code-fixer` with the synthesized findings. Dispatch input includes `worktree_cwd = <wt_from>`. Code-fixer applies fixes, commits, pushes.
 3. Re-dispatch `gate-runner` for the same targets. Recompute lint pass/fail.
 4. If still failing → iter counter += 1, repeat from step 1 (up to 3 total iters).
-5. Iter cap reached with lint still failing → halt with **lint cap-exhausted report**:
-   ```
-   ### /dev-merge 중단 — PR #<num> (lint cap 도달)
+5. Iter cap reached with lint still failing → halt. Dispatch `completion-reporter` with:
+   - `skill_type: "dev-merge"`
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"lint_cap_exhausted"`); optional `leader`, `lint_failure_targets[]`.
 
-   | 항목 | 값 |
-   |------|-----|
-   | lint 라운드 | 3/3 |
-   | 실패 타겟 | <list> |
-   | 마지막 failure excerpt | <text> |
-   | PR 상태 | open (수동 처리 대기) |
-
-   master 가 직접 lint 수정 후 재호출 또는 `--codex` 등 다른 경로 검토.
-   ```
+   Relay the agent's response verbatim to master.
 
 Lint hotfix iter is INDEPENDENT from the review iter — review iter (3) and lint iter (3) are separate budgets. Total max iter per PR = 6 (3 review + 3 lint), reasonable upper bound.
 
@@ -173,21 +166,16 @@ Lint hotfix iter is INDEPENDENT from the review iter — review iter (3) and lin
 
 When both reviewers return `[]` AND lint gate passes (within respective iter caps), the automated review + lint is clean. **Do NOT auto-merge yet.** Master gets a final intervention chance before the merge commit is created.
 
-Output the PENDING message and halt:
+Dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment`: `"work_complete"` on first arrival (initial clean); `"hotfix_complete"` when re-entering after a master-supervised hotfix iteration.
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` schema.
+  - For `work_complete`: required fields `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`; optional `leader`, `findings_breakdown`, `conflict_status`, `post_action_hints[]`.
+  - For `hotfix_complete`: all `work_complete` required fields plus `current_hotfix_number`, `prior_hotfix_summaries[]` (each `{hotfix_number, summary_ko}`); optional `next_hotfix_number`.
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /dev-merge 대기 — PR #<num>
-
-자동 리뷰 통과 (<n>/3 라운드, 게시 finding <count>건, 핫픽스 커밋 <count>건).
-머지 직전 — 마스터 최종 확인.
-
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 저장소 | <owner>/<repo> |
-| PR | #<num> |
-| 핫픽스 커밋 | <count> |
-
 마스터 입력 대기:
   - `머지 완료` (또는 `플랜 완료`) → `gh pr merge` 실행 → 종료
   - `핫픽스 <description>` → master 힌트로 code-fixer 재dispatch (4번째 iter+, master-supervised)
@@ -257,20 +245,14 @@ After `gh pr merge` returns success: `git worktree remove ${wt_from}`. On failur
 
 ### Conflict-PENDING 메시지
 
-Output and halt:
+Dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "work_complete"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `work_complete` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`; optional `leader`, `conflict_status` (set to the `mergeable,mergeStateStatus` output verbatim).
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /dev-merge 충돌 — PR #<num>
-
-`gh pr merge` 충돌 감지. PR mergeable=CONFLICTING.
-
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 충돌 상태 | <gh pr view --json mergeable,mergeStateStatus output> |
-| 핫픽스 커밋 (자동 iter) | <count> |
-| master-supervised 커밋 | <count> |
-
 마스터 입력 대기:
   - `핫픽스 <resolution hint>` → code-fixer 가 hint + 충돌 마커 + 양측 diff 받아 해결
                                   → push → mergeable 재확인 → PENDING/Conflict-PENDING 분기
@@ -323,37 +305,19 @@ state=$(gh pr view <PR-num> --json state,mergeable --jq '.state + " " + .mergeab
 
 ## Reporting
 
-Korean output after successful merge:
+After successful merge, dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`; optional `leader`, `findings_breakdown`, `conflict_resolution_commits`.
 
-```
-### /dev-merge 완료 — PR #<num>
+Relay the agent's response verbatim to master.
 
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 저장소 | <owner>/<repo> |
-| PR 번호 | #<num> |
-| 리뷰 라운드 | <n>/3 |
-| 게시 finding | <count> (compliance: X, bug: Y) |
-| 핫픽스 커밋 | <count> |
-| 머지 방식 | merge commit (--no-ff) |
-| 머지 SHA | <sha> |
-```
+On review cap-exhausted halt, dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "skill_finalize.blocked"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"review_cap_exhausted"`); optional `leader`, `remaining_findings[]`.
 
-On cap-exhausted halt:
-
-```
-### /dev-merge 중단 — PR #<num> (이터레이션 한계)
-
-| 항목 | 값 |
-|------|-----|
-| 라운드 | 3/3 |
-| 잔여 finding | <count> |
-| PR 상태 | open (수동 처리 대기) |
-
-### 잔여 finding
-<list with file:line, category, message>
-```
+Relay the agent's response verbatim to master.
 
 ## Failure policy
 
