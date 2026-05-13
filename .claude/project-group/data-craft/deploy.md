@@ -24,7 +24,7 @@ projects:
   - name: data-craft-server
     role: BE
     tool: aws
-    target:
+    target: https://d3u7b7cxusjkuc.cloudfront.net
     build_command: pnpm build
     deploy_command:
     env_management: git-tracked
@@ -50,6 +50,8 @@ projects:
 
 - env 파일은 각 저장소에서 git-tracked. 단일 env 공유 (개발/프로덕트 분리 없음).
 
-## 미확정
+## 서버 인프라 메모
 
-- `data-craft-server` 의 `target` (EC2 IP / 도메인) 미수집. `pre-deploy` 실행 전 마스터 확정 필요.
+- `data-craft-server` 의 `target` = CloudFront 분포 (`https://d3u7b7cxusjkuc.cloudfront.net`). EC2 인스턴스 앞단에 CloudFront 가 배치된 구조.
+- 리더 저장소 (`data-craft`) 의 `src/shared/config/env.ts` 에 `PRODUCTION_API_URL` / `PRODUCTION_STORAGE_URL` 동일 값으로 참조됨.
+- `.env.example` 의 `VITE_API_BASE_URL` / `VITE_BASE_STORAGE_URL` 도 동일 호스트로 명시.

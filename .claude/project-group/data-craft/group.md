@@ -10,6 +10,9 @@
 | 코드 리뷰 | `dev-merge` 의 read-only reviewer 2종 (`claude-md-compliance-reviewer` + `bug-detector`) + 필요 시 `code-fixer` 자동 적용 |
 | PR 머지 방식 | merge commit (`--no-ff`, dev-merge 디폴트) |
 | 배포 우선순위 | 서버 우선 (deploy.md 참조) |
+| 테스트 의무 | 없음 (PR 전 `pnpm test` 강제 안 함 — 마스터 명시) |
+| 버전 태그 | git tag 미부여 — `patch-confirmation` 의 패치노트 v{N}.K.0 으로만 버전 추적 (마스터 명시) |
+| SLA / 핫픽스 절차 | 본인 판단 (별도 명시 없음 — 마스터 명시) |
 
 ## i-dev / dev-merge 필수 정책 (마스터 명시)
 
@@ -25,8 +28,6 @@
 - `plan-enterprise` 다단계 phase 작업 시 i-dev 가 main 보호막.
 - harness 내 `plan-enterprise`, `task-db-structure`, `task-db-data` 등 외부 프로젝트 스킬은 본 정책 자동 준수 (i-dev 통합 표준).
 
-## 미확정
+## 미확정 항목
 
-- 테스트 의무 정책 (PR 전 `pnpm test` 강제 여부).
-- SemVer git tag 정책 — 패치노트 v{N}.K.0 별도로 git tag 를 부여할지 여부.
-- 응답 SLA / 핫픽스 절차.
+없음 — 4개 정책 영역 (dev / deploy / db / group) 의 모든 결정 사항이 본 라운드로 확정되었다. 추후 추가 항목 발생 시 `/group-policy data-craft` 로 보충.
