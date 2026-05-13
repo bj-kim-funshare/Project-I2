@@ -114,7 +114,6 @@ Issue body template extends `plan-enterprise`'s with one section:
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
-git worktree list
 
 # Create WIP A worktree (working-tree-level isolation)
 wip_a="plan-enterprise-os-<N>-<slug>-작업"

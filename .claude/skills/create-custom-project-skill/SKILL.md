@@ -151,7 +151,6 @@ Entry ritual — see `.claude/md/worktree-lifecycle.md`.
 
 ```bash
 git worktree prune
-git worktree list
 
 wip="create-custom-project-skill-<N>-문서"
 wt="../$(basename "$(pwd)")-worktrees/${wip}"

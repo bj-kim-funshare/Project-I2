@@ -86,7 +86,6 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
      ```bash
      # Entry ritual
      git worktree prune
-     git worktree list   # report unrelated leftovers to master
 
      wip="task-db-structure-<id>-작업"
      wt="../$(basename "$(pwd)")-worktrees/${wip}"

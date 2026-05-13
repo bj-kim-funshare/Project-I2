@@ -56,7 +56,6 @@ Standard pattern from `CLAUDE.md` §5. Entry ritual — see `.claude/md/worktree
 
 ```bash
 git worktree prune
-git worktree list
 
 wip="patch-update-{next}-문서"
 wt="../$(basename "$(pwd)")-worktrees/${wip}"

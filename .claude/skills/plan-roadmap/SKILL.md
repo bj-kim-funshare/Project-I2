@@ -152,7 +152,6 @@ Slug = master-provided title normalized — lowercase Latin/digits allowed, Hang
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
-git worktree list   # report unrelated leftovers to master
 
 wip="plan-roadmap-{N}-{slug}-문서"
 wt="../$(basename "$(pwd)")-worktrees/${wip}"

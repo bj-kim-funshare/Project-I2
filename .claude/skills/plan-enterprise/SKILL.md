@@ -138,7 +138,6 @@ Slug is a short Latin/Hangul-phonetic transliteration of the plan title (max 50 
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
-git worktree list
 
 # Create WIP A worktree (working-tree-level isolation)
 wip_a="plan-enterprise-<N>-<slug>-작업"

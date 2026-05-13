@@ -96,7 +96,6 @@ Reached only if at least one area changed. Single WIP — all writes are docs.
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
-git worktree list   # report unrelated leftovers to master
 
 wip="group-policy-<leader>-문서"
 wt="../$(basename "$(pwd)")-worktrees/${wip}"

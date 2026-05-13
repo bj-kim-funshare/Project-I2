@@ -36,7 +36,6 @@ Both branch names required. Works against the current working directory's GitHub
 ```bash
 # Entry ritual
 git worktree prune
-git worktree list   # report unrelated leftovers to master
 
 wt_from="../$(basename "$(pwd)")-worktrees/devmerge-<from-branch>"
 git worktree add "${wt_from}" <from-branch>   # checkout existing branch, no -b

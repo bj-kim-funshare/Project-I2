@@ -69,16 +69,19 @@ git worktree remove "${wt_path}"   # removes dir + metadata; branch itself stays
 
 ```bash
 git worktree prune      # drop metadata for manually-deleted dirs
-git worktree list       # surface any leftover worktrees
 ```
 
-If `git worktree list` shows worktrees that do not belong to this invocation, report them to
-master and wait for master's decision. Do NOT auto-remove.
+That's the entire ritual. Do NOT run `git worktree list` to enumerate other sessions' worktrees,
+and do NOT halt on or report them. Worktrees belonging to other sessions are by construction
+**not this session's concern** — that is the entire point of the isolation. The only worktree
+this skill cares about is the one it is about to create or remove for its own WIP.
 
 ## Failure recovery
 
-- **Mid-skill crash** leaves a stale worktree. The next skill's entry ritual surfaces it via
-  `git worktree list`.
+- **Mid-skill crash** leaves a stale worktree dir + branch. The owning session (re-invocation
+  by master) is responsible for cleanup. Other sessions never inspect or touch it. If master
+  manually deletes the worktree dir, the next `git worktree prune` (by any session) cleans the
+  orphaned `.git/worktrees/<name>` metadata transparently.
 - If `git worktree remove` fails (e.g., dirty worktree): inspect with
   `git -C <wt_path> status` and report; do not force-remove without master confirmation.
 - If the worktree dir was manually deleted but `.git/worktrees/<name>` metadata persists,
