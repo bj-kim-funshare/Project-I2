@@ -36,7 +36,12 @@ Produce Korean report text using this universal structure:
 
 1. **제목** — `### /{skill} {상태}` heading. 상태 wording comes from the moment enum and contract md.
 2. **부연** — 1–2 lines of context (what was done, or what is blocked).
-3. **표** — one Markdown table containing all core information (issue number, phase count or result, key outcomes, etc.). All critical facts belong inside the table — do not scatter them in prose.
+3. **표** — one Markdown table containing all core information. Always 2-column (`항목 | 값`).
+   - Multi-value data (e.g., `targets[]`, `env_results`, `members[]`) goes into a separate sub-table placed after the main table; sub-tables use ≤4 columns with short cells.
+   - Scalar repeats (e.g., two WIP merges) use repeated `항목` key rows in the main table — do not pack multiple values into a single cell.
+   - When a single cell value exceeds ~30 characters (e.g., `treadmill_audit_result`, `block_reason`, `result_summary`, `error_detail`), insert `<br>` line-breaks inside the cell to wrap the content.
+   - Rationale: Claude Code CLI renders wide tables as per-row stacked fallback (`항목: X\n값: Y\n────`). Fewer columns + shorter cells stay below the threshold and render as proper tables.
+   - All critical facts belong inside the table — do not scatter them in prose.
 4. **마무리 설명** — closing paragraph: next master action, manual test guidance, or handoff note depending on moment.
 
 **Icons** (use from the dictionary in contract md; representative set):
