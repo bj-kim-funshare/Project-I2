@@ -1,5 +1,37 @@
 # 아이OS — Patch Note (001)
 
+## v001.10.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #7
+> 대상: 아이OS — /dev-start FE 필터 + 멀티셀렉트 도입
+
+### 페이즈 결과
+
+- **Phase 1**: `dev.md` YAML 매니페스트 스키마에 `role: FE | BE` 필드 추가. dev-start 의 §Manifest contract YAML 예시와 Field semantics 목록에 role 항목 명세. new-project-group 의 Round 1 dev 필드 목록 / dev.md 템플릿에 role 노출. group-policy 의 partial-update 예시 dev 블록에 role 라인 추가하여 마스터가 변경 대상으로 인지하도록 함.
+- **Phase 2**: dev-start 절차 개정. Invocation 을 `/dev-start <leader-name>` 단일 토큰으로 단순화 (두 번째 토큰 단일 타겟 형식 제거 — 마스터 결정). Procedure 도입부에 신규 Step 0 (role=FE 필터 → 0/1/N 분기 + AskUserQuestion multiSelect, dev-build line 60 선례) 추가. Reporting 에 비선택 멤버 누락 명시, Scope 갱신, Failure policy 에 FE 후보 0 / multiSelect 0 선택 두 케이스 추가. 후속 cleanup 으로 도달 불가해진 "Specified target name not in manifest" 행 제거 + 실제 사용 중인 `type: project | monorepo` 필드를 Manifest contract 에 동기화.
+- **Phase 3**: `.claude/project-group/data-craft/dev.md` 4개 타겟에 role 백필 (data-craft / data-craft-mobile / data-craft-ai-preview = FE, data-craft-server = BE). deploy.md 의 role 값과 일치.
+
+### 영향 파일
+
+- `.claude/skills/dev-start/SKILL.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/project-group/data-craft/dev.md`
+
+### Treadmill Audit
+
+**NOT APPLICABLE** — 본 변경은 dev-start 스펙 본문이 이미 명시한 "Frontend dev server restart / Out of scope: Backend dev servers" 의도를 절차로 실현한 결함 복구 + 매니페스트 스키마 1개 필드 (`role`) 추가이며 신규 규칙/훅/에이전트/스킬/검증축이 아니다. advisor #1 / #2 모두 NOT APPLICABLE 동의.
+
+### 회귀 검증
+
+- `dev-build` 가 dev.md 를 읽되 `role` 필드 미참조 (line 52-54 — name/cwd/type/build_command 만 사용). data-craft-server 빌드 경로 무영향.
+- 다른 리더 매니페스트 부재 (`grep -l "targets:" .claude/project-group/*/dev.md` → data-craft 1건만). 백필 범위 1건으로 한정.
+
+### 마스터 검증 시나리오
+
+머지 후 `/dev-start data-craft` 재호출 → AskUserQuestion 카드에 FE 3종 (`data-craft`, `data-craft-mobile`, `data-craft-ai-preview`) 만 노출, `data-craft-server` 미노출. 선택된 항목만 기동.
+
 ## v001.9.0
 
 > 통합일: 2026-05-13
