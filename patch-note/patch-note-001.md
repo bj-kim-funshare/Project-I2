@@ -1,5 +1,24 @@
 # 아이OS — Patch Note (001)
 
+## v001.32.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #23
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/skills/plan-enterprise/SKILL.md` 에 cross-repo phase 정식 지원 추가. Pre-conditions 에 "한 페이즈 = 정확히 하나의 work repo" 6번 항목, Step 5 이슈 템플릿에 `Phase N work repo:` 라인, Step 6 를 N==1 / N>1 분기로 일반화 (멀티 케이스 WIP A_X = `plan-enterprise-<N>-<slug>-작업-{repo-slug}` lazy 생성), Step 7a 디스패치 본문에 페이즈별 work_repo 워크트리 경로 전달 + 새 work_repo 첫 페이즈 시 lazy 생성 1-단계 흐름 명시, Step 9 머지를 9.1 (각 work_repo 의 i-dev 머지) / 9.2 (leader repo WIP B + 패치노트) / 9.3 (leader i-dev WIP B 머지) 로 분리. Failure policy 에 work_repo dev.md 미등록 / work repo i-dev 머지 충돌 (repo 명시) / codex + multi-repo v1 미지원 3개 항목 추가 및 단일-repo 표현의 머지 충돌 항목 대체. iter 카운트 (페이즈당 3회) 는 페이즈별 독립 유지 1줄 명시.
+- **Phase 2**: `.claude/skills/plan-enterprise-os/SKILL.md` 에 단일-repo (Project-I2) 고정 명시화 + plan-enterprise 와 어휘 정렬. Pre-conditions 보조 안내 블록 아래 "본 스킬은 항상 work repo = leader repo = Project-I2 단일. cross-repo phase 절차는 N/A, '한 페이즈 = 한 work repo' 어휘는 동일" 한 줄, Step 5 이슈 본문 템플릿 인용부 위 "`Phase N work repo: Project-I2` 라인 포함 — 단일-repo 고정이지만 어휘 정렬 우선" 한 줄, Step 6 본문에 "N=1 고정 — plan-enterprise 의 N>1 lazy 생성 / repo-slug 접미사 분기 N/A" 한 줄, Step 9 본문에 "N+1=2-step 으로 plan-enterprise 일반화 절차의 N=1 케이스와 동치" 한 줄, Scope (In scope) 마지막 항목으로 "본 스킬은 N=1 고정" 명시 1줄. 절차 자체는 변경 없음.
+- **Phase 3**: `.claude/md/completion-reporter-contract.md` §6 `plan-enterprise` 와 `plan-enterprise-os` 두 `skill_finalize` 서브섹션에 `wip_branches_merged[]` 원소 형식 명시 라인 추가. plan-enterprise: 단일-repo bare `<branch>` 또는 multi-repo `<repo>:<branch>` 두 형식 허용, 조립측이 케이스에 따라 선택. 렌더링 row 의 `<branch>` 를 `<element>` 로 일반화하여 `:` 포함 형식도 그대로 출력. plan-enterprise-os: N=1 고정으로 bare `<branch>` 형식만 허용. 스키마 타입 (문자열 배열) 자체는 변경 없음 — doc-only.
+
+### 영향 파일
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/md/completion-reporter-contract.md`
+
+### Treadmill Audit
+PASS — 단일-repo 가정 3건 (Step 6 cwd 기반 wt_path · WIP A 1개 한정 · Step 9 `i-dev` hardcode 단일 repo 한정) 일괄 폐기 (Q3). Step 6 N==1 분기로 단일-repo 케이스 기존 동작 보존하여 backward compat 유지. 재발 가능 신호: MEMORY.md `project_followup_plan_enterprise_cross_repo.md` 의 data-craft multi-repo 후속 예고.
+
 ## v001.31.0
 
 > 통합일: 2026-05-13
