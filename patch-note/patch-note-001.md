@@ -1,5 +1,55 @@
 # 아이OS — Patch Note (001)
 
+## v001.4.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #4
+> 대상: 아이OS — 모든 write 스킬에 git worktree 격리 강제
+
+### 배경
+
+빌드 직후 24 시간 내 다중-세션 충돌 3회 이상 발생. 한 세션의 `git checkout` 이 같은 working tree 의 단일 HEAD 를 mutate 하여 다른 세션의 WIP 위에 commit 박힘 / 메인 working tree 의 미커밋 edit 손실 / phase-executor declared affected_files 위반 등. 원인은 cwd 가 아니라 **single working tree 의 single HEAD**. 해결: `git worktree add` 로 WIP 마다 독립 working tree + HEAD 부여.
+
+### 페이즈 결과
+
+- **Phase 1** — `.claude/md/worktree-lifecycle.md` 신설. 정확한 충돌 메커니즘, 경로 규약 (`../{repo}-worktrees/<wip>`), create/dispatch/merge/remove 시퀀스, prune 정책, 잔존 race 명시, "다른 세션의 worktree 는 이 세션의 관심사가 아니다" 원칙.
+- **Phase 2** — CLAUDE.md §5 WIP & merge protocol 을 4 단계 → 5 단계로 격상. 1 단계 = WIP worktree + branch (working-tree-level isolation). 절차 본문은 worktree-lifecycle.md 참조.
+- **Phase 3 (load-bearing)** — 4 개 write-capable sub-agent (phase-executor, code-fixer, db-migration-author, db-data-author) 에 `worktree_cwd` 입력 추가. 모든 git 호출이 `git -C <worktree_cwd>` 형식. code-fixer 의 `git checkout` 제거.
+- **Phase 4** — plan-enterprise + plan-enterprise-os SKILL.md 갱신. Step 6 / 7 / 9 / 10 / HOTFIX 경로에 worktree 절차 주입. 메인 세션 검증 ritual 에 `git fetch origin <wip_branch>` 추가.
+- **Phase 5** — task-db-structure + task-db-data SKILL.md 갱신. Phase 1 dispatch 에 worktree_cwd, Phase 3 WIP 블록을 worktree add 패턴으로, Phase 5 머지 후 worktree remove.
+- **Phase 6** — dev-merge SKILL.md 갱신. from-branch (이미 존재) 위에 worktree add (no -b), code-fixer dispatch 3 곳에 worktree_cwd, conflict-PENDING rebase 를 `git -C <wt_from>` 으로.
+- **Phase 7** — group-policy / new-project-group / plan-roadmap SKILL.md 갱신. 메인 세션이 worktree 절대경로로 Write/Edit, `git -C <wt>` 로 commit/push, 머지 후 remove. group-policy "유지 4" no-op 분기는 worktree 생성 전 halt.
+- **Phase 8** — create-custom-project-skill / patch-update / patch-confirmation SKILL.md 갱신. patch-confirmation 은 메인 cwd 미커밋 변경을 `git stash push -u → git -C <wt> stash pop` 으로 worktree 이동하는 7 단계 절차 명시.
+- **Phase 9 (post-advisor BLOCK)** — entry ritual 의 `git worktree list # report unrelated leftovers to master` 안티-패턴 제거. worktree-lifecycle.md + 9 SKILL.md 정리. 다른 세션의 worktree 는 본 세션의 관심사가 아님을 본문에 명시.
+
+### 영향 파일
+
+- 신규: `.claude/md/worktree-lifecycle.md`
+- 수정: `CLAUDE.md`, `.claude/agents/phase-executor.md`, `.claude/agents/code-fixer.md`, `.claude/agents/db-migration-author.md`, `.claude/agents/db-data-author.md`
+- 수정: `.claude/skills/{plan-enterprise, plan-enterprise-os, task-db-structure, task-db-data, dev-merge, group-policy, new-project-group, plan-roadmap, create-custom-project-skill, patch-update, patch-confirmation}/SKILL.md` (총 11)
+- 메모리 retire: `~/.claude/projects/.../memory/feedback_no_pre_session_collision_check.md` 삭제 + `MEMORY.md` 인덱스 정리
+
+### Treadmill Audit
+
+- **Q1 재발성**: PASS — 24 시간 내 3 회 이상 충돌 사고.
+- **Q2 새 엣지 케이스**:
+  - worktree dir stale (수동 삭제) → `git worktree prune` 으로 투명 정리.
+  - patch-confirmation 의 git stash race (메인 cwd 단일 stash 저장소, 동시 호출 시 stash 섞임) → worktree 로 해소 안 됨. §5 4 단계 + 마스터 복구. SKILL.md 본문에 명시.
+  - Korean 경로 (`-작업`, `-문서`) — macOS APFS 정상 동작 확인 (본 v001.4.0 WIP B 가 첫 dogfood, `git worktree add` 성공).
+  - worktree-lifecycle.md 의 `push -u origin` "optional" 표현 — 실제로는 dispatcher 가 mandatory 사용. 후속 fix 후보.
+- **Q3 trade-out 폐기**: PASS — `feedback_no_pre_session_collision_check.md` 메모리 삭제 + `MEMORY.md` 인덱스 한 줄 제거. worktree 격리가 도입되어 "다른 세션 사전 회피 금지" 의 보호 대상 (사전 회피) 자체가 의미를 잃음.
+
+### 잔존 known limitations
+
+- patch-confirmation 의 git stash race (위 Q2 참조).
+- patch-note 버전 번호 race (두 세션이 동시에 v001.K+1.0 산출 시 머지에서 충돌; §5 4 단계로 한쪽을 .K+2.0 으로 renumber). worktree-lifecycle.md 명시.
+- worktree-lifecycle.md 의 `push -u origin` "optional" 표현 정리 (단어 한 줄 수정 후보).
+
+### 다음 사이클 후보
+
+- 본 v001.4.0 의 dogfood 일주일 운영 후 결함 수집 → 마이크로 fix 패치 (예: lifecycle md `optional` 표현 정리)
+- 다중 세션 실 운영 검증 (두 세션 동시 write 스킬 호출 → 양측 머지 시 충돌 없이 양측 보존)
+
 ## v001.3.0
 
 > 통합일: 2026-05-13
