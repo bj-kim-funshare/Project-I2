@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.22.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #15
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/md/completion-reporter-contract.md` narrow-safe 표 가이드 + 2열 표준화. §2 universal output template 에 "Narrow-safe table rules" 절 신설 — 항상 2열 (`항목 | 값`), 다열 정보는 sub-table 분리, 스칼라 반복은 동일 키 반복 행, 30자 초과 셀은 `<br>` 줄바꿈, 근거 (CLI 가 폭 부족 시 행별 stacked fallback 으로 변환) 명시. §2 minimal example 에 "narrow-safe 예시 (2열·짧은 셀)" 표시 첨가. §6 의 다열 권장 컬럼 스펙 (15개 항목: `dev-merge` 3개 moment, `task-db-structure` / `task-db-data` `skill_finalize`, `pre-deploy` 2개 moment, `dev-inspection` 2개 moment, `dev-security-inspection` / `db-security-inspection` / `project-verification` (미러 동기화), `dev-start` `skill_finalize`, `dev-build` `skill_finalize`, `group-policy` `skill_finalize`, `new-project-group` `skill_finalize`, `plan-roadmap` `skill_finalize`, `create-custom-project-skill` 2개 moment) 을 모두 "항목 | 값 + 필요 시 sub-table" 패턴으로 변환. §6 preamble 에 long-value `<br>` 규칙 (treadmill_audit_result / block_reason / result_summary / error_detail) 일괄 명시. patch-update schema 4열 → 2열 정렬 (§2 예시와 모순 해소).
+- **Phase 2**: `.claude/agents/completion-reporter.md` Output rules §3 보강 — 단일 한 줄 표 지시를 narrow-safe 세부 6 항목으로 확장 (2열 강제, sub-table 분리, 스칼라 반복 행, `<br>` 줄바꿈, CLI fallback 근거 rationale, 산문 분산 금지). contract md §2 와 동일 용어 정합 (2-column / sub-table / scalar repeats / stacked-fallback).
+- **Phase 3 (skip)**: SKILL.md 출력 예시 동기화 — 14개 SKILL.md 탐색 결과, 모두 contract md 를 path-reference 만 하고 inline 표 예시·컬럼 리스트를 복제하지 않음을 확인. 동기화 대상 없음.
+
+### 영향 파일
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/agents/completion-reporter.md`
+
+### Treadmill Audit
+PASS — Q3 폐기 1건 명시: `§6 의 "Recommended table columns" 자유 컬럼 레이아웃 권한` (스킬별 임의 다열 자유도, 15개 schema 에서 5~8열까지 다양) 이 retired → 단일 `항목 | 값` 2열 + sub-table 표준이 enforced 로 대체. 신규 메커니즘 추가 아닌 기존 출력 규칙 spec tightening (Q3 의 폐기-신설 1:1 매핑 충족). 실증 검증은 본 patch-note 의 plan-enterprise-os #15 자체 Step 11 finalize 보고 도그푸딩 + 후속 임의 스킬 보고에서 narrow 터미널에서 표로 렌더되는지 확인.
+
 ## v001.21.0
 
 > 통합일: 2026-05-13
