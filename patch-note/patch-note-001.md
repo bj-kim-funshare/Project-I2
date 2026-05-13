@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.17.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #12
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/scripts/statusline.sh` 의 표시 레이아웃 조정 및 슬래시 스킬 호출 시 L3 프롬프트 미표시 버그 수정. 변경 4건: (1) ⏱ 누적 작업 시간(`DUR_FMT`) 을 L2 끝에서 L1 끝(EXT_BADGES 앞)으로 이동, DIM 색상 유지. (2) `CC_VERSION` 추출 변수와 `VERSION_SUFFIX` 변수/사용처를 완전히 제거하여 L1 의 `· cc<ver>` 표기 폐기. (3) L3 프롬프트 추출 python3 heredoc 의 `<command-` 분기를 재작성 — `<command-args>` 본문을 우선 추출, 비어 있으면 `<command-name>` (예: `/plan-enterprise-os`) fallback, 둘 다 매치 실패 시 기존대로 skip. 슬래시 스킬과 함께 입력한 args 가 L3 에 실제 표시되도록 함. `<local-command-` / `<system-reminder>` 무조건 skip 은 유지. (4) 헤더 주석 (`:14-17`) 의 L1/L2 라인 레이아웃 설명을 새 구성에 동기화.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. statusline 표기 재배치 + L3 프롬프트 추출 버그 수정뿐.
+
 ## v001.16.0
 
 > 통합일: 2026-05-13
