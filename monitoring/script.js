@@ -90,6 +90,15 @@ function renderKpi(data) {
   $('#kpi-messages-val').textContent = fmtNum(messages);
   $('#kpi-sessions').textContent = fmtNum(data.files_processed || 0);
 
+  const byDay = data.by_day || [];
+  const bySession = data.by_session || [];
+  $('#kpi-msgs-avg-day').textContent = byDay.length > 0 ? (messages / byDay.length).toFixed(1) : '—';
+  $('#kpi-msgs-avg-session').textContent = bySession.length > 0 ? (messages / bySession.length).toFixed(1) : '—';
+  // 마지막 일 단위 집계로 근사
+  const last24hMsgs = byDay.length > 0 ? (byDay[byDay.length - 1].messages || 0) : 0;
+  $('#kpi-msgs-24h').textContent = fmtNum(last24hMsgs);
+  $('#kpi-msgs-24h-pct').textContent = messages > 0 ? ((last24hMsgs / messages) * 100).toFixed(1) + '%' : '—';
+
   $('#kpi-noncache').textContent = fmtNum(noncache);
   $('#kpi-cache').textContent = fmtNum(cache);
   $('#kpi-input').textContent = fmtNum(input);

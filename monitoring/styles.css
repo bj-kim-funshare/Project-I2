@@ -234,6 +234,31 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   text-underline-offset: 3px;
 }
 
+/* KPI 카드 보조 수치 그리드 */
+.kpi-extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.kpi-extras > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.kpi-extras .lbl {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.kpi-extras .val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ================= CHARTS ================= */
 .charts {
   display: grid;
