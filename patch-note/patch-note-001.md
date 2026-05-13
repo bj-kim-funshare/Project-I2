@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.21.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #14
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/skills/task-db-structure/SKILL.md` v2 업그레이드 — Scope 에 routine DDL (PROCEDURE / FUNCTION / TRIGGER `CREATE` / `DROP` / `REPLACE`) 추가, EVENT 는 v3 후보 DEFER 명시. Pre-conditions 에 `dev_prod_separation` (표준 `분리` | `공유` | 커스텀) 과 `connection_style` (표준 `DATABASE_URL` | `DB_* 환경변수` | 커스텀) 두 필수 필드 + 부재 시 fail-fast 메시지 추가. Phase 1 (plan authoring) 의 트랜잭션 wrap 필드는 routine DDL 시 `N/A (routine DDL — implicit commit)` 허용. Phase 2 (advisor) DESTRUCTIVE 태그 정책 확장 (`DROP PROCEDURE / FUNCTION / TRIGGER`). Phase 4 (execute) 분기 로직 신규 — `분리` 시 현행 `dev → staging → prod` 순차 + 환경별 게이트 유지, `공유` 시 마스터 라벨링 단일 환경 1회 실행 (dry-run + 실 + 검증 + 자동 롤백 안전망은 동일 유지), 커스텀 시 마스터 확인 카드. 실 적용 직전 capture rollback 단계 (§b2) 삽입 — mysql `SHOW CREATE PROCEDURE|FUNCTION|TRIGGER` / postgres `pg_get_functiondef` 캡처 → `rollback.<env_or_label>.sql` 저장, 신규 CREATE 시 `DROP ... IF EXISTS` emit. 환경 변수 contract 도 `connection_style` 기반 분기 — `DATABASE_URL` 또는 `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` (mysql2 패턴) 조합.
+- **Phase 1b**: `.claude/md/completion-reporter-contract.md` env_results 키 유연화 — `task-db-structure` / `task-db-data` 의 `env_results` 가 `{dev, staging, prod}` 고정 키에서 환경명 → 4-enum 값 동적 매핑으로 변경. Recommended table columns 도 정적 3열에서 "one column per env_results key (dispatcher-determined)" 동적 표현으로 갱신. Phase 1 의 `공유` 분기 단일 라벨 보고가 스키마 위반 없이 작동.
+- **Phase 2**: `.claude/agents/db-migration-author.md` v2 업그레이드 — Scope 에 routine DDL 추가 (EVENT 미포함, v3 후보), ALTER 미지원 → DROP+CREATE 패턴 가이드 명문화, DESTRUCTIVE 태그에 routine DROP 포함, 트랜잭션 wrap `N/A (routine DDL)` 허용. Input 에 `routine_mode: boolean` 추가 (dispatcher 가 request + issue body 의 routine 키워드 스캔 후 결정), Return JSON 에 `capture_templates[]` 추가 (mysql `SHOW CREATE` / postgres `pg_get_functiondef` 템플릿 문자열 배열 — 실 실행은 dispatcher 책임). 정합 보정 carve-out 으로 SKILL.md 의 Phase 1 dispatch 호출부에 `routine_mode` 전달 명시.
+- **Phase 3**: collection skills 동기화 — `.claude/skills/new-project-group/SKILL.md` Round 3 (db) 의 `dev_prod_separation` 과 `connection_style` 두 필드를 표준 closed-choice + 자유형 fallback 구조로 갱신 (자유형 시 task-db-structure 가 Phase 4 마스터 확인 카드로 위임). `connection_style` 설명을 기존 'ORM 이름 / pool 설정' 프레이밍에서 '환경 변수 계약 결정' 역할로 교체. `.claude/skills/group-policy/SKILL.md` 에 'DB area — standard value recognition' 절 추가, 표준 값 간 전환 / 자유형 → 표준 정규화 요청을 확인 카드 없이 직접 적용.
+- **Phase 4**: `.claude/project-group/data-craft/db.md` frontmatter 표준 값 정규화 — `dev_prod_separation: 같은 DB 사용 (분리 없음)` → `공유`, `connection_style: mysql2 직접 연결` → `DB_* 환경변수`. body 내용 유지.
+
+### 영향 파일
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/agents/db-migration-author.md`
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/project-group/data-craft/db.md`
+
+### Treadmill Audit
+PASS — Q3 폐기 2건 명시: (a) `dev → staging → prod 강제 순차` 가정 → Phase 4 §10 의 `dev_prod_separation` 3-분기로 대체 (`분리` / `공유` / 커스텀), (b) `단일 rollback.sql` 가정 → §b2 의 env-별 capture-based `rollback.<env_or_label>.sql` 1순위 + 기존 `rollback.sql` 을 best-effort fallback (2순위) 으로 강등. 신규 메커니즘 (capture step, dynamic env_results 매핑) 은 폐기 항목과 1:1 매핑. EVENT 미포함은 Q3 의 좁은 scope 선호 (advisor 권고) 에 따른 v2 의 의도적 제한 — v3 후보로 명시.
+
 ## v001.20.0
 
 > 통합일: 2026-05-13
