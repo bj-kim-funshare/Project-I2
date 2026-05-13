@@ -1,13 +1,13 @@
 ---
 name: task-db-structure
-description: Plan and execute DDL changes (CREATE/ALTER/DROP TABLE/COLUMN/INDEX/CONSTRAINT) against a project group's databases according to the group's db.md policy. Authors paired migration + rollback SQL + plan.md audit doc via db-migration-author sub-agent, advisor-reviews for safety, commits to a local WIP branch (no PR), then sequentially executes against each environment (dev → staging → prod) with master approval gate per environment and automatic rollback on failure. After execution, appends results to plan.md and auto-merges WIP to i-dev (CLAUDE.md §5 universal — preserve both on conflict). Never touches data — strict DDL scope. v1 supports MySQL and PostgreSQL.
+description: Plan and execute DDL and routine changes (CREATE/ALTER/DROP TABLE/COLUMN/INDEX/CONSTRAINT/VIEW and CREATE/DROP/REPLACE PROCEDURE/FUNCTION/TRIGGER) against a project group's databases according to the group's db.md policy. Authors paired migration + rollback SQL + plan.md audit doc via db-migration-author sub-agent, advisor-reviews for safety, commits to a local WIP branch (no PR), then executes against each environment with master approval gate per environment and automatic rollback on failure. Branches on db.md `dev_prod_separation`: `분리` → sequential dev → staging → prod; `공유` (or custom with master confirmation) → single-label execution. After execution, appends results to plan.md and auto-merges WIP to i-dev (CLAUDE.md §5 universal — preserve both on conflict). Never touches data — strict DDL scope. v2 supports MySQL and PostgreSQL.
 ---
 
 # task-db-structure
 
-DDL execution skill for a project group's databases. Replaces the structural half of the old `task-db` skill (data half goes to `task-db-data`).
+DDL and routine execution skill for a project group's databases. Replaces the structural half of the old `task-db` skill (data half goes to `task-db-data`).
 
-This skill changes real databases. The full pipeline includes paired migration + rollback authoring with plan.md audit, advisor safety review, local WIP commit, per-environment execution with master gates and auto-rollback on failure, plan.md result append, and auto-merge to i-dev. Master picked the full-environment scope (2026-05-12) — dev / staging / prod all execute, gated by master approval per environment. PR step polished out the same day (post-execution PR was redundant codification ceremony).
+This skill changes real databases. The full pipeline includes paired migration + rollback authoring with plan.md audit, advisor safety review, local WIP commit, per-environment execution with master gates and auto-rollback on failure, plan.md result append, and auto-merge to i-dev. Master picked the full-environment scope (2026-05-12) — dev / staging / prod all execute (when separated), gated by master approval per environment. PR step polished out the same day (post-execution PR was redundant codification ceremony).
 
 ## Invocation
 
@@ -22,13 +22,15 @@ This skill changes real databases. The full pipeline includes paired migration +
 
 1. `.claude/project-group/<leader>/` exists with `db.md` populated.
 2. `db.md` declares at minimum:
-   - `engine` (mysql or postgres — v1 supported).
+   - `engine` (mysql or postgres — v2 supported).
    - `framework` (raw-sql, prisma, knex, sequelize — for migration file format).
-   - Environment connection info — by environment variable name. v1 expects standard names: `DEV_DATABASE_URL`, `STAGING_DATABASE_URL`, `PROD_DATABASE_URL`. Missing env → that environment is skipped (with master notice).
+   - `dev_prod_separation`: standard values `분리` | `공유` | `<custom description>`. Standard values drive Phase 4 branching directly. A custom description triggers a master confirmation card at Phase 4 entry before branching is decided. **Field absence → fail-fast**: `"db.md 의 dev_prod_separation 필드 부재 — group-policy 로 보정 후 재호출"`.
+   - `connection_style`: standard values `DATABASE_URL` | `DB_* 환경변수` | `<custom description>`. Determines which env variable contract is used in Phase 4. **Field absence → fail-fast**: `"db.md 의 connection_style 필드 부재 — group-policy 로 보정 후 재호출"`.
+   - Environment connection info — by environment variable name. Resolution depends on `connection_style` (see Phase 4 §b). Missing env → that environment is skipped (with master notice).
 3. The target repo (the one with DB code in the group) is identifiable. If the group has multiple repos, the skill asks via `AskUserQuestion` which repo carries the DB.
 4. Current branch = `i-dev` (or `main` for bootstrap). The skill creates a WIP from there.
 5. `gh` CLI 의존성은 없음 (PR 단계 폐기됨, 2026-05-12 master 결정). git CLI 만 사용.
-6. DB CLIs available: `mysql` (or `psql` for postgres) on PATH. v1 invokes the CLI directly; framework migration tools (`prisma migrate deploy` etc.) are NOT used in v1 — the skill applies SQL files explicitly.
+6. DB CLIs available: `mysql` (or `psql` for postgres) on PATH. v2 invokes the CLI directly; framework migration tools (`prisma migrate deploy` etc.) are NOT used in v2 — the skill applies SQL files explicitly.
 
 ## Phase 1 — Plan authoring
 
@@ -53,6 +55,7 @@ This skill changes real databases. The full pipeline includes paired migration +
    - 프레임워크: <framework>
    - 파괴적 ops: <count>건 (<list>)
    - 데이터 후속 작업 필요: <yes|no>
+   - 트랜잭션 wrap: <yes | NON-TRANSACTIONAL: <reason> | N/A (routine DDL — implicit commit)>
 
    <Korean summary from agent>
 
@@ -61,16 +64,18 @@ This skill changes real databases. The full pipeline includes paired migration +
    ```
    Wait for master's explicit "진행" (or equivalent) before continuing. Any other response → revise via re-dispatch.
 
+   **Routine work note**: when the migration involves only PROCEDURE / FUNCTION / TRIGGER operations, the transaction wrap field may show `N/A (routine DDL — implicit commit)` — routine DDL causes an implicit commit in MySQL and cannot be wrapped in a user transaction. In PostgreSQL, `CREATE OR REPLACE FUNCTION` can be wrapped; emit the actual wrap status per engine.
+
 ## Phase 2 — Advisor safety review
 
 5. **Call `advisor()`** with the migration and rollback contents in context. The dispatcher's review checklist (this is the load-bearing safety gate):
 
    **Concrete checks**:
    - (a) Every `DROP TABLE` / `DROP COLUMN` / `MODIFY COLUMN <type>` in migration.sql has a corresponding restorative statement in rollback.sql.
-   - (b) Both files wrap statements in `BEGIN; ... COMMIT;` — OR carry an explicit `-- NON-TRANSACTIONAL: <reason>` comment at the top.
-   - (c) `DESTRUCTIVE:` tag comments precede every destructive operation (the author agent emits these).
-   - (d) Rollback SQL parses against the target engine — verified by `mysql --syntax-check` (mysql) or `psql -e --pset=expanded=on --command="EXPLAIN ..."` dry attempt against a known-empty database / parser endpoint. (v1 limit: rough syntax check; full parse fidelity requires the actual engine — accept that v1 may pass syntactically-suspect SQL through to the dev dry-run stage where the engine catches it.)
-   - (e) v1 known limit: there is no `protected_tables` field in `db.md`. The advisor cannot enforce "this table is protected from DDL." Master must catch protected-table violations in the Phase 1 plan review.
+   - (b) Both files wrap statements in `BEGIN; ... COMMIT;` — OR carry an explicit `-- NON-TRANSACTIONAL: <reason>` comment at the top — OR the migration is routine-only and `N/A (routine DDL — implicit commit)` is declared.
+   - (c) `DESTRUCTIVE:` tag comments precede every destructive operation. Destructive operations include: `DROP TABLE`, `DROP COLUMN`, `MODIFY COLUMN <type>` (table DDL) and `DROP PROCEDURE`, `DROP FUNCTION`, `DROP TRIGGER` (routine DDL — definition loss is irreversible if no capture backup exists). The author agent emits these tags; advisor verifies their presence.
+   - (d) Rollback SQL parses against the target engine — verified by `mysql --syntax-check` (mysql) or `psql -e --pset=expanded=on --command="EXPLAIN ..."` dry attempt against a known-empty database / parser endpoint. (v2 limit: rough syntax check; full parse fidelity requires the actual engine — accept that v2 may pass syntactically-suspect SQL through to the dev dry-run stage where the engine catches it.)
+   - (e) v2 known limit: there is no `protected_tables` field in `db.md`. The advisor cannot enforce "this table is protected from DDL." Master must catch protected-table violations in the Phase 1 plan review.
 
 6. Advisor returns prose. The dispatcher parses for the **literal token `BLOCK:`** at the start of any line (case-sensitive). Token presence → halt and report. Absence → proceed.
 
@@ -102,24 +107,68 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
 
 ## Phase 4 — Execute per environment
 
-10. **Determine environment list** — from `db.md` declared environments (`dev`, `staging`, `prod`). Sequential order is fixed: `dev → staging → prod`.
-11. **For each environment** in order:
+10. **Read `dev_prod_separation` from `db.md`** and determine the execution branch:
 
-    **a. Master per-env approval gate (2/4, 3/4, 4/4)** via `AskUserQuestion`:
+    - **`분리`** → standard sequential execution: `dev → staging → prod`. Proceed to §11a with all three environments.
+    - **`공유`** → single-environment execution. Show master:
+      ```
+      본 그룹은 dev/prod 동일 DB — 단일 게이트로 1회 실행됩니다.
+      실행 환경 라벨을 알려주세요 (예: "prod", "shared", "data-craft-db").
+      ```
+      Wait for master's label. Use that label as the single `env_or_label` for §11. The environment list has exactly one entry.
+    - **Custom value (non-standard)** → show master a confirmation card via `AskUserQuestion`:
+      ```
+      Q: db.md 의 dev_prod_separation 값이 표준 값 (분리/공유) 이 아닙니다: "<value>".
+         실행 분기를 선택해 주세요.
+      Options:
+        - 분리 (dev → staging → prod 순차)
+        - 공유 (단일 환경 — 라벨 입력 필요)
+        - 중단
+      ```
+      If master selects `공유`, also prompt for the environment label.
+
+11. **For each environment** (or single label in `공유` branch) in order:
+
+    **a. Master per-env approval gate** via `AskUserQuestion`:
     ```
-    Q: <env> 환경에 마이그레이션 실행?
+    Q: <env_or_label> 환경에 마이그레이션 실행?
     Options:
-      - 진행 (dry-run + 실 적용 + 검증)
+      - 진행 (capture → dry-run → 실 적용 → 검증)
       - 건너뛰기 (이 환경 스킵, 다음 환경 진행)
       - 중단 (전체 파이프라인 정지, WIP 보존, i-dev 미머지)
     ```
 
-    **b. Connect**: read `${ENV_UPPER}_DATABASE_URL` env var. Missing → skip environment with master notice; offer to halt or continue to next.
+    **b. Connect**: resolve the database URL based on `connection_style` from `db.md`:
+    - `DATABASE_URL` → read `${ENV_UPPER}_DATABASE_URL` env var (e.g., `DEV_DATABASE_URL` for `dev`, or `<LABEL_UPPER>_DATABASE_URL` for a custom label).
+    - `DB_* 환경변수` → read `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` and compose the connection (mysql2 pattern: `mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME`).
+    - Custom `connection_style` → show master a confirmation card with the value and ask which standard contract to apply (DATABASE_URL / DB_* / 중단).
+
+    Missing env var(s) → skip environment with master notice; offer to halt or continue to next.
+
+    **b2. Capture rollback** (routine changes only — insert between connect and dry-run):
+
+    If the migration contains PROCEDURE / FUNCTION / TRIGGER operations, capture the current live definition before applying anything:
+
+    - **mysql**: for each routine `<name>`:
+      ```bash
+      mysql ... -e "SHOW CREATE PROCEDURE <name>\G"    # or FUNCTION / TRIGGER
+      ```
+      Save output to `<wt>/rollback.<env_or_label>.sql`. If SHOW returns 0 rows (routine does not exist yet — new CREATE):
+      ```sql
+      DROP PROCEDURE IF EXISTS <name>;   -- or FUNCTION / TRIGGER
+      ```
+    - **postgres**: for each routine `<name>`:
+      ```sql
+      SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = '<name>';
+      ```
+      Save output similarly. If 0 rows → emit `DROP FUNCTION IF EXISTS <name>;`.
+
+    One `rollback.<env_or_label>.sql` file per environment label. This file is the primary rollback source for routine changes. The `rollback.sql` authored by `db-migration-author` (git-baseline-based) remains as a best-effort fallback (secondary).
 
     **c. Dry-run**: apply migration inside a transaction that is forcibly rolled back at the end. Catches syntax / constraint / FK issues without persisting.
     ```bash
     # mysql
-    mysql --connection-url="$DB_URL" <<EOF
+    mysql <connection flags> <<EOF
     SET autocommit = 0;
     START TRANSACTION;
     $(cat migration.sql)
@@ -134,14 +183,19 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
     ```
     Non-zero exit → halt this environment; pipeline halts (do NOT proceed to next env); report to master.
 
-    **d. Real execution**: apply migration for real (the file's own `COMMIT;` finalizes).
+    **Note**: routine DDL (CREATE/DROP/REPLACE PROCEDURE/FUNCTION/TRIGGER) causes an implicit commit in MySQL — the dry-run ROLLBACK will not undo them. In MySQL, dry-run for routines is a best-effort syntax check only; the master confirmation card (§a) should state this limitation. In PostgreSQL, `CREATE OR REPLACE FUNCTION` can be fully rolled back inside a transaction.
+
+    **d. Real execution**: apply migration for real (the file's own `COMMIT;` or implicit commit finalizes).
     ```bash
-    mysql --connection-url="$DB_URL" < migration.sql
+    mysql <connection flags> < migration.sql
     # or psql "$DB_URL" -v ON_ERROR_STOP=1 -f migration.sql
     ```
-    Non-zero exit → **auto-rollback**: apply rollback.sql against the same env. Then halt; pipeline halts; report to master.
+    Non-zero exit → **auto-rollback**:
+    1. Apply `rollback.<env_or_label>.sql` (1st priority — capture-based).
+    2. If that file is absent or also fails → apply `rollback.sql` authored by db-migration-author (best-effort fallback, 2nd priority).
+    Then halt; pipeline halts; report to master.
 
-    **e. Post-execution verification**: re-introspect the schema to confirm the migration's intended state holds. For raw-sql: spot-check via `SHOW COLUMNS` / `\d table`. For frameworks: prefer the framework's introspection (`prisma db pull`, etc.). Mismatch → auto-rollback + halt.
+    **e. Post-execution verification**: re-introspect the schema to confirm the migration's intended state holds. For raw-sql: spot-check via `SHOW COLUMNS` / `\d table`; for routines: `SHOW PROCEDURE STATUS WHERE Name = '<name>'` (mysql) or `\df <name>` (postgres). For frameworks: prefer the framework's introspection (`prisma db pull`, etc.). Mismatch → auto-rollback (same priority order as §d) + halt.
 
 12. **After each environment** (success or explicit skip), accumulate the result in memory. After ALL environments complete (or pipeline halts on failure):
 
@@ -149,14 +203,15 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
     ```markdown
     ## 환경별 실행 결과
 
-    | 환경 | dry-run | 실 적용 | 검증 | rollback 발생 |
-    |------|---------|---------|------|---------------|
-    | dev | ✅ | ✅ | ✅ | — |
-    | staging | ✅ | ✅ | ✅ | — |
-    | prod | ✅ | ❌ exit 1 | — | ✅ 자동 |
+    | 환경 | capture | dry-run | 실 적용 | 검증 | rollback 발생 |
+    |------|---------|---------|---------|------|---------------|
+    | dev | ✅ | ✅ | ✅ | ✅ | — |
+    | staging | ✅ | ✅ | ✅ | ✅ | — |
+    | prod | ✅ | ✅ | ❌ exit 1 | — | ✅ 자동 |
 
     실행 종료 사유: {success | partial-failure-rollback | partial-failure-rollback-failed | aborted-by-master}
     ```
+    For `공유` branch, the table has one row with the master-supplied label.
 
     If failure occurred and rollback tables/files were preserved, also fill the `## 미정리 잔여` section.
 
@@ -184,7 +239,7 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
 15. Dispatch `completion-reporter` with:
     - `skill_type: "task-db-structure"`
     - `moment: "skill_finalize"`
-    - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `task-db-structure` `skill_finalize` schema. Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (`{dev, staging, prod}` each `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"`); optional `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`.
+    - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `task-db-structure` `skill_finalize` schema. Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (`{dev, staging, prod}` each `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"` for `분리` branch; for `공유` branch use the master-supplied label as the single key); optional `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`.
 
     Relay the agent's response verbatim to master.
 
@@ -198,8 +253,10 @@ Immediate Korean report + halt.
 |---|---|
 | `.claude/project-group/<leader>/db.md` not found | `"그룹 <leader> 에 db.md 부재 — /group-policy 실행 필요"` |
 | Required `db.md` field missing (engine/framework) | `"<leader>/db.md 에 <field> 누락 — /group-policy 로 추가 필요"` |
-| Engine not in v1 support (mysql / postgres) | `"엔진 <engine> v1 미지원. v1: mysql, postgres"` |
-| Framework not in v1 support | `"프레임워크 <framework> v1 미지원. v1: raw-sql, prisma, knex, sequelize"` |
+| `dev_prod_separation` field missing | `"db.md 의 dev_prod_separation 필드 부재 — group-policy 로 보정 후 재호출"` |
+| `connection_style` field missing | `"db.md 의 connection_style 필드 부재 — group-policy 로 보정 후 재호출"` |
+| Engine not in v2 support (mysql / postgres) | `"엔진 <engine> v2 미지원. v2: mysql, postgres"` |
+| Framework not in v2 support | `"프레임워크 <framework> v2 미지원. v2: raw-sql, prisma, knex, sequelize"` |
 | `db-migration-author` returns error | `"db-migration-author <error_type>: <details_ko>"` |
 | Master rejects plan in Phase 1 | (re-dispatch with revision) |
 | Advisor `BLOCK:` token detected | `"advisor 차단: <reason>. WIP 미생성, 작업 파일 미커밋 보존."` (master decides) |
@@ -210,24 +267,29 @@ Immediate Korean report + halt.
 | Post-execution verification mismatch | `"<env> 적용 후 검증 실패: 기대 vs 실제 불일치. 자동 롤백 진행."` |
 | `git worktree add` 실패 (path 충돌 / 권한 / 디스크) | `"worktree 생성 실패: <error>. Phase 1-2 산출물 보존, 작업 미진입. 마스터 결정 필요."` |
 
-## Scope (v1)
+## Scope (v2)
 
 In scope:
 - DDL migrations: CREATE / ALTER / DROP for tables, columns, indexes, constraints, views.
+- Routine DDL: CREATE / DROP / REPLACE for PROCEDURE, FUNCTION, TRIGGER. ALTER is not supported for routines — use DROP + CREATE pattern (the sub-agent guides this).
 - Paired forward + rollback SQL authored by `db-migration-author`.
-- Advisor safety review (5 concrete checks).
-- Sequential env execution (dev → staging → prod) with per-env master gate, dry-run, real exec, post-verify, auto-rollback.
+- Environment-specific pre-capture rollback for routine changes (`rollback.<env_or_label>.sql`).
+- Advisor safety review (5 concrete checks, routine DROP included in DESTRUCTIVE classification).
+- Sequential env execution (dev → staging → prod) for `dev_prod_separation: 분리` groups.
+- Single-label execution for `dev_prod_separation: 공유` groups, with master-supplied label.
+- Per-env master gate, dry-run, real exec, post-verify, auto-rollback on failure.
 - MySQL and PostgreSQL engines.
 - raw-sql / prisma / knex / sequelize migration file formats.
-- Env var-based connection: `${ENV_UPPER}_DATABASE_URL`.
+- Env var-based connection: `${ENV_UPPER}_DATABASE_URL` (when `connection_style: DATABASE_URL`) or `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` composite (when `connection_style: DB_* 환경변수`).
 
-Out of scope (v1):
+Out of scope (v2):
+- EVENT (MySQL) — scheduler dependency changes the capture/rollback semantics. v3 candidate, DEFER.
 - DML (data manipulation) — `task-db-data` covers.
 - Engines beyond MySQL/PostgreSQL (SQLite, MongoDB, etc.).
-- Secret-manager-based credential resolution (env var only in v1).
+- Secret-manager-based credential resolution (env var only in v2).
 - Framework migration runners (the skill calls SQL CLIs directly; `prisma migrate deploy` etc. are deferred).
-- Protected-table enforcement (`db.md` lacks the `protected_tables` field in v1).
+- Protected-table enforcement (`db.md` lacks the `protected_tables` field in v2).
 - Multi-step migrations within one invocation (one migration per invocation).
 - Cross-DB migrations within a single invocation (one DB at a time per environment).
-- Concurrent / parallel env execution (always sequential).
+- Concurrent / parallel env execution (always sequential within `분리` branch).
 - Online-schema-change tools (pt-osc, gh-ost) — deferred.
