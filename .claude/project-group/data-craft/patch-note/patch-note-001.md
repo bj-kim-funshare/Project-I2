@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.13.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 8, cumulative phase 14)
+
+### Hotfix 결과
+
+마스터 요구 2개:
+1. 선 그래프 상세 설정에 "선 색상 설정 기능 없음" 인지 — 실제론 color picker 존재했으나 시각 명료성 낮아 인지 실패.
+2. 모든 위젯 상세 설정에 "위젯 저장 및 적용" 버튼 좌측에 **빨강색 취소 버튼** 추가.
+
+- **Phase 14** (`ef2629a7`):
+  - **A. LineChartSettings 선 색상 UI 명료화** — color picker 컨테이너 `w-10 → w-14`, swatch `w-8 → w-10 + border-2 border-gray-400`, 라벨 `Color (text-[10px]) → 선 색상 (text-xs)`. 사용자가 한 눈에 인지 가능.
+  - **B. WidgetSettingsPanel 취소 버튼** — 컴포넌트 mount 시 widget.config 의 `structuredClone` 을 `useRef` 로 스냅샷. 취소 클릭 시 초기 config 복원 (`onConfigChange`) + 패널 닫기 (`onComplete`). 빨강 테두리 + 빨강 텍스트 motion.button 을 "저장 및 적용" 버튼 좌측에 배치.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/LineChartSettings.tsx` (color picker 시각 명료화)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsPanel.tsx` (snapshot 스냅샷 + 취소 버튼)
+
+### 검증 결과
+
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 선 그래프 위젯 설정 — 각 값 컬럼 행에 "선 색상" 라벨 + 더 큰 swatch 가 시각적으로 명확히 노출, 클릭 시 color picker 동작 확인.
+2. 위젯 설정 패널 — "위젯 저장 및 적용" 버튼 좌측에 빨강 텍스트 "취소" 버튼 노출.
+3. 위젯 설정 변경 후 취소 — 변경사항 폐기되고 패널 진입 전 상태로 복원 확인. 저장 시 변경사항 유지 확인 (회귀 체크).
+
 ## v001.12.0
 
 > 통합일: 2026-05-13
