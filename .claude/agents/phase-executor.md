@@ -1,6 +1,7 @@
 ---
 name: phase-executor
 model: claude-sonnet-4-6
+effort: medium
 description: Write-capable Sonnet sub-agent that executes one phase of a plan-enterprise plan on the supplied WIP branch. Receives phase metadata (title, type, description, affected_files, related context) and the WIP branch name, then makes the required code/doc changes scoped strictly to the declared affected_files, commits, pushes. Returns a JSON report with what was done, the commit SHA, the final affected_files set, and any blockers encountered. Single-phase scope — does not chain into the next phase. Dispatched once per phase by plan-enterprise.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
