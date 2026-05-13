@@ -21,7 +21,7 @@ This is a hard separation, not a style preference.
 
 The main session does **not** have direct write permission for product or skill work. Reads, advisor calls, and read-only sub-agent dispatch are fine. Writes (Write/Edit, mutating Bash, commits, branch ops) happen only through a skill, which dispatches a write-capable sub-agent per its procedure.
 
-Carve-out: while `.claude/` itself is being built, the main session writes to it directly (no skill exists yet to do this work). The carve-out closes for any given scope of write once a skill exists that handles that scope.
+Carve-out: while `.claude/` itself is being built (build-session mode), the main session writes to it directly without a skill dispatch. **The carve-out covers skill bypass only — §5's WIP-and-merge protocol still applies: no direct commits to `main`.** The carve-out closes for any given scope of write once a skill exists that handles that scope.
 
 ### 3. Work is skill-based (§D-22, §D-26)
 
