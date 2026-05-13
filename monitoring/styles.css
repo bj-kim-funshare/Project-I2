@@ -442,6 +442,35 @@ i { color: var(--muted); }
   color: #ef4444;
 }
 
+/* ================= COMPARE TOGGLE ================= */
+.compare-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.compare-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.compare-toggle input[type="checkbox"]:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* ================= CHART COMPARE LIST ================= */
+.chart-compare-list {
+  font-size: 12px;
+  padding: 4px 8px;
+  color: var(--muted);
+}
+.chart-compare-list .cmp-up { color: #3b82f6; }
+.chart-compare-list .cmp-down { color: #ef4444; }
+
 /* ================= ANIMATIONS ================= */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }

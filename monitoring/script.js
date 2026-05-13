@@ -75,6 +75,80 @@ function table(headers, rows) {
   return `<table>${thead}${tbody}</table>`;
 }
 
+// ---------- Period comparison helpers ----------
+
+function isoWeekToDate(year, week) {
+  // Returns the Monday of ISO week `week` in `year`.
+  const jan4 = new Date(Date.UTC(year, 0, 4)); // Jan 4 is always in W1
+  const w1Monday = new Date(jan4);
+  w1Monday.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));
+  const result = new Date(w1Monday);
+  result.setUTCDate(result.getUTCDate() + (week - 1) * 7);
+  return result;
+}
+
+function dateToIsoWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayOfWeek = (d.getUTCDay() + 6) % 7; // Mon=0
+  d.setUTCDate(d.getUTCDate() - dayOfWeek + 3); // nearest Thursday
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const yearStartMonday = new Date(yearStart);
+  yearStartMonday.setUTCDate(yearStart.getUTCDate() - ((yearStart.getUTCDay() + 6) % 7));
+  const week = Math.round((d - yearStartMonday) / (7 * 86400000)) + 1;
+  return { year: d.getUTCFullYear(), week };
+}
+
+function prevPeriodKey(unit, key) {
+  if (unit === 'weekly') {
+    // key: "YYYY-WWW"
+    const m = key.match(/^(\d{4})-W(\d+)$/);
+    if (!m) return null;
+    const year = parseInt(m[1], 10);
+    const week = parseInt(m[2], 10);
+    const monday = isoWeekToDate(year, week);
+    monday.setUTCDate(monday.getUTCDate() - 7);
+    const { year: py, week: pw } = dateToIsoWeek(monday);
+    return `${py}-W${String(pw).padStart(2, '0')}`;
+  }
+  if (unit === 'monthly') {
+    // key: "YYYY-MM"
+    const m = key.match(/^(\d{4})-(\d{2})$/);
+    if (!m) return null;
+    let year = parseInt(m[1], 10);
+    let month = parseInt(m[2], 10);
+    month -= 1;
+    if (month < 1) { month = 12; year -= 1; }
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }
+  if (unit === 'quarterly') {
+    // key: "YYYY-QN"
+    const m = key.match(/^(\d{4})-Q(\d)$/);
+    if (!m) return null;
+    let year = parseInt(m[1], 10);
+    let q = parseInt(m[2], 10);
+    q -= 1;
+    if (q < 1) { q = 4; year -= 1; }
+    return `${year}-Q${q}`;
+  }
+  if (unit === 'half') {
+    // key: "YYYY-HN"
+    const m = key.match(/^(\d{4})-H(\d)$/);
+    if (!m) return null;
+    let year = parseInt(m[1], 10);
+    let h = parseInt(m[2], 10);
+    h -= 1;
+    if (h < 1) { h = 2; year -= 1; }
+    return `${year}-H${h}`;
+  }
+  if (unit === 'yearly') {
+    // key: "YYYY"
+    const y = parseInt(key, 10);
+    if (isNaN(y)) return null;
+    return String(y - 1);
+  }
+  return null;
+}
+
 // ---------- KPI ----------
 
 function renderKpi(data) {
@@ -168,21 +242,21 @@ function clearDeltaBadges() {
 
 // ---------- Delta badges ----------
 
-function applyDeltaBadges(data) {
-  const SNAPSHOT_KEY = 'monitoring:last-snapshot';
+function computeKpiSnapshot(data) {
   const t = data.total || {};
   const cwrite = (t.cache_creation_5m || 0) + (t.cache_creation_1h || 0);
   const cread = t.cache_read || 0;
   const cacheHitRatio = (cwrite + cread) > 0 ? (cread / (cwrite + cread)) * 100 : 0;
-
-  const current = {
+  return {
     messages: t.messages || 0,
     noncache: (t.input || 0) + (t.output || 0),
     cache: cwrite + cread,
     cache_hit_ratio: cacheHitRatio,
     cost_usd: t.cost_usd || 0,
   };
+}
 
+function applyDeltaBadgesFromValues(prev, current) {
   const setBadge = (id, delta, fmt) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -197,17 +271,23 @@ function applyDeltaBadges(data) {
     }
   };
 
+  setBadge('kpi-delta-msgs', current.messages - (prev.messages || 0), (v) => fmtKMB(v));
+  setBadge('kpi-delta-noncache', current.noncache - (prev.noncache || 0), (v) => fmtKMB(v));
+  setBadge('kpi-delta-cache', current.cache - (prev.cache || 0), (v) => fmtKMB(v));
+  setBadge('kpi-delta-cache-hit-ratio', current.cache_hit_ratio - (prev.cache_hit_ratio || 0), (v) => `${v.toFixed(1)}%p`);
+  setBadge('kpi-delta-cost', current.cost_usd - (prev.cost_usd || 0), (v) => `$${v.toFixed(2)}`);
+}
+
+function applyDeltaBadges(data) {
+  const SNAPSHOT_KEY = 'monitoring:last-snapshot';
+  const current = computeKpiSnapshot(data);
+
   const raw = localStorage.getItem(SNAPSHOT_KEY);
   if (raw) {
     try {
       const snap = JSON.parse(raw);
       if (snap.saved_at !== data.generated_at) {
-        const prev = snap.values || {};
-        setBadge('kpi-delta-msgs', current.messages - (prev.messages || 0), (v) => fmtKMB(v));
-        setBadge('kpi-delta-noncache', current.noncache - (prev.noncache || 0), (v) => fmtKMB(v));
-        setBadge('kpi-delta-cache', current.cache - (prev.cache || 0), (v) => fmtKMB(v));
-        setBadge('kpi-delta-cache-hit-ratio', current.cache_hit_ratio - (prev.cache_hit_ratio || 0), (v) => `${v.toFixed(1)}%p`);
-        setBadge('kpi-delta-cost', current.cost_usd - (prev.cost_usd || 0), (v) => `$${v.toFixed(2)}`);
+        applyDeltaBadgesFromValues(snap.values || {}, current);
       }
     } catch (_) {
       // 손상된 snapshot 무시
@@ -258,20 +338,29 @@ const pieLabelsPlugin = {
 function renderChartDayTokens(data, opts) {
   const chartKey = (opts && opts.chartKey) || 'dayTokens';
   const canvasSel = (opts && opts.canvasSel) || '#chart-day-tokens canvas';
+  const compareData = (opts && opts.compareData) || null;
   destroyChart(chartKey);
   const days = (data.by_day || []);
   const labels = days.map(d => d.day);
   const ctx = $(canvasSel);
   if (!ctx || !days.length) return;
+
+  const datasets = [
+    { label: 'input', data: days.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '66', stack: 's', fill: 'origin' },
+    { label: 'output', data: days.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '66', stack: 's', fill: '-1' },
+  ];
+
+  if (compareData) {
+    const cdays = (compareData.by_day || []);
+    datasets.push(
+      { label: 'input (비교)', data: cdays.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '99', borderDash: [5, 5], stack: 'c', fill: 'origin' },
+      { label: 'output (비교)', data: cdays.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '99', borderDash: [5, 5], stack: 'c', fill: '-1' },
+    );
+  }
+
   charts[chartKey] = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'input', data: days.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '66', stack: 's', fill: 'origin' },
-        { label: 'output', data: days.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '66', stack: 's', fill: '-1' },
-      ],
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -375,6 +464,51 @@ function renderChartCacheDonut(data) {
     },
     plugins: [pieLabelsPlugin],
   });
+}
+
+function clearPieCompareLists() {
+  for (const id of ['compare-model-list', 'compare-skill-list', 'compare-cache-list']) {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; el.hidden = true; }
+  }
+}
+
+function renderPieCompareList(listId, currRows, prevRows, labelKey, valueKey) {
+  const el = document.getElementById(listId);
+  if (!el) return;
+
+  const currTotal = currRows.reduce((a, r) => a + (r[valueKey] || 0), 0);
+  const prevTotal = prevRows.reduce((a, r) => a + (r[valueKey] || 0), 0);
+  if (currTotal <= 0 || prevTotal <= 0) { el.hidden = true; return; }
+
+  const currMap = {};
+  for (const r of currRows) currMap[r[labelKey]] = (r[valueKey] || 0);
+  const prevMap = {};
+  for (const r of prevRows) prevMap[r[labelKey]] = (r[valueKey] || 0);
+
+  const labels = Array.from(new Set([...Object.keys(currMap), ...Object.keys(prevMap)]));
+  const deltas = labels.map(lbl => {
+    const cs = (currMap[lbl] || 0) / currTotal * 100;
+    const ps = (prevMap[lbl] || 0) / prevTotal * 100;
+    const absDelta = (currMap[lbl] || 0) - (prevMap[lbl] || 0);
+    return { lbl, pctDelta: cs - ps, absDelta };
+  });
+
+  const filtered = deltas
+    .filter(d => Math.abs(d.pctDelta) >= 1)
+    .sort((a, b) => Math.abs(b.pctDelta) - Math.abs(a.pctDelta))
+    .slice(0, 5);
+
+  if (!filtered.length) { el.hidden = true; return; }
+
+  el.innerHTML = filtered.map(d => {
+    const sign = d.pctDelta >= 0 ? '▲' : '▼';
+    const cls = d.pctDelta >= 0 ? 'cmp-up' : 'cmp-down';
+    const pctStr = `${sign} ${d.pctDelta >= 0 ? '+' : ''}${d.pctDelta.toFixed(1)}%p`;
+    const absStr = `(${d.absDelta >= 0 ? '+' : ''}${fmtKMB(d.absDelta)})`;
+    return `<div><span class="${cls}">${d.lbl}: ${pctStr} ${absStr}</span></div>`;
+  }).join('');
+  el.hidden = false;
 }
 
 function renderChartSessionBar(data, opts) {
@@ -531,9 +665,9 @@ function updateUrl(unit, key) {
   history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
 }
 
-function renderAll(data) {
+function renderAll(data, compareData) {
   renderKpi(data);
-  renderChartDayTokens(data);
+  renderChartDayTokens(data, { compareData: compareData || null });
   renderChartModelDonut(data);
   renderChartSkillDonut(data);
   renderChartCacheDonut(data);
@@ -542,13 +676,38 @@ function renderAll(data) {
 
   renderChartModelDonut(data, { chartKey: 'modelDonutDetail', canvasSel: '#chart-detail-model' });
   renderChartSkillDonut(data, { chartKey: 'skillDonutDetail', canvasSel: '#chart-detail-skill' });
-  renderChartDayTokens(data, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day' });
+  renderChartDayTokens(data, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day', compareData: compareData || null });
   renderChartSessionBar(data, { chartKey: 'sessionBarDetail', canvasSel: '#chart-detail-session' });
 
   $('#by-model').innerHTML = renderByModel(data.by_model || []);
   $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);
   $('#by-day').innerHTML = renderByDay(data.by_day || []);
   $('#by-session').innerHTML = renderBySession(data.by_session || []);
+
+  if (compareData) {
+    const currTotal = data.total || {};
+    const prevTotal = compareData.total || {};
+    const currCacheDonut = [
+      { token_type: 'non-cache', val: (currTotal.input || 0) + (currTotal.output || 0) },
+      { token_type: 'cache write', val: (currTotal.cache_creation_5m || 0) + (currTotal.cache_creation_1h || 0) },
+      { token_type: 'cache read', val: currTotal.cache_read || 0 },
+    ];
+    const prevCacheDonut = [
+      { token_type: 'non-cache', val: (prevTotal.input || 0) + (prevTotal.output || 0) },
+      { token_type: 'cache write', val: (prevTotal.cache_creation_5m || 0) + (prevTotal.cache_creation_1h || 0) },
+      { token_type: 'cache read', val: prevTotal.cache_read || 0 },
+    ];
+    renderPieCompareList('compare-model-list', data.by_model || [], compareData.by_model || [], 'model', 'input');
+    renderPieCompareList('compare-skill-list', data.by_skill || [], compareData.by_skill || [], 'skill', 'input');
+    renderPieCompareList(
+      'compare-cache-list',
+      currCacheDonut.map(r => ({ token_type: r.token_type, val: r.val })),
+      prevCacheDonut.map(r => ({ token_type: r.token_type, val: r.val })),
+      'token_type', 'val',
+    );
+  } else {
+    clearPieCompareLists();
+  }
 }
 
 function render(data) {
@@ -583,22 +742,54 @@ function populatePeriodKeys(periodsIndex, unit) {
   keyEl.disabled = false;
 }
 
-async function applyPeriodSelection(unit, key) {
+function updateCompareToggleState(unit, periodsIndex) {
+  const compareEl = document.getElementById('period-compare');
+  if (!compareEl) return;
+  if (!unit || unit === 'all') {
+    compareEl.disabled = true;
+    compareEl.checked = false;
+  } else {
+    compareEl.disabled = false;
+  }
+}
+
+async function applyPeriodSelection(unit, key, periodsIndex) {
   const err = $('#error');
   err.hidden = true;
+  const compareEl = document.getElementById('period-compare');
+  const compareOn = compareEl && !compareEl.disabled && compareEl.checked;
+
   try {
     if (!unit || unit === 'all') {
       const data = await loadAggregate();
       $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
       renderAll(data);
       applyDeltaBadges(data);
+      clearPieCompareLists();
       updateUrl('all', null);
     } else {
       const data = await loadPeriodData(unit, key);
       const agg = await loadAggregate();
-      $('#meta').textContent = `기간: ${key} | 생성일: ${shortTime(agg.generated_at)}`;
-      clearDeltaBadges();
-      renderAll(data);
+      const idx = periodsIndex || (agg.periods_index || {});
+
+      if (compareOn) {
+        const prevKey = prevPeriodKey(unit, key);
+        const prevKeys = idx[unit] || [];
+        if (prevKey && prevKeys.includes(prevKey)) {
+          const prevData = await loadPeriodData(unit, prevKey);
+          $('#meta').textContent = `기간: ${key} vs ${prevKey} (비교) | 생성일: ${shortTime(agg.generated_at)}`;
+          renderAll(data, prevData);
+          applyDeltaBadgesFromValues(computeKpiSnapshot(prevData), computeKpiSnapshot(data));
+        } else {
+          $('#meta').textContent = `기간: ${key} | 비교 불가: 직전 기간 데이터 없음 | 생성일: ${shortTime(agg.generated_at)}`;
+          clearDeltaBadges();
+          renderAll(data);
+        }
+      } else {
+        $('#meta').textContent = `기간: ${key} | 생성일: ${shortTime(agg.generated_at)}`;
+        clearDeltaBadges();
+        renderAll(data);
+      }
       updateUrl(unit, key);
     }
   } catch (e) {
@@ -645,9 +836,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const unitEl = $('#period-unit');
     const keyEl = $('#period-key');
+    const compareEl = document.getElementById('period-compare');
 
     unitEl.value = initUnit;
     populatePeriodKeys(periodsIndex, initUnit);
+    updateCompareToggleState(initUnit, periodsIndex);
 
     if (initUnit !== 'all' && initKey) {
       const validKeys = (periodsIndex[initUnit] || []);
@@ -656,30 +849,40 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         unitEl.value = 'all';
         populatePeriodKeys(periodsIndex, 'all');
+        updateCompareToggleState('all', periodsIndex);
       }
     }
 
     unitEl.addEventListener('change', () => {
       const unit = unitEl.value;
       populatePeriodKeys(periodsIndex, unit);
+      updateCompareToggleState(unit, periodsIndex);
       if (unit === 'all') {
-        applyPeriodSelection('all', null);
+        applyPeriodSelection('all', null, periodsIndex);
       } else {
         const key = keyEl.value;
-        if (key) applyPeriodSelection(unit, key);
+        if (key) applyPeriodSelection(unit, key, periodsIndex);
       }
     });
 
     keyEl.addEventListener('change', () => {
       const unit = unitEl.value;
       const key = keyEl.value;
-      if (unit !== 'all' && key) applyPeriodSelection(unit, key);
+      if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
     });
+
+    if (compareEl) {
+      compareEl.addEventListener('change', () => {
+        const unit = unitEl.value;
+        const key = keyEl.value;
+        if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
+      });
+    }
 
     const currentUnit = unitEl.value;
     const currentKey = keyEl.value;
     if (currentUnit !== 'all' && currentKey) {
-      await applyPeriodSelection(currentUnit, currentKey);
+      await applyPeriodSelection(currentUnit, currentKey, periodsIndex);
     } else {
       render(agg);
     }

@@ -24,6 +24,9 @@
       <select id="period-key" disabled>
         <option value="">—</option>
       </select>
+      <label class="compare-toggle">
+        <input type="checkbox" id="period-compare" disabled> 비교
+      </label>
     </div>
     <div id="meta" class="meta"></div>
     <button id="refresh-btn" type="button">새로고침</button>
@@ -109,16 +112,19 @@
       <article class="chart-card" id="chart-model-donut">
         <h3>모델 분포 (전체 토큰)</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-model-list" hidden></div>
       </article>
 
       <article class="chart-card" id="chart-skill-donut">
         <h3>스킬 점유 (Top 8 + 기타)</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-skill-list" hidden></div>
       </article>
 
       <article class="chart-card" id="chart-cache-donut">
         <h3>캐시 vs 비-캐시 비중</h3>
         <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-compare-list" id="compare-cache-list" hidden></div>
       </article>
 
       <article class="chart-card wide" id="chart-session-bar">
