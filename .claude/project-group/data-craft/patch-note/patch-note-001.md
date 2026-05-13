@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.8.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 3, cumulative phase 9)
+
+### Hotfix 결과
+
+마스터 요구: (1) 막대그래프 단색 적용 문제 해결 — 급진적 2 + 점진적 2 테마. (2) 파이/산점도 동일 적용. (3) 선 그래프는 테마 대신 라인별 색 지정.
+
+- **Phase 9** (`914852f2`):
+  - **A. 4종 팔레트 재정의 (`chart-colors.ts`, `ColorSchemeSelector.tsx` 동기화)** — 기존 ID 유지로 데이터 마이그레이션 없음:
+    - `warm` = 급진적1 (vibrant-warm, 8색 고대비).
+    - `cool` = 급진적2 (vibrant-cool, 8색 고대비).
+    - `default` = 점진적1 (blue 단일 hue 명도 8단계).
+    - `mono` = 점진적2 (gray 단일 hue 명도 8단계).
+  - **B. 막대그래프 단일 시리즈 카테고리 색 (`BarChartWidget.tsx`)** — `valueColumns.length === 1` 분기 추가 (`isSingleSeries` / `isSingleSeriesClient` 변수). 서버 경로(line 98+113) 와 클라이언트 경로(line 187+215) 양쪽 모두 단일 시리즈 시 group 인덱스로, 다중 시리즈 시 column 인덱스로 색 결정.
+  - **C. 산점도 포인트별 색 (`ScatterChartWidget.tsx`)** — 기존 `getSchemeColor(0, ...)` 단일 색 → normalizedPoints 빌드 시 point 인덱스 기반 색을 내장해 두 렌더 분기 모두 일관 적용.
+  - **D. 파이 차트 (`PieChartWidget.tsx`)** — 변경 없음 (이미 slice index 기반 색). 새 팔레트 자동 적용.
+  - **E. 선 그래프 라인별 색 (`types.ts`, `LineChartWidget.tsx`, `LineChartSettings.tsx`)** — `ChartValueColumn` 에 `color?: string` 추가. `LineChartWidget` 의 색 결정을 `vc.color ?? getSchemeColor(colIndex, config.colorScheme)` fallback 패턴으로 변경 (line 190, 341). `LineChartSettings` 에서 `<ColorSchemeSelector>` 블록 제거 후 각 valueColumn 행에 color picker 추가.
+  - **F. 데이터 호환성** — `LineChartConfig.colorScheme` 필드는 유지 (deprecated 로 두되 UI 노출 X). 기존 위젯이 `colorScheme: 'default'` 만 있고 valueColumns 에 color 가 없을 때 fallback 으로 정상 렌더.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/chart-colors.ts` (팔레트 재정의)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColorSchemeSelector.tsx` (selector 미리보기 동기화)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx` (단일 시리즈 그룹 인덱스 분기)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/ScatterChartWidget.tsx` (포인트별 색)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/LineChartWidget.tsx` (vc.color fallback)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/LineChartSettings.tsx` (라인별 color picker)
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts` (`ChartValueColumn.color?`)
+
+### 검증 결과
+
+- advisor #2 (hotfix 5-perspective): PASS — 3개 요구사항 모두 코드에 반영. 단일 시리즈 discriminator 2곳 (서버·클라이언트 경로) + LineChart vc.color fallback 2곳 모두 적용 확인.
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 막대그래프 (단일 시리즈) — 카테고리 막대 색이 4종 테마에 따라 자동 변화 확인 (default = blue 명도 그라데이션, warm/cool = 고대비, mono = gray 그라데이션).
+2. 막대그래프 (다중 시리즈) — 시리즈별 색 구분 유지 확인.
+3. 파이 차트 — 4종 테마 시각 적용 확인 (도넛 조각별 색).
+4. 산점도 — 포인트별로 색이 변하는지 확인 (이전엔 단일 색).
+5. 선 그래프 — 위젯 설정에서 각 라인별 color picker 노출 확인, 색 지정 후 즉시 라인 색 변경. 기존 widget 데이터 (color 미지정) 가 fallback 으로 정상 렌더 확인.
+
 ## v001.7.0
 
 > 통합일: 2026-05-13
