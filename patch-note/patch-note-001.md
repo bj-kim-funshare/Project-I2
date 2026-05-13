@@ -1,5 +1,25 @@
 # 아이OS — Patch Note (001)
 
+## v001.19.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #11
+> 대상: 아이OS
+
+### 페이즈 결과 (핫픽스 4건)
+- **핫픽스 1**: 대시보드 1분 자동 새로고침 — `setInterval(60_000)` 등록, 각 tick 마다 현재 기간 컨텍스트 (unit/key) 유지하며 재fetch + 재렌더. `_autoRefreshInFlight` 가드로 중첩 방지, `beforeunload` 시 `clearInterval`.
+- **핫픽스 2**: 새로고침 버튼 왼쪽에 마지막 새로고침 시각 (`HH:MM:SS`) 연하게 표기 — `#last-refresh-time` span + `.last-refresh-time { color: var(--muted); font-size: 12px; tabular-nums; :empty {display:none} }`. `applyPeriodSelection` / 초기 렌더 시점에 `updateLastRefreshDisplay()` 호출.
+- **핫픽스 3**: 자동 새로고침 콜백을 `applyPeriodSelection` 직접 호출에서 수동 버튼과 동일한 `refresh()` 호출로 교체 — `POST /api/refresh` 로 `collect.py` 백엔드 재수집까지 트리거. 자동/수동 새로고침 동작 대칭화 (advisor 가 짚은 비대칭 정정).
+- **핫픽스 4**: 기간 선택 옵션 오타 수정 — `<option value="yearly">년간</option>` → `연간`.
+
+### 영향 파일
+- `monitoring/script.js`
+- `monitoring/index.html`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+NOT APPLICABLE — 핫픽스 4건 모두 UX 개선 / 오타 수정 / 동작 대칭화. 신규 규칙·훅·에이전트·스킬·검증축 추가 없음.
+
 ## v001.18.0
 
 > 통합일: 2026-05-13
