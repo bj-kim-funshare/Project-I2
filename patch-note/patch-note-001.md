@@ -1,5 +1,43 @@
 # 아이OS — Patch Note (001)
 
+## v001.15.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #9
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/md/sub-agent-prompt-budget.md` 신규 작성. 목적 (1M tier 자동 라우팅 / Sonnet 1M extra-usage 빌링 가드 차단), 권장 5~15k / 절대 상한 100k 토큰, byte 휴리스틱 (영문 4 byte/token → 400 KB, 한글 2 byte/token → 200 KB), 인라인 금지 안티패턴 6종 (PR diff / 정책 파일 전문 / prior-phases 누적 / per-repo scope 객체 / advisor 출력 / 이전 라운드 findings JSON), 대안 패턴 3종 (영구 문서+식별자 / path+식별자 자력 read / 소형 JSON 인라인 ≤ 15k), write-capable 에이전트 자기방어 계약, dispatcher 책임 절 포함.
+- **Phase 2**: `CLAUDE.md` §8 (Token budget) 말미에 universal rule 1단락 추가 — `.claude/md/sub-agent-prompt-budget.md` reference, 인라인 금지, path/식별자만 전달 원칙.
+- **Phase 3**: 10개 스킬 (`plan-enterprise`, `plan-enterprise-os`, `dev-merge`, `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification`, `task-db-structure`, `task-db-data`, `pre-deploy`) 의 sub-agent dispatch 절을 각 맥락에 맞게 수정. `plan-enterprise` 는 `group-policy summary` + `prior-phases summary` 인라인 폐기, phase-executor 는 `gh issue view <N>` 자력 read. `plan-enterprise-os` 는 `harness_context` 인라인 폐기 (CLAUDE.md / `.claude/md/*` / MEMORY.md 자력 read). `dev-merge` 는 PR diff / findings JSON / git log 인라인 폐기 — reviewer 와 code-fixer 가 `gh pr diff`, `gh pr view --json reviews,comments` 자력 호출. inspection 4 스킬은 per-repo scope 객체를 `.claude/inspection-runs/<ts>-<skill>.json` 으로 저장 후 path 전달. `pre-deploy` 는 `deploy.md` 전문 인라인 폐기, 선택 target list + branch state 만 audit JSON 으로 저장.
+- **Phase 4**: 4 write-capable agent (`phase-executor`, `code-fixer`, `db-migration-author`, `db-data-author`) 의 Input contract 재작성 (인라인 수신 → 식별자 + path 수신 후 자력 read) + 자기방어 절 추가 (prompt body 100k 초과 추정 시 error JSON `{"error":"prompt_body_exceeds_budget","policy":".claude/md/sub-agent-prompt-budget.md","action":"..."}` 반환 후 halt). `code-fixer.md` 는 frontmatter `description` + Procedure step 2 도 새 contract 에 맞게 fixup.
+
+### 영향 파일
+- `.claude/md/sub-agent-prompt-budget.md` (신규)
+- `CLAUDE.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/skills/dev-merge/SKILL.md`
+- `.claude/skills/dev-inspection/SKILL.md`
+- `.claude/skills/dev-security-inspection/SKILL.md`
+- `.claude/skills/db-security-inspection/SKILL.md`
+- `.claude/skills/project-verification/SKILL.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/agents/phase-executor.md`
+- `.claude/agents/code-fixer.md`
+- `.claude/agents/db-migration-author.md`
+- `.claude/agents/db-data-author.md`
+
+### 검증
+- `grep -l sub-agent-prompt-budget CLAUDE.md .claude/skills/*/SKILL.md .claude/agents/*.md` → 15 파일 매칭 (목표 15 = 1 + 10 + 4).
+- `.claude/md/sub-agent-prompt-budget.md` 에 "absolute hard cap 100k tokens" 문구 4 회 등장.
+- `dev-merge`, `plan-enterprise`, `plan-enterprise-os` diff 에서 기존 인라인 컨텍스트 항목 (PR diff / git log / prior comments / group-policy summary / prior-phases summary / harness_context) 이 제거되고 path/identifier 패턴으로 교체됨이 확인됨.
+
+### Treadmill Audit
+PASS — 폐기 항목 6종 명시: (1) `plan-enterprise` 의 `prior-phases summary` + `group_policy_summary` 인라인 누적, (2) `plan-enterprise-os` 의 `harness_context` 인라인, (3) `dev-merge` 의 PR diff / git log / prior PR comments 인라인 + code-fixer 의 findings array 인라인, (4) inspection 4 스킬의 per-repo scope object 컬렉션 인라인, (5) `pre-deploy` 의 `deploy.md` 전문 인라인, (6) write-capable agent 정의의 인라인 입력 가정 (frontmatter description + Procedure 본문).
+
 ## v001.14.0
 
 > 통합일: 2026-05-13
