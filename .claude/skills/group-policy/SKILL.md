@@ -89,6 +89,8 @@ Advisor scope: **same as `.claude/skills/new-project-group/SKILL.md` §Advisor v
 
 Advisor blockers → halt and report to master before any disk write. Non-blocker concerns are surfaced but proceed.
 
+> **리더 저장소 컨벤션 보존 가드**: dev 영역 수정 응답이 `targets[]` 첫 항목의 `name` 을 변경하려 하거나, 첫 항목을 제거/이동시키면 advisor 가 blocker 로 차단한다 (리더 저장소 식별 불가). 첫 항목 == leader 컨벤션은 그룹 등록 시점에 LOCK 되며 이후 수정 불가; 변경 필요 시 그룹 폐기 + 재등록 (`/new-project-group`).
+
 ## WIP / merge protocol
 
 > Worktree 절차: `.claude/md/worktree-lifecycle.md`.
@@ -148,6 +150,7 @@ Immediate Korean report + halt. No retry.
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
+| 수정 응답이 `targets[]` 첫 항목의 `name` 변경 또는 위치 이동을 요청 | `"리더 저장소 컨벤션 보존 불가 — targets[] 첫 항목 (name == <leader>) 은 LOCK. 변경 필요 시 그룹 재등록."` |
 
 ## Scope (v1)
 
