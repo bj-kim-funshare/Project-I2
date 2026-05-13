@@ -33,6 +33,8 @@ Open-form description, optionally referencing an existing issue on this repo.
 
 > **Leader/work repo 분리 일관성**: 본 harness 는 단일 저장소이므로 **leader repo = work repo = Project-I2 (자기 자신)**. plan-enterprise / pre-deploy / inspection-procedure 의 leader-repo 어휘와 동일한 형식으로 표현되지만 실효 분기는 없다.
 
+> 본 스킬은 항상 work repo = leader repo = Project-I2 단일. plan-enterprise 의 cross-repo phase 절차 (work_repo 필드, N+1-step 머지) 는 본 스킬에 적용되지 않으나, "한 페이즈 = 한 work repo" 어휘는 동일하다.
+
 ## Lifecycle (mirrors plan-enterprise, 11 steps)
 
 ```
@@ -103,6 +105,8 @@ gh issue create \
 
 Issue body template extends `plan-enterprise`'s with one section:
 
+이슈 본문의 페이즈 분할 섹션에는 plan-enterprise 와 동일한 형식으로 `Phase N work repo: Project-I2` 라인을 포함한다 (단일-repo 고정이지만 어휘 정렬 우선).
+
 ```markdown
 ## advisor 계획 검증 (6 관점)
 - Intent: PASS / FAIL — <one line>
@@ -114,6 +118,8 @@ Issue body template extends `plan-enterprise`'s with one section:
 ```
 
 ### Step 6 — WIP A
+
+본 스킬은 N=1 고정 (work repo = Project-I2 한 개). plan-enterprise 가 N>1 일 때 가지는 lazy 생성 / repo-slug 접미사 분기는 본 스킬에 적용되지 않는다.
 
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
@@ -152,6 +158,8 @@ Iteration budget: 3 per phase, identical to `plan-enterprise`.
 Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts patch-note authoring.
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
+
+본 스킬의 머지는 N+1=2-step (WIP A 1번 + WIP B 1번) 으로 plan-enterprise 의 일반화된 (N+1)-step 머지 절차의 N=1 케이스와 동치.
 
 1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
 2. Create WIP B as a worktree from main:
@@ -257,6 +265,7 @@ In scope:
 - Per-phase main-session verification (5-step ritual + Treadmill-aware check).
 - Two-WIP merge (`작업` first, then `문서`).
 - Patch-note at root `patch-note/`.
+- 본 스킬은 N=1 고정. plan-enterprise 의 cross-repo phase 절차 (work_repo 필드 / per-repo WIP A lazy 생성 / N+1-step 머지) 는 본 스킬에 N/A — '한 페이즈 = 한 work repo' 어휘만 정렬.
 
 Out of scope (v1):
 - External-project work (use `plan-enterprise`).
