@@ -35,6 +35,7 @@ targets:
   - name: <member-name>
     cwd: <absolute-path>
     role: FE | BE            # FE = frontend (dev-start 의 기동 대상), BE = backend (dev-start 미기동, dev-build 등 다른 스킬은 정상 사용)
+    type: project | monorepo   # dev-build 가 모노레포 선택 UI 노출에 사용. dev-start 의 multiSelect 라벨에도 [monorepo] 인디케이터로 노출.
     dev_command: <shell-command-line>
     port: <integer>
     cache_paths:
@@ -48,6 +49,7 @@ targets:
 Field semantics:
 - `cwd`: absolute path to the member's project root. The dev command runs from here.
 - `role`: `FE` or `BE` (closed choice). dev-start only starts FE targets. BE targets remain in the manifest and are available to other skills (dev-build, etc.) but are excluded from dev-start's startup sequence.
+- `type`: `project` or `monorepo` (closed choice). dev-build uses this to expose monorepo selection sub-cards; dev-start uses it to append a `[monorepo]` indicator on the multiSelect option label.
 - `dev_command`: the exact shell command to start the dev server (e.g., `pnpm dev`, `npm run dev`, `vite`).
 - `port`: the port the dev server is expected to bind. Used for both kill-prior and readiness polling.
 - `cache_paths`: zero or more paths to delete before starting. Resolved relative to `cwd`. Missing paths are skipped silently.
@@ -145,7 +147,6 @@ Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. D
 | `.claude/project-group/<leader>/` does not exist | `"그룹 <leader> 미등록 — /new-project-group 먼저 실행"` |
 | Directory exists but `dev.md` missing | `"그룹 <leader> 에 dev 설정 없음 — /group-policy 먼저 실행"` |
 | Manifest YAML parse failure | `"<leader>/dev.md YAML 파싱 실패: <error>"` |
-| Specified target name not in manifest | `"<leader>/dev.md 에 타겟 '<target>' 없음. 사용 가능: <list>"` |
 | Step failure (1–4) | `"<member> / <step>: <verbatim error>"` |
 | FE 후보 0 (전체 BE 또는 매니페스트 비어있음) | `"<leader> FE 타겟 없음 — 종료"` |
 | multiSelect 0 선택 | `"선택된 타겟 없음 — 종료"` |
