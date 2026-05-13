@@ -48,31 +48,52 @@ If branch `main` does not exist locally: branch it from current `main` HEAD. Rep
 
 ## WIP / merge protocol
 
-Two WIPs, both per `CLAUDE.md` §5. They run sequentially — 작업 first, then 문서 (which branches from `main` *after* the code merge so the patch-note edit sees the just-committed code state).
+Two WIPs, both per `CLAUDE.md` §5. Entry ritual for each — see `.claude/md/worktree-lifecycle.md`. They run sequentially — 작업 first, then 문서 (which branches from `main` *after* the code merge so the patch-note edit sees the just-committed code state).
 
 ### Code WIP (`patch-confirmation-{N}.{K+1}-작업`)
 
-Branched from `main`. Working-tree changes are preserved across the branch creation (HEAD ref change only).
+The uncommitted product changes live in the **main working tree** (main cwd). A new worktree branches from `main` HEAD and does not carry those changes. To move them into the worktree, use stash:
 
-```
-git checkout -b patch-confirmation-{N}.{K+1}-작업 main
-git add -A
-git commit -m "patch-confirmation: <target> 미커밋 변경 통합 (v{N}.{K+1})"
+```bash
+# 1. Stash the changes in main cwd (keeps main cwd clean for worktree add)
+git stash push -u -m "patch-confirmation pre-WIP $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# 2. Create the code worktree
+wip_a="patch-confirmation-{N}.{K+1}-작업"
+wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
+git worktree add -b "${wip_a}" "${wt_a}" main
+
+# 3. Apply the stash into the worktree
+git -C "${wt_a}" stash pop
+
+# 4. Stage and commit (everything git status showed at pre-condition time, including untracked)
+git -C "${wt_a}" add -A
+git -C "${wt_a}" commit -m "patch-confirmation: <target> 미커밋 변경 통합 (v{N}.{K+1})"
+
+# 5. Merge into main from main cwd
 git checkout main
-git merge --no-ff patch-confirmation-{N}.{K+1}-작업
+git pull --ff-only origin main 2>/dev/null || true
+git merge --no-ff "${wip_a}"
+
+# 6. Remove the code worktree
+git worktree remove "${wt_a}"
 ```
 
 `git add -A` stages everything `git status` showed at pre-condition time — including untracked files. Document this for the user; they are expected to have run `git status` themselves before invoking.
+
+잔존 race: 두 세션이 동시에 patch-confirmation 을 호출하면 메인 cwd 의 git stash 가 단일 저장소라 섞일 수 있다. 1 회 동시 호출 가정으로 운영하며, race 시 §5 4 단계 양측 보존 + master 결정으로 복구한다.
 
 ### Doc WIP (`patch-confirmation-{N}.{K+1}-문서`)
 
 Branched from `main` after the code merge.
 
-```
-git checkout -b patch-confirmation-{N}.{K+1}-문서 main
+```bash
+wip_d="patch-confirmation-{N}.{K+1}-문서"
+wt_d="../$(basename "$(pwd)")-worktrees/${wip_d}"
+git worktree add -b "${wip_d}" "${wt_d}" main
 ```
 
-Append the following block to `{patch_dir}/patch-note-{N}.md` (Korean, release-artifact language per `patch-update` precedent):
+Append the following block to `${wt_d}/{patch_dir}/patch-note-{N}.md` (Korean, release-artifact language per `patch-update` precedent):
 
 ```markdown
 ## v{N}.{K+1}.0
@@ -90,11 +111,13 @@ The file list is mechanical — every uncommitted path from step 4, prefixed by 
 
 Per master spec: no `v{N}.{K+2}.0 — Commit&Push 대기중` placeholder is appended. The next minor slot only materializes when the next `patch-confirmation` invocation creates it.
 
-```
-git add {patch_dir}/patch-note-{N}.md
-git commit -m "patch-confirmation: patch-note v{N}.{K+1}.0 추가 (<target>)"
+```bash
+git -C "${wt_d}" add {patch_dir}/patch-note-{N}.md
+git -C "${wt_d}" commit -m "patch-confirmation: patch-note v{N}.{K+1}.0 추가 (<target>)"
 git checkout main
-git merge --no-ff patch-confirmation-{N}.{K+1}-문서
+git pull --ff-only origin main 2>/dev/null || true
+git merge --no-ff "${wip_d}"
+git worktree remove "${wt_d}"
 ```
 
 ## Reporting
@@ -128,6 +151,7 @@ Immediate Korean report + halt. No retry, no recovery.
 | No uncommitted changes | `"미커밋 변경 없음 — 분석할 내용 없음"` |
 | Uncommitted change includes a patch-note file | `"patch-note-<N>.md 가 미커밋 상태. patch-confirmation 은 patch-note 를 자체 관리합니다. 사전 커밋 또는 변경 제거 후 재호출."` |
 | Filename `NNN` parse failure | `"파일명 NNN 파싱 실패: <filename>"` |
+| `git worktree add` failure | `"worktree 생성 실패: <error>. 수동 정리 후 재호출."` |
 | `git merge --no-ff` of 작업 WIP fails | `"main ← 작업 WIP 머지 실패: <error>. WIP 브랜치와 사용자 변경 그대로 보존."` (문서 WIP 진입 X) |
 | `git merge --no-ff` of 문서 WIP fails | `"main ← 문서 WIP 머지 실패: <error>. 코드 커밋 완료, patch-note 미반영."` |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
