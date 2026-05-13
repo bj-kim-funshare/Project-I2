@@ -84,12 +84,13 @@ fmt_tokens() {
   else printf '%s' "$n"; fi
 }
 
-# ISO8601 reset target → "Xh Ym" or "Xd Yh Zm".
 iso_to_epoch() {
-  local target=$1
-  [ -z "$target" ] && { echo ""; return; }
-  date -j -f "%Y-%m-%dT%H:%M:%S" "${target%%.*}" "+%s" 2>/dev/null || \
-    date -d "$target" "+%s" 2>/dev/null || echo ""
+  local v=$1
+  [ -z "$v" ] && { echo ""; return; }
+  case "$v" in
+    ''|*[!0-9]*) echo "" ;;
+    *) echo "$v" ;;
+  esac
 }
 
 fmt_reset_hm() {
