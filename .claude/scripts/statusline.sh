@@ -14,7 +14,7 @@
 # Line layout (master directive 2026-05-13):
 #   L1 — Identity + limits: cwd · branch · model · effort · 5h · 7d
 #   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
-#   L3 — Last user prompt: 💬 (max 5 lines × 62 chars/line; wraps; isMeta + 제어 키워드 제외)
+#   L3 — Last user prompt: 💬 (max 5 lines × 105 chars/line; wraps; isMeta + 제어 키워드 제외)
 #
 # Mandatory items (always shown with placeholder fallback):
 #   📊 ctx% / 🧠 effort / 🕐 5h / 📅 7d
@@ -229,7 +229,7 @@ try:
 except Exception:
     sys.exit(0)
 
-LINE_WIDTH = 62
+LINE_WIDTH = 105
 MAX_LINES = 5
 
 for line in reversed(lines):
