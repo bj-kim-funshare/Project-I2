@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.14.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #8 (핫픽스3)
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Hotfix 3**: `.claude/scripts/statusline.sh` L3 wrap 알고리즘을 글자수 기반 → display-width 기반으로 전환. `unicodedata.east_asian_width(ch)` 결과가 `W` 또는 `F` (CJK 한자/한글/일본어/전각 ASCII) 면 가중치 2, 그 외(반각 ASCII 등) 1. `LINE_WIDTH=105` 는 이제 글자 수가 아닌 display unit budget 으로 해석됨 (e.g. 한글만 채울 경우 52자 = 104 weight). 5줄 초과 시 마지막 줄 끝 `...` (3 weight) 절단도 동일 기준.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### 검증
+- 합성 입력 "한글" × 60 + "abc" × 5 (총 weight 255) → 정확히 3 라인으로 wrap, 각 라인이 weight ≤ 105 임을 실 스크립트 실행으로 확인.
+
+### Treadmill Audit
+NOT APPLICABLE — 알고리즘 정밀화, 신규 메커니즘/규칙 없음. `unicodedata` 는 Python 표준 라이브러리.
+
 ## v001.13.0
 
 > 통합일: 2026-05-13
