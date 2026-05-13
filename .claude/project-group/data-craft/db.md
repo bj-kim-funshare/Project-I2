@@ -1,8 +1,8 @@
 ---
-dev_prod_separation: 같은 DB 사용 (분리 없음)
+dev_prod_separation: 공유
 env_management: git-tracked
 migration_approach: 수동 SQL (ORM 미사용)
-connection_style: mysql2 직접 연결
+connection_style: DB_* 환경변수
 ---
 
 # data-craft — db 환경 규정
