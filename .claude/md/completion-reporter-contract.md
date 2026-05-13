@@ -17,6 +17,16 @@ All reports follow a four-block structure:
 
 Icons in the heading indicate the moment category. Additional icons decorate table rows and closing lines to aid rapid scanning. Do not pile multiple icons on one line.
 
+### Narrative-first rule
+
+For Tier A / Tier A2 schemas (`plan-enterprise`, `plan-enterprise-os`, `dev-merge`, `task-db-structure`, `task-db-data`, `create-custom-project-skill`), the table's primary rows are the narrative fields — `master_intent_summary` (🎯 명령원문 / 요구사항), `root_cause_summary` (🔍 원인 — bug-fix plans only), `solution_summary` (🛠 해결방법), `result_summary` (✅ 결과), `manual_test_scenarios[]` (🧪 시나리오, one repeated row per entry). Meta statistics (issue number, phase count, advisor verdicts, treadmill audit) are secondary — render them in a single compact "메타" row at the end of the table (e.g., `| 메타 | 이슈 #15 · 3 페이즈 · advisor PASS · treadmill PASS |`) or in the closing paragraph. Narrative fields must never be silently omitted when present in the payload — if a narrative field is absent, mark the row `(정보 없음)` per §8 fallback.
+
+**Reason**: master reviews the report to understand "what command was given, what was the cause, what was done, what is the result, how do I test it" — meta stats are reference detail, not the headline.
+
+For `task-db-structure` and `task-db-data` `skill_finalize`, deliverable file rows (`migration_file`, `rollback_file`, `plan_file`, `capture_file`, `forward_file`) are primary outputs (part of "결과"), not meta-stats — place them after narrative rows and before the compact meta row.
+
+For `dev-merge`, the `from→to` branch row appears at the top of the table (before narrative rows) since it is the primary context frame for the report.
+
 ### Narrow-safe table rules
 
 All tables in completion reports must be narrow-safe to avoid Claude Code CLI's stacked-fallback rendering (triggered by wide terminals that cannot accommodate multi-column layout):
@@ -119,7 +129,7 @@ Universal required fields: `skill_type`, `block_reason`, `issue_url` (when a han
 
 **Preamble — required vs. optional**: `Required` means the dispatcher must supply the field. If the agent finds a required field absent from the received `data`, it writes `(정보 없음)` in the corresponding table cell and appends a trailing `⚠️ 주의: 누락 필수 필드 — <field_list>` line after the closing paragraph. The agent does not reject or abort — it renders a partial report with explicit notices.
 
-**Common field sourcing (dispatcher guidance)**: The main session is the dispatcher. When assembling `data` for any skill / moment, the recurring narrative fields are sourced as follows:
+**Common field sourcing (dispatcher guidance)**: The main session is the dispatcher. When assembling `data` for any skill / moment, the recurring narrative fields are sourced as follows. Narrative fields (`master_intent_summary`, `root_cause_summary`, `solution_summary`, `result_summary`, `manual_test_scenarios`) are **primary content** for Tier A / A2 reports — dispatcher must populate them substantively (no skipping with `(정보 없음)` when content exists). Meta-stat fields (`phase_count`, `affected_files_total`, `advisor_plan_result`, `advisor_complete_result`, `treadmill_audit_result`) are **secondary** — pack into a compact meta row.
 
 | Field | Source |
 |-------|--------|
@@ -149,30 +159,31 @@ Tier C (single-finalize doc/utility): `patch-confirmation`, `patch-update`, `gro
 ##### `work_complete`
 - Required: `leader`, `issue_number`, `issue_url`, `master_intent_summary`, `result_summary`, `phase_count`, `affected_files_total`
 - Optional: `root_cause_summary` (bug-fix plans only), `solution_summary`, `manual_test_scenarios[]`, `next_action_guidance`, `post_action_hints[]`, `patch_note_version`, `advisor_plan_result`, `advisor_complete_result`
-- Recommended table columns: 항목 | 값
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 📋 요구사항 (도출 가능 시), 🔍 원인 (bug-fix only), 🛠 해결방법, ✅ 결과, 🧪 시나리오 (반복 행). 끝에 압축 메타 한 줄.
 
 | 항목 | 값 |
 |------|-----|
-| 플랜 이슈 | #N (URL) |
-| 리더 | leader |
-| 페이즈 수 | count |
-| 영향 파일 | total |
-| 패치노트 | version |
-| advisor 계획 | PASS |
-| advisor 완료 | PASS |
+| 🎯 명령원문 | <master_intent_summary> |
+| 📋 요구사항 | <derived scope — `<br>` for multi-bullet> |
+| 🔍 원인 | <root_cause_summary — omit row if not bug-fix> |
+| 🛠 해결방법 | <solution_summary, `<br>` for multi-step> |
+| ✅ 결과 | <result_summary, `<br>` for multi-clause> |
+| 🧪 시나리오 | <manual_test_scenarios[0]> |
+| 🧪 시나리오 | <manual_test_scenarios[1]> ... (repeated rows) |
+| 메타 | 이슈 #N · K 페이즈 · advisor 계획 PASS · advisor 완료 PASS |
 
-- Notes: This moment fires at Step 11 PENDING. `advisor_plan_result` and `advisor_complete_result` should be `"PASS"` or `"BLOCK: <reason>"`.
+- Notes: This moment fires at Step 11 PENDING. `advisor_plan_result` and `advisor_complete_result` should be `"PASS"` or `"BLOCK: <reason>"`. Meta row compresses all stat fields (issue #, phase count, file count, advisor verdicts, patch-note version) into one cell.
 
 ##### `hotfix_complete`
 - Required: all `work_complete` required fields, plus `current_hotfix_number`, `prior_hotfix_summaries[]` (each entry: `{hotfix_number, summary_ko}`)
 - Optional: `next_hotfix_number`, `post_action_hints[]`
-- Recommended table columns: 항목 | 값 (main rows same as `work_complete`; add 핫픽스 이력 sub-section or rows)
-- Notes: Heading uses 🔁 icon. Prior hotfix summaries render as sub-rows or a compact sub-table after the main table.
+- Recommended table columns: 항목 | 값 — narrative-first rows same as `work_complete` (🎯 명령원문, 🛠 해결방법, ✅ 결과, 🧪 시나리오). Ends with compact 메타 row. Prior hotfix summaries render as a compact sub-table after the main table per §7 `hotfix_complete` rule.
+- Notes: Heading uses 🔁 icon. Prior hotfix summaries render in a separate sub-table after the main table per §7.
 
 ##### `skill_finalize`
 - Required: `leader`, `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `push_pending`
 - Optional: `push_status` (`"success"` | `"failed"` | `"n/a"`), `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`
-- Recommended table columns: 항목 | 값
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 🛠 해결방법, ✅ 결과, 🧪 시나리오 (반복 행). Then deliverable rows: `| 🔀 WIP 머지 | <branch> ✅ |` (scalar-repeat for each branch), `| 📦 패치노트 | vNNN.K.0 |`. Ends with compact 메타 one row: `| 메타 | 이슈 #N closed · 워크트리 clean · advisor 계획/완료 PASS |`.
 - Notes: Heading uses 🏁. When `push_pending: true`, closing paragraph includes: "push 미완료 — master `git push origin i-dev` 또는 명시적 push 진행 권장."
 
 ##### `skill_finalize.blocked`
@@ -196,14 +207,17 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `work_complete`
 - Required: `harness`, `issue_number`, `issue_url`, `master_intent_summary`, `result_summary`, `phase_count`, `affected_files_total`, `treadmill_audit_result`
 - Optional: `root_cause_summary`, `solution_summary`, `manual_test_scenarios[]`, `next_action_guidance`, `post_action_hints[]`, `patch_note_version`, `advisor_plan_result`, `advisor_complete_result`
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 📋 요구사항 (도출 가능 시), 🔍 원인 (bug-fix only), 🛠 해결방법, ✅ 결과, 🧪 시나리오 (반복 행). 끝에 압축 메타 한 줄 (이슈 #, 페이즈 수, advisor PASS, treadmill PASS).
 
 ##### `hotfix_complete`
 - Required: all `work_complete` required fields, plus `current_hotfix_number`, `prior_hotfix_summaries[]`
 - Optional: `next_hotfix_number`, `post_action_hints[]`
+- Recommended table columns: 항목 | 값 — narrative-first rows same as `work_complete`. Ends with compact 메타 row. Prior hotfix summaries in a separate sub-table after the main table per §7 `hotfix_complete` rule.
 
 ##### `skill_finalize`
 - Required: `harness`, `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `treadmill_audit_result`
 - Optional: `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 🛠 해결방법, ✅ 결과, 🧪 시나리오 (반복 행). Then: `| 🔀 WIP 머지 | <branch> ✅ |` (scalar-repeat), `| 📦 패치노트 | vNNN.K.0 |`. 끝에 압축 메타 한 줄: `| 메타 | 이슈 #N closed · 워크트리 clean · treadmill PASS · advisor 계획/완료 PASS |`.
 
 ##### `skill_finalize.blocked`
 - Required: `harness`, `issue_number`, `block_reason`, `block_type`
@@ -216,18 +230,19 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `work_complete`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`
 - Optional: `leader`, `findings_breakdown` (`{compliance, bug, lint}`), `conflict_status`, `post_action_hints[]`
-- Recommended table columns: 항목 | 값 — rows: from→to, 저장소, PR 번호, 리뷰 라운드, 게시 finding, 핫픽스 커밋
+- Recommended table columns: 항목 | 값 — narrative-first, from→to row first (primary context frame), then: 🎯 명령원문, ✅ 결과, 🧪 시나리오 (반복 행). 끝에 압축 메타 한 줄: `| 메타 | PR #N · 리뷰 K라운드 · finding M건 · 핫픽스 커밋 P건 |`.
 - Notes: `work_complete` fires at PENDING gate (before merge). Heading notes "머지 직전 — 마스터 최종 확인."
 
 ##### `hotfix_complete`
 - Required: all `work_complete` required fields, plus `current_hotfix_number`, `prior_hotfix_summaries[]`
 - Optional: `next_hotfix_number`
+- Recommended table columns: 항목 | 값 — same narrative-first order as `work_complete` (from→to first, then narrative rows, then compact 메타). Prior hotfix summaries in a separate sub-table after the main table per §7 `hotfix_complete` rule.
 - Notes: `hotfix_complete` fires when a master-supervised `핫픽스` iteration finishes and PENDING re-enters.
 
 ##### `skill_finalize`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`
 - Optional: `leader`, `findings_breakdown`, `conflict_resolution_commits`
-- Recommended table columns: 항목 | 값 — rows: from→to, 저장소, PR 번호, 리뷰 라운드, 게시 finding, 핫픽스 커밋, 머지 방식, 머지 SHA
+- Recommended table columns: 항목 | 값 — from→to first, then: 🎯 명령원문, ✅ 결과, 🧪 시나리오 (반복 행). Then deliverable: `| 🔀 머지 SHA | <sha> |`. 끝에 압축 메타: `| 메타 | PR #N · 리뷰 K라운드 · finding M건 · 핫픽스 커밋 P건 · 머지 방식 squash/merge |`.
 - Notes: Heading uses 🏁. `merge_sha` is the full SHA from `gh pr merge`.
 
 ##### `skill_finalize.blocked`
@@ -245,7 +260,7 @@ Mirrors `plan-enterprise` exactly with the following differences:
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `wip_branch`, `migration_file`, `rollback_file`, `plan_file`, `destructive_ops_count`, `env_results` (dynamic mapping: environment name → `"✅"` | `"⏭ skipped"` | `"❌ rollback"` | `"❌ rollback-failed"`; key set is dispatcher-determined — 분리 분기 관례: `{dev, staging, prod}`, 공유 분기: 마스터 라벨링한 단일 키)
 - Optional: `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`
-- Recommended table columns: 항목 | 값 — rows: WIP, migration_file, rollback_file, plan_file, 파괴적 ops. `env_results` keys render as repeated `항목` key rows (one row per env, e.g., `| 실행 결과 (dev) | ✅ |`).
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 🛠 해결방법, ✅ 결과. Then deliverable rows: `| 📄 migration | <file> |`, `| 📄 rollback | <file> |`, `| 📄 plan | <file> |`, `| 💥 파괴적 ops | <count> |`. Then `env_results` as repeated rows (one per env, e.g., `| 실행 결과 (dev) | ✅ |`). 끝에 압축 메타.
 - Notes: Heading uses 🏁. Rollback tables listed if present.
 
 ##### `skill_finalize.blocked`
@@ -268,6 +283,7 @@ Mirrors `task-db-structure` exactly with the following differences:
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `wip_branch`, `capture_file`, `forward_file`, `rollback_file`, `plan_file`, `execution_id`, `risk_tags[]`, `env_results`
 - Optional: `issue_number`, `affected_tables[]`, `advisor_status`, `leftover_rollback_tables[]`
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, 🛠 해결방법, ✅ 결과. Then deliverable rows: `| 📄 capture | <file> |`, `| 📄 forward | <file> |`, `| 📄 rollback | <file> |`, `| 📄 plan | <file> |`, `| 🏷 risk_tags | <tags> |`. Then `env_results` as repeated rows. 끝에 압축 메타.
 
 ##### `skill_finalize.blocked`
 - Required: `leader`, `block_reason`, `block_type`, `execution_id`
@@ -430,13 +446,13 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 ##### `work_complete`
 - Required: `leader`, `skill_name` (full prefixed name, e.g., `"data-craft-deploy-check"`), `issue_number`, `issue_url`, `result_summary`, `wip_branch`
 - Optional: `referenced_subagents[]`, `advisor_result`
-- Recommended table columns: 항목 | 값 — rows: 신규 스킬, 파일, 플랜 이슈, WIP, advisor 검증. `referenced_subagents[]` as repeated `| 참조 sub-agent | <name> |` rows.
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, ✅ 결과. Then deliverable rows: 신규 스킬, WIP, advisor 검증. `referenced_subagents[]` as repeated `| 참조 sub-agent | <name> |` rows. 끝에 압축 메타: `| 메타 | 이슈 #N · advisor PASS |`.
 - Notes: `work_complete` fires at Step 9 (after merge), before PENDING gate (Step 10). Issue stays OPEN.
 
 ##### `skill_finalize`
 - Required: `leader`, `skill_name`, `issue_number`, `issue_url`, `result_summary`, `issue_close_status`, `wip_branch`
 - Optional: `referenced_subagents[]`
-- Recommended table columns: 항목 | 값 — rows: 신규 스킬, 플랜 이슈, WIP, 이슈 종료 상태
+- Recommended table columns: 항목 | 값 — narrative-first rows: 🎯 명령원문, ✅ 결과. Then: 신규 스킬, WIP. 끝에 압축 메타: `| 메타 | 이슈 #N closed · 이슈 종료 ✅ |`.
 - Notes: 🏁 heading. `issue_close_status` should be `"closed ✅"` on normal finalize.
 
 ---

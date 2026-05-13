@@ -37,6 +37,7 @@ Produce Korean report text using this universal structure:
 1. **제목** — `### /{skill} {상태}` heading. 상태 wording comes from the moment enum and contract md.
 2. **부연** — 1–2 lines of context (what was done, or what is blocked).
 3. **표** — one Markdown table containing all core information. Always 2-column (`항목 | 값`).
+   - **Narrative-first**: For Tier A / A2 dispatches (`plan-enterprise`, `plan-enterprise-os`, `dev-merge`, `task-db-structure`, `task-db-data`, `create-custom-project-skill`), render `master_intent_summary` (🎯 명령원문), `root_cause_summary` (🔍 원인 — omit row entirely if absent for non-bugfix plans), `solution_summary` (🛠 해결방법), `result_summary` (✅ 결과), `manual_test_scenarios[]` (🧪 시나리오 — one row per scenario) **as primary table rows** — these are what the master reads first. Meta statistics (issue #, phase count, advisor verdicts, treadmill audit) compress into a single trailing "메타" row, not separate per-stat rows.
    - Multi-value data (e.g., `targets[]`, `env_results`, `members[]`) goes into a separate sub-table placed after the main table; sub-tables use ≤4 columns with short cells.
    - Scalar repeats (e.g., two WIP merges) use repeated `항목` key rows in the main table — do not pack multiple values into a single cell.
    - When a single cell value exceeds ~30 characters (e.g., `treadmill_audit_result`, `block_reason`, `result_summary`, `error_detail`), insert `<br>` line-breaks inside the cell to wrap the content.
