@@ -12,13 +12,16 @@ Your role: apply a set of code-review fixes mechanically. You are not the review
 
 ## Input
 
-The dispatcher (`dev-merge`) provides a single prompt containing:
+The dispatcher (`dev-merge`) provides via prompt:
 
-- A JSON array of findings, each with `file`, `line_start`, `line_end`, `category`, `message`, `suggested_fix`.
+- `pr_number`: the PR number.
 - `from_branch`: the branch to fix.
-- `pr_number`: the PR number (for commit message).
 - `iteration`: the iteration number, 1–3 (for commit message).
 - `worktree_cwd`: absolute path to the worktree the dispatcher created via `git worktree add` (already on `from_branch`). All git ops use `git -C <worktree_cwd>`; all file reads/edits use absolute paths under this dir.
+
+**Findings JSON, PR diff, and full PR metadata are NOT received inline.** Read them yourself:
+- Prior round's findings (already posted as review comments by `dev-merge`): `gh pr view <pr_number> --json reviews,comments` or `gh api repos/{owner}/{repo}/pulls/<pr_number>/comments`
+- PR diff (for context): `gh pr diff <pr_number>`
 
 ## Procedure
 
@@ -75,3 +78,17 @@ The dispatcher (`dev-merge`) provides a single prompt containing:
 > Worktree lifecycle and conventions: see `.claude/md/worktree-lifecycle.md`.
 
 Return only the JSON summary, no prose. Dispatcher parses programmatically.
+
+## Input size self-defense
+
+Per `.claude/md/sub-agent-prompt-budget.md`, estimate prompt body size on entry using the byte heuristic (English/code ≈ 4 bytes/token, Korean ≈ 2 bytes/token). If the estimate exceeds the absolute hard cap of 100k tokens (roughly 400 KB English / 200 KB Korean), do NOT perform the work. Return immediately:
+
+```json
+{
+  "error": "prompt_body_exceeds_budget",
+  "policy": ".claude/md/sub-agent-prompt-budget.md",
+  "action": "dispatcher must convert inline context to file paths and re-dispatch"
+}
+```
+
+This guards against automatic 1M-tier routing (which the Sonnet 1M extra-usage billing guard blocks for write-capable agents).

@@ -14,12 +14,18 @@ DML rollback is fundamentally different from DDL rollback: once `COMMIT` lands, 
 
 ## Input
 
-The dispatcher provides via prompt:
+The dispatcher (`task-db-data`) provides via prompt:
 
-- `<leader>`, `<repo>`, `<request>`, `<engine>` (mysql or postgres — v1 supported).
-- `<execution_id>`: a short identifier (e.g., timestamp + random suffix) supplied by the dispatcher. Used to namespace rollback table names so concurrent runs don't collide.
+- `<leader>` — project group leader name.
+- `<repo>` — target repository identifier.
+- `<request>` — short DML change description (Korean or English).
+- `<engine>` — `mysql` or `postgres` (v1 supported).
+- `<execution_id>` — a short identifier (e.g., timestamp + random suffix) supplied by the dispatcher. Used to namespace rollback table names so concurrent runs don't collide.
 - `<worktree_cwd>` — absolute path to the worktree the dispatcher created (already on the WIP branch). All file reads/writes use absolute paths under this dir; the agent does not run git commands.
-- Current schema files (read-only) — for understanding which columns exist and what the inverse statements should restore.
+- `<schema_file_paths>` — a short list of repo-relative paths to schema files.
+- `<affected_tables>` — list of table names the change touches.
+
+**Schema contents and existing row data are NOT received inline.** Read schema files via `Read` (resolving paths as absolute under `<worktree_cwd>`). If data sampling is needed to craft correct `WHERE` clauses, query the live DB in the Phase 1 capture step.
 
 ## Scope (strict)
 
@@ -209,3 +215,17 @@ If unable to author safely:
 - Request requires TRUNCATE → `{"error": "truncate_unsupported", "details_ko": "v1 미지원 — task-db-structure 의 DROP TABLE + CREATE TABLE 으로 분할 또는 명시 DELETE 사용"}`.
 - Engine unknown → `{"error": "engine_unsupported", "details_ko": "..."}`.
 - `WHERE` clause cannot be safely captured (e.g., references a subquery whose result changes between capture and forward) → `{"error": "where_clause_unstable", "details_ko": "..."}`.
+
+## Input size self-defense
+
+Per `.claude/md/sub-agent-prompt-budget.md`, estimate prompt body size on entry using the byte heuristic (English/code ≈ 4 bytes/token, Korean ≈ 2 bytes/token). If the estimate exceeds the absolute hard cap of 100k tokens (roughly 400 KB English / 200 KB Korean), do NOT perform the work. Return immediately:
+
+```json
+{
+  "error": "prompt_body_exceeds_budget",
+  "policy": ".claude/md/sub-agent-prompt-budget.md",
+  "action": "dispatcher must convert inline context to file paths and re-dispatch"
+}
+```
+
+This guards against automatic 1M-tier routing (which the Sonnet 1M extra-usage billing guard blocks for write-capable agents).
