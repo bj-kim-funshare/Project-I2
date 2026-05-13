@@ -1,0 +1,243 @@
+{
+  "total": {
+    "input": 8773,
+    "output": 2500488,
+    "cache_creation_5m": 0,
+    "cache_creation_1h": 6433852,
+    "cache_read": 118801144,
+    "messages": 712,
+    "cost_usd": 558.8855,
+    "cost_breakdown": {
+      "input": 0.131595,
+      "output": 187.5366,
+      "cache_write": 193.01556,
+      "cache_read": 178.201716,
+      "hypothetical_no_cache": 2066.193135
+    }
+  },
+  "by_model": [
+    {
+      "model": "claude-opus-4-7",
+      "input": 8773,
+      "output": 2500488,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 6433852,
+      "cache_read": 118801144,
+      "messages": 712,
+      "cost_usd": 558.8855,
+      "cost_breakdown": {
+        "input": 0.131595,
+        "output": 187.5366,
+        "cache_write": 193.01556,
+        "cache_read": 178.201716,
+        "hypothetical_no_cache": 2066.193135
+      }
+    }
+  ],
+  "by_skill": [
+    {
+      "skill": "메인 세션",
+      "input": 8681,
+      "output": 2493222,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 6290279,
+      "cache_read": 117968153,
+      "messages": 690
+    },
+    {
+      "skill": "master-key",
+      "input": 75,
+      "output": 3950,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 125084,
+      "cache_read": 665589,
+      "messages": 15
+    },
+    {
+      "skill": "init",
+      "input": 17,
+      "output": 3316,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 18489,
+      "cache_read": 167402,
+      "messages": 7
+    }
+  ],
+  "by_session": [
+    {
+      "session_id": "fd15ac23-37ec-4983-b238-40734c1f2014",
+      "first_timestamp": "2026-05-09T18:22:36.107Z",
+      "last_timestamp": "2026-05-10T12:53:50.137Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 956,
+        "output": 858695,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 2792479,
+        "cache_read": 73370989,
+        "messages": 219
+      },
+      "skills": [
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "2433aa9d-e33a-49f0-b65c-a05963652ea9",
+      "first_timestamp": "2026-05-10T04:55:32.779Z",
+      "last_timestamp": "2026-05-10T12:51:57.078Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 264,
+        "output": 533830,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 917767,
+        "cache_read": 10880381,
+        "messages": 98
+      },
+      "skills": [
+        "master-key",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "c42f6a35-7b82-4312-a3a4-05c0c00d2eb7",
+      "first_timestamp": "2026-05-10T04:32:33.921Z",
+      "last_timestamp": "2026-05-10T04:39:43.277Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 5527,
+        "output": 53175,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 201753,
+        "cache_read": 1857196,
+        "messages": 40
+      },
+      "skills": [
+        "master-key",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "2f72f008-fd57-43a3-969f-622ba76cc52a",
+      "first_timestamp": "2026-05-10T03:08:18.421Z",
+      "last_timestamp": "2026-05-10T04:10:42.776Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 1143,
+        "output": 646383,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 1129333,
+        "cache_read": 14095930,
+        "messages": 137
+      },
+      "skills": [
+        "master-key",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "2e1e2cff-23cd-4bd5-9470-fc5099193d8a",
+      "first_timestamp": "2026-05-10T02:32:04.381Z",
+      "last_timestamp": "2026-05-10T02:35:54.251Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 84,
+        "output": 37204,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 94059,
+        "cache_read": 645399,
+        "messages": 21
+      },
+      "skills": [
+        "master-key",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "17baa4d7-464e-4e86-b939-84d03e36e90b",
+      "first_timestamp": "2026-05-10T01:51:21.031Z",
+      "last_timestamp": "2026-05-10T02:22:41.875Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 290,
+        "output": 265381,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 314139,
+        "cache_read": 9017593,
+        "messages": 114
+      },
+      "skills": [
+        "master-key",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    },
+    {
+      "session_id": "1af6b8c6-79a9-40c7-a1e7-fb1c64611c14",
+      "first_timestamp": "2026-05-09T17:59:24.255Z",
+      "last_timestamp": "2026-05-09T18:21:05.594Z",
+      "model_primary": "claude-opus-4-7",
+      "tokens": {
+        "input": 509,
+        "output": 105820,
+        "cache_creation_5m": 0,
+        "cache_creation_1h": 984322,
+        "cache_read": 8933656,
+        "messages": 83
+      },
+      "skills": [
+        "init",
+        "메인 세션"
+      ],
+      "cwd": "/Users/starbox/Documents/GitHub/Project-I2",
+      "git_branch": "main"
+    }
+  ],
+  "by_day": [
+    {
+      "day": "2026-05-09",
+      "input": 910,
+      "output": 431206,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1531007,
+      "cache_read": 23161204,
+      "messages": 163,
+      "cost_usd": 113.0261,
+      "cost_breakdown": {
+        "input": 0.01365,
+        "output": 32.34045,
+        "cache_write": 45.93021,
+        "cache_read": 34.741802,
+        "hypothetical_no_cache": 402.737265
+      }
+    },
+    {
+      "day": "2026-05-10",
+      "input": 7863,
+      "output": 2069282,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 4902845,
+      "cache_read": 95639940,
+      "messages": 549,
+      "cost_usd": 445.8594,
+      "cost_breakdown": {
+        "input": 0.117945,
+        "output": 155.19615,
+        "cache_write": 147.08535,
+        "cache_read": 143.459905,
+        "hypothetical_no_cache": 1663.45587
+      }
+    }
+  ]
+}
