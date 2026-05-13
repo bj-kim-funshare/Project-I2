@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.15.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 10, cumulative phase 16)
+
+### Hotfix 결과
+
+마스터 요구: 파이 위젯 우측 범례에서 라벨이 한 항목이라도 truncate 발생 시 → 모든 항목을 `[마커] [라벨]` / `값 (퍼센트%)` 2줄 stacked layout 으로 자동 전환. 추가로 stacked 라벨도 길이가 컨테이너 폭을 초과하면 multi-line ellipsis 로 잘림.
+
+- **Phase 16 iter 1** (`144baea7`):
+  - `PieChartWidget.tsx` 우측 범례 라벨 span 에 `ref` 부착, `useLayoutEffect` 에서 `scrollWidth > clientWidth` 측정해 `isAnyTruncated` state 갱신.
+  - 범례 컨테이너에 `ResizeObserver` 부착 — 폭 변화 시 재측정.
+  - `chartDataKey` 변경 시 inline layout 으로 리셋.
+  - `isAnyTruncated === true` 시 stacked layout 분기 (1행 마커+라벨, 2행 pl-[18px] 들여쓰기+`값 (퍼센트%)`).
+- **Phase 16 iter 2** (`481b2f3d`):
+  - stacked 라벨 span 에 multi-line ellipsis 패턴 적용 (`display: -webkit-box`, `WebkitLineClamp: 2`, `WebkitBoxOrient: vertical`, `overflow: hidden` + 기존 `whiteSpace: normal`, `wordBreak: keep-all` 유지).
+  - 결과: stacked 에서 자연스럽게 wrap, 2 라인 초과 시 끝에 말줄임표.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/PieChartWidget.tsx` (+111 / -25)
+
+### 검증 결과
+
+- TSC delta: hotfix 변경 파일에서 신규 typecheck 에러 0건.
+
+### 마스터 수동 회귀 시나리오
+
+1. 파이 위젯 — 짧은 라벨만 있는 데이터: inline layout (`[마커] [라벨] 값 (퍼센트%)`) 유지.
+2. 파이 위젯 — 긴 라벨 한 개라도 포함 → 모든 항목이 stacked 2줄 layout 으로 전환.
+3. 파이 위젯 — stacked 에서도 라벨이 매우 긴 경우 (한 단어 길이 등) 2 라인 wrap 후 말줄임표.
+4. 위젯 폭을 늘리거나 줄이면 ResizeObserver 가 재측정 — 충분히 넓어진 후 데이터 변경 또는 새로고침 시 inline 으로 복귀 (`chartDataKey` reset 의존).
+
 ## v001.14.0
 
 > 통합일: 2026-05-13
