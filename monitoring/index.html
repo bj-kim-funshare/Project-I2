@@ -2,47 +2,131 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>I2 Monitoring</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>아이OS 토큰 모니터링</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="lib/chart.umd.js" defer></script>
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <header>
+  <header class="topbar">
     <h1>아이OS 토큰 모니터링</h1>
     <div id="meta" class="meta"></div>
-    <button id="refresh-btn">새로고침</button>
+    <button id="refresh-btn" type="button">새로고침</button>
   </header>
 
   <section id="error" class="error" hidden></section>
 
-  <section class="totals">
-    <h2>전체 합계</h2>
-    <div id="totals" class="totals-grid"></div>
-  </section>
+  <main class="layout">
 
-  <section>
-    <h2>모델별</h2>
-    <div id="by-model" class="table-wrap"></div>
-  </section>
+    <!-- KPI -->
+    <section class="kpi-grid" aria-label="핵심 지표">
+      <article class="kpi-card" id="kpi-messages">
+        <h3>전체 메시지</h3>
+        <div class="big-number" id="kpi-messages-val">—</div>
+        <div class="kpi-meta">처리된 세션 <span id="kpi-sessions">—</span> 개</div>
+      </article>
 
-  <section>
-    <h2>스킬별</h2>
-    <div id="by-skill" class="table-wrap"></div>
-  </section>
+      <article class="kpi-card kpi-tokens" id="kpi-tokens">
+        <h3>전체 토큰</h3>
+        <div class="big-split" aria-label="비-캐시 / 캐시 분리">
+          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span>
+          <span class="big-divider" aria-hidden="true">/</span>
+          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span>
+        </div>
+        <div class="kpi-unit">non-cache / cache</div>
+        <dl class="kpi-breakdown">
+          <div class="kpi-row kpi-row-noncache"><dt>input</dt><dd id="kpi-input">—</dd></div>
+          <div class="kpi-row kpi-row-noncache"><dt>output</dt><dd id="kpi-output">—</dd></div>
+          <div class="kpi-row kpi-row-cache"><dt>cache write</dt><dd id="kpi-cwrite">—</dd></div>
+          <div class="kpi-row kpi-row-cache"><dt>cache read</dt><dd id="kpi-cread">—</dd></div>
+        </dl>
+      </article>
 
-  <section>
-    <h2>일자별</h2>
-    <div id="by-day" class="table-wrap"></div>
-  </section>
+      <article class="kpi-card kpi-gauge" id="kpi-cache-eff">
+        <h3>캐시 효율</h3>
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 120 70" class="gauge">
+            <path class="gauge-bg" d="M10 60 A50 50 0 0 1 110 60"/>
+            <path class="gauge-fg" d="M10 60 A50 50 0 0 1 110 60" pathLength="100" stroke-dashoffset="100"/>
+          </svg>
+          <span class="gauge-value" id="kpi-cache-eff-val">—</span>
+        </div>
+        <div class="kpi-meta">cache_read / 전체 입력 토큰</div>
+      </article>
 
-  <section>
-    <h2>세션별 (최근 50)</h2>
-    <div id="by-session" class="table-wrap"></div>
-  </section>
+      <article class="kpi-card" id="kpi-cost">
+        <h3>추정 비용</h3>
+        <div class="big-number" id="kpi-cost-val">—</div>
+        <div class="kpi-unit">USD</div>
+        <div class="kpi-meta">
+          <span class="kpi-hint" title="Claude Code 의 prompt caching 으로 cache_read 가 전체 토큰의 70~95% 를 차지하는 것은 정상이다. cache_read 는 input 단가의 ~10% (opus 기준 $1.5/M vs $15/M) 로 청구되므로 표시 비용의 실제 부담은 캐시 비중만큼 낮다.">ⓘ 캐시는 별도 단가 — 호버 시 설명</span>
+        </div>
+      </article>
+    </section>
 
-  <footer>
-    <p>외부 의존 0 — 로컬 <code>~/.claude/projects/.../*.jsonl</code> 만 읽음. 가격 추정은 <code>scripts/collect.py</code> 내부 PRICING 표 기준.</p>
+    <!-- 차트 -->
+    <section class="charts" aria-label="시각화">
+      <article class="chart-card wide" id="chart-day-tokens">
+        <h3>일자별 토큰 (스택)</h3>
+        <div class="chart-body"><canvas></canvas></div>
+      </article>
+
+      <article class="chart-card" id="chart-model-donut">
+        <h3>모델 분포 (전체 토큰)</h3>
+        <div class="chart-body"><canvas></canvas></div>
+      </article>
+
+      <article class="chart-card" id="chart-skill-donut">
+        <h3>스킬 점유 (Top 8 + 기타)</h3>
+        <div class="chart-body"><canvas></canvas></div>
+      </article>
+
+      <article class="chart-card" id="chart-cache-donut">
+        <h3>캐시 vs 비-캐시 비중</h3>
+        <div class="chart-body"><canvas></canvas></div>
+      </article>
+
+      <article class="chart-card wide" id="chart-session-bar">
+        <h3>세션 Top 10 (총 토큰)</h3>
+        <div class="chart-body chart-body-tall"><canvas></canvas></div>
+      </article>
+
+      <article class="chart-card wide" id="chart-day-cost">
+        <h3>일자별 추정 비용</h3>
+        <div class="chart-body"><canvas></canvas></div>
+      </article>
+    </section>
+
+    <!-- 보조 테이블 -->
+    <section class="tables-section">
+      <h2>상세 테이블</h2>
+
+      <details class="table-block" open>
+        <summary>모델별</summary>
+        <div id="by-model" class="table-wrap"></div>
+      </details>
+
+      <details class="table-block">
+        <summary>스킬별</summary>
+        <div id="by-skill" class="table-wrap"></div>
+      </details>
+
+      <details class="table-block">
+        <summary>일자별</summary>
+        <div id="by-day" class="table-wrap"></div>
+      </details>
+
+      <details class="table-block">
+        <summary>세션별 (최근 50)</summary>
+        <div id="by-session" class="table-wrap"></div>
+      </details>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    외부 의존 0 — 로컬 <code>~/.claude/projects/.../*.jsonl</code> 만 읽음. 가격 추정은 <code>scripts/collect.py</code> 내부 PRICING 표 기준.
   </footer>
-
-  <script src="script.js"></script>
 </body>
 </html>
