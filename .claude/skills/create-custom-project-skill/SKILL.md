@@ -1,6 +1,6 @@
 ---
 name: create-custom-project-skill
-description: Author a new project-group-specific skill from master's intent description. Reads the 16 baseline skills' patterns as reference shape, drafts a SKILL.md skeleton at .claude/skills/{leader}-{slug}/SKILL.md, has master review via ExitPlanMode, and commits on a single doc WIP. The new skill may reference existing sub-agents but cannot create new ones — sub-agent creation is a separate concern outside v1 scope of this meta skill.
+description: Author a new project-group-specific skill from master's intent description. Reads the 16 baseline skills' patterns as reference shape, drafts a SKILL.md skeleton at .claude/skills/{leader}-{slug}/SKILL.md, has master review via ExitPlanMode, and commits on a single doc WIP. Owns its issue lifecycle — creates an issue at Step 5 and closes it at Step 11 on master `플랜 완료` input. The new skill may reference existing sub-agents but cannot create new ones — sub-agent creation is a separate concern outside v1 scope of this meta skill.
 ---
 
 # create-custom-project-skill
@@ -36,7 +36,9 @@ Auto mode:
   Step 6 — WIP branch creation
   Step 7 — write the new SKILL.md to disk
   Step 8 — commit + merge to main
-  Step 9 — completion report
+  Step 9 — completion report (mechanical creation summary)
+  Step 10 — PENDING gate — master input awaited
+  Step 11 — FINALIZE on `플랜 완료` — gh issue close + final report
 ```
 
 ## Step 1 — Clarification (Plan mode)
@@ -183,24 +185,63 @@ git worktree remove "${wt}"
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
-## Step 9 — Completion report
+## Step 9 — Completion report (mechanical creation summary)
 
 Korean output to master:
 
 ```
-### /create-custom-project-skill 완료 — <leader>-<slug>
+### /create-custom-project-skill 작업 완료 — <leader>-<slug>
 
 | 항목 | 값 |
 |------|-----|
 | 신규 스킬 | <leader>-<slug> |
 | 파일 | .claude/skills/<leader>-<slug>/SKILL.md |
-| 플랜 이슈 | #<N> (<URL>) |
+| 플랜 이슈 | #<N> OPEN (<URL>) |
 | WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
 | advisor 검증 | PASS |
 | 참조 sub-agent | <list or "없음"> |
 ```
 
-Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session).
+The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session). Proceed to Step 10.
+
+## Step 10 — PENDING gate
+
+Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master finalizes.
+
+```
+### /create-custom-project-skill 대기 — 이슈 #<N> <leader>-<slug>
+
+스킬 파일 생성 + main 머지 완료. advisor 검증 PASS.
+
+마스터 입력 대기:
+  - `플랜 완료` → 이슈 close (Step 11) + 최종 종료
+  - `중단` → 이슈 open 유지, halt
+  - (다른 입력) → 본 플랜 미종결 유지
+```
+
+## Step 11 — FINALIZE (on `플랜 완료`)
+
+1. Close the plan issue:
+
+   ```bash
+   gh issue close <N> --comment "/create-custom-project-skill: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+   ```
+
+2. Korean final report:
+
+   ```
+   ### /create-custom-project-skill 완료 — <leader>-<slug>
+
+   | 항목 | 값 |
+   |------|-----|
+   | 신규 스킬 | <leader>-<slug> |
+   | 플랜 이슈 | #<N> closed ✅ |
+   | WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
+   | advisor 검증 | PASS |
+   | 참조 sub-agent | <list or "없음"> |
+   ```
+
+End of skill invocation.
 
 ## Failure policy
 
@@ -223,7 +264,7 @@ In scope:
 - Reference to any of the existing 14 sub-agents (`bug-detector`, `code-fixer`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`, `db-migration-author`, `db-data-author`, `phase-executor` + the 3 built-in Claude Code agents `Explore`/`general-purpose`/`Plan`).
 - Single doc WIP, single merge to main.
 - 5-perspective advisor including Treadmill check.
-- Issue on Project-I2 repo as the plan record.
+- **Issue lifecycle ownership** — create at Step 5, PENDING gate at Step 10, close at Step 11 on `플랜 완료`. The skill closes its own issue; no handoff.
 
 Out of scope (v1):
 - Creating new sub-agents (master adds those separately if needed; the custom skill's spec may reference a non-yet-existing sub-agent only if master explicitly intends to create it next, but this skill itself does not author the agent file).
