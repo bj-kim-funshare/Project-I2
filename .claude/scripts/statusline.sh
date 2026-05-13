@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# I2 statusline — v1.2 (3-line compact + last user prompt).
-# Reads Claude Code's statusline JSON from stdin, emits 3 colored lines.
+# I2 statusline — v1.3 (L3 multi-line + isMeta/제어 키워드 필터).
+# Reads Claude Code's statusline JSON from stdin, emits colored lines.
 # Spec: https://code.claude.com/docs/ko/statusline
 #
 # Registration (in .claude/settings.json):
@@ -11,10 +11,10 @@
 #     "refreshInterval": 15
 #   }
 #
-# Line layout (master directive 2026-05-12):
+# Line layout (master directive 2026-05-13):
 #   L1 — Identity + limits: cwd · branch · model · effort · 5h · 7d
 #   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
-#   L3 — Last user prompt: 💬 (from ~/.claude/projects/.../<session>.jsonl)
+#   L3 — Last user prompt: 💬 (max 5 lines × 125 chars/line; wraps; isMeta + 제어 키워드 제외)
 #
 # Mandatory items (always shown with placeholder fallback):
 #   📊 ctx% / 🧠 effort / 🕐 5h / 📅 7d
@@ -229,7 +229,8 @@ try:
 except Exception:
     sys.exit(0)
 
-LIMIT = 140  # single-line truncation length
+LINE_WIDTH = 125
+MAX_LINES = 5
 
 for line in reversed(lines):
     line = line.strip()
@@ -240,6 +241,8 @@ for line in reversed(lines):
     except json.JSONDecodeError:
         continue
     if d.get("type") != "user":
+        continue
+    if d.get("isMeta") is True:
         continue
     if d.get("userType") != "external":
         continue
@@ -266,11 +269,25 @@ for line in reversed(lines):
     if not text.strip():
         continue
 
-    # Normalize whitespace, truncate to LIMIT.
+    # Normalize whitespace.
     text = " ".join(text.split())
-    if len(text) > LIMIT:
-        text = text[:LIMIT - 3] + "..."
-    sys.stdout.write(text)
+
+    # Skip skill control keywords — master inputs but not statusline-worthy.
+    if text == "플랜 완료" or text == "중단":
+        continue
+    if text == "핫픽스" or text.startswith("핫픽스 "):
+        continue
+
+    # Wrap to LINE_WIDTH × up to MAX_LINES; truncate overflow with "...".
+    wrapped = [text[i:i + LINE_WIDTH] for i in range(0, len(text), LINE_WIDTH)]
+    if len(wrapped) > MAX_LINES:
+        wrapped = wrapped[:MAX_LINES]
+        last = wrapped[-1]
+        if len(last) >= 3:
+            wrapped[-1] = last[:-3] + "..."
+        else:
+            wrapped[-1] = "..."
+    sys.stdout.write("\n".join(wrapped))
     break
 PY
 )
