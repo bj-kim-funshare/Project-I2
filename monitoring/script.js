@@ -7,17 +7,30 @@ const USD = (n) => `$${(n || 0).toFixed(2)}`;
 const fmtNum = (n) => NUM.format(n || 0);
 
 const COLORS = {
-  noncache: '#2a6df4',
-  input: '#1d5ad6',
-  output: '#7aa6f5',
-  cache: '#f4a72a',
-  cacheWrite: '#d6851d',
-  cacheRead: '#f5c97a',
-  positive: '#2ea44f',
-  muted: '#aaa',
+  noncache: '#3b82f6',
+  input: '#3b82f6',
+  output: '#60a5fa',
+  cache: '#9b59b6',
+  cacheWrite: '#a855f7',
+  cacheRead: '#c084fc',
+  positive: '#10b981',
+  muted: '#8b93a7',
 };
 
-const PALETTE = ['#2a6df4', '#f4a72a', '#2ea44f', '#d63d8a', '#9b51e0', '#11a7c7', '#e8704e', '#7a7a7a', '#5c8ed6', '#d6a31d'];
+const PALETTE = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ec4899', '#22d3ee', '#f97316', '#8b93a7', '#7c3aed', '#facc15'];
+
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = '#e6e9f2';
+  Chart.defaults.borderColor = 'rgba(139, 147, 167, 0.18)';
+  Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif';
+  if (Chart.defaults.plugins && Chart.defaults.plugins.tooltip) {
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(11, 13, 18, 0.92)';
+    Chart.defaults.plugins.tooltip.borderColor = '#2a3144';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.titleColor = '#e6e9f2';
+    Chart.defaults.plugins.tooltip.bodyColor = '#e6e9f2';
+  }
+}
 
 const charts = {};
 
