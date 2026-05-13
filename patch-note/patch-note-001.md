@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.24.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #17
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/scripts/statusline.sh` 의 `iso_to_epoch()` 본문을 ISO8601 파싱 (`date -j -f "%Y-%m-%dT%H:%M:%S"` + GNU `date -d` 폴백) 에서 epoch 정수 통과 처리 (입력이 비었거나 숫자 외 문자가 있으면 빈 문자열, 순수 정수면 그대로 echo) 로 교체. 원인 — Claude Code 공식 statusline 스펙 (code.claude.com/docs/ko/statusline) 상 `rate_limits.{five_hour|seven_day}.resets_at` 가 Unix epoch seconds 정수인데 스크립트가 ISO 문자열로 가정해 매번 파싱 실패 → `fmt_reset_hm` / `fmt_reset_dhm` 빈 문자열 반환 → LINE1 의 `🕐 5h X% (Xh Ym)` / `📅 7d X% (Xd Yh Zm)` 표시 분기 거짓 → 잔여시간 숨김. 헤더 v1.3 line layout 주석은 이미 잔여시간 표시를 전제 — latent bug. 호출자 (`fmt_reset_hm` / `fmt_reset_dhm`) 와 LINE1 조립부는 변경 없음, 다운스트림 로직은 정상 동작 중이었으므로 헬퍼 한 함수 수정만으로 표시 복구. 함수 위 주석 (`# ISO8601 reset target → ...`) 도 함께 제거 (구 가정 설명 무효). stdin JSON 모의 검증 통과 — `🕐 5h 23% (2h29m)` / `📅 7d 41% (5d18h53m)` 확인.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 추가 없음. 기존 헬퍼의 입력 가정 (ISO8601) 을 공식 스펙 (epoch 정수) 에 맞추는 단일 함수 본문 교체 한정.
+
 ## v001.23.0
 
 > 통합일: 2026-05-13
