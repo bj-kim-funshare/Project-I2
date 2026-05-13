@@ -1,5 +1,44 @@
 # 아이OS — Patch Note (001)
 
+## v001.3.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2 (핫픽스 phase)
+> 대상: 마스터 머신 사용자 환경 설정
+
+### 페이즈 결과
+
+- **Phase 2 — Claude Code 시작 시 기본 effort xhigh→medium**: `~/.claude/settings.json:147` `effortLevel` 키 값 변경. 이슈 #2 PENDING 게이트에서 마스터 핫픽스 입력으로 진입.
+
+### 변경 요약
+
+- **변경 위치**: `~/.claude/settings.json` line 147
+- **변경**: `"effortLevel": "xhigh"` → `"effortLevel": "medium"`
+- **영향 범위**: 모든 프로젝트의 Claude Code 메인 세션 — Project-I2 의 `.claude/settings.json` 에는 effort 키가 없어 글로벌 값을 상속하므로 본 변경이 즉시 적용됨. 본 레포 sub-agent 들은 별도로 frontmatter `effort: medium` 으로 이미 고정되어 영향 없음.
+
+### 영향 파일
+
+- `~/.claude/settings.json` — **untracked**, 본 레포 git 추적 밖. 변경 검증은 마스터 머신에서만 가능. 향후 독자가 git blame 으로 변경 출처를 못 찾는 이유.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축/invariant 추가 0. 단일 설정 값 변경.
+
+### 절차상 비대칭
+
+- 코드 변경 origin push 0 (변경 자체가 레포 밖)
+- 패치노트 origin push 1 (본 v001.3.0 entry 가 main 으로 머지·push 됨)
+
+### 사후 ratification 메모
+
+본 핫픽스는 이슈 #2 의 Step 11 PENDING 게이트에서 마스터가 `핫픽스, claude 시작 시 기본 effort가 지금 xhigh인데 medium으로 바꿔줘` 입력으로 진입. plan-enterprise-os 스킬 v1 spec 의 hotfix path 적용 (WIP `-문서-핫픽스1` 명명은 향후 컨벤션 시드).
+
+### 커밋
+
+- 본 v001.3.0 패치노트 작성 자체가 단일 commit (`-문서-핫픽스1` WIP, 그 후 main 머지 commit)
+
+---
+
 ## v001.2.0
 
 > 통합일: 2026-05-13
