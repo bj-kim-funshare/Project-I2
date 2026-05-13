@@ -1,5 +1,37 @@
 # 아이OS — Patch Note (001)
 
+## v001.5.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #3
+> 대상: 아이OS — 모니터링 대시보드 일자별 토큰 차트
+
+### 페이즈 결과
+
+- **Phase 1** — `monitoring/script.js` 의 `renderChartDayTokens()` 를 Chart.js v4.5.1 누적 영역 선 그래프로 전환. `type: 'bar' → 'line'`, 각 dataset 에 `borderColor` (원색) + `backgroundColor` (hex8 40% 알파, 원색 + `'66'`) + `fill` 체인 (`'origin'` → `'-1'` x3) 추가. `stack: 's'` 및 `scales.{x,y}.stacked: true` 유지 (Chart.js v4 누적 영역 관용구).
+
+### 변경 요약
+
+- 막대 차트를 4 시리즈 누적 영역 선으로 시각화 전환.
+- 누적 의미(스택)는 유지 — 마스터 sharpening 확인 (2026-05-13).
+- tooltip / legend / responsive / scales.y.ticks.callback / HTML / 색상 상수 무변경.
+- 마스터 요청 범위 밖 옵션 (tension / pointRadius 등) 추가 없음.
+
+### 영향 파일
+
+- 수정: `monitoring/script.js` (단일 함수 `renderChartDayTokens`, 10 줄 = 5 추가 / 5 삭제)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 변경은 단일 시각화 옵션 토글이며, 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 / invariant 추가 0.
+
+### 절차상 메모
+
+- 본 entry 는 v001.4.0 worktree 격리 머지 이후 가장 먼저 도입되는 doc WIP — 새 §5 패턴 (`git worktree add ../Project-I2-worktrees/<wip> main`) 의 plan-enterprise-os doc WIP 첫 dogfood.
+- 본 계획의 code WIP (`-작업`) 는 worktree 격리 도입 직전 구 패턴으로 진행되어 다른 세션의 동시 commit 1 건 (`e862889`, 이슈 #2 핫픽스2 부분 1/3) 이 같은 branch 에 박힘. 해당 commit 은 origin/main 에 함께 push 되어 정합성 유지 (이슈 #2 의 후속 진행에서 정상 추적 가능).
+
+---
+
 ## v001.4.0
 
 > 통합일: 2026-05-13
