@@ -225,6 +225,7 @@ Same as `plan-enterprise`. Skill state remains open; master can re-invoke later 
 | 총 페이즈 수 | <N> + 핫픽스 <count> |
 | WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (main 머지 ✅) |
 | WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (main 머지 ✅) |
+| WIP 핫픽스 | plan-enterprise-os-<N>-<slug>-핫픽스1..<M> (각 main 머지 ✅, 총 <M>개 / 0개 = 핫픽스 없음) |
 | 패치노트 최종 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 (6 관점) | PASS |
 | advisor 완료 (6 관점) | PASS (최종 핫픽스 포함) |

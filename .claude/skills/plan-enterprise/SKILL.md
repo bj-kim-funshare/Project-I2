@@ -291,20 +291,28 @@ Then halt. Next master message routes per the gate parse rule.
 
 ### HOTFIX re-entry path
 
+Each hotfix uses its **own single WIP** — code + patch-note entry both live on the hotfix WIP. No `-작업/-문서` split for hotfixes (intentional carve-out from §G's code-doc separation rule: a hotfix is one atomic correction unit, so splitting it across two WIPs adds ceremony without isolation benefit, and a per-hotfix WIP keeps each hotfix's merge commit head-traceable independently from the base plan).
+
 When master types `핫픽스 <description>`:
 
 1. Treat `<description>` as a single new phase metadata. Main session infers `affected_files`:
    - From `<description>` semantically.
    - If unclear, ask master one sharpening question (text, no card).
 2. The new phase number = `prior_max_phase + 1` (cumulative across the plan; first hotfix on a 5-phase plan = phase 6).
-3. Re-enter Step 7 with this single phase:
+3. **Create hotfix WIP** branched from `i-dev`:
+   ```bash
+   git checkout i-dev
+   git checkout -b plan-enterprise-<N>-<slug>-핫픽스<M>   # M = cumulative hotfix count, from 1
+   git push -u origin plan-enterprise-<N>-<slug>-핫픽스<M>
+   ```
+4. Re-enter Step 7 against this hotfix WIP (phase-executor's WIP-branch argument = hotfix WIP, not the original `-작업` WIP):
    - **default flow**: dispatch `phase-executor` (1 phase, 3-iter cap reset).
    - **--codex flow**: generate a Codex prompt for just this hotfix phase (same packet shape, single phase). Output + halt. Master returns `코덱스 완료, {보고}` or `코덱스 실패, {보고}`.
-4. After phase-executor returns success (or Codex result accepted):
+5. After phase-executor returns success (or Codex result accepted):
    - **Step 8 advisor #2** re-runs on the hotfix commits only.
-   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor). Previous entries are not modified. The new entry summarizes only the hotfix phase.
-   - **Step 10 merge** the hotfix WIPs into i-dev.
-5. Return to **Step 11 PENDING**. Master may issue more `핫픽스` or finalize.
+   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor) **on the same hotfix WIP** (not on the original `-문서`). Previous entries are not modified. The new entry summarizes only the hotfix phase.
+   - **Step 10 merge** the hotfix WIP into `i-dev` — single merge commit per hotfix.
+6. Return to **Step 11 PENDING**. Master may issue more `핫픽스` (next gets a new WIP, `M+1`) or finalize.
 
 Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.
 
@@ -331,6 +339,7 @@ If master's next message is not a recognized trigger (`플랜 완료` / `핫픽�
 | 총 페이즈 수 | <N> + 핫픽스 <count> |
 | WIP 작업 | plan-enterprise-<N>-<slug>-작업 (i-dev 머지 ✅) |
 | WIP 문서 | plan-enterprise-<N>-<slug>-문서 (i-dev 머지 ✅) |
+| WIP 핫픽스 | plan-enterprise-<N>-<slug>-핫픽스1..<M> (각 i-dev 머지 ✅, 총 <M>개 / 0개 = 핫픽스 없음) |
 | 패치노트 최종 | v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 | PASS |
 | advisor 완료 | PASS (최종 핫픽스 포함) |

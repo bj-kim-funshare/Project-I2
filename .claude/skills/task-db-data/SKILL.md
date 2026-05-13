@@ -76,6 +76,8 @@ Same as `task-db-structure`:
 
 PR ceremony 폐기 — 데이터 변경 파일은 실행 *후* codification 이라 PR 머지 게이트는 의미 약함. WIP→i-dev 자동 머지 (Phase 5) 로 대체. 모든 audit 컨텍스트는 `plan.md` 에 기록.
 
+**Code-doc 묶음 carve-out**: `-작업` WIP 안에 capture·forward·rollback SQL (코드) + `plan.md` audit (문서) 가 같이 들어간다. §G "Never combine code and doc into one WIP" 의 의도된 예외 — `plan.md` 는 SQL 실행 직후 append 되는 audit 이라 분리하면 추적성 손실. 단일 DB task 는 한 원자 단위로 운영한다.
+
 8. **WIP / merge protocol**:
    - i-dev bootstrap if missing.
    - WIP branch: `task-db-data-<issue-or-execution_id>-작업`, branched from i-dev.

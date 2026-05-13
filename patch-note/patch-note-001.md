@@ -1,5 +1,46 @@
 # 아이OS — Patch Note (001)
 
+## v001.2.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2
+> 대상: 아이OS (monitoring 페이지)
+
+### 페이즈 결과
+
+- **Phase 1 — 다크테마 + 중앙정렬 + 고정 grid**: `monitoring/styles.css` 401줄 재작성 + `monitoring/script.js` 31줄 보강. 마스터 스크린샷 피드백 (라이트테마 / 풀폭 늘어남 / 빈 4번째 열 / KPI 카드 정렬) 4종 결함을 Project-I monitoring CSS 벤치마킹으로 일괄 해소.
+
+### 변경 요약
+
+- CSS 변수 다크 팔레트 (`--bg #0b0d12`, `--surface #141821`, `--accent #7c3aed`, …) — Project-I 토큰과 1:1 매핑
+- `.layout { max-width: 1480px; margin: 0 auto; }` — 풀폭 늘어남 해소
+- KPI grid `repeat(4, 1fr)` 고정, 차트 grid `repeat(3, 1fr)` 고정 + `.wide { grid-column: span 3; }` — `auto-fit` 의 빈 4번째 열 제거
+- KPI 카드 `min-height: 168px` 통일, `dt::before` 마커로 non-cache(●) / cache(▣) 색상 구분
+- `Chart.defaults.color / borderColor / tooltip` 다크 정합 — Chart.js 6 인스턴스 일괄 적용
+- 다크 BG 친화 팔레트: `input #3b82f6`, `cache #9b59b6`, `positive #10b981`
+- 반응형 1280px → 2-col, 800px → 1-col
+
+### 영향 파일
+
+- `monitoring/styles.css`
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축/invariant 추가 0. 순수 시각 정합 수정.
+
+### 사후 ratification 메모
+
+작업 commit `acb2b9d` 가 마스터 스크린샷 피드백 직후 선행 실행됨. 본 plan-enterprise-os 호출은 사후 ratification — 마스터가 `/plan-enterprise-os` 인자로 push 직접 위임 → Step 4 ExitPlanMode 생략. advisor 계획/완료 6 관점 모두 PASS.
+
+### 커밋
+
+- `acb2b9d` style: monitoring 다크테마 + 중앙정렬 + 고정 grid
+- `d616640` merge: monitoring 다크테마 polish (이슈 #2 phase 1)
+- 본 v001.2.0 패치노트 작성 자체가 추가 1 커밋 (`-문서` WIP)
+
+---
+
 ## v001.1.0
 
 > 통합일: 2026-05-12
