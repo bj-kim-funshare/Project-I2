@@ -74,6 +74,14 @@
         <div class="kpi-meta">
           <span class="kpi-hint" title="Claude Code 의 prompt caching 으로 cache_read 가 전체 토큰의 70~95% 를 차지하는 것은 정상이다. cache_read 는 input 단가의 ~10% (opus 기준 $1.5/M vs $15/M) 로 청구되므로 표시 비용의 실제 부담은 캐시 비중만큼 낮다.">ⓘ 캐시는 별도 단가 — 호버 시 설명</span>
         </div>
+        <div class="kpi-extras">
+          <div><span class="lbl">일평균</span><span class="val" id="kpi-cost-daily-avg">—</span></div>
+          <div><span class="lbl">캐시 절감</span><span class="val" id="kpi-cost-saved">—</span></div>
+          <div><span class="lbl">input</span><span class="val" id="kpi-cost-input">—</span></div>
+          <div><span class="lbl">output</span><span class="val" id="kpi-cost-output">—</span></div>
+          <div><span class="lbl">cache</span><span class="val" id="kpi-cost-cache">—</span></div>
+        </div>
+        <div class="kpi-cost-top-models" id="kpi-cost-top-models"></div>
       </article>
     </section>
 

@@ -125,6 +125,33 @@ function renderKpi(data) {
   $('#kpi-cache-no-cache-cost').textContent = USD(hypothetical);
 
   $('#kpi-cost-val').textContent = USD(t.cost_usd);
+
+  // 카드 4 보조 정보
+  const byDayCosts = byDay.map(d => d.cost_usd || 0);
+  const dailyAvg = byDayCosts.length > 0
+    ? byDayCosts.reduce((a, v) => a + v, 0) / byDayCosts.length
+    : null;
+  $('#kpi-cost-daily-avg').textContent = dailyAvg != null ? USD(dailyAvg) : '—';
+
+  const hypotheticalTotal = bd.hypothetical_no_cache || 0;
+  const costSaved = Math.max(0, hypotheticalTotal - (t.cost_usd || 0));
+  $('#kpi-cost-saved').textContent = USD(costSaved);
+
+  $('#kpi-cost-input').textContent = USD(bd.input || 0);
+  $('#kpi-cost-output').textContent = USD(bd.output || 0);
+  const cacheCost = (bd.cache_write || 0) + (bd.cache_read || 0);
+  $('#kpi-cost-cache').textContent = USD(cacheCost);
+
+  const topModels = (data.by_model || [])
+    .slice()
+    .sort((a, b) => (b.cost_usd || 0) - (a.cost_usd || 0))
+    .slice(0, 3);
+  const topModelsEl = $('#kpi-cost-top-models');
+  if (topModelsEl) {
+    topModelsEl.innerHTML = topModels.map(m =>
+      `<div class="cost-model-row"><span class="lbl">${m.model}</span><span class="val">${USD(m.cost_usd || 0)}</span></div>`
+    ).join('');
+  }
 }
 
 // ---------- Charts ----------
