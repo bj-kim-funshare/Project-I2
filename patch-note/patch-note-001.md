@@ -1,5 +1,39 @@
 # 아이OS — Patch Note (001)
 
+## v001.8.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #5
+> 대상: 아이OS — patch-confirmation push 자동화 + classifier 6 list 우회
+
+### 페이즈 결과
+
+- **Phase 1**: `.claude/skills/patch-confirmation/SKILL.md` 에 머지 후 `origin/main` push 단계 spec 추가. description 한 문장 + Final push 서브섹션 (코드 블록 + 설명) + Scope out-of-scope "Push" 제거 + Failure policy 표 main push 실패 row + Reporting 표 `origin/main push` row, 총 5건 변경.
+- **Phase 2**: `.claude/settings.json` 의 root JSON 에 `permissions.allow` 6 항목 추가 — `Bash(git push origin main)`, `Bash(git push -u origin *)`, `Bash(gh issue create *)`, `Bash(gh issue close *)`, `Bash(gh issue comment *)`, `Bash(gh pr *)`. classifier 의 main session git/gh 차단을 narrow carve-out 으로 우회 (broad wildcards `Bash(git *)` / `Bash(gh *)` 거부).
+
+### 영향 파일
+
+- `.claude/skills/patch-confirmation/SKILL.md` (수정)
+- `.claude/settings.json` (수정)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 기존 스킬 (patch-confirmation) 의 기능 확장 + permissions allow 6줄 carve-out. 새 룰/훅/페르소나/스킬/검증축 추가 없음, 메모리 `feedback_no_prevention_treadmill.md` 의 카테고리 직접 매칭 없음.
+
+### 마스터 결정 흐름
+
+- (a) narrow scope: `patch-confirmation` 한 스킬만, 다른 머지 스킬 별개 (메모리 `feedback_plan_enterprise_no_auto_push.md` 와 정합)
+- (i) bundle: spec 변경 + permissions 보강을 한 plan 안 2 phase 로
+- (B) 6 명시 list: broad wildcards 거부, narrow 1줄 거부, 6 명시 항목 채택
+
+### Verification
+
+작업 WIP main 머지 직후 `git push origin main` 1회 실 시도 → 통과 ✅. classifier 가 `Bash(git push origin main)` 룰 정상 인식. plan 의 verification 약속 충족.
+
+### 후속 plan 후보 (본 plan 범위 외)
+
+- 다른 머지 스킬 (`patch-update`, `group-policy`, `new-project-group`, `plan-roadmap`, `create-custom-project-skill`) 의 push 정책 일관성 검토. `plan-enterprise` / `-os` 는 메모리 `feedback_plan_enterprise_no_auto_push.md` 로 push 안 함 정책 명시 — 그 외 스킬은 결정 미정.
+
 ## v001.7.0
 
 > 통합일: 2026-05-13
