@@ -196,13 +196,9 @@ Relay the agent's response verbatim to master, then proceed to Step 10.
 
 ## Step 10 — PENDING gate
 
-Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master finalizes.
+Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master finalizes. After Step 9's `work_complete` dispatch relays its report to master, append the gate prompt:
 
 ```
-### /create-custom-project-skill 대기 — 이슈 #<N> <leader>-<slug>
-
-스킬 파일 생성 + main 머지 완료. advisor 검증 PASS.
-
 마스터 입력 대기:
   - `플랜 완료` → 이슈 close (Step 11) + 최종 종료
   - `중단` → 이슈 open 유지, halt

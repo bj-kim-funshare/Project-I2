@@ -1,6 +1,6 @@
 # Shared inspection procedure
 
-Common procedure for skills that dispatch a single read-only sub-agent, then either create a GitHub issue (when blocking findings exist) or report cleanly. Consumed by `dev-inspection`, `dev-security-inspection`, `db-security-inspection` (and any future inspection skill following the same pattern). `pre-deploy` Branch A follows a similar shape but is not yet refactored to reference this file.
+Common procedure for skills that dispatch a single read-only sub-agent, then either create a GitHub issue (when blocking findings exist) or report cleanly. Consumed by `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification` (and any future inspection skill following the same pattern). `pre-deploy` uses its own SKILL.md flow with the same `completion-reporter` dispatch pattern but is not consolidated here.
 
 **Loading**: each consuming skill manually `Read`s this file at entry and follows it. Manual Read is the contract — there is no auto-load mechanism for `.claude/md/*` (specialized rules are loaded on-demand by referencing skills/agents, per CLAUDE.md §8).
 
