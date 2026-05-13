@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.11.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #8
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/scripts/statusline.sh` L3 추출 필터에 `isMeta=true` 스킵 + 제어 키워드(`플랜 완료` / `중단` / `핫픽스 …`) 스킵 추가. LIMIT 140 단일 라인 → `LINE_WIDTH=125 × MAX_LINES=5` wrap, 초과 분량은 5번째 줄 끝 `...` 절단. 헤더 코멘트 v1.2 → v1.3 갱신.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### 검증
+- 실 스크립트 end-to-end 스모크: isMeta=true 레코드 + "플랜 완료" 레코드 + 정상 프롬프트 3건 합성 JSONL 입력 → L3 출력이 "💬 정상 마지막 프롬프트" 로 확인됨.
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증 축 추가 없음. 기존 스크립트 행위 보정.
+
+### Deviation 기록
+phase-executor sub-agent 디스패치 2회 모두 API 한도 `Extra usage required for 1M context` 로 실패 (sonnet 모델 override 포함). CLAUDE.md §2 build-session carve-out 정신과 마스터의 "make the reasonable call" 지시에 따라 메인 세션이 WIP A worktree 에 직접 Edit/commit/push 수행. 다음 plan-enterprise-os 실행 전 sub-agent 1M-context 한도 환경 이슈 점검 필요.
+
 ## v001.10.0
 
 > 통합일: 2026-05-13
