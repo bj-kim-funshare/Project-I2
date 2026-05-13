@@ -154,6 +154,64 @@ function renderKpi(data) {
   }
 }
 
+// ---------- Delta badges ----------
+
+function applyDeltaBadges(data) {
+  const SNAPSHOT_KEY = 'monitoring:last-snapshot';
+  const t = data.total || {};
+  const cwrite = (t.cache_creation_5m || 0) + (t.cache_creation_1h || 0);
+  const cread = t.cache_read || 0;
+  const cacheHitRatio = (cwrite + cread) > 0 ? (cread / (cwrite + cread)) * 100 : 0;
+
+  const current = {
+    messages: t.messages || 0,
+    noncache: (t.input || 0) + (t.output || 0),
+    cache: cwrite + cread,
+    cache_hit_ratio: cacheHitRatio,
+    cost_usd: t.cost_usd || 0,
+  };
+
+  const setBadge = (id, delta, fmt) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = '';
+    el.className = 'kpi-delta';
+    if (delta > 0) {
+      el.textContent = `▲ +${fmt(delta)}`;
+      el.classList.add('up');
+    } else if (delta < 0) {
+      el.textContent = `▼ -${fmt(Math.abs(delta))}`;
+      el.classList.add('down');
+    }
+  };
+
+  const raw = localStorage.getItem(SNAPSHOT_KEY);
+  if (raw) {
+    try {
+      const snap = JSON.parse(raw);
+      if (snap.saved_at !== data.generated_at) {
+        const prev = snap.values || {};
+        setBadge('kpi-delta-msgs', current.messages - (prev.messages || 0), (v) => fmtKMB(v));
+        setBadge('kpi-delta-noncache', current.noncache - (prev.noncache || 0), (v) => fmtKMB(v));
+        setBadge('kpi-delta-cache', current.cache - (prev.cache || 0), (v) => fmtKMB(v));
+        setBadge('kpi-delta-cache-hit-ratio', current.cache_hit_ratio - (prev.cache_hit_ratio || 0), (v) => `${v.toFixed(1)}%p`);
+        setBadge('kpi-delta-cost', current.cost_usd - (prev.cost_usd || 0), (v) => `$${v.toFixed(2)}`);
+      }
+    } catch (_) {
+      // 손상된 snapshot 무시
+    }
+  }
+
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+      saved_at: data.generated_at,
+      values: current,
+    }));
+  } catch (_) {
+    // localStorage 쓰기 실패 무시
+  }
+}
+
 // ---------- Plugin ----------
 
 const pieLabelsPlugin = {
@@ -455,6 +513,8 @@ function render(data) {
   $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);
   $('#by-day').innerHTML = renderByDay(data.by_day || []);
   $('#by-session').innerHTML = renderBySession(data.by_session || []);
+
+  applyDeltaBadges(data);
 }
 
 async function refresh() {

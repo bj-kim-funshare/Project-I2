@@ -22,7 +22,7 @@
     <!-- KPI -->
     <section class="kpi-grid" aria-label="핵심 지표">
       <article class="kpi-card" id="kpi-messages">
-        <h3>전체 메시지</h3>
+        <h3>전체 메시지 <span class="kpi-delta" id="kpi-delta-msgs"></span></h3>
         <div class="big-number" id="kpi-messages-val">—</div>
         <div class="kpi-meta">처리된 세션 <span id="kpi-sessions">—</span> 개</div>
         <div class="kpi-extras">
@@ -36,9 +36,9 @@
       <article class="kpi-card kpi-tokens" id="kpi-tokens">
         <h3>전체 토큰</h3>
         <div class="big-split" aria-label="비-캐시 / 캐시 분리">
-          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span>
+          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span><span class="kpi-delta" id="kpi-delta-noncache"></span>
           <span class="big-divider" aria-hidden="true">/</span>
-          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span>
+          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span><span class="kpi-delta" id="kpi-delta-cache"></span>
         </div>
         <div class="kpi-unit">non-cache / cache</div>
         <dl class="kpi-breakdown">
@@ -50,7 +50,7 @@
       </article>
 
       <article class="kpi-card kpi-gauge" id="kpi-cache-eff">
-        <h3>캐시 효율</h3>
+        <h3>캐시 효율 <span class="kpi-delta" id="kpi-delta-cache-hit-ratio"></span></h3>
         <div class="gauge-wrap">
           <svg viewBox="0 0 120 70" class="gauge">
             <path class="gauge-bg" d="M10 60 A50 50 0 0 1 110 60"/>
@@ -68,7 +68,7 @@
       </article>
 
       <article class="kpi-card" id="kpi-cost">
-        <h3>추정 비용</h3>
+        <h3>추정 비용 <span class="kpi-delta" id="kpi-delta-cost"></span></h3>
         <div class="big-number" id="kpi-cost-val">—</div>
         <div class="kpi-unit">USD</div>
         <div class="kpi-meta">

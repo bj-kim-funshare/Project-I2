@@ -376,6 +376,25 @@ code {
 }
 i { color: var(--muted); }
 
+/* ================= KPI DELTA BADGE ================= */
+.kpi-delta {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  vertical-align: middle;
+  display: inline-block;
+}
+.kpi-delta:empty { display: none; }
+.kpi-delta.up {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+.kpi-delta.down {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
 /* ================= ANIMATIONS ================= */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
