@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.13.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #8 (핫픽스2)
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Hotfix 2**: `.claude/scripts/statusline.sh` 의 `LINE_WIDTH` 62 → 105 (마스터 실 테스트 후 "1.7배로 늘려줘" 지시 반영, 62 × 1.7 = 105.4 → 105). `MAX_LINES=5` 그대로.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### Treadmill Audit
+NOT APPLICABLE — 상수 값 조정, 신규 메커니즘 없음.
+
 ## v001.12.0
 
 > 통합일: 2026-05-13
