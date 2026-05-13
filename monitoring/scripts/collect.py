@@ -125,8 +125,12 @@ def collect() -> dict[str, Any]:
             if not usage:
                 continue
 
-            model = msg.get("model") or "unknown"
-            skill = rec.get("attributionSkill") or "(no-skill)"
+            raw_model = msg.get("model") or "unknown"
+            if raw_model == "<synthetic>":
+                model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
+            else:
+                model = raw_model
+            skill = rec.get("attributionSkill") or "메인 세션"
             ts = rec.get("timestamp")
             cwd = rec.get("cwd")
             branch = rec.get("gitBranch")
