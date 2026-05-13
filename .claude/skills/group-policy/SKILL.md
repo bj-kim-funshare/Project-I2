@@ -48,12 +48,14 @@ Concrete example — dev area, current state:
 [현재 상태]
 프로젝트 1: data-craft-fe
   cwd: /Users/starbox/data-craft-fe
+  role: FE
   dev_command: pnpm dev
   port: 5173
   cache_paths: node_modules/.vite,dist
 
 프로젝트 2: data-craft-be
   cwd: /Users/starbox/data-craft-be
+  role: BE
   dev_command: pnpm start:dev
   port: 3000
   cache_paths: dist

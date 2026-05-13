@@ -34,6 +34,7 @@ This manifest is produced by the `group-policy` skill (dev section). If it is ab
 targets:
   - name: <member-name>
     cwd: <absolute-path>
+    role: FE | BE            # FE = frontend (dev-start 의 기동 대상), BE = backend (dev-start 미기동, dev-build 등 다른 스킬은 정상 사용)
     dev_command: <shell-command-line>
     port: <integer>
     cache_paths:
@@ -46,6 +47,7 @@ targets:
 
 Field semantics:
 - `cwd`: absolute path to the member's project root. The dev command runs from here.
+- `role`: `FE` or `BE` (closed choice). dev-start only starts FE targets. BE targets remain in the manifest and are available to other skills (dev-build, etc.) but are excluded from dev-start's startup sequence.
 - `dev_command`: the exact shell command to start the dev server (e.g., `pnpm dev`, `npm run dev`, `vite`).
 - `port`: the port the dev server is expected to bind. Used for both kill-prior and readiness polling.
 - `cache_paths`: zero or more paths to delete before starting. Resolved relative to `cwd`. Missing paths are skipped silently.
