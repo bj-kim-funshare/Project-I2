@@ -321,10 +321,11 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .chart-card.wide { grid-column: span 3; }
 .chart-card.span-2 { grid-column: span 2; }
 .chart-card h3 {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
+  padding-top: 2px;
 }
 .chart-body {
   position: relative;
