@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.46.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스11)
+> 대상: 아이OS
+
+### 개요
+스킬 점유 차트에서 "메인 세션" 이 압도적으로 1위로 집계되는 증상 보고. JSONL 직접 분석 결과: 가장 최근 세션 (이슈 #25 플랜 본체) 400 메시지 중 `attributionSkill: plan-enterprise-os` 태깅 = **5개만**, 나머지 395개 무태깅 → `"메인 세션"` 폴백. Claude Code 런타임이 스킬 진입 직후 잠시만 태깅하고 그 이후 phase 실행 / 핫픽스 입력 / 머지 작업 등은 태깅 안 함. 마스터 의심대로 collector 의 폴백 로직이 스킬 점유를 심각하게 과소집계.
+
+런타임은 본 repo 에서 수정 불가하나 collector 측에서 sticky 전파로 보정 가능 — 한 번 X 로 태깅된 이후 같은 세션 JSONL 내 메시지는 다른 attributionSkill 이 나타나기 전까지 모두 X 로 귀속.
+
+### 페이즈 결과
+- **핫픽스11** (`monitoring/scripts/collect.py`):
+  - 메시지 루프 직전에 세션별 `sticky_skill = "메인 세션"` 초기화.
+  - 각 레코드 처리 시 `raw_skill = rec.get("attributionSkill")` 가 truthy 면 `sticky_skill = raw_skill` 로 갱신. 본 메시지 귀속 = `sticky_skill`.
+  - 결과: 세션 첫 attributionSkill 태깅 이후 모든 메시지가 그 스킬로 귀속. 다음 스킬 태깅이 나타나면 그 시점부터 새 스킬로 전환.
+  - 검증: collect.py 재실행 후 by_skill 상위 — plan-enterprise-os 3040 / plan-enterprise 3007 / init 930 / task-db-data 820 / 메인 세션 701 (이전 압도적 1위 → 5위). 분포 정상화 확인.
+
+### 영향 파일
+- `monitoring/scripts/collect.py`
+
+### Treadmill Audit
+NOT APPLICABLE — 집계 로직 정정. 신규 메커니즘 추가 없음. 알려진 한계: 스킬 종료 후 메인 세션 대화가 같은 JSONL 안에서 이어지면 이전 스킬로 과대집계될 수 있으나, 실제로 각 스킬 invocation 은 보통 별도 세션이라 영향 미미.
+
 ## v001.45.0
 
 > 통합일: 2026-05-14
