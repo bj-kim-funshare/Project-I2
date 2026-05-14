@@ -15,20 +15,19 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 ## Invocation
 
 ```
-/pre-deploy <leader-name> [<target-name>,<target-name>,...]
+/pre-deploy <leader-name>
 ```
 
 - `<leader-name>` required.
-- Member selection optional. If omitted and the group has more than one target, the skill issues one `AskUserQuestion` (multiSelect) listing the targets. If omitted and the group has a single target, auto-select. Target names are matched against `deploy.md` `targets[].name`.
+- Always issue one `AskUserQuestion` (multiSelect) listing **every** target in `deploy.md` `targets[]`, regardless of `deploy_command` value. Single-target groups also get the UI (no auto-select). Targets with empty or whitespace-only `deploy_command` are labeled `<name> (수동 배포 — deploy_command 빈값)` in the option text to keep master's choice visible.
 
 ## Pre-conditions
 
-1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차. 본 스킬 컨텍스트 = external.
+1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification. 본 스킬은 external context 의 **branch-overridden 예외**: 모든 멤버 레포 (`dev.md targets[].cwd` 전부) 가 `main` 위에 있어야 한다 (i-dev 아님). 검증은 다중 선택 UI 이전에 실행. 복원은 touched cwd 만 `main` 으로.
 2. `.claude/project-group/<leader>/` exists with `deploy.md`.
-3. Every selected target has `deploy_command` populated. Missing → fail with `/group-policy` redirect (groups created before the `deploy_command` field was added to the schema must be updated).
-4. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
-5. cwd may be anywhere — the skill operates per target's declared `cwd`.
-6. `dev.md` `targets[]` 에 `name == <leader>` 인 항목이 존재해야 한다 (= 리더 저장소 식별 가능). 컨벤션: targets[] 첫 항목이 리더 저장소.
+3. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
+4. cwd may be anywhere — the skill operates per target's declared `cwd`.
+5. `dev.md` `targets[]` 에 `name == <leader>` 인 항목이 존재해야 한다 (= 리더 저장소 식별 가능). 컨벤션: targets[] 첫 항목이 리더 저장소.
 
 ## Context preparation (main session)
 
@@ -107,6 +106,7 @@ After receiving the findings array:
    - `cd <target.cwd>`.
    - Run `<target.build_command>` via Bash. Capture exit code + tail of stderr/stdout.
    - On non-zero exit → halt the loop; remaining targets are not attempted.
+   - If `<target.deploy_command>` is empty or whitespace-only → skip the deploy step, record `deploy_status: "manual"` and `url: null` for this target's report row, and continue to the next target.
    - Run `<target.deploy_command>` via Bash. Capture exit code + tail + (if parseable) the deployed URL.
    - On non-zero exit → halt the loop; remaining targets are not attempted.
 3. **Prior-issue close (only if all selected targets succeeded AND `prior_issue_number` is not null)**:
@@ -126,11 +126,13 @@ After receiving the findings array:
 4. Dispatch `completion-reporter` with:
    - `skill_type: "pre-deploy"`
    - `moment: "skill_finalize"`
-   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`); optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`.
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`); optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`. Note: `deploy_status` may be `"manual"` (in addition to success/failure values) when a target's `deploy_command` was empty and the deploy step was skipped.
 
    Relay the agent's response verbatim to master.
 
    If any target's build or deploy failed: append `"<target> 후속 타겟 중단됨. 마스터 결정 필요 (롤백 자동 X)."` after relaying the reporter's output.
+
+   If any target has `deploy_status: "manual"`: append `'수동 배포 필요 — deploy_command 빈값. 마스터가 직접 수행.'` as a tail note in the final master-facing report.
 
 ## WIP rule note
 
@@ -145,7 +147,7 @@ The "이슈번호" the WIP rule references is, for this skill, the issue that **
 
 ## 완료 후 HEAD 복원
 
-`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `i-dev`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 
@@ -155,8 +157,7 @@ Immediate Korean report + halt. No retry.
 |---|---|
 | `.claude/project-group/<leader>/` not found | `"그룹 <leader> 미등록 — /new-project-group 먼저 실행"` |
 | `deploy.md` missing | `"<leader>/deploy.md 부재 — /group-policy 실행 필요"` |
-| Selected target missing `deploy_command` | `"<leader>/deploy.md 의 targets 에 deploy_command 누락: <target_list>. /group-policy 로 추가 필요."` |
-| Target name in arg doesn't match any in deploy.md | `"<leader>/deploy.md 에 타겟 '<name>' 없음. 사용 가능: <list>."` |
+| 멤버 레포 cwd 가 `main` 위에 있지 않음 (entry 검증) | `"<cwd> 가 main 아님 (현재: <branch>). pre-deploy 는 모든 멤버 레포가 main 일 때만 호출 가능."` |
 | `gh` CLI missing or unauthenticated (when issue creation is needed) | `"gh CLI 미설치 또는 미인증. 이슈 생성 불가 — 사전 설치/인증 후 재호출."` |
 | Validator dispatch failure | `"deploy-validator 디스패치 실패: <error>."` |
 | Prior-issue lookup failure | `"gh issue list 실패: <error>. prior_issue_number=null 로 진행 (안전 측 — 신규 이슈 생성, 옛 이슈 close 안 함)."` |
@@ -178,6 +179,9 @@ In scope:
 - Issue close on clean re-invocation after all selected targets deploy successfully — 합격 보고서 comment + `gh issue close`.
 - Sequential build + deploy execution when validation is clean.
 - Sequential halt on first build/deploy failure within Branch B (prior issue stays open).
+- 항상 노출되는 multiSelect 선택 UI (target args 폐기 / 자동 선택 폐기 / 단일 타겟도 UI 노출).
+- main 기준 검증/배포 (branch-overridden — external context 의 i-dev 일괄 룰에서 본 스킬만 분리).
+- 빈 `deploy_command` 타겟은 선택 가능 — build 만 실행, deploy 스킵, `deploy_status: "manual"` 표시 + master-facing 안내.
 
 Out of scope (v1):
 - Auto-fix of validation findings (handed off via the created issue to `plan-enterprise` or equivalent).
