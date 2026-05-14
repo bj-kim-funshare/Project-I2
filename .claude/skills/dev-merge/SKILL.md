@@ -24,6 +24,7 @@ Both branch names required. Works against the current working directory's GitHub
 3. Both `<from-branch>` and `<to-branch>` exist locally and remotely (master pushes the from-branch before invoking).
 4. No existing open PR for the same `<from-branch>` → `<to-branch>` pair (would collide).
 5. Current local branch may be anything — the skill operates via PR, not via local merge.
+6. 본 스킬은 from/to-branch 마스터 명시. 정렬 검증은 면제, 완료 복원은 호출 시점 HEAD 또는 to-branch. (세부 절차: `.claude/md/branch-alignment.md` Entry verification — 본 스킬 컨텍스트 = variable).
 
 ## WIP rule note
 
@@ -318,6 +319,10 @@ On review cap-exhausted halt, dispatch `completion-reporter` with:
 - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"review_cap_exhausted"`); optional `leader`, `remaining_findings[]`.
 
 Relay the agent's response verbatim to master.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = 호출 시점 HEAD 또는 to-branch (variable). 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 
