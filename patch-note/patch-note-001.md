@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.51.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스16)
+> 대상: 아이OS
+
+### 개요
+브라우저 탭 제목과 헤더 H1 텍스트를 "아이OS 토큰 모니터링" → "토큰 사용량 모니터링" 으로 변경. 기본 지구 favicon 을 SVG 인라인 가로 막대 차트 아이콘으로 교체 (data URI, 4개 막대 — 파랑/보라/초록/주황).
+
+### 페이즈 결과
+- **핫픽스16** (`monitoring/index.html`):
+  - `<title>` 텍스트 변경.
+  - `<h1>` 텍스트 변경.
+  - `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,...">` 추가. 4 개 rect 막대로 구성된 미니 차트 아이콘. data URI 방식으로 별도 파일 의존성 없음.
+  - 자산 cache-bust `?v=20260514-15` → `?v=20260514-16`.
+
+### 영향 파일
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 텍스트·아이콘 변경. 신규 메커니즘 추가 없음.
+
 ## v001.50.0
 
 > 통합일: 2026-05-14
