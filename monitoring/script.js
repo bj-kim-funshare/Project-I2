@@ -663,6 +663,53 @@ function renderChartSessionBar(data, opts) {
   });
 }
 
+function renderChartAgentBar(data) {
+  destroyChart('agentBar');
+  const rows = (data.by_agent || [])
+    .slice()
+    .sort((a, b) => {
+      const ta = (a.input || 0) + (a.output || 0) + (a.cache_creation_5m || 0) + (a.cache_creation_1h || 0) + (a.cache_read || 0);
+      const tb = (b.input || 0) + (b.output || 0) + (b.cache_creation_5m || 0) + (b.cache_creation_1h || 0) + (b.cache_read || 0);
+      return tb - ta;
+    });
+  const ctx = $('#chart-agent-bar canvas');
+  if (!ctx || !rows.length) return;
+  charts.agentBar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.agent),
+      datasets: [{
+        label: '총 토큰',
+        data: rows.map(r => (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0)),
+        backgroundColor: rows.map((_, i) => PALETTE[i % PALETTE.length]),
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => `${fmtKMB(c.parsed.x)} 토큰`,
+            afterLabel: (c) => {
+              const r = rows[c.dataIndex];
+              return [
+                `메시지: ${fmtNum(r.messages || 0)}`,
+                `input: ${fmtNum(r.input || 0)}`,
+                `output: ${fmtNum(r.output || 0)}`,
+                `cache read: ${fmtNum(r.cache_read || 0)}`,
+              ];
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 function renderChartPromptBar(data) {
   destroyChart('promptBar');
   const items = (data.by_prompt || []).slice(0, 30);
@@ -957,6 +1004,7 @@ function renderAll(data, compareData) {
     renderChartCacheDonut(data);
   }
   renderChartSessionBar(data);
+  renderChartAgentBar(data);
   renderChartDayCost(aggData);
   renderChartPromptBar(data);
 

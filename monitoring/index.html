@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>아이OS 토큰 모니터링</title>
-  <link rel="stylesheet" href="styles.css?v=20260514-10">
+  <link rel="stylesheet" href="styles.css?v=20260514-13">
   <script src="lib/chart.umd.js" defer></script>
-  <script src="script.js?v=20260514-10" defer></script>
+  <script src="script.js?v=20260514-13" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -147,6 +147,11 @@
         <div class="chart-body chart-body-tall"><canvas></canvas></div>
       </article>
 
+      <article class="chart-card wide" id="chart-agent-bar">
+        <h3>서브에이전트 사용량 (총 토큰)</h3>
+        <div class="chart-body chart-body-tall"><canvas></canvas></div>
+      </article>
+
       <article class="chart-card wide" id="chart-day-cost">
         <h3>일자별 추정 비용</h3>
         <div class="chart-body"><canvas></canvas></div>
@@ -162,29 +167,31 @@
     <section class="tables-section">
       <h2>상세 테이블</h2>
 
-      <section class="detail-section has-html-legend">
-        <h3>모델별</h3>
-        <div class="detail-chart">
-          <canvas id="chart-detail-model"></canvas>
-          <div class="chart-legend" data-target="chart-detail-model"></div>
-        </div>
-        <details class="table-block">
-          <summary>표 보기</summary>
-          <div id="by-model" class="table-wrap"></div>
-        </details>
-      </section>
+      <div class="detail-row-2col">
+        <section class="detail-section has-html-legend">
+          <h3>모델별</h3>
+          <div class="detail-chart">
+            <canvas id="chart-detail-model"></canvas>
+            <div class="chart-legend" data-target="chart-detail-model"></div>
+          </div>
+          <details class="table-block">
+            <summary>표 보기</summary>
+            <div id="by-model" class="table-wrap"></div>
+          </details>
+        </section>
 
-      <section class="detail-section has-html-legend">
-        <h3>스킬별</h3>
-        <div class="detail-chart">
-          <canvas id="chart-detail-skill"></canvas>
-          <div class="chart-legend" data-target="chart-detail-skill"></div>
-        </div>
-        <details class="table-block">
-          <summary>표 보기</summary>
-          <div id="by-skill" class="table-wrap"></div>
-        </details>
-      </section>
+        <section class="detail-section has-html-legend">
+          <h3>스킬별</h3>
+          <div class="detail-chart">
+            <canvas id="chart-detail-skill"></canvas>
+            <div class="chart-legend" data-target="chart-detail-skill"></div>
+          </div>
+          <details class="table-block">
+            <summary>표 보기</summary>
+            <div id="by-skill" class="table-wrap"></div>
+          </details>
+        </section>
+      </div>
 
       <section class="detail-section">
         <h3>일자별</h3>

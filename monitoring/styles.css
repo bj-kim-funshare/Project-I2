@@ -413,6 +413,15 @@ tbody tr:nth-child(even) { background: var(--surface-2); }
 tbody tr:hover { background: var(--surface-3); }
 
 /* ================= DETAIL SECTIONS ================= */
+.detail-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.detail-row-2col .detail-section {
+  margin-bottom: 0;
+}
 .detail-section {
   margin-bottom: 24px;
 }
