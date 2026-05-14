@@ -1,5 +1,75 @@
 # 아이OS — Patch Note (001)
 
+## v001.60.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #29 (핫픽스3)
+> 대상: 아이OS + GitHub 폴더 전체 9 repo
+
+### 핫픽스3 요약
+
+마스터가 GitHub 폴더 내 다른 5개 프로젝트도 같은 청소 정책 적용 요청. 추가로 `i-dev-001` (Project-I 시대 integration 컨벤션) 을 9 repo 전체에서 폐기하고 `i-dev` (I2 컨벤션) 단일화 지시.
+
+### 1단계: i-dev-001 폐기 (9 repo)
+
+| 케이스 | repo | 동작 |
+|--------|------|------|
+| A: i-dev + i-dev-001 둘 다 | data-craft × 4 | i-dev-001 force-delete (local + origin); diverged unique 커밋 폐기 — 마스터 "실작업 없음" 확인 |
+| B: i-dev-001 만 | Pingus-Server / PinLog-Web / Tteona / Tteona-server | `git branch -m i-dev-001 i-dev` 인-플레이스 rename → `push -u origin i-dev` → `push --delete origin i-dev-001` (커밋 0 손실) |
+| C: 둘 다 없음 | Project-I | skip |
+
+SHA 백업: `/tmp/branch-cleanup-29-hotfix3/idev001-retirement-log.txt`
+
+### 2단계: 5 other-projects aggressive cleanup
+
+마스터 "5개 모두 실작업 없음" 확정 → Project-I (archived) + Pingus-Server / PinLog-Web / Tteona / Tteona-server (Project-I 시대 컨벤션) 전체 공격 청소.
+
+**Phase A** (모든 worktree force-remove), **Phase B** (모든 비보호 local branch `-D`), **Phase C** (모든 비보호 origin ref `push --delete`).
+
+| Repo | 전 (local/wt/origin) | 후 (local/wt/origin) | 정리 |
+|------|---:|---:|---:|
+| Pingus-Server | 6/3/5 | 2/1/2 | 4 / 2 / 3 |
+| PinLog-Web | 13/2/6 | 2/1/2 | 11 / 1 / 4 |
+| Project-I | 6/3/2 | 1/1/1 | 5 / 2 / 1 |
+| Tteona | 16/2/3 | 3/1/3 | 13 / 1 / 0 |
+| Tteona-server | 9/7/3 | 3/1/3 | 6 / 6 / 0 |
+| **소계** | **50/17/19** | **11/5/11** | **39 / 12 / 8** |
+
+### 3단계: orphan 디렉토리 청소
+
+- 자동 제거 (rmdir 빈 디렉토리): Project-I `.worktrees/`, `.claude/worktrees/`, Tteona `.worktrees/`, Tteona-server `.worktrees/`.
+- 수동 `rm -rf` (deeper 빈 구조): Pingus-Server `.worktrees/`, PinLog-Web `.worktrees/`.
+- 총 6개 husk 디렉토리 제거.
+
+### plan #29 최종 누적 (10 repo 전체)
+
+**Project-I2 (본체):** 1 / 1 / 1
+
+**데이터 크래프트 그룹 4 repo:** local 13 / worktrees 4 / origin 22 (보호 + special 만)
+
+**기타 5 repo:** local 11 / worktrees 5 / origin 11
+
+**누적 작업량 (v001.56.0 + v001.58.0 + v001.59.0 + v001.60.0):**
+- 로컬 브랜치 정리: ~440+
+- 로컬 worktree 정리: ~130+
+- origin 브랜치 정리: ~360+
+- 파일시스템 husk: 11개 디렉토리
+- 컨벤션 마이그레이션: 9 repo i-dev-001 → i-dev 단일화
+
+### Treadmill Audit
+
+PASS — 본 핫픽스 3건 시리즈 모두 추가 메커니즘 없음. 1회성 청소. 새 정책 (머지-후-브랜치-삭제) 은 v001.56.0 에서 1:1 trade-out 완료.
+
+### 후속 권장 사항
+
+1. **branch-cleanup.sh active-worktree 판정 강화**: path convention 검증 추가 (`<repo>-worktrees/` sibling = I2 active, `<repo>/.worktrees/` 또는 `<repo>.worktrees/` = Project-I 좀비).
+2. **merged 모드 정규식 보강**: `-핫픽스N$` 단독, `-문서-N$`, `-문서-핫픽스N$`, `-작업-핫픽스N$` 등 변종 추가.
+3. **origin push --delete 통합 옵션**: `--include-origin` 플래그.
+4. **orphan sibling dir 감지/제거**: `<repo>.worktrees/`, `<repo>-worktrees/`, `<repo>-wt-*` husk 자동 보고.
+5. **i-dev-001 폐기 영구화**: I2 컨벤션이 `i-dev` 단일이므로, 새 repo 부트스트랩 (`new-project-group`) 시 i-dev-001 생성 금지 — 이미 i-dev 만 생성 중일 가능성 높으나 검증 필요.
+
+---
+
 ## v001.59.0
 
 > 통합일: 2026-05-14
