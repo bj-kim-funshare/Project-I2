@@ -36,6 +36,7 @@ jnum() { jq -r "$1 // 0" <<<"$input" 2>/dev/null | cut -d. -f1; }
 jraw() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
 
 MODEL=$(jget '.model.display_name' '?')
+MODEL=${MODEL/ context/}
 EFFORT=$(jget '.effort.level' '')
 VIM_MODE=$(jraw '.vim.mode')
 AGENT_NAME=$(jraw '.agent.name')
