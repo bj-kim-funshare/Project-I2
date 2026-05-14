@@ -226,19 +226,30 @@ state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable +
 - `UNKNOWN <any>` → wait 2 seconds, retry the check once. Still UNKNOWN → enter Conflict-PENDING (treat as conflict for safety).
 - Anything else (`BLOCKED` etc. — branch protection, required checks not passed) → halt with the verbatim state in the error report. PR stays open.
 
+### 보호 브랜치 (from-branch 삭제 금지 대상)
+
+하드코딩 1차 목록: `i-dev`, `main`, `master`, `develop`. from-branch 가 이 목록에 정확히 일치하면 `gh pr merge` 호출 시 `--delete-branch` 를 생략하고, 머지 후 worktree 만 제거한다 (브랜치는 로컬·리모트 모두 보존 — long-running 통합 브랜치 정책 (`CLAUDE.md` §5) 정합).
+
+추후 확장 여지: group-policy 의 `group.md` 에 `protected_branches:` 목록 정의를 허용하는 방향. 본 차수의 1차 스코프는 하드코딩만.
+
 ### Merge command
 
 When mergeable check passes (`MERGEABLE CLEAN`):
 
 ```bash
+# from-branch 가 보호 브랜치 목록 (i-dev / main / master / develop) 에 포함된 경우
+gh pr merge <PR-num> --merge
+# 그 외 (일회용 WIP)
 gh pr merge <PR-num> --merge --delete-branch
 ```
 
-`--merge` selects merge-commit method, producing a non-fast-forward merge commit per master's lock — preserves the PR's scope visibly in history. `--delete-branch` deletes the remote from-branch on merge; the local-side `git branch -d` after worktree removal handles any residual local branch ref.
+`--merge` selects merge-commit method, producing a non-fast-forward merge commit per master's lock — preserves the PR's scope visibly in history. 보호 브랜치 (`i-dev` / `main` / `master` / `develop`) 인 경우 `--delete-branch` 를 생략하여 remote 브랜치를 보존한다 (브랜치 보존 — 다음 사이클 재사용). 비보호 브랜치 (일회용 WIP) 인 경우 `--delete-branch` 적용 (기존 동작 유지).
 
 If `gh pr merge` itself fails despite the mergeable check passing (rare — concurrent push intercepted the merge), retry the mergeable check once. Re-check → CONFLICTING means a concurrent push happened, enter Conflict-PENDING. Re-check → other failure means transient issue, halt with verbatim error.
 
-After `gh pr merge` returns success: `git worktree remove ${wt_from}` then `git branch -d <from-branch> 2>/dev/null || true` (may be no-op if `--delete-branch` already removed the local tracking ref). On failure or master halt, the worktree is preserved for forensics; master decides cleanup.
+After `gh pr merge` returns success: 보호 브랜치인 경우 `git worktree remove ${wt_from}` 만 실행하고 로컬 브랜치는 보존한다 (long-running 통합 브랜치 정책 — `CLAUDE.md` §5 정합). 비보호 브랜치인 경우 `git worktree remove ${wt_from}` 후 `git branch -d <from-branch> 2>/dev/null || true` 까지 실행한다 (may be no-op if `--delete-branch` already removed the local tracking ref). On failure or master halt, the worktree is preserved for forensics; master decides cleanup.
+
+머지 직후 main session 은 `from_branch_deleted` (bool) 을 도출한다 — from-branch 가 보호 목록에 매칭되면 `false`, 비보호면 `true`. 이 값은 Step 11 의 `skill_finalize` dispatch `data` payload 에 사용한다.
 
 ## Conflict-PENDING (PR 머지 충돌 처리)
 
@@ -309,7 +320,7 @@ state=$(gh pr view <PR-num> --json state,mergeable --jq '.state + " " + .mergeab
 After successful merge, dispatch `completion-reporter` with:
 - `skill_type: "dev-merge"`
 - `moment: "skill_finalize"`
-- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`; optional `leader`, `findings_breakdown`, `conflict_resolution_commits`.
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`; optional `leader`, `findings_breakdown`, `conflict_resolution_commits`, `from_branch_deleted` (bool — 보호 브랜치로 인해 삭제 생략된 경우 `false`).
 
 Relay the agent's response verbatim to master.
 
@@ -328,6 +339,8 @@ Relay the agent's response verbatim to master.
 
 Immediate Korean report + halt. No retry, no auto-recovery.
 
+마지막 행은 실패가 아닌 보호-스킵 정보 알림으로, 정상 흐름의 일부다.
+
 | Cause | Output |
 |---|---|
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. dev-merge 진입 보류. 마스터 결정 필요."` |
@@ -344,6 +357,7 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | Conflict-PENDING `핫픽스 <hint>` resolution still fails after code-fixer | "충돌 해결 미완 — code-fixer 가 마스터 hint 로 해결 못함. 추가 핫픽스 또는 수동 해결 필요." (Conflict-PENDING 재진입) |
 | `수동 머지 완료` claimed but PR state=CLOSED unmerged | "PR #<num> CLOSED (unmerged). 수동 머지 완료 trigger 와 불일치. 마스터 확인 필요." |
 | `gh pr merge --delete-branch` succeeded merge but branch deletion failed | `"PR #<num> 머지 완료. remote 브랜치 삭제 실패: <error>. 로컬 브랜치 잔존 확인 필요."` |
+| from-branch 가 보호 브랜치 (`i-dev` / `main` / `master` / `develop`) | (실패 아님 — 정보) `"from-branch <branch> 보호 — \`--delete-branch\` 건너뜀. 통합 브랜치 보존."` |
 
 ## Scope (v1)
 
@@ -358,5 +372,5 @@ Out of scope (v1):
 - Squash or rebase merge methods.
 - Tag creation, push to additional remotes.
 - Multi-PR coordination (one PR per invocation).
-- Auto-deletion of the from-branch after merge (now in scope via `--delete-branch` + local `git branch -d`).
+- Auto-deletion of the from-branch after merge (보호 브랜치 목록 (`i-dev` / `main` / `master` / `develop`) 에 미포함된 경우에 한함. group-policy 확장은 후속 차수).
 - Reviewer language specialization (React-specific, Express-specific, TS-specific) — Claude's full 5-agent literal model was scoped down to 2 judgment agents + context-by-main-session, with master's confirmation. Specialization can be added if a project's review patterns demand it.

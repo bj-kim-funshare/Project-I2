@@ -247,10 +247,10 @@ Mirrors `plan-enterprise` exactly with the following differences:
 
 ##### `skill_finalize`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`
-- Optional: `leader`, `findings_breakdown`, `conflict_resolution_commits`
+- Optional: `leader`, `findings_breakdown`, `conflict_resolution_commits`, `from_branch_deleted` (bool — 보호 브랜치(`i-dev`/`main`/`master`/`develop`)로 인해 삭제가 생략된 경우 `false`; 일회용 WIP 삭제 시 `true`; omitted 면 기본 동작 = 삭제로 해석)
 - Narrative sections (emit per payload): `#### 🎯 명령원문`, `#### ✅ 결과`, `#### 🧪 시나리오`.
 - Table rows (short-scalar only): from→to context row first (`| 브랜치 | <from> → <to> |`), `| 🔀 머지 SHA | <short-sha> |`, `| 메타 | PR #N · 리뷰 K라운드 · finding M건 · 핫픽스 커밋 P건 |`.
-- Notes: Heading uses 🏁. `merge_sha` is the full SHA from `gh pr merge`.
+- Notes: Heading uses 🏁. `merge_sha` is the full SHA from `gh pr merge`. `from_branch_deleted: false` 가 payload 에 포함되면 메타 row 끝에 `· from 브랜치 보존` 토큰을 덧붙인다. `true` 또는 omitted 면 별도 표시 없음.
 
 ##### `skill_finalize.blocked`
 - Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (`"review_cap_exhausted"` | `"lint_cap_exhausted"` | `"merge_conflict"` | `"branch_protection"` | `"other"`)
