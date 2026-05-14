@@ -30,6 +30,7 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
               │
               ▼   (collect.py 가 파싱)
        monitoring/data/aggregate.json   ← gitignore (런타임 산출물)
+       monitoring/data/hourly.json      ← 동시 출력; 최근 14일·시간 단위 희소 집계 (실시간 모드용)
               │
               ▼   (script.js 가 fetch + 렌더)
             대시보드

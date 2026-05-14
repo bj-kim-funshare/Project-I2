@@ -304,6 +304,19 @@ def parse_ts(ts: str | None) -> date | None:
         return None
 
 
+def parse_ts_hour(ts: str | None) -> str | None:
+    """Parse ISO 8601 timestamp string to hour-key 'YYYY-MM-DDTHH' (local time). Returns None on failure."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        # Convert to local time (matching parse_ts semantics which uses .date() = local)
+        dt_local = dt.astimezone()
+        return dt_local.strftime("%Y-%m-%dT%H")
+    except (ValueError, AttributeError):
+        return None
+
+
 def period_keys_for(d: date) -> dict[str, str]:
     """Compute all 5 period bucket keys for a given date."""
     iso_year, iso_week, _ = d.isocalendar()
@@ -421,6 +434,10 @@ def collect() -> dict[str, Any]:
 
     all_prompt_items: list[dict[str, Any]] = []
 
+    hourly_agg: dict[str, dict[str, int]] = defaultdict(empty_token_record)
+    hourly_cost: dict[str, float] = defaultdict(float)
+    hourly_messages: dict[str, int] = defaultdict(int)
+
     files_processed = 0
     files_skipped = 0
 
@@ -480,6 +497,12 @@ def collect() -> dict[str, Any]:
             day_bd = by_day_breakdown[day_key]
             for k in day_bd:
                 day_bd[k] += msg_bd[k]
+
+            hour_key = parse_ts_hour(ts)
+            if hour_key is not None:
+                add_usage(hourly_agg[hour_key], usage)
+                hourly_cost[hour_key] += cost_of(model, msg_record)
+                hourly_messages[hour_key] += 1
 
             model_counts[model] += 1
             session_record["skills"].add(skill)
@@ -625,6 +648,9 @@ def collect() -> dict[str, Any]:
         "by_prompt_meta": by_prompt_meta,
         "periods_index": periods_index,
         "_period_agg": period_agg,  # internal — stripped before writing aggregate.json
+        "_hourly_agg": hourly_agg,  # internal — used to write hourly.json, stripped before writing aggregate.json
+        "_hourly_cost": hourly_cost,
+        "_hourly_messages": hourly_messages,
     }
 
 
@@ -646,6 +672,46 @@ def write_period_files(base_dir: Path, period_agg: dict[str, dict[str, Any]]) ->
             out_path.write_text(json.dumps(period_json, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def write_hourly_file(
+    output_path: Path,
+    generated_at: str,
+    hourly_agg: dict[str, dict[str, int]],
+    hourly_cost: dict[str, float],
+    hourly_messages: dict[str, int],
+) -> None:
+    """Write monitoring/data/hourly.json — sparse, last 14 days, sorted ascending."""
+    now = datetime.now(timezone.utc)
+    cutoff_hour = (now.timestamp() - 14 * 24 * 3600)
+
+    hours_out = []
+    for hour_key in sorted(hourly_agg.keys()):
+        rec = hourly_agg[hour_key]
+        # Skip zero-activity hours
+        total_tokens = rec["input"] + rec["output"] + rec["cache_creation_5m"] + rec["cache_creation_1h"] + rec["cache_read"]
+        if total_tokens == 0 and hourly_messages.get(hour_key, 0) == 0:
+            continue
+        # Rolling-window cap: drop hours older than 14 days
+        try:
+            hour_dt = datetime.strptime(hour_key, "%Y-%m-%dT%H").astimezone(timezone.utc)
+            if hour_dt.timestamp() < cutoff_hour:
+                continue
+        except ValueError:
+            continue
+        hours_out.append({
+            "hour": hour_key,
+            "input": rec["input"],
+            "output": rec["output"],
+            "cache_creation_5m": rec["cache_creation_5m"],
+            "cache_creation_1h": rec["cache_creation_1h"],
+            "cache_read": rec["cache_read"],
+            "messages": hourly_messages.get(hour_key, 0),
+            "cost_usd": round(hourly_cost.get(hour_key, 0.0), 4),
+        })
+
+    result = {"generated_at": generated_at, "hours": hours_out}
+    output_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def main() -> int:
     output_path = Path(__file__).resolve().parent.parent / "data" / "aggregate.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -655,8 +721,11 @@ def main() -> int:
 
     result = collect()
 
-    # Extract and remove internal period_agg before writing aggregate.json
+    # Extract and remove internal fields before writing aggregate.json
     period_agg = result.pop("_period_agg", {})
+    hourly_agg = result.pop("_hourly_agg", {})
+    hourly_cost = result.pop("_hourly_cost", {})
+    hourly_messages = result.pop("_hourly_messages", {})
 
     output_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {output_path}", file=sys.stderr)
@@ -664,6 +733,11 @@ def main() -> int:
     # Write period snapshot files
     write_period_files(periods_base, period_agg)
     print(f"wrote period snapshots under {periods_base}", file=sys.stderr)
+
+    # Write hourly aggregates
+    hourly_path = output_path.parent / "hourly.json"
+    write_hourly_file(hourly_path, result.get("generated_at", ""), hourly_agg, hourly_cost, hourly_messages)
+    print(f"wrote {hourly_path}", file=sys.stderr)
 
     if "error" in result:
         print(f"WARNING: {result['error']}", file=sys.stderr)
