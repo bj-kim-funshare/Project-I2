@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.31.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 2)
+
+### 페이즈 결과
+
+- **Phase 6 (hotfix 2)** (`5c9bfedc`): 세로 막대 그래프의 막대 위 수치 라벨이 정수일 때 `.0` 이 표기되던 문제 수정. `BarChartWidget.tsx` 모듈 최상위에 `formatBarValue` 헬퍼 도입 — k-축약 분기 (`n >= 1000`) 를 먼저 평가해 기존 동작 유지하고, k 값이 정수면 `5k` / 아니면 `5.5k`. 1000 미만은 `Number.isInteger` 로 정수면 `String(n)`, 그 외엔 기존 `toLocaleString(undefined, { maximumFractionDigits: 1 })` fallback. 세로 막대 분기 (`!isHorizontal`) 의 값 레이블 인라인 표현식만 헬퍼 호출로 교체했고, 가로 막대 분기는 마스터 지시 범위 밖이라 미수정.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +10/-5, 1 파일 affected_files 내.
+- 페이즈 iter: 2회 (1회차 `71f5a639` 의 precedence 역전 회귀 — 정수 ≥ 1000 이 k-축약을 잃어 `5000` → `"5000"` 으로 떨어지는 결함 발견. 마스터 명시 범위는 ".0 제거" 였으나 k-축약 깨짐은 의도치 않은 레이아웃 회귀라 reset 후 2회차에서 k-분기 우선 평가하는 구조로 재작성하여 통과).
+- 동작 검증 (mental): `5` → `"5"`, `5.0` → `"5"`, `5.3` → `"5.3"`, `5000` → `"5k"`, `5500` → `"5.5k"`.
+- Lint gate: advisory (베이스라인 동일, 신규 심볼 `formatBarValue` 회귀 grep 0건).
+
+### 운영 메모
+
+- 수동 검증: 세로 막대 그래프 위젯에서 정수 데이터일 때 라벨이 `5`/`5k` 로, 소수 데이터일 때 `5.3`/`5.5k` 로 표시되는지 확인. 가로 막대는 기존 표기 유지 (변경 없음).
+- 가로 막대 분기는 마스터 지시 범위 밖 — 별도 핫픽스/플랜 시 동일 헬퍼 재사용 가능.
+
 ## v001.30.0
 
 > 통합일: 2026-05-14
