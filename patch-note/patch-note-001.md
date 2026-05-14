@@ -1,5 +1,31 @@
 # 아이OS — Patch Note (001)
 
+## v001.45.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스10)
+> 대상: 아이OS
+
+### 개요
+핫픽스6 에서 도입한 HTML 범례 (grid 2 컬럼) 이후 핫픽스7~9 가 도넛이 세로 타원으로 그려지는 증상을 CSS 만으로 해결하려다 9 라운드 hot fix loop 에 빠진 사례. advisor 진단으로 근본 원인 확인 후 일괄 정정.
+
+근본 원인: Chart.js `responsive: true, maintainAspectRatio: false` 가 canvas 의 containing block (`.chart-body`) 을 측정해 backing buffer 를 설정. HTML 범례 도입 후 `.chart-body` 가 CSS grid (260px canvas + 1fr legend, 총 ~380px) 인데 Chart.js 는 전체 폭 ~380px 과 height 260px 을 읽어 backing buffer = 380×260. CSS 박스 (260×260 `!important`) 안에 압축 렌더되어 가로 압축 → 세로 타원. CSS layer 는 display box 만 통제하고 Chart.js layer 가 backing buffer 를 별도로 결정하므로 두 layer 가 독립 — CSS hack 으로는 해결 불가. Chart.js options layer 에서 정정.
+
+### 페이즈 결과
+- **핫픽스10** (`monitoring/script.js`, `monitoring/styles.css`, `monitoring/index.html`):
+  - `renderChartModelDonut` / `renderChartSkillDonut` / `renderChartCacheDonut` 의 Chart options 에서 `maintainAspectRatio: false` → `maintainAspectRatio: true`, `aspectRatio: 1` 추가. Chart.js 가 컨테이너 모양 무관하게 항상 1:1 정사각형 렌더 강제. 다른 차트 (day-tokens/session-bar/day-cost/prompt-bar) 는 `false` 유지 — 의도된 직사각형.
+  - `styles.css` 에서 핫픽스7~9 의 잔재 일괄 제거: `.chart-card.has-html-legend .chart-body canvas { width: 260px !important; height: 260px !important; }` 룰 전체 삭제, `.detail-section.has-html-legend .detail-chart canvas { width: 260px !important; height: 260px !important; }` 룰 전체 삭제, `.chart-card.has-html-legend .chart-body { height: 260px; }` 의 height 라인 삭제, 동일 detail-chart 의 height 라인 삭제. grid 정의 (`grid-template-columns: 260px minmax(0, 1fr)`) 만 layout 용으로 유지.
+  - 자산 cache-bust `?v=20260514-9` → `?v=20260514-10`.
+  - 검증: 로컬 정적 서버로 자산 200 OK, 도넛 3 함수에 `aspectRatio: 1` 적용 확인, CSS `width: 260px !important` 잔재 0 건 확인. **육안 검증은 마스터 브라우저에서 최종 확인 필요.**
+
+### 영향 파일
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/index.html`
+
+### Treadmill Audit
+PASS — 9 라운드 hot fix loop 의 동일 도넛 정사각형 작업이 매번 "완료" 보고되며 마스터 브라우저에서 동일 증상 재발한 행태가 `feedback_no_prevention_treadmill.md` 의 재발 신호와 일치. 본 핫픽스에서 advisor 진단으로 근본 원인 (Chart.js backing buffer vs CSS display box layer 분리) 을 명시화하고 한 layer 에서만 정정. Q3 trade-out: 핫픽스7~9 가 CSS 에 추가한 width/height/aspect-ratio 오버라이드를 폐기. 보고 절차의 재발 방지를 위해 본 핫픽스 commit 직후 정적 서버 자산 검증을 수행, 마스터 육안 검증을 종료 게이트 전 명시 요구.
+
 ## v001.44.0
 
 > 통합일: 2026-05-14
