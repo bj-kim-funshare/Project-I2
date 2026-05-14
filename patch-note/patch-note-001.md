@@ -1,5 +1,24 @@
 # 아이OS — Patch Note (001)
 
+## v001.36.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스1)
+> 대상: 아이OS
+
+### 개요
+v001.35.0 (이슈 #25 본플랜) 머지 후 마스터 브라우저 검증에서 `kpi-tokens` 카드 ("전체 토큰") 의 두 델타 배지가 `595.2K [▼-127K] / 93.6M [▼-5.6M]` 형태로 두 숫자 사이에 인라인 렌더되어 어느 숫자의 델타인지 모호하고 줄바꿈으로 인해 UI 가 깨지는 증상 보고. 각 숫자 바로 아래에 자기 배지를 stacking 하는 방식으로 정정.
+
+### 페이즈 결과
+- **핫픽스1** (`monitoring/index.html`, `monitoring/styles.css`): `.big-split` 내부 구조를 변경 — 각 `big-number-half` 와 짝 `kpi-delta` 를 `.big-split-col <div>` 로 묶어 세로 stacking. `styles.css` 에 `.big-split-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }` 추가, `.kpi-tokens .big-split` 의 `align-items: baseline` → `center` 변경. 렌더 결과: 두 숫자가 같은 줄, 각 숫자 바로 아래에 그 숫자의 델타 배지 노출.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+NOT APPLICABLE — 핫픽스는 순수 레이아웃 정정. 신규 규칙/훅/에이전트/스킬/검증축 추가 없음.
+
 ## v001.35.0
 
 > 통합일: 2026-05-14
