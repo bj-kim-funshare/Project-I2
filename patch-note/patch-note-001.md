@@ -1,5 +1,37 @@
 # 아이OS — Patch Note (001)
 
+## v001.68.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #35
+> 대상: 아이OS
+
+### 변경 사유
+
+`/pre-deploy` 가 validator clean (block=0) 후 Branch B 의 `deploy_command` 를 자동 순차 실행하는 것이 정상 흐름이지만, auto-mode 분류기가 `npx gh-pages -d dist` 등 publish 류 명령을 디폴트 deny 로 분류해 멈췄다. 원인은 `.claude/settings.json` 의 `autoMode.allow` 에 `task-db-structure`/`task-db-data` 의 mysql/psql carve-out 만 보유하고 `pre-deploy` 의 평행 carve-out 이 부재한 것. 본 패치로 두 carve-out 을 동렬 정렬.
+
+본 플랜 진입 자체도 분류기의 self-modification 가드에 막혀 (이슈 생성 / 설정 편집 모두 사전 차단) 마스터가 settings.json 에 사전 인가 prose 를 수동 편집해 부트스트랩. 그 부트스트랩 라인은 향후 plan-enterprise-os 의 harness 자가보수 plan 일반에 대한 구조적 인가로 영구화 (ExitPlanMode 통과 plan 에 한정).
+
+### 페이즈 결과
+
+- **Phase 1 — pre-deploy deploy_command carve-out**: `.claude/settings.json` `autoMode.allow` 에 pre-deploy Branch B 직접 실행 인가 prose 추가. `permissions.allow` 에 두 패턴 추가 (`Bash(git checkout main && npx gh-pages *)`, `Bash(git checkout main && git push origin main:*)`). `CLAUDE.md` 말미 mysql/psql carve-out blockquote 옆에 pre-deploy 전용 운영 메모 blockquote 추가.
+- **사전 부트스트랩 (이슈 #35 부트스트랩 커밋 `ec9bf3d`)**: 마스터가 수동 편집한 사전 인가 prose 를 `autoMode.allow` 에 영구 commit. CLAUDE.md §5 의 "no direct commits to main" 원칙에 일회성 일탈 (분류기 가드 해제는 마스터 수기 편집만 가능 → WIP 사이클 불가). 마스터 명시 인가로 정당화.
+
+### 영향 파일
+
+- `.claude/settings.json`
+- `CLAUDE.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 새 prevention 메커니즘 추가가 아닌 기존 분류기 deny 의 carve-out (인가 범위 narrowing-out). Q1 구조적 누락 1건 / Q2 적용 범위 prose 명시 (Branch B clean only, ExitPlanMode 통과 plan only) / Q3 N/A.
+
+### 실증 가설
+
+Carve-out 효력은 마스터의 `/pre-deploy <leader>` 재실행 시점에 실증. 분류기가 `deploy_command` 를 자동 통과시키면 가설 검증 — 미통과 시 본 plan 의 HOTFIX 트리거 (prose 또는 패턴 형식 보정).
+
+---
+
 ## v001.67.0
 
 > 통합일: 2026-05-14
