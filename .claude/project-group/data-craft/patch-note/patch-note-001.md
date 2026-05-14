@@ -1,5 +1,14 @@
 # data-craft — Patch Note (001)
 
+## v001.45.0
+
+> 통합일: 2026-05-14
+
+### 변경 파일
+
+- (수정) src/app/lib/seedBundleData.ts
+- (수정) src/entities/theme/model/themeStore.ts
+
 ## v001.44.0
 
 > 통합일: 2026-05-14
