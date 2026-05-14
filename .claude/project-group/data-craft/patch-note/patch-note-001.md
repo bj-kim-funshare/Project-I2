@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.24.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#13
+
+### 페이즈 결과
+
+- **Phase 1** (`47d79cc`): `Promotion` / `ClientPromotion` 인터페이스에 `maxSeats` / `snapshotSeats` 필드 추가 + `mapPromotionRow` / `mapClientPromotionRow` 매핑 + `insertClientPromotion` args 에 옵셔널 `snapshotSeats` + INSERT 컬럼/플레이스홀더 추가. 기존 caller 호환 유지.
+- **Phase 2** (`2345b1f`): `purchasePromotion` 협업 seats 가드를 `assertValidSeats(seats, p.minUsers ?? 1, p.maxSeats ?? MAX_SEATS_PER_PLAN)` 로 교체 (minUsers 단독 검증 흡수). `insertClientPromotion` 호출 직전에 `snapshotSeats` 도출 + 재검증 후 박제.
+- **Phase 3** (`dfc625a`): `billingRenewal.service.ts` 협업 갱신 경로를 `cp.snapshotSeats` 기준 분기 — non-null 이면 박제값 직결 사용 (FOR UPDATE 락 생략), NULL 이면 기존 `findClientSeatsForUpdate` fallback. 양 경로 모두 `assertValidSeats` 재검증 추가 (admin 의 promotion.minUsers 상향 가능성 차단).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`, merge `88349b3`):
+- `src/types/promotion.types.ts`
+- `src/models/promotion.model.ts`
+- `src/services/promotion.service.ts`
+- `src/services/billingRenewal.service.ts`
+
+### 검증 결과
+
+- Lint: `pnpm lint` exit 0 (페이즈별 3회 + 머지 전 최종 확인).
+- 기존 테스트 영향 없음 (회귀 없음 — `promotion.routes.*.test.ts` 는 mocked charge 기반 HTTP integration, 시그니처 호환).
+- advisor: 계획/완료 시점 2회 통과. Phase 2 의 `seats-below-min` 에러 코드 narrowing 검토 — 외부 caller 가 해당 코드를 직접 매칭하지 않음 확인.
+
+### 운영 메모
+
+- legacy `client_promotion` 행 (snapshot_seats == NULL) 의 박제 마이그레이션은 본 plan 범위 밖. 필요 시 별도 `task-db-data` 로 백필.
+- snapshot 경로는 FOR UPDATE 락을 생략 — `snapshot_seats` 가 immutable 박제이므로 seats 값에 대해선 안전하지만 동일 company 동시 갱신 직렬화 효과 차이는 모니터링 포인트.
+
 ## v001.23.0
 
 > 통합일: 2026-05-14
