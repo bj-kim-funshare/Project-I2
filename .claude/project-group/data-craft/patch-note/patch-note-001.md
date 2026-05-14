@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.48.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#23 (참조: funshare-inc/data-craft#11 G5/G6)
+
+### 페이즈 결과
+
+- **Phase 1** (`0e02b55`): `billingRenewal.service.ts` 의 `pendingPromotionId` try/catch 분기를 3분기 로직 — 첫 실패 시 `pending_promotion_failed_at` 에 NOW() 기록, 7일 이내 재시도 보존, 7일 임계 초과 시 `pending_promotion_id` + `pending_promotion_failed_at` 모두 NULL 클리어 + 사용자 in-app 알림 (`createPendingPromotionAbandonedNotification`) + `logger.error` — 으로 확장. 성공 경로에 `setPendingPromotionFailedAt(null)` 리셋 추가. `client.model.ts` 에 `setPendingPromotionFailedAt` / `findPendingPromotionFailedAt` 신설 + `ClientRow` 에 `pendingPromotionFailedAt` 필드 추가. `notification.service.ts` 에 `createPendingPromotionAbandonedNotification` 신설 (DB-only, `subscription:renewal-failed` 패턴 미러).
+- **Phase 2** (`b2c76ad`): `promotion.service.ts` 에 `forceExpireClientPromotion(companyId)` 신규 함수 추가 — `findActiveClientPromotionByCompany` 로 cp 조회 후 `expireClientPromotionInTx` 직접 호출 (기존 `expireClientPromotion` 의 promotion-null `PromotionError('no-active')` throw 회피). `billingRenewal.service.ts:259` 의 `findPromotionById` null 분기를 `logger.error` 격상 + `forceExpireClientPromotion` + `createPromotionUnavailableNotification` try/catch 흐름으로 교체. `notification.service.ts` 에 `createPromotionUnavailableNotification` 신설 (DB-only, `subscription:plan-downgraded` 타입).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/services/billingRenewal.service.ts`
+- `src/models/client.model.ts`
+- `src/services/notification.service.ts`
+- `src/services/promotion.service.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm lint`): exit 0 — Phase 1, Phase 2 양쪽 PASS.
+- advisor() #1 (계획) / advisor() #2 (완료) 모두 5관점 PASS, BLOCK 없음.
+
+### 절차 노트
+
+- 사전 정리: `i-dev-001` 의 모든 내용을 양측 손실 없이 `i-dev` 로 머지 (master 명시 지시). data-craft / data-craft-server 두 저장소에서 `git merge --no-ff origin/i-dev-001` 충돌 없이 auto 머지. mobile / ai-preview 는 이미 i-dev 우위 (no-op).
+- G6 단기 코드는 신규 `forceExpireClientPromotion` 으로 처리. 장기 정책 (promotion soft-delete + FK 가드) 은 `client_promotion.promotion_id` 가 이미 `ON DELETE RESTRICT` 적용되어 있어 추가 변경 불요 — 이슈 #23 본문 및 #11 댓글에 기록.
+- DB 컬럼 `client.pending_promotion_failed_at` 추가는 plan-enterprise 의 mysql 실행 권한 분리 정책에 따라 본 플랜 범위 밖. 완료 시점 후속 프롬프트로 `/task-db-structure data-craft` 출력 — master 가 별도 실행.
+- 운영자 알림은 Slack/webhook 인프라 부재로 `logger.error` 유지 — 별도 후속.
+
+### 알려진 후속 부채 (informational blockers)
+
+- Dangling promotion 이 협업 프로모션이었을 경우 `wasCollaboration=false` 로 처리되어 `client.seats=1` 리셋 누락 가능. `client_promotion.snapshot_*` 9컬럼에 collaboration 류 컬럼 부재 — 향후 `snapshot_is_collaboration` 컬럼 추가 시 재검토.
+- `RenewableClient` 타입이 `billingScheduler.service.ts` 소재로 Phase 1 affected_files 범위 밖. catch 블록 내 단독 DB 조회 (`findPendingPromotionFailedAt`) 로 우회. 추후 RenewableClient 에 컬럼 추가 여부는 별도 chore 결정.
+- `sse.service.ts` 가 dispatch 의 affected_files 에 선언되어 있었으나 실제 코드베이스는 `src/services/sse/sseEventEmitter.ts` 로 분산. 두 신규 알림 모두 DB-only 처리 — SSE emit 필요 시 별도 phase.
+
+### 이슈 #11 후속
+
+본 플랜 완료 시 main session 이 funshare-inc/data-craft#11 에 G5/G6 완료 + G1·B7 미처리 명시 댓글을 별도 게시. 잔여 finding 추적은 #11 OPEN 유지 (master 결정).
+
 ## v001.47.0
 
 > 통합일: 2026-05-14
