@@ -12,6 +12,8 @@ Pre-flight a deploy. Two outcomes:
 
 The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main risk is structurally avoided by removing the auto-fix pathway entirely. Close authority is scoped to this skill's own issues — pre-deploy never closes issues created by other skills.
 
+본 스킬은 **원격 저장소 / 배포 대상 인프라** 에 대해 동작한다 (Branch A 는 GitHub 이슈 생성, Branch B 는 `build_command` + `deploy_command` 실행). 로컬 소스 트리에 commit 을 만들지 않는다.
+
 ## Invocation
 
 ```

@@ -396,11 +396,11 @@ Tier C skills dispatch `skill_finalize` only (except `create-custom-project-skil
 #### `patch-confirmation` — moments: `skill_finalize`
 
 ##### `skill_finalize`
-- Required: `target` (`"아이OS"` or leader name), `result_summary`, `patch_note_version`, `patch_note_file`, `analyzed_file_count`, `wip_branches_merged[]`, `push_status` (`"success"` | `"failed"`)
+- Required: `target` (`"아이OS"` or leader name), `result_summary`, `patch_note_version`, `patch_note_file`, `analyzed_file_count`, `wip_branches_merged[]`, `push_status` (`"success"` | `"failed"`), `mode` (`"commit_and_push"` | `"push_only"`), `commits_pushed_count` (Case A: integer; Case B: `{repo_name: int, ...}` map + separate `i2_main` integer; 0 is a valid value for `push_only` mode)
 - Optional: `file_breakdown` (`{added, modified, deleted}`)
 - Narrative sections (emit per payload): `#### 🎯 명령원문` (target), `#### ✅ 결과` (새 패치노트 버전 / 파일 / 분석 파일 수).
-- Table rows (short-scalar only): `| 📦 패치노트 | <version> |`, `| 🔀 WIP 머지 | <branch> ✅ |` rows, `| 메타 | WIP 머지 ✅ · push 상태 |`.
-- Notes: 🏁 heading. When `push_status: "failed"`, the push row uses 🚨 icon and closes with "마스터 수동 `git push origin main` 필요."
+- Table rows (short-scalar only): `| 📦 패치노트 | <version> |`, `| 🔀 WIP 머지 | <branch> ✅ |` rows, `| 메타 | mode: <mode> · WIP 머지 ✅ · push 상태 |`.
+- Notes: 🏁 heading. When `push_status: "failed"`, the push row uses 🚨 icon and closes with "마스터 수동 `git push origin main` 필요." `push_only` 모드는 0 commit push 도 정상.
 
 ---
 
