@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.43.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스8)
+> 대상: 아이OS
+
+### 개요
+핫픽스7 의 `aspect-ratio: 1 / 1; width: auto !important; height: 100% !important;` 시도가 Chart.js 의 canvas backing buffer 와 충돌해 캔버스가 자연 크기로 폭주, 카드 박스를 뚫고 인근 차트를 가리는 증상. aspect-ratio 폐기 — grid 첫 컬럼을 chart-body 높이와 일치하는 고정폭 (240px / detail 260px) 으로 두고 canvas 는 `width:100%; height:100%; max-height:240px` 로 회귀. 결과: canvas 가 항상 정사각형 240×240 (detail 260×260), 박스 안에 안정 배치, 우측 셀에 HTML 범례.
+
+### 페이즈 결과
+- **핫픽스8** (`monitoring/styles.css`, `monitoring/index.html`):
+  - `.chart-card.has-html-legend .chart-body` 의 grid `grid-template-columns: minmax(0, 1fr) auto` → `240px minmax(0, 1fr)`.
+  - 동일 셀렉터의 canvas 룰을 `width:100% !important; height:100% !important; max-height:240px` 로 회복 (aspect-ratio / justify-self / width:auto 삭제).
+  - `.detail-section.has-html-legend .detail-chart` 도 `260px minmax(0, 1fr)` + canvas max-height 260px.
+  - 자산 cache-bust `?v=20260514-7` → `?v=20260514-8`.
+
+### 영향 파일
+- `monitoring/styles.css`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 시각 정정. 신규 메커니즘 추가 없음.
+
 ## v001.42.0
 
 > 통합일: 2026-05-14
