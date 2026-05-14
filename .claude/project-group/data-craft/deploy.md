@@ -23,7 +23,7 @@ projects:
     env_management: git-tracked
   - name: data-craft-server
     role: BE
-    tool: aws
+    tool: other
     target: https://d3u7b7cxusjkuc.cloudfront.net
     build_command: pnpm build
     deploy_command: git checkout main && git push origin main:aws-deploy
