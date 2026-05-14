@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.22.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 14, cumulative phase 20)
+
+### Hotfix 결과 (반복 환경 결함 근본 정정)
+
+마스터 보고: vite dev server 에서 `Failed to resolve import "fs_external_data_viewer/styles.css"` 가 어제 fix 후 다시 재발. fs-external-data-viewer / fs-sub-data-viewer 의 `dist/styles.css` 만 반복 누락 패턴.
+
+**Root cause** (main session 직접 확인): 두 패키지의 `dev` 스크립트가 `"tsup --watch"` 만 실행 — tsup 가 dist 를 clear 하고 JS 만 재출력 → styles.css 누락. `fs-data-viewer` 의 dev 스크립트는 vite 기반이라 dist 미간섭 (css 보존). 두 패키지에서 어느 시점이라도 `pnpm dev` 가 돌면 css 가 사라지는 패턴.
+
+- **Phase 20** (`e787f7dc`):
+  - `fs-external-data-viewer/package.json` 과 `fs-sub-data-viewer/package.json` 의 `dev` 스크립트를 `"tsup --watch"` → `"pnpm build:css && tsup --watch"` 로 변경. dev 시작 시 styles.css 1회 생성 후 tsup watch 진입.
+  - css 자체의 watch 는 빈도가 낮아 매번 빌드 불필요. tsup 가 dist clear 시점에도 build:css 가 함께 다시 실행되도록 하려면 별도 watch 도구 (concurrently 등) 도입 필요 — 본 hotfix 는 시작 시점 1회만으로도 마스터 보고 문제 해소.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-external-data-viewer/package.json` (dev script)
+- `packages/fs-sub-data-viewer/package.json` (dev script)
+
+### 검증 결과
+
+- 코드 변경 0건 (package.json scripts 만 변경).
+- TSC delta: 0.
+- 환경 fix — dev server 재시작 시 정상 동작 확인 권장.
+
+### 마스터 수동 회귀 시나리오
+
+1. 두 패키지의 `pnpm dev` 가 시작 시점에 styles.css 를 생성하는지 확인.
+2. dev server 가 fs-external-data-viewer / fs-sub-data-viewer 의 styles.css import resolve 성공 여부 확인.
+3. 향후 styles 변경 시 일시적으로 stale 될 수 있으나 — css 변경 빈도가 낮아 dev 재시작 1회로 해소.
+
+### Post-action hints
+
+- 본 hotfix 는 dev 시작 시점 1회 build:css. **tsup watch 가 자동으로 dist clear 하면 그 시점에 css 가 다시 사라질 수 있음**. 영구 watch 가 필요하면 `concurrently` 또는 `npm-run-all` 도입해 `tsup --watch` 와 `tailwindcss --watch` 를 병렬 실행 — 후속 hotfix 검토 가능.
+
 ## v001.21.0
 
 > 통합일: 2026-05-14
