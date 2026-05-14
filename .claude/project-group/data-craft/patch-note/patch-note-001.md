@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.49.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#25
+
+### 페이즈 결과
+
+- **Phase 1** (`47f8177`): `viewer.group.ts:57` 및 `builder.form.ts:106` 의 TEMP 그룹명 생성식에서 `randomUUID()` 출력을 `randomUUID().replace(/-/g, '').slice(0, 16)` 로 교체. 결과 그룹명 길이 viewer 측 39자 / builder 측 44자, SP `db.sql/03-procedures.sql:1333` 가 구성하는 lock key (`CONCAT('lock_group_', group_name)`) 가 각각 50자 / 55자로 MySQL `GET_LOCK` 64자 한계 안으로 복귀. 동일 저장소 `inputStore.service.ts:31-34` 의 53자 상한 패턴을 참조하는 인라인 주석을 두 사이트에 추가하여 향후 회귀를 차단. race 방어 (UUID 64-bit 엔트로피) 보존.
+
+### 영향 파일
+
+data-craft-server:
+- `src/services/viewer/viewer.group.ts`
+- `src/services/builder/builder.form.ts`
+
+### 근본 원인
+
+v001.21.0 (plan-enterprise #8 Phase 3, `2a84cec`) 에서 race condition 방어로 TEMP 명 접미사를 `Math.random()` → `randomUUID()` 로 교체할 때 lock key 길이 검증을 누락한 회귀. `randomUUID()` 의 36자 (dashes 포함) 가 `lock_group_` 접두사 11자와 합산되어 70자 (>64자) 가 됨. 본 플랜은 동 저장소에 이미 존재하던 `inputStore.service.ts` 의 16자 truncation 패턴을 동일하게 적용해 정합화.
+
+### 후속 (미수행)
+
+- F-1: SP `sp_manage_data_group` 자체에 `CHAR_LENGTH(v_lock_key) > 64` 검사 또는 SHA-기반 짧은 lock key fallback 추가 (defense-in-depth, `task-db-structure` 후속).
+- F-2: `__TEMP_FORM_*` 잔재 정리 (v001.21.0 F-2 와 동일, 본 플랜 미수행).
+
 ## v001.48.0
 
 > 통합일: 2026-05-14
