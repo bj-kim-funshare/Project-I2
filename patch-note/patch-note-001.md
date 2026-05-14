@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.40.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스5)
+> 대상: 아이OS
+
+### 개요
+도넛 3종 (모델 분포 / 스킬 점유 / 캐시 vs 비-캐시) 의 우측 범례가 검정 글자로 렌더되어 어두운 배경에서 안 보임. 원인: `generateLabels` 콜백이 반환하는 item 들이 `fontColor` 를 명시하지 않아 일부 Chart.js 빌드에서 `labels.color` 가 무시되고 기본 색으로 폴백. 각 item 에 `fontColor: '#e6e9f2'` 명시. 추가로 마스터 요구에 따라 범례 색 박스를 정사각형 (12×12) 으로 강제.
+
+### 페이즈 결과
+- **핫픽스5** (`monitoring/script.js`, `monitoring/index.html`):
+  - `renderChartModelDonut` / `renderChartSkillDonut` / `renderChartCacheDonut` 의 `legend.labels.generateLabels` 반환 객체에 `fontColor: '#e6e9f2'` 추가 (3 곳).
+  - 동일 함수들의 `legend.labels` 에 `boxWidth: 12, boxHeight: 12` 추가 — 색 박스 정사각형 (3 곳).
+  - 자산 cache-bust 쿼리 `?v=20260514-4` → `?v=20260514-5`.
+
+### 영향 파일
+- `monitoring/script.js`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 시각 정정. 신규 메커니즘 추가 없음.
+
 ## v001.39.0
 
 > 통합일: 2026-05-14
