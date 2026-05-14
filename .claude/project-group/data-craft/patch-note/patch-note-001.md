@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.37.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 6)
+
+### 페이즈 결과
+
+핫픽스 6 은 2 sub-dispatch — 카드 위젯의 시각 중심 보정 + 원형 게이지 수치 잘림 회피.
+
+- **Phase 10 (hotfix 6a)** (`89f8fa99`): 카드 위젯의 메인 컨텐츠 (값 display) 가 헤더 row 아래 본문 영역의 중앙에 정렬되어 카드 전체 기준으로는 약간 아래로 치우쳐 보이는 문제. `CardWidget` 내부에 `hasHeader` 계산 (titleConfig.text / config.title / iconPlacement === 'header' 시 iconConfig.name 유무) 도입 후 본문 wrapper 의 style 에 `marginTop: hasHeader ? -14 : 0` 적용 — 헤더 row 의 일반 높이 (~28px) 절반만큼 본문을 위로 올려 시각 중심을 카드 전체 중심에 일치. 헤더가 없는 케이스는 보정 0 으로 자연스럽게 처리.
+- **Phase 10 (hotfix 6b)** (`3c1b4166`): 원형 게이지 (`shape === 'circle'`) 의 하단 caption 으로 표시되는 numeric value span 이 위젯 컨테이너 높이 제약 때문에 잘리는 문제. `GaugeWidget` circle 분기의 outer motion.div 를 `flex-col` → `flex-row items-center justify-center gap-3` 로 변경, SVG 를 좌측 (flex-shrink-0) 에 고정하고 numeric value span 을 SVG 우측으로 이동 (`text-2xl font-bold flex-shrink-0`). SVG 내부 중앙 퍼센티지 텍스트 / mask / threshold 렌더링은 손대지 않음. semicircle / linear 분기 변경 없음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +17/-4, 2 파일 모두 affected_files 내.
+- 페이즈 iter: 6a 는 1회차 API socket error 로 0 커밋 상태 유지 후 재디스패치 1회 통과 (실패 사후 작업 없음 — clean tree). 6b 1회 통과.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 카드 위젯 수동 검증: 헤더 (제목/아이콘) 가 있는 카드와 없는 카드 양쪽에서 값 display 가 카드 전체 시각 중심에 위치하는지 확인. 스파크라인 켜진 카드도 동일 보정 적용되어 자연스러움.
+- 원형 게이지 수동 검증: SVG 가 게이지 영역 중앙에 그대로 있고 numeric value 가 우측에 잘림 없이 표시되는지 확인. 게이지 폭이 매우 좁아지는 케이스의 좌우 fallback 은 본 핫픽스 범위 밖 — 별도 핫픽스 가능.
+
 ## v001.36.0
 
 > 통합일: 2026-05-14
