@@ -30,10 +30,15 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
               │
               ▼   (collect.py 가 파싱)
        monitoring/data/aggregate.json   ← gitignore (런타임 산출물)
+       monitoring/data/hourly.json      ← 동시 출력; 최근 14일·시간 단위 희소 집계 (실시간 모드용)
               │
               ▼   (script.js 가 fetch + 렌더)
             대시보드
 ```
+
+## 실시간 모드
+
+기간 선택기에서 **실시간**을 고르면 `data/hourly.json` (시간 단위 희소 집계) 을 기반으로 렌더링한다. 비교 대상 없이 선택 시 이번 주 월요일 00:00(로컬) ~ 현재 구간을 집계한다. 비교 대상(1시간 전 / 3시간 전 / 7시간 전 / 24시간 전 / 2일 전 / 3일 전 / 5일 전)을 선택하면 `[지금 - N, 지금]` 을 기준 구간, `[지금 - 2N, 지금 - N]` 을 비교 구간으로 잡아 KPI 델타 배지와 차트를 동일 창폭으로 비교한다. `hourly.json` 미존재 시(collect.py 미실행) 화면에 한국어 안내를 표시하고 크래시하지 않는다.
 
 ## 집계 축
 
