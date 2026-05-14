@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.25.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#14
+
+### 페이즈 결과
+
+- **Phase 1** (`9c8606b` + 어설션 1줄 후속 정정 `8667772`): 5개 테스트 파일 (`charge.service.test.ts`, `billingRenewal.test.ts`, `billingSubscription.executeFirstPayment.test.ts`, `src/tests/zone-01/sec-srv-45-payment-orderid.test.ts`, `seatChange.service.test.ts`) 에서 stale `cancelPayment` mock 프로퍼티와 단언 prune. logger mock 에 `critical: vi.fn()` 추가 (production 보상 분기가 `logger.critical({event_type:'PAYMENT_CHARGE_DB_FAILURE', context:...})` 로 이전됨). 보상 시도/실패 부수효과 검증 케이스는 logger.critical spy 단언으로 1:1 매핑 교체, cancelError 전파 전용 케이스는 삭제. iter#1 직후 노출된 `billingRenewal.test.ts:171` 의 stale `reason` 어설션 (`'자동갱신 결제 3회 연속 실패'` → `'자동갱신 결제 3회 연속 실패 → Free 강등'`) 1줄 정정. 5개 영향 파일 vitest 개별 실행 모두 PASS.
+- **Phase 2** (`5732c8f`): `ChargeResult` 의 `orderid-mismatch` variant 에서 orphan `cancelError?: Error` 필드 제거. JSDoc 의 "cancelKey/cancelError 반환" 문구를 "paymentKey 반환" 로 정정. `grep -rn cancelError src/ tests/` 0건 확인.
+- **Phase 3** (`b8f7673`): `billingRenewal.service.ts:renewSingleClient()` next-cycle 좌석 변경 적용 흐름에서 `appliedSeats = Math.max(currentSeats + netDelta, 1)` 직후 + `updateClientSeatsWithConnection` 호출 직전에 `assertValidSeats(appliedSeats, 1, MAX_SEATS_PER_PLAN)` 1줄 삽입. `@/utils/paymentGuards` import 보강. `billingSubscription.service.ts:128` 동일 패턴.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`, merge `11c0525`):
+- `src/services/charge.service.test.ts`
+- `src/services/billingRenewal.test.ts`
+- `src/services/billingSubscription.executeFirstPayment.test.ts`
+- `src/tests/zone-01/sec-srv-45-payment-orderid.test.ts`
+- `src/services/seatChange.service.test.ts`
+- `src/types/charge.types.ts`
+- `src/services/billingRenewal.service.ts`
+
+### 검증 결과
+
+- Lint: `pnpm lint` exit 0 (페이즈별 3회 모두 통과).
+- Phase 1 vitest: 5개 영향 파일 개별 실행 모두 PASS (charge=13/13, billingRenewal=7/7, billingSubscription.executeFirstPayment=4/4, sec-srv-45=3/3, seatChange=3/3).
+- advisor: 계획 시점 + 완료 시점 5관점 2회 모두 PASS.
+- 사전 존재 실패 (webhook.controller.test.ts, webhook.idempotency.test.ts, promotion.routes.\*.test.ts 등) 는 본 플랜 스코프 외 — debug-chain 라우터 미존재 / billing.model.ts 경로 불일치 / webhook.model.ts 미존재 등 별도 후속.
+
+### 운영 메모
+
+- Phase 3 가드 위치는 `Math.max(..., 1)` clamp 뒤 — 하한 (`< 1`) 은 silent clamp, 가드는 상한 (`> MAX_SEATS_PER_PLAN`) 만 보호. 마스터 명시 ("Phase 1 가드와 동일 패턴") 채택. 하한 검증이 필요해지면 `Math.max` 이전 위치로 이전 변형 가능.
+- Phase 1 의 logger.critical mock 추가는 prod 의 보상 분기 이전을 따라잡은 후속 — 동일 패턴이 필요한 신규 결제 테스트 작성 시 동일하게 적용 필요.
+
 ## v001.24.0
 
 > 통합일: 2026-05-14
