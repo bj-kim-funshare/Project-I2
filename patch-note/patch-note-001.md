@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.49.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스14)
+> 대상: 아이OS
+
+### 개요
+2건 동시 정정. (1) 서브에이전트 사용량 차트가 실시간 모드에서 빈 상태로 보임 — 원인: `aggregateHoursInWindow()` 가 `by_agent` 미생성. day-tokens/cost 처럼 풀 aggregate (`aggData`) 사용으로 변경. (2) 상세 모델별·스킬별 도넛이 위아래로 늘어진 타원, 도넛과 표 보기가 딱 붙어 있음 — 원인: `.detail-chart` 의 height 280px 와 grid 컬럼 260px 불일치로 셀이 260×280 직사각형, 그리고 `.detail-chart` 와 `.table-block` 사이 margin 없음. 핫픽스10 의 정합 정리를 detail 에 적용.
+
+### 페이즈 결과
+- **핫픽스14** (`monitoring/script.js`, `monitoring/styles.css`, `monitoring/index.html`):
+  - `script.js` `renderAll()` 에서 `renderChartAgentBar(data)` → `renderChartAgentBar(aggData)`. 실시간 모드에서도 풀 aggregate 의 `by_agent` 사용.
+  - `styles.css` `.detail-section.has-html-legend .detail-chart` 에 `height: 260px;` 추가 — grid 컬럼폭과 정합. `margin-bottom: 12px;` 추가 — 도넛과 `.table-block` 사이 시각적 간격 확보.
+  - 자산 cache-bust `?v=20260514-13` → `?v=20260514-14`.
+
+### 영향 파일
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 데이터 소스 정합 + 레이아웃 정정. 신규 메커니즘 추가 없음.
+
 ## v001.48.0
 
 > 통합일: 2026-05-14
