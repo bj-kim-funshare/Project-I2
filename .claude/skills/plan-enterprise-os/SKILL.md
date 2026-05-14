@@ -1,6 +1,6 @@
 ---
 name: plan-enterprise-os
-description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into main.
+description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into main. Optionally routes phase execution to Codex via --codex flag while Claude remains planner, verifier, and final authority.
 ---
 
 # plan-enterprise-os
@@ -19,10 +19,12 @@ The skill mirrors `plan-enterprise`'s lifecycle (11 steps, two-WIP merge, issue-
 ## Invocation
 
 ```
-/plan-enterprise-os <plan description in Korean (may reference an existing issue with #N)>
+/plan-enterprise-os <plan description in Korean (may reference an existing issue with #N)> [--codex]
 ```
 
 Open-form description, optionally referencing an existing issue on this repo.
+
+`--codex` is optional. When present, Claude performs planning, issue creation, Codex prompt generation, and verification, while Codex executes the phase commits on the `-작업-codex` WIP branch.
 
 ## Pre-conditions
 
@@ -126,7 +128,10 @@ Issue body template extends `plan-enterprise`'s with one section:
 git worktree prune
 
 # Create WIP A worktree (working-tree-level isolation)
+# Default:
 wip_a="plan-enterprise-os-<N>-<slug>-작업"
+# if --codex is set:
+wip_a="plan-enterprise-os-<N>-<slug>-작업-codex"
 wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
 git worktree add -b "${wip_a}" "${wt_a}" main
 git -C "${wt_a}" push -u origin "${wip_a}"
@@ -135,6 +140,13 @@ git -C "${wt_a}" push -u origin "${wip_a}"
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ### Step 7 — Phase execution
+
+Step 7 branches on the invocation flag:
+
+- Default path (no `--codex`): use the existing `phase-executor` dispatch loop below. Do not change the retry budget, issue comments, or worktree semantics.
+- `--codex` path: generate one Codex prompt for the active phase set, halt for master's bridge message, then verify Codex commits before Step 8.
+
+### Default path — `phase-executor`
 
 Phase-executor receives: plan issue number (`#N`), `worktree_cwd` (absolute path of the WIP A worktree), harness marker `'os'`, and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
 
@@ -153,21 +165,87 @@ Per-phase main-session verification ritual is identical to `plan-enterprise`'s 5
 
 Iteration budget: 3 per phase, identical to `plan-enterprise`.
 
+### `--codex` path — master-mediated Codex execution
+
+Use this path instead of dispatching `phase-executor` when the invocation includes `--codex`. The path applies to the initial full phase set and to a HOTFIX re-entry's single hotfix phase.
+
+#### 7-codex-a. Generate Codex prompt and halt
+
+Generate a prompt for master to paste into Codex. Output it under this Korean framing:
+
+```text
+Codex 에게 paste 할 프롬프트입니다:
+
+<prompt>
+```
+
+The prompt includes:
+
+- Plan issue number and URL.
+- Target repo: Project-I2 (this repo).
+- Target branch name: `plan-enterprise-os-<N>-<slug>-작업-codex` for initial work, or the current `-codex` hotfix WIP branch when re-entering from `핫픽스`.
+- Base branch: `main`.
+- Full phase breakdown for the active phase set: `phase_number`, `title`, `type`, `description`, and `affected_files`.
+- Instruction for Codex to read `CLAUDE.md` from the worktree directly (it is in-repo and accessible from the Codex sandbox).
+- Instruction for Codex to read the plan issue body via `gh issue view <N>` for harness context — the `## 조사자료` section contains memory/explore output and the `## advisor 계획 검증 (6 관점)` section contains the Treadmill Audit verdict. Memory files at `~/.claude/projects/.../memory/*.md` are outside the repo and must NOT be referenced inline in the prompt.
+- Instruction to work phase by phase and make one commit per phase.
+- Instruction to keep every commit inside that phase's `affected_files`.
+- Instruction to stop and report if scope expansion is required.
+- Fact-only report requirements: commits, files changed, lines changed if available, commands run if any, blockers, and notes.
+- Explicit reminder that Codex cannot declare final completion.
+- Expected master return forms: `코덱스 완료, {report}` or `코덱스 실패, {report}`.
+
+After outputting the prompt, halt. Do not proceed until master returns one of the Codex trigger forms.
+
+#### 7-codex-b. On `코덱스 완료, {report}`
+
+1. Surface the Codex report in the skill's working notes.
+2. Fetch the Codex branch:
+   ```bash
+   git fetch origin plan-enterprise-os-<N>-<slug>-작업-codex
+   ```
+   For hotfix re-entry, fetch the active hotfix WIP branch instead.
+3. Verify the branch exists. Missing branch → failure policy.
+4. Verify the branch has commits since `main`:
+   ```bash
+   git log --oneline main..origin/<codex-wip-branch>
+   ```
+   Empty result → failure policy.
+5. For each Codex commit in `main..origin/<codex-wip-branch>`, run the same main-session verification ritual:
+   - `git show <commit> --stat`.
+   - Verify changed files are within the cumulative active phase `affected_files`. When commit messages or Codex report map a commit to a specific phase, prefer that phase's own `affected_files`; otherwise use the active phase set's cumulative allowed files.
+   - `git diff <prev_commit>..<commit>` inspection.
+   - Verify the diff substantively matches the corresponding phase description and does not creep into later phases.
+   - **Treadmill-aware check**: if a Codex commit added or substantially modified a rule/hook/agent/skill, verify the issue body's Treadmill Audit verdict confirms Q3 (something retired) was honored. If the implementation silently dropped Q3, halt and report to master before Step 8.
+   - Parse blockers from Codex's master-reported text and decide whether they require master attention before Step 8.
+6. If all commits pass, append the normal per-phase issue comments using Codex's report and the verified commit SHAs, then proceed to Step 8.
+7. If any check fails, halt and report the mismatch to master. Do not run advisor #2.
+
+#### 7-codex-c. On `코덱스 실패, {report}`
+
+Surface master's reported Codex context and halt. Master options:
+
+- Retry with a revised Codex prompt (return to 7-codex-a).
+- Abort the plan.
+- Re-plan from Step 3 if the scope or phase breakdown was wrong.
+- Switch to the default `phase-executor` path for the remaining active phase set.
+
 ### Step 8 — Final advisor call #2 (6 perspectives)
 
-Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts patch-note authoring.
+Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts patch-note authoring. Step 8 onward is identical regardless of whether Step 7 used `phase-executor` or Codex.
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
 
 본 스킬의 머지는 N+1=2-step (WIP A 1번 + WIP B 1번) 으로 plan-enterprise 의 일반화된 (N+1)-step 머지 절차의 N=1 케이스와 동치.
 
-1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
+1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업` (or `-작업-codex` if `--codex` was used). Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
 2. Create WIP B as a worktree from main:
    ```bash
    wip_b="plan-enterprise-os-<N>-<slug>-문서"
    wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
    git worktree add -b "${wip_b}" "${wt_b}" main
    ```
+   The document WIP never receives a `-codex` suffix — patch-note is always Claude-authored.
 3. Patch-note path: `patch-note/patch-note-{NNN}.md` (repo root, NOT under `.claude/`). Parse for max `K`; new entry = `v{NNN}.{K+1}.0`.
 
    v1 caveat: this repo currently has no `patch-note/patch-note-001.md` — that file is master's responsibility to bootstrap on first I2 use of `patch-update`/`patch-confirmation`. If `patch-note/` is empty when this skill reaches Step 9, halt with `"patch-note/ 부재 — 마스터가 patch-note-001.md 수동 생성 후 재호출"`.
@@ -221,9 +299,32 @@ Relay the agent's response verbatim to master, then append the gate prompt:
 
 #### HOTFIX re-entry path
 
-Identical to `plan-enterprise` Step 11's HOTFIX path with two differences:
-- The new phase's verification ritual includes the Treadmill-aware check (Step 7's "additional check specific to harness work") — if the hotfix adds/modifies a rule/hook/agent/skill, main session verifies Q3 trade-out is honored.
-- The new patch-note entry `v<NNN>.<K+2>.0` includes the Treadmill Audit subsection per the harness patch-note shape.
+Each hotfix uses its own single WIP — code + patch-note entry both live on the hotfix WIP. No `-작업/-문서` split for hotfixes (intentional carve-out from §G's code-doc separation rule).
+
+When master types `핫픽스 <description>`:
+
+1. Treat `<description>` as a single new phase metadata. Main session infers `affected_files`:
+   - From `<description>` semantically.
+   - If unclear, ask master one sharpening question (text, no card).
+2. The new phase number = `prior_max_phase + 1` (cumulative across the plan).
+3. **Create hotfix WIP** as a worktree from `main`:
+   ```bash
+   wip_h="plan-enterprise-os-<N>-<slug>-핫픽스<M>"          # default; M = cumulative hotfix count, from 1
+   wip_h="plan-enterprise-os-<N>-<slug>-핫픽스<M>-codex"    # when the original invocation used --codex
+   wt_h="../$(basename "$(pwd)")-worktrees/${wip_h}"
+   git worktree add -b "${wip_h}" "${wt_h}" main
+   git -C "${wt_h}" push -u origin "${wip_h}"
+   ```
+4. Re-enter Step 7 against this hotfix WIP:
+   - **default flow**: dispatch `phase-executor` (1 phase, 3-iter cap reset). Apply Treadmill-aware check if phase adds/modifies a rule/hook/agent/skill.
+   - **--codex flow**: generate a Codex prompt for just this hotfix phase (same packet shape, single phase). Include instruction for Codex to read `CLAUDE.md` from worktree and plan issue body via `gh issue view <N>`. Output + halt. Master returns `코덱스 완료, {보고}` or `코덱스 실패, {보고}`. After Codex commits accepted, apply Treadmill-aware check: if hotfix adds/modifies a rule/hook/agent/skill, verify Q3 trade-out honored per plan issue's Treadmill Audit verdict.
+5. After phase-executor returns success (or Codex result accepted):
+   - **Step 8 advisor #2** re-runs on the hotfix commits only.
+   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor) **on the same hotfix WIP** (not on the original `-문서`). Previous entries are not modified. The new entry summarizes only the hotfix phase and includes the Treadmill Audit subsection.
+   - **Step 10 merge** the hotfix WIP into `main` — single merge commit per hotfix. After merge: `git worktree remove "${wt_h}"`.
+6. Return to **Step 11 PENDING**. Master may issue more `핫픽스` (next gets a new WIP, `M+1`) or finalize.
+
+Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.
 
 #### Other input handling
 
@@ -258,6 +359,9 @@ Inherits `plan-enterprise`'s failure modes; additions specific to OS:
 | `patch-note/` (root) missing at Step 9 | `"patch-note/ 부재 — 마스터가 patch-note-001.md 수동 생성 후 재호출"` |
 | Treadmill Audit FAIL at Step 3 or Step 8 | `"Treadmill Audit 실패: <reason>. 마스터 결정 필요 (trade-out 추가 또는 계획 폐기)."` |
 | `git worktree add` failure | `"worktree 생성 실패: <error>. 마스터 결정 필요."` |
+| `--codex` 완료 통보 후 Codex branch 없음 | `"Codex branch 부재. master 가 완료 통보했으나 plan-enterprise-os-<N>-<slug>-작업-codex 브랜치 없음."` |
+| `--codex` 완료 통보 후 Codex commit 없음 | `"Codex commit 부재. master 가 완료 통보했으나 main 이후 Codex commit 없음."` |
+| Codex commit 이 phase `affected_files` 초과 | `"Codex output scope mismatch — <commit> 이 affected_files 외 파일 변경: <files>. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
@@ -269,6 +373,8 @@ In scope:
 - Per-phase main-session verification (5-step ritual + Treadmill-aware check).
 - Two-WIP merge (`작업` first, then `문서`).
 - Patch-note at root `patch-note/`.
+- `--codex` invocation mode (single-repo, N=1 fixed).
+- Codex-mediated hotfix re-entry for plans that started with `--codex`.
 - 본 스킬은 N=1 고정. plan-enterprise 의 cross-repo phase 절차 (work_repo 필드 / per-repo WIP A lazy 생성 / N+1-step 머지) 는 본 스킬에 N/A — '한 페이즈 = 한 work repo' 어휘만 정렬.
 
 Out of scope (v1):
@@ -279,3 +385,4 @@ Out of scope (v1):
 - Auto-bootstrap of `patch-note/patch-note-001.md` (master's manual step).
 - Mid-plan plan revision via in-flight ExitPlanMode (one ExitPlanMode per invocation).
 - Auto-close of the plan issue (master decides).
+- `--codex` + multi-repo (N/A — 본 스킬은 N=1 고정).
