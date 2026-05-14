@@ -1,5 +1,30 @@
 # 아이OS — Patch Note (001)
 
+## v001.65.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #33
+> 대상: 아이OS
+
+### 변경 사유
+
+`/pre-deploy data-craft` 가 4개 멤버 레포 모두 `i-dev` 위에 있다는 이유로 진입 검증 실패로 halt 후 "각 레포 `git checkout main` 후 재호출" 을 요구함 — 결함. pre-deploy 는 현 시점 `main` 기준으로 빌드/배포하는 스킬이므로 호출 시 멤버 레포를 자동으로 `main` 으로 정렬해야 한다. `main` 브랜치 자체가 없거나 checkout 이 실패할 때만 halt/보고. i-dev 가 main 보다 앞서있는지 여부는 본 스킬 검증 영역이 아니다 (마스터가 의도적으로 머지 스킬을 사용하지 않아 일부 변경을 배포에서 제외했을 수 있음).
+
+### 페이즈 결과
+
+- **Phase 1**: `branch-alignment.md` §1 / §2 의 Branch-overridden context (pre-deploy) 를 "verify on main" → "auto-checkout main, fail only on main 부재 or checkout 실패" 로 교체. bash 패턴 2종 실패 메시지로 분리. `pre-deploy/SKILL.md` Pre-conditions §1, Failure policy 표 (1행 → 2행), Scope (v1) 의 "main 기준 검증/배포" 항목도 동일 의미로 갱신 — "검증" 어휘를 "정렬 액션" 으로 명확화.
+
+### 영향 파일
+
+- `.claude/md/branch-alignment.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+
+### Treadmill Audit
+
+PASS — Q3 trade-out 이행: 기존 "pre-deploy 진입 시 멤버 레포 main 위 엄격 검증" 1건이 "자동 main 정렬 (실패 조건 2종 으로 한정)" 으로 retire/대체. 신규 메커니즘 추가 없음.
+
+---
+
 ## v001.64.0
 
 > 통합일: 2026-05-14
