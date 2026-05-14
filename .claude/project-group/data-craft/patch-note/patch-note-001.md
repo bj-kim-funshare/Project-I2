@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.32.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#19
+
+### 페이즈 결과
+
+- **Phase 1** (`83448488`): 7개 `packages/fs-*` 패키지의 `tsup.config.ts` 정규화. (1) `onSuccess: "pnpm build:css"` 7개 전체에 통일 적용 — `fs-data-viewer` 기존 인라인 `tailwindcss -i ./src/styles.css -o ./dist/styles.css --minify` 도 `pnpm build:css` 로 정규화하여 single source of truth 가 `package.json scripts.build:css` 로 일원화. (2) `clean: true` 누락 3개 explorer (`fs-data-viewer-explorer`, `fs-external-data-viewer-explorer`, `fs-sub-data-viewer-explorer`) 에 추가 → 7개 모두 동일 구조 (`clean: true` + `onSuccess: "pnpm build:css"`).
+- **Phase 2** (`7c4b89f0`): 7개 패키지 `package.json scripts.build` 를 `"tsup && pnpm build:css"` → `"tsup"` 로 단순화. `onSuccess` 가 single source 로 동작하므로 직렬 호출 중복 제거. turbo 캐시 시점과 `build:css` 완료 시점이 항상 일치 → `dist/styles.css` 누락 상태가 캐시되는 구조적 결함 해소. `scripts.build:css` 및 `scripts.dev` 는 미변경 (dev 의 `pnpm build:css && tsup --watch` prelude 는 `--watch` 첫빌드 race 회피용으로 보존).
+
+### 회귀검증 결과
+
+캐시 클리어 (`pnpm -r exec rm -rf dist` + `rm -rf .turbo node_modules/.cache`) → `pnpm build:packages` (10 tasks, 47.5s) → `pnpm typecheck:all` (8 tasks, exit 0, 11.8s) → 7개 `packages/fs-*/dist/styles.css` 모두 존재 (21KB ~ 90KB) → `pnpm exec turbo run build --filter='./packages/fs-external-data-viewer'` 재실행 시 FULL TURBO 캐시 hit (103ms) 후에도 styles.css 76846B 잔존 확인. 추가 실증: `build:css` 를 일시 `"exit 1"` 로 변경 후 `pnpm build` 시 tsup ELIFECYCLE exit 1 — turbo 가 깨진 dist 를 캐시하지 않음을 보장.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/tsup.config.ts`
+- `packages/fs-data-viewer/package.json`
+- `packages/fs-data-viewer-explorer/tsup.config.ts`
+- `packages/fs-data-viewer-explorer/package.json`
+- `packages/fs-external-data-viewer/tsup.config.ts`
+- `packages/fs-external-data-viewer/package.json`
+- `packages/fs-external-data-viewer-explorer/tsup.config.ts`
+- `packages/fs-external-data-viewer-explorer/package.json`
+- `packages/fs-file-attachment/tsup.config.ts`
+- `packages/fs-file-attachment/package.json`
+- `packages/fs-sub-data-viewer/tsup.config.ts`
+- `packages/fs-sub-data-viewer/package.json`
+- `packages/fs-sub-data-viewer-explorer/tsup.config.ts`
+- `packages/fs-sub-data-viewer-explorer/package.json`
+
+### 비차단 잔여
+
+- i-dev-001 베이스라인 lint 부채 162 problems (124 errors / 38 warnings) — 본 플랜 변경분 무관 (`KanbanCardConfigDialog`, `UpgradeDialog`, `useFormWidgetHistory`, `zone3-deprecate.test.ts` 등 UI/test 파일). 본 플랜 lint gate 는 변경 7개 `tsup.config.ts` 단독 실행 시 exit 0 — 신규 오류 0건. 베이스라인 부채는 별도 플랜에서 처리 권장.
+
 ## v001.31.0
 
 > 통합일: 2026-05-14
