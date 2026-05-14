@@ -56,9 +56,15 @@
       <article class="kpi-card kpi-tokens" id="kpi-tokens">
         <h3>전체 토큰</h3>
         <div class="big-split" aria-label="비-캐시 / 캐시 분리">
-          <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span><span class="kpi-delta" id="kpi-delta-noncache"></span>
+          <div class="big-split-col">
+            <span class="big-number-half kpi-noncache" id="kpi-noncache" title="input + output">—</span>
+            <span class="kpi-delta" id="kpi-delta-noncache"></span>
+          </div>
           <span class="big-divider" aria-hidden="true">/</span>
-          <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span><span class="kpi-delta" id="kpi-delta-cache"></span>
+          <div class="big-split-col">
+            <span class="big-number-half kpi-cachepart" id="kpi-cache" title="cache write + cache read">—</span>
+            <span class="kpi-delta" id="kpi-delta-cache"></span>
+          </div>
         </div>
         <div class="kpi-unit">non-cache / cache</div>
         <dl class="kpi-breakdown">
