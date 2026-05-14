@@ -1,5 +1,43 @@
 # 아이OS — Patch Note (001)
 
+## v001.69.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #36
+> 대상: 아이OS
+
+### 변경 사유
+
+`patch-confirmation` 의 primary 책무가 "미커밋 흡수" 로 설계돼 있어, working tree 가 clean 한 상태에서 호출하면 pre-condition 단계에서 fail-fast 했다. 그 결과 **이미 로컬에 커밋돼 있지만 origin 에 안 올라간 commit 들을 origin 으로 밀어줄 정상화된 채널이 없었다** — `plan-enterprise` / `plan-enterprise-os` / `new-project-group` / `group-policy` / `plan-roadmap` / `create-custom-project-skill` / `patch-update` 는 모두 `feedback_plan_enterprise_no_auto_push.md` 메모리 규정에 따라 로컬 머지에서 종료하므로 push 가 누락된 상태로 누적될 수 있었다. 본 plan 으로 `patch-confirmation` 을 push primary / 미커밋 흡수 secondary 로 뒤집어 정상화된 push 채널을 확보한다. 부수로 `dev-merge` 와 `pre-deploy` 의 "원격 저장소 대상 스킬" 정체성을 spec 본문에 명시하고, `dev-merge` 가 PR 머지 후 로컬 to-branch 를 `pull --ff-only` 로 동기화하도록 누락 단계를 보강한다.
+
+### 페이즈 결과
+
+- **Phase 1 — patch-confirmation/SKILL.md 재정의** (`dfe939f`): 1줄 description 을 push primary 로 재작성. Case A pre-condition 5 ("Uncommitted changes exist") 와 Case B pre-condition 5 ("At least one member repo has uncommitted changes") 제거 + 순번 재할당 (Case A 1-3, Case B 1-5). 본문 Step 흐름 안에 `git status --porcelain` 분기 추가 — 미커밋 부재 시 WIP 전체 skip → final push 직행 (push_only 모드). Case B 에 `targets[]` 전체 순회 final sweep loop 추가 (clean 멤버까지 idempotent 동기화). 이중 push (WIP loop step 6 + final sweep) 는 의도된 설계임을 명시. Failure policy 표에서 "미커밋 없음" 행 제거. completion-reporter payload 에 `mode` (`commit_and_push`/`push_only`) 와 `commits_pushed_count` 추가. description 직후 `feedback_plan_enterprise_no_auto_push.md` carve-out 1줄 inline.
+- **Phase 2 — README.md §G inventory** (`83ec6b2`): 단순 스킬 표의 `patch-confirmation` 행 역할 셀을 "로컬 → origin push (push 전 미커밋 발생 시 patch-note 새 마이너로 흡수)" 로 갱신.
+- **Phase 3 — completion-reporter-contract §6 patch-confirmation 스키마** (`3d9d919`): Required 필드에 `mode` enum 과 `commits_pushed_count` (Case A 정수 / Case B `{repo_name: int}` 맵 + `i2_main`) 추가. 메타 table row 에 `mode: <mode>` 끼워넣고 Notes 에 "push_only 모드는 0 commit push 도 정상" 한 줄 추가.
+- **Phase 4 — dev-merge/SKILL.md 종료 동기화 + 원격 정체성** (`4dd0dea`): frontmatter description 에 "Operates exclusively against the GitHub remote ... never produces local merge commits." 추가. Reporting 절과 "완료 후 HEAD 복원" 절 사이에 "머지 완료 후 to-branch 동기화" 절 신설 — PR 머지 성공 직후 `git -C <main_wt> checkout <to_branch>` → `git pull --ff-only origin <to_branch>` 순서로 로컬 동기화. ff-only 실패는 alarm-visible (자동 복구 금지). PR 머지 실패 경로에서는 skip.
+- **Phase 5 — pre-deploy/SKILL.md 원격 정체성** (`687eb4a`): 소개 단락과 `## Invocation` 사이에 "본 스킬은 원격 저장소 / 배포 대상 인프라에 대해 동작한다 (Branch A 는 GitHub 이슈 생성, Branch B 는 build_command + deploy_command 실행). 로컬 소스 트리에 commit 을 만들지 않는다." 한 줄 삽입.
+- **Post-execution — 메모리 carve-out 강화** (`feedback_plan_enterprise_no_auto_push.md`): 기존 line 19 의 약식 carve-out 을 "patch-confirmation 은 본 규정의 명시적 carve-out — 아이OS 운영의 유일한 정상화된 push 채널" 로 강화. `dev-merge` 와 `pre-deploy` 는 원격 도메인이라 본 규정 무관임을 명시. (repo 외부 파일 — WIP commit 대상 아님.)
+
+### 영향 파일
+
+- `.claude/skills/patch-confirmation/SKILL.md`
+- `README.md`
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/skills/dev-merge/SKILL.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+- (repo 외부) `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/memory/feedback_plan_enterprise_no_auto_push.md`
+
+### Treadmill Audit
+
+PASS — 대부분 NOT APPLICABLE (기존 스킬/contract/README/memory 수정만, push 단계 자체는 이미 spec 에 있던 동작의 분기 조건만 격하). **예외 — Phase 4 의 `git pull --ff-only` 추가** 만 새 단계: Q1 `gh pr merge` 가 원격 main 만 진전시키고 로컬은 뒤처지는 divergence 는 PR 워크플로에서 매 머지마다 재발하는 구조적 현상 (1회성 아님). Q2 ff-only 실패는 alarm-visible 로 surface (자동 복구 금지). Q3 본 추가는 새 검증축이 아닌 누락 단계 보강이라 trade-out 무 — Q3 적용 외.
+
+### 실증 가설
+
+push 채널 정상화는 다음 호출에서 실증: (a) I2 working tree clean + `main` 이 origin 보다 N commit 앞선 상태에서 `/patch-confirmation 아이OS` 호출 시 fail 없이 push_only 모드로 origin/main 정합. (b) `/dev-merge` PR 머지 후 로컬 `git status` 가 `Your branch is up to date with 'origin/<to-branch>'` 로 나오는지 확인. 미통과 시 본 plan 의 HOTFIX 트리거.
+
+---
+
 ## v001.68.0
 
 > 통합일: 2026-05-14
