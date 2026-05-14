@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.66.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #34
+> 대상: 아이OS
+
+### 변경 사유
+
+2026-05-14 `/pre-deploy data-craft` 호출에서 deploy-validator 가 두 건의 false block 을 생성했다 (이슈 funshare-inc/data-craft#27): (1) `data-craft` (tool: gh-pages) — `npx gh-pages --version` 프로브가 sub-agent Bash 샌드박스의 네트워크 제약 (`only-if-cached`) 에 걸려 실패. 마스터 실제 환경은 정상 + `origin/gh-pages` 과거 배포 이력 존재. (2) `data-craft-server` (tool: aws) — `deploy_command` 가 순수 git (`git push origin main:aws-deploy`) 인데 validator 는 `tool` 라벨만 보고 `aws sts get-caller-identity` 강제 프로브 → aws CLI 미설치 block. 두 케이스 모두 manifest 의 `tool` 라벨과 실제 `deploy_command` 본문의 불일치에서 비롯된 구조적 결함이며, 외부 프로젝트에서 재발 예측되는 일반 패턴이다 (gh-pages publish, git-push-to-deploy, GitOps 등).
+
+### 페이즈 결과
+
+- **Phase 1**: `.claude/agents/deploy-validator.md` §2 "Tool CLI invocable" 를 정적 `tool` → 프로브 매핑에서 `deploy_command` 토큰 기반 모델로 재작성. 토큰 추출 (공백 + `&&`/`||`/`|`/`;` split, exact-equality 매칭, `npx <pkg>` 시 둘 다 포함), 트리거 토큰 부재 시 행 전체 skip, severity 분기 (바이너리 부재 = `block` / 환경 가용성 의존 = `warn`) 명시. `gh-pages` 는 항상 `warn`, `docker info` / `aws sts` 는 `warn`, `--version` 류는 `block` 유지.
+
+### 영향 파일
+
+- `.claude/agents/deploy-validator.md`
+
+### Treadmill Audit
+
+PASS — Q3 trade-out 2건 이행: (a) `tool` 필드 단독으로 프로브를 강제 실행하던 정적 규칙 retire (대체: `deploy_command` 토큰 등장 시에만 프로브). (b) `aws sts get-caller-identity` 실패를 일률 `block` 처리하던 규칙 retire (대체: 환경 가용성 의존 프로브 실패는 `warn`). 신규 검증 축/훅/스킬/에이전트 추가 없음 — 한 섹션을 단순화 방향으로 재작성.
+
+---
+
 ## v001.65.0
 
 > 통합일: 2026-05-14
