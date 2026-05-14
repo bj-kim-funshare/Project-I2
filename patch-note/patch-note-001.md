@@ -1,5 +1,53 @@
 # 아이OS — Patch Note (001)
 
+## v001.55.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #28
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1**: `CLAUDE.md` 에 새 hard rule §9 "브랜치 정렬 정책" 추가 + `.claude/md/branch-alignment.md` 신규 생성 (Entry verification / Exit restoration / Multi-repo handling / 적용 범위 strict-universal 명시).
+- **Phase 2**: 9개 변경 스킬 (`dev-merge`, `pre-deploy`, `plan-enterprise`, `plan-enterprise-os`, `task-db-structure`, `task-db-data`, `group-policy`, `create-custom-project-skill`, `plan-roadmap`) 의 SKILL.md 에 Pre-conditions 참조 라인 + "완료 후 HEAD 복원" 섹션 retrofit. 디스패치 1차 컨텍스트 매핑 오류 (`group-policy` 등 3개 스킬을 external 로 오분류) 를 phase-executor 가 정당하게 거부 → 정정 후 재디스패치 통과. 참고: 본 `plan-enterprise-os` invocation 자체는 본 페이즈의 spec 변경 전 로드된 spec 으로 진행 — 신 exit-restoration 규칙은 다음 호출부터 적용.
+- **Phase 3**: 7개 유틸 스킬 (`dev-build`, `dev-start`, `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification`, `patch-update`) 의 Pre-conditions 에 Entry verification 참조 라인 추가. strict-universal 채택. `patch-update` 는 dual-target 변형 적용.
+- **Phase 4**: `new-project-group/SKILL.md` 에 "Member repo i-dev bootstrap" H2 섹션 신설 — 각 `targets[].cwd` 에 대해 git repo 확인 / main 존재 / i-dev 멱등 생성 / origin push / 깨끗한 working tree 일 때 checkout. Pre-conditions / Failure policy / Scope 갱신.
+- **Phase 5**: `patch-confirmation/SKILL.md` Case A (`아이OS`, 단일 I2 워크트리) / Case B (`<leader>`, 멤버 repo 별 코드 WIP + I2 문서 WIP 1개) 분기로 본문 재작성. 디스패치 1차 scope_expansion_needed 거부 (Phase 1 의 dual-target 예외 정합 필요) → 정정 후 `.claude/md/branch-alignment.md` §1 dual-target 예외에서 patch-confirmation 제거, `patch-update` 만 dual-target 유지. completion-reporter data 에 `target_case` / `member_repos[]` 필드 추가.
+- **Phase 6**: data-craft 4 repo i-dev 재정렬 (main-session-direct, 외부 repo). data-craft / -ai-preview / -server 3개 repo 에 `i-dev` 신규 생성 (main 으로부터) + origin push. data-craft-mobile 은 i-dev 기존 존재 — 정렬만. 4 repo 모두 현재 HEAD = `i-dev` 로 정렬 완료. `i-dev-001` (구 I-OS 잔재) 은 보존.
+
+### 영향 파일
+
+- `CLAUDE.md`
+- `.claude/md/branch-alignment.md` (신규)
+- `.claude/skills/dev-merge/SKILL.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/skills/create-custom-project-skill/SKILL.md`
+- `.claude/skills/plan-roadmap/SKILL.md`
+- `.claude/skills/dev-build/SKILL.md`
+- `.claude/skills/dev-start/SKILL.md`
+- `.claude/skills/dev-inspection/SKILL.md`
+- `.claude/skills/dev-security-inspection/SKILL.md`
+- `.claude/skills/db-security-inspection/SKILL.md`
+- `.claude/skills/project-verification/SKILL.md`
+- `.claude/skills/patch-update/SKILL.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/patch-confirmation/SKILL.md`
+- 외부 (4 data-craft repo, i-dev 브랜치 생성/정렬)
+
+### Treadmill Audit
+
+PASS (Phase 1 한정). Q1 (재발 사고: data-craft 브랜치 mismatch 반복) / Q2 (multi-repo 검증 + 임의-checkout 복원 신규 명시) / Q3 (각 스킬의 inline 브랜치 검증 책임이 retire, 공유 md `branch-alignment.md` 가 단일 출처가 됨). Phase 2~6 은 NOT APPLICABLE — 결손 보강 / Phase 1 정책 적용.
+
+### 참고
+
+- 진입 검증의 strict-universal vs writer-only 결정은 ExitPlanMode 시점에 strict-universal 로 확정 (마스터 "반드시" 우선). 추후 writer-only 로 완화 시 별도 정책 변경 필요.
+- Phase 7 단계에서 phase-executor 의 reviewer 안전망이 2회 작동 (Phase 2 컨텍스트 / Phase 5 scope) — 1차 디스패치 결함을 main-session 대신 sub-agent 가 잡아냄. 향후 디스패치 프롬프트 작성 시 컨텍스트 매핑 사전 검증 강화 여지.
+
 ## v001.54.0
 
 > 통합일: 2026-05-14
