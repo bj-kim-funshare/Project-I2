@@ -9,7 +9,9 @@
       "Bash(gh issue comment *)",
       "Bash(gh pr *)",
       "Bash(mysql *)",
-      "Bash(psql *)"
+      "Bash(psql *)",
+      "Bash(git checkout main && npx gh-pages *)",
+      "Bash(git checkout main && git push origin main:*)"
     ]
   },
   "autoMode": {
@@ -19,7 +21,9 @@
     ],
     "allow": [
       "$defaults",
-      "Direct mysql/psql CLI invocation during Phase 4 (capture / dry-run / apply / verify) of the task-db-structure and task-db-data skills is authorized — this is the core operation of these skills, with safety provided by the Phase 1 advisor review, per-environment master approval gates at Phase 4, and capture-based rollback.", "plan-enterprise-os 스킬의 일환으로 발생하는 .claude/settings.json 및 CLAUDE.md 편집은 마스터의 ExitPlanMode 승인을 이미 거친 plan의 실행 단계이므로 자동 진행 허용 — 분류기의 self-modification 가드는 ExitPlanMode 통과 plan 에 대해 면제."
+      "Direct mysql/psql CLI invocation during Phase 4 (capture / dry-run / apply / verify) of the task-db-structure and task-db-data skills is authorized — this is the core operation of these skills, with safety provided by the Phase 1 advisor review, per-environment master approval gates at Phase 4, and capture-based rollback.",
+      "plan-enterprise-os 스킬의 일환으로 발생하는 .claude/settings.json 및 CLAUDE.md 편집은 마스터의 ExitPlanMode 승인을 이미 거친 plan의 실행 단계이므로 자동 진행 허용 — 분류기의 self-modification 가드는 ExitPlanMode 통과 plan 에 대해 면제.",
+      "Direct execution of a registered project group's <target>.deploy_command via Bash during pre-deploy Branch B (validator clean path, after build_command success) is authorized — this is the core operation of the pre-deploy skill, with safety provided by the validator's clean verdict (block=0), the per-target sequential halt-on-failure semantics in SKILL.md Branch B, and the master-facing 합격/부분 실패 보고서 at finalize."
     ]
   },
   "statusLine": {

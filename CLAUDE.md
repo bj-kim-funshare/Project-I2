@@ -115,3 +115,5 @@ Sub-agent dispatch prompt bodies are governed by `.claude/md/sub-agent-prompt-bu
 - Cross-session memory: `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/memory/`.
 
 > The `.claude/settings.json` `permissions.allow` entries `Bash(mysql *)` / `Bash(psql *)` and the `autoMode.environment` / `autoMode.allow` DB-CLI prose are intended exclusively for the `task-db-structure` and `task-db-data` skills. Direct mysql/psql invocation in other contexts bypasses the classifier without intent — explicit master authorization required.
+
+> The `.claude/settings.json` `autoMode.allow` entry authorizing direct `deploy_command` execution is intended exclusively for the `pre-deploy` skill's Branch B (validator clean path, after `build_command` success). Invoking a project group's `deploy_command` in any other context bypasses the validator gate without intent — explicit master authorization required.
