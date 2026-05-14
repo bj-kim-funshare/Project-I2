@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.23.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#9 (Hotfix 15, cumulative phase 21)
+
+### Hotfix 결과 (Hotfix 13 결함 정정)
+
+마스터 보고: `borderConfig.spacing='outside'` 사용 시 위젯이 이웃 위젯이나 보드 가장자리와 닿아야 하는데 안 닿음.
+
+**원인**: Hotfix 13 iter 1 의 phase-executor 가 `outside` 를 WidgetContainer 의 `margin:6` 로 구현 → 위젯이 격자 셀에서 안쪽으로 6px 축소. Hotfix 6 의 DashboardGrid calc 인셋 (좌상우하 2.5px) 도 함께 적용되어 ~8.5px 안쪽 축소. 의미 정반대.
+
+**마스터 의도 정확**:
+- `'inside'`: 위젯 box 안에 border, 콘텐츠 padding 안쪽 보호. 위젯간 5px 여백 유지.
+- `'outside'`: 위젯 box 가 격자 셀 가득 확장 — 위젯간 5px 여백 무효화, 이웃 위젯 border 와 픽셀 단위 맞닿음.
+
+- **Phase 21** (`f071a230`):
+  - WidgetContainer: outside 분기의 `margin:6` + width/height calc 보정 두 곳 (헤더 없는 분기, 헤더 있는 분기) 모두 제거. isOutside 변수도 삭제.
+  - DashboardGrid: static 위치 계산부에 `isOutsideSpacing` 검사 추가 — `spacing='outside'` 위젯에 한해 2.5px calc 인셋 대신 격자 셀 raw 퍼센트 좌표 사용. 결과: outside 위젯은 격자 셀 가장자리까지 확장.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/DashboardGrid.tsx`
+
+### 검증 결과
+
+- TSC delta: 0.
+- `pnpm build` ✅ `built in 17.70s`.
+
+### 마스터 수동 회귀 시나리오
+
+1. 위젯 두 개 가로로 인접, 둘 다 spacing='outside' + border 좌/우 ON → A 우측 border 와 B 좌측 border 가 픽셀 단위 맞닿음.
+2. 보드 가장자리에 spacing='outside' 위젯 + border 좌 ON → 위젯 좌측 border 가 보드 좌측 가장자리에 닿음.
+3. spacing='inside' (기본) 위젯은 기존 5px 여백 유지.
+
+### Post-action hints
+
+- 설정 모드 드래그 중 outside 위젯의 표시 크기 (calc % - 5px) 와 드롭 후 정착 크기 (% 원본) 가 일시적으로 미세하게 어긋남. dropPreview 인셋도 동일 — 시각적 결함이며 설정 모드 한정. 뷰 모드 영향 없음.
+
 ## v001.22.0
 
 > 통합일: 2026-05-14
