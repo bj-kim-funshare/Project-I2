@@ -1,5 +1,42 @@
 # 아이OS — Patch Note (001)
 
+## v001.64.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #32
+> 대상: 아이OS
+
+### 변경 사유
+
+2026-05-14 `/pre-deploy data-craft` 호출 시 두 가지 의도 위반이 드러남:
+1. 다중 선택지 UI 없이 3개 FE 타겟을 독단으로 자동 선택.
+2. `data-craft-server` 의 `deploy_command` 가 빈값이라는 이유로 자동 제외 — 마스터 선택권 박탈.
+
+추가 정정 정책: pre-deploy 의 검증과 배포는 **항상 main 기준** 이어야 하나, `branch-alignment.md` 가 external 컨텍스트 = i-dev 일괄로 묶고 있어 pre-deploy 도 i-dev 기준으로 동작 중이었음. 본 패치에서 pre-deploy 스킬과 시스템 (branch-alignment, deploy-validator, completion-reporter-contract) 4개 영역을 일괄 정정.
+
+### 페이즈 결과
+
+- **Phase 1**: `deploy-validator` 의 `deploy_command present` 체크를 `block` → `warn` 로 강등. 빈값 타겟은 빌드만 실행하고 마스터가 수동 배포하는 흐름 명시.
+- **Phase 2**: `pre-deploy` SKILL.md 7개 영역 개편 — invocation 시그니처 단일화 (target args 폐기), 항상 multiSelect UI 노출, 빈 `deploy_command` 단축회로 (build 실행 / deploy 스킵 / `deploy_status: "manual"`), pre-condition `i-dev`→`main`, failure policy 행 정리, scope 갱신.
+- **Phase 3**: `completion-reporter-contract.md` §6 `pre-deploy.skill_finalize.targets[].deploy_status` 허용값을 정식 명시 (`"success" | "failed" | "manual"`).
+- **Phase 4**: `branch-alignment.md` 4 섹션 (§1 / §2 / §3 / §5) 에 `pre-deploy` 를 branch-overridden 예외로 정식 등록. `<leader>` 인자임에도 모든 멤버 레포 `main` 기준 검증 (multiSelect UI 이전 실행).
+
+### 영향 파일
+
+- `.claude/agents/deploy-validator.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/md/branch-alignment.md`
+
+### Treadmill Audit
+
+PASS — Q3 trade-out 2건 명시:
+
+1. **"empty deploy_command = block" 룰 폐기**: 빈 `deploy_command` 가 validator 차단 트리거였던 룰을 `warn` 로 강등 + pre-deploy pre-condition #3 삭제. data-craft-server 독단 제외 사고의 직접 원인 룰이 제거됨.
+2. **"external = i-dev 일괄" 룰의 부분 폐기**: `branch-alignment.md` 의 external 컨텍스트가 모든 `<leader>` 호출에 `i-dev` 를 강제하던 일괄 룰을 `pre-deploy` 한해 `main` 으로 override. branch-overridden skill 라는 새 분류를 정식 등록.
+
+Q1 (재발 사고 트리거): 2026-05-14 `/pre-deploy data-craft` 의 실제 사고. Q2 (새 엣지): 부분 자동 배포 타겟 (build 자동 + deploy 수동) 카테고리의 등장 + branch-overridden 분류 신설.
+
 ## v001.63.0
 
 > 통합일: 2026-05-14
