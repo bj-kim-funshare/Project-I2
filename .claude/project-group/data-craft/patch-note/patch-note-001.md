@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.21.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#12 (Hotfix 1)
+
+### Hotfix 결과
+
+마스터 요청 — B1 (billingKey / 카드번호 평문 INSERT) 의 BE 코드 레이어를 본 플랜 안에서 즉시 처리. DB 작업 (컬럼 widening / 백필 / 평문 drop) 은 마스터가 별도 DB 프롬프트로 후속 실행.
+
+- **Hotfix 1** (`38a11425a8aa6737841009518e8bd3853b52548d`):
+  - `src/utils/billingCrypto.ts` 신규 — AES-256-GCM 봉투암호화 util.
+    - `encryptBillingField(plaintext)` → IV(12B) + ciphertext + tag(16B) base64 직렬화 + `enc:v1:` prefix
+    - `decryptBillingField(stored)` → prefix 없으면 평문 그대로 반환 (lazy migration — 기존 평문 행 호환)
+    - 마스터키 = env `BILLING_MASTER_KEY` (base64 32 byte). 미설정 시 encrypt 호출 시점 throw, decrypt 는 prefix 없는 입력에 한해 key 불필요.
+  - `src/models/billing.model.ts` 수정:
+    - `createBillingInfo` INSERT: customerKey / billingKey / cardNumber (non-null) 암호화
+    - `findActiveBillingByCompanyId` SELECT 반환 매핑: billingKey / customerKey / cardNumber decrypt 적용
+    - `findBillingByCustomerKey`: WHERE 직접 비교 불가 (암호문 IV 매번 다름) → 활성 행 전수 fetch + in-memory decrypt 비교
+    - `deactivateBillingByKey`: `WHERE is_active = 1` 로 스캔 제한 + decrypt 비교 → id 기반 UPDATE
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`):
+- `src/utils/billingCrypto.ts` (신규)
+- `src/models/billing.model.ts`
+
+### 마스터 결정 카브아웃
+- DB 컬럼 widening / 백필 / 평문 drop = 별도 DB 프롬프트 후속. 본 hotfix 는 코드 레이어만.
+- `findBillingByCustomerKey` / `deactivateBillingByKey` 의 full-scan + in-memory decrypt 는 활성 빌링 행 수 = 회사 수 가정에서 수용. 대량화 시 인덱스 재설계 필요.
+- `BILLING_MASTER_KEY` env fail-fast 는 lazy (encrypt 호출 시점) — 부팅 시 검증 보강은 B8 핸드오프 트랙에서 함께 처리.
+
+### 후속 DB 작업 (마스터 별도 실행)
+1. `/task-db-structure data-craft` — `billing_info` 컬럼 widening (`billing_key`, `customer_key`, `card_number` VARCHAR 길이 ≥ 200 또는 TEXT 로 확장)
+2. `/task-db-data data-craft` — 기존 평문 행 일괄 암호화 백필 (BE 의 encryptBillingField 로직과 일치)
+
+### 검증
+- `pnpm lint` exit 0 (server hotfix1 base 깨끗, 신규 결함 0).
+- 5-perspective advisor PASS (계획 + 완료 양쪽).
+- 머지: hotfix WIP → server i-dev-001 (단일 step), 문서 WIP → I2 main.
+
+---
+
 ## v001.20.0
 
 > 통합일: 2026-05-14
