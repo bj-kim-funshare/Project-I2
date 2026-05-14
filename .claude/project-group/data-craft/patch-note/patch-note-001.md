@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.51.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#30
+
+### 페이즈 결과
+
+- **Phase 1** (`d5b3637`): `data-craft-server` 의 `src/app.ts` 에 `import { db } from './config/database';` 1줄을 추가하여 `TS2304: Cannot find name 'db'` 빌드 오류를 해소. 원인 — plan-enterprise #28 의 aws-deploy reconciliation 머지로 `/health` 엔드포인트 (`db.healthCheck()` 호출) 가 import 누락 상태로 유입됨. lint exit 0 / build exit 0 / post-merge build (i-dev tip) exit 0 검증.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/app.ts` (+1 line, import 추가)
+
+### 후속
+
+`/dev-merge data-craft` (또는 수동 `i-dev → main` 승격) 후 `/pre-deploy data-craft data-craft-server` 재호출 시 build ✅ + deploy ✅ 통과 기대. plan-28 의 reconciliation 머지에서 비롯된 빌드 차단을 본 plan 으로 해소.
+
 ## v001.50.0
 
 > 통합일: 2026-05-14
