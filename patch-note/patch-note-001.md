@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.42.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스7)
+> 대상: 아이OS
+
+### 개요
+핫픽스6 의 grid 레이아웃 (`grid-template-columns: minmax(0, 1fr) auto`) 으로 도넛 canvas 가 grid 셀에 따라 비-정사각형 비율로 확장되어 위아래 늘어난 타원형으로 렌더되는 증상. 기존 `.chart-body canvas { width: 100% !important; height: 100% !important; }` 가 canvas 를 grid 셀 전체로 강제하면서 발생. canvas 자체에 `aspect-ratio: 1 / 1` 적용 + `width: auto` 로 강제 정사각형.
+
+### 페이즈 결과
+- **핫픽스7** (`monitoring/styles.css`, `monitoring/index.html`):
+  - `.chart-card.has-html-legend .chart-body canvas` 와 `.detail-section.has-html-legend .detail-chart canvas` 양쪽에 `width: auto !important; height: 100% !important; aspect-ratio: 1 / 1; justify-self: center;` 적용. canvas 가 항상 정사각형이 되고 grid 셀 안에서 가운데 정렬.
+  - 자산 cache-bust `?v=20260514-6` → `?v=20260514-7`.
+
+### 영향 파일
+- `monitoring/styles.css`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 시각 정정. 신규 메커니즘 추가 없음.
+
 ## v001.41.0
 
 > 통합일: 2026-05-14
