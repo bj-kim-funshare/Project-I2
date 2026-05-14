@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.34.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #26
+> 대상: 아이OS
+
+### 개요
+statusline L1 모델 표기에서 `(1M context)` → `(1M)` 로 단축. 더불어 L2 의 좌측 3 인디케이터 (`➕ ~ ➖` 파일 수, `git status --porcelain` 기반 WT 스냅샷) 와 우측 `📝 +/-` (세션 누적 라인 수, `cost.total_lines_added/removed` 기반) 가 중복인지 검토 — 단위(파일 vs 라인) 및 대상(WT 스냅샷 vs 세션 누적) 이 서로 다른 비중복 표기로 확인되어 통합 미수행.
+
+### 페이즈 결과
+- **Phase 1**: `.claude/scripts/statusline.sh` line 38 의 `MODEL=$(jget '.model.display_name' '?')` 직후에 `MODEL=${MODEL/ context/}` 한 줄 추가. bash fixed-string 치환으로 `" context"` 제거 — 매칭 없는 모델명 (1M 비-context, 일반 Opus/Sonnet 등) 은 원문 그대로 통과. 1 추가 / 0 삭제.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 메커니즘 (규칙/훅/에이전트/스킬/검증축) 추가 없음. 기존 1 라인 변환만 추가.
+
 ## v001.33.0
 
 > 통합일: 2026-05-14
