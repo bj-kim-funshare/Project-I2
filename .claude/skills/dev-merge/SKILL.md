@@ -1,6 +1,6 @@
 ---
 name: dev-merge
-description: Code-reviewed merge of one branch into another via GitHub PR. Main session prepares context (git log, prior PR comments, code-comment cross-checks) inline; dispatches two read-only reviewer sub-agents in parallel (claude-md-compliance-reviewer + bug-detector). Findings with confidence ≥ 80 are posted as PR review comments. A write-capable code-fixer sub-agent applies fixes between rounds. Up to 3 iteration rounds before halting for master. Merge method = merge commit (--no-ff equivalent). Works on any git+gh repository — external projects or this harness itself.
+description: Code-reviewed merge of one branch into another via GitHub PR. Main session prepares context (git log, prior PR comments, code-comment cross-checks) inline; dispatches two read-only reviewer sub-agents in parallel (claude-md-compliance-reviewer + bug-detector). Findings with confidence ≥ 80 are posted as PR review comments. A write-capable code-fixer sub-agent applies fixes between rounds. Up to 3 iteration rounds before halting for master. Merge method = merge commit (--no-ff equivalent). Works on any git+gh repository — external projects or this harness itself. Operates exclusively against the GitHub remote — creates the PR, posts review comments, and merges via `gh pr merge`; never produces local merge commits.
 ---
 
 # dev-merge
@@ -335,6 +335,19 @@ On review cap-exhausted halt, dispatch `completion-reporter` with:
 - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"review_cap_exhausted"`); optional `leader`, `remaining_findings[]`.
 
 Relay the agent's response verbatim to master.
+
+## 머지 완료 후 to-branch 동기화
+
+PR 머지 성공 (정상 `머지 완료` / `플랜 완료` 경로, 또는 Conflict-PENDING 에서 `수동 머지 완료` 후 state=MERGED 확인 경로) 직후, HEAD 복원 전에 실행한다. PR 머지 자체가 실패한 경로 (Conflict-PENDING 대기 중, 또는 `gh pr merge` 오류) 에서는 실행하지 않는다.
+
+```bash
+git -C <main_wt> checkout <to_branch>
+git -C <main_wt> pull --ff-only origin <to_branch>
+```
+
+`<to_branch>` 는 본 dev-merge 호출의 마스터 지정 PR base 브랜치 (스킬 인자 to-branch; `main` / `i-dev` / 임의 브랜치 그대로). cwd 컨텍스트에서 파생하지 않는다. `<main_wt>` 는 dev-merge 를 호출한 메인 working tree 의 절대경로.
+
+ff-only 실패 시 로컬 to-branch 가 origin 과 분기됐다는 신호 — 자동 복구 (rebase / merge / --no-ff) 를 시도하지 않는다. 마스터 수동 개입 필요.
 
 ## 완료 후 HEAD 복원
 
