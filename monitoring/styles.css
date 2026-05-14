@@ -498,14 +498,14 @@ i { color: var(--muted); }
 /* ================= HTML LEGEND (DONUT CHARTS) ================= */
 .chart-card.has-html-legend .chart-body {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
+  height: 260px;
 }
 .chart-card.has-html-legend .chart-body canvas {
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 240px;
+  width: 260px !important;
+  height: 260px !important;
 }
 .chart-legend {
   display: flex;
@@ -550,11 +550,11 @@ i { color: var(--muted); }
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
+  height: 260px;
 }
 .detail-section.has-html-legend .detail-chart canvas {
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 260px;
+  width: 260px !important;
+  height: 260px !important;
 }
 
 /* ================= REALTIME MODE ================= */
