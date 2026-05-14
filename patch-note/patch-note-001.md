@@ -1,5 +1,30 @@
 # 아이OS — Patch Note (001)
 
+## v001.52.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스17)
+> 대상: 아이OS
+
+### 개요
+핫픽스15 가 `.claude/agents/*.md` frontmatter 의 `description:` 을 그대로 노출했으나 CLAUDE.md §1 (Korean for terminal/user-facing, English for `.claude/`) 규정상 description 이 영문이라 마스터가 툴팁을 이해하기 어려운 문제. collect.py 의 `load_agent_descriptions()` 본문을 한국어 간결 매핑으로 교체 (19 agent: 13 sub-agent + 6 built-in). frontmatter 파싱 로직 제거.
+
+### 절차 메모
+hotfix17 작업 브랜치를 main 에 머지하던 도중 working tree HEAD 가 codex 브랜치 (`plan-enterprise-os-1-codex-flow-integration-작업-codex`, MEMORY.md `codex-bootstrap-in-flight`) 로 옮겨져 있음을 발견 — codex 협업 세션이 평행 진행되며 HEAD 를 옮긴 결과. main 으로 명시적 복귀 후 hotfix17 작업 재머지로 정합 회복.
+
+### 페이즈 결과
+- **핫픽스17** (`monitoring/scripts/collect.py`, `monitoring/index.html`):
+  - `AGENTS_DIR` 상수 + frontmatter line-based parser 제거. `load_agent_descriptions()` 본문을 19 agent 한국어 간결 매핑 dict 단일 return 으로 교체. 각 매핑은 1-2 문장 내, 마스터가 즉시 이해 가능한 비전문 표현.
+  - 자산 cache-bust `?v=20260514-16` → `?v=20260514-17`.
+  - 검증: collect.py 재실행 후 `aggregate.json.agent_descriptions` — phase-executor / Explore / gate-runner 등 한국어 출력 확인.
+
+### 영향 파일
+- `monitoring/scripts/collect.py`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 텍스트 한국어화. 신규 메커니즘 추가 없음.
+
 ## v001.51.0
 
 > 통합일: 2026-05-14
