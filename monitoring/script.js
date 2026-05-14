@@ -409,17 +409,56 @@ function renderChartModelDonut(data, opts) {
   if (!ctx || !rows.length) return;
   const labels = rows.map(r => r.model);
   const values = rows.map(r => totalTokens(r));
+  const prevRows = (opts && opts.prevRows) || null;
+  const totalVal = values.reduce((a, v) => a + v, 0);
+  let prevMap = null;
+  let prevTotal = 0;
+  if (prevRows) {
+    prevMap = {};
+    for (const r of prevRows) prevMap[r.model] = totalTokens(r);
+    prevTotal = Object.values(prevMap).reduce((a, v) => a + v, 0);
+  }
+  const bgs = labels.map((_, i) => PALETTE[i % PALETTE.length]);
   charts[chartKey] = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]) }],
+      datasets: [{ data: values, backgroundColor: bgs }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
+        legend: {
+          position: 'right',
+          align: 'center',
+          labels: {
+            color: '#e6e9f2',
+            generateLabels: (chart) => {
+              const ds = chart.data.datasets[0] || {};
+              const bgColors = ds.backgroundColor || [];
+              return (chart.data.labels || []).map((label, i) => {
+                let text = label;
+                if (prevMap && prevTotal > 0 && totalVal > 0) {
+                  const cs = values[i] / totalVal * 100;
+                  const ps = (prevMap[label] || 0) / prevTotal * 100;
+                  const delta = cs - ps;
+                  const sign = delta >= 0 ? '▲' : '▼';
+                  const absDelta = values[i] - (prevMap[label] || 0);
+                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
+                }
+                return {
+                  text,
+                  fillStyle: bgColors[i],
+                  strokeStyle: bgColors[i],
+                  lineWidth: 0,
+                  hidden: !chart.getDataVisibility(i),
+                  index: i,
+                };
+              });
+            },
+          },
+        },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
@@ -442,17 +481,56 @@ function renderChartSkillDonut(data, opts) {
     labels.push('기타');
     values.push(others.reduce((a, r) => a + totalTokens(r), 0));
   }
+  const prevRowsRaw = (opts && opts.prevRows) || null;
+  const totalVal = values.reduce((a, v) => a + v, 0);
+  let prevMap = null;
+  let prevTotal = 0;
+  if (prevRowsRaw) {
+    prevMap = {};
+    for (const r of prevRowsRaw) prevMap[r.skill] = totalTokens(r);
+    prevTotal = Object.values(prevMap).reduce((a, v) => a + v, 0);
+  }
+  const bgs = labels.map((_, i) => PALETTE[i % PALETTE.length]);
   charts[chartKey] = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]) }],
+      datasets: [{ data: values, backgroundColor: bgs }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
+        legend: {
+          position: 'right',
+          align: 'center',
+          labels: {
+            color: '#e6e9f2',
+            generateLabels: (chart) => {
+              const ds = chart.data.datasets[0] || {};
+              const bgColors = ds.backgroundColor || [];
+              return (chart.data.labels || []).map((label, i) => {
+                let text = label;
+                if (prevMap && prevTotal > 0 && totalVal > 0) {
+                  const cs = values[i] / totalVal * 100;
+                  const ps = (prevMap[label] || 0) / prevTotal * 100;
+                  const delta = cs - ps;
+                  const sign = delta >= 0 ? '▲' : '▼';
+                  const absDelta = values[i] - (prevMap[label] || 0);
+                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
+                }
+                return {
+                  text,
+                  fillStyle: bgColors[i],
+                  strokeStyle: bgColors[i],
+                  lineWidth: 0,
+                  hidden: !chart.getDataVisibility(i),
+                  index: i,
+                };
+              });
+            },
+          },
+        },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
@@ -460,7 +538,7 @@ function renderChartSkillDonut(data, opts) {
   });
 }
 
-function renderChartCacheDonut(data) {
+function renderChartCacheDonut(data, opts) {
   destroyChart('cacheDonut');
   const t = data.total || {};
   const noncache = (t.input || 0) + (t.output || 0);
@@ -468,17 +546,57 @@ function renderChartCacheDonut(data) {
   const cread = t.cache_read || 0;
   const ctx = $('#chart-cache-donut canvas');
   if (!ctx) return;
+  const values = [noncache, cwrite, cread];
+  const cacheLabels = ['non-cache (input+output)', 'cache write', 'cache read'];
+  const prevRows = (opts && opts.prevRows) || null;
+  const totalVal = values.reduce((a, v) => a + v, 0);
+  let prevVals = null;
+  let prevTotal = 0;
+  if (prevRows) {
+    prevVals = prevRows.map(r => r.val || 0);
+    prevTotal = prevVals.reduce((a, v) => a + v, 0);
+  }
+  const bgs = [COLORS.noncache, COLORS.cacheWrite, COLORS.cacheRead];
   charts.cacheDonut = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['non-cache (input+output)', 'cache write', 'cache read'],
-      datasets: [{ data: [noncache, cwrite, cread], backgroundColor: [COLORS.noncache, COLORS.cacheWrite, COLORS.cacheRead] }],
+      labels: cacheLabels,
+      datasets: [{ data: values, backgroundColor: bgs }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
+        legend: {
+          position: 'right',
+          align: 'center',
+          labels: {
+            color: '#e6e9f2',
+            generateLabels: (chart) => {
+              const ds = chart.data.datasets[0] || {};
+              const bgColors = ds.backgroundColor || [];
+              return (chart.data.labels || []).map((label, i) => {
+                let text = label;
+                if (prevVals && prevTotal > 0 && totalVal > 0) {
+                  const cs = values[i] / totalVal * 100;
+                  const ps = prevVals[i] / prevTotal * 100;
+                  const delta = cs - ps;
+                  const sign = delta >= 0 ? '▲' : '▼';
+                  const absDelta = values[i] - prevVals[i];
+                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
+                }
+                return {
+                  text,
+                  fillStyle: bgColors[i],
+                  strokeStyle: bgColors[i],
+                  lineWidth: 0,
+                  hidden: !chart.getDataVisibility(i),
+                  index: i,
+                };
+              });
+            },
+          },
+        },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
@@ -854,49 +972,37 @@ function updateUrl(unit, key) {
 }
 
 function renderAll(data, compareData) {
+  const aggData = _aggregateCache || data;
   renderKpi(data);
-  renderChartDayTokens(data, { compareData: compareData || null });
-  renderChartModelDonut(data);
-  renderChartSkillDonut(data);
-  renderChartCacheDonut(data);
+  renderChartDayTokens(aggData, {});
+  if (compareData) {
+    const prevTotal = compareData.total || {};
+    const prevCacheRows = [
+      { val: (prevTotal.input || 0) + (prevTotal.output || 0) },
+      { val: (prevTotal.cache_creation_5m || 0) + (prevTotal.cache_creation_1h || 0) },
+      { val: prevTotal.cache_read || 0 },
+    ];
+    renderChartModelDonut(data, { prevRows: compareData.by_model || [] });
+    renderChartSkillDonut(data, { prevRows: compareData.by_skill || [] });
+    renderChartCacheDonut(data, { prevRows: prevCacheRows });
+  } else {
+    renderChartModelDonut(data);
+    renderChartSkillDonut(data);
+    renderChartCacheDonut(data);
+  }
   renderChartSessionBar(data);
-  renderChartDayCost(data);
+  renderChartDayCost(aggData);
   renderChartPromptBar(data);
 
   renderChartModelDonut(data, { chartKey: 'modelDonutDetail', canvasSel: '#chart-detail-model' });
   renderChartSkillDonut(data, { chartKey: 'skillDonutDetail', canvasSel: '#chart-detail-skill' });
-  renderChartDayTokens(data, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day', compareData: compareData || null });
+  renderChartDayTokens(aggData, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day' });
   renderChartSessionBar(data, { chartKey: 'sessionBarDetail', canvasSel: '#chart-detail-session' });
 
   $('#by-model').innerHTML = renderByModel(data.by_model || []);
   $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);
   $('#by-day').innerHTML = renderByDay(data.by_day || []);
   $('#by-session').innerHTML = renderBySession(data.by_session || []);
-
-  if (compareData) {
-    const currTotal = data.total || {};
-    const prevTotal = compareData.total || {};
-    const currCacheDonut = [
-      { token_type: 'non-cache', val: (currTotal.input || 0) + (currTotal.output || 0) },
-      { token_type: 'cache write', val: (currTotal.cache_creation_5m || 0) + (currTotal.cache_creation_1h || 0) },
-      { token_type: 'cache read', val: currTotal.cache_read || 0 },
-    ];
-    const prevCacheDonut = [
-      { token_type: 'non-cache', val: (prevTotal.input || 0) + (prevTotal.output || 0) },
-      { token_type: 'cache write', val: (prevTotal.cache_creation_5m || 0) + (prevTotal.cache_creation_1h || 0) },
-      { token_type: 'cache read', val: prevTotal.cache_read || 0 },
-    ];
-    renderPieCompareList('compare-model-list', data.by_model || [], compareData.by_model || [], 'model', 'input');
-    renderPieCompareList('compare-skill-list', data.by_skill || [], compareData.by_skill || [], 'skill', 'input');
-    renderPieCompareList(
-      'compare-cache-list',
-      currCacheDonut.map(r => ({ token_type: r.token_type, val: r.val })),
-      prevCacheDonut.map(r => ({ token_type: r.token_type, val: r.val })),
-      'token_type', 'val',
-    );
-  } else {
-    clearPieCompareLists();
-  }
 }
 
 function render(data) {
@@ -1036,6 +1142,16 @@ async function applyPeriodSelection(unit, key, periodsIndex) {
       if (windows.compareStart != null) {
         compareData = aggregateHoursInWindow(hourly.hours, windows.compareStart, windows.compareEnd);
       }
+      // preload aggregate so _aggregateCache is set before renderAll uses it for day charts
+      await loadAggregate().catch(() => null);
+      // fallback: inject current week's session/prompt data into realtime base
+      try {
+        const { year: cy, week: cw } = dateToIsoWeek(new Date());
+        const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
+        const weeklyFallback = await loadPeriodData('weekly', currentWeekKey);
+        baseData.by_session = weeklyFallback.by_session || [];
+        baseData.by_prompt = weeklyFallback.by_prompt || [];
+      } catch (_) { /* 현재 주 데이터 없으면 빈 채로 유지 */ }
       if (compareData) {
         const hoursLabel = compareKey === '48' ? '2일' : compareKey === '72' ? '3일' : compareKey === '120' ? '5일' : `${compareKey}시간`;
         $('#meta').textContent = `실시간: 최근 ${hoursLabel} 합 vs 직전 동일 폭 (비교)`;
