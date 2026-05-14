@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.41.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스6)
+> 대상: 아이OS
+
+### 개요
+도넛 3종 (모델 분포 / 스킬 점유 / 캐시 vs 비-캐시) 의 우측 범례를 마스터 의도 (개행 분리 / 부분 색상 / 0.1%p 임계 필터) 에 맞추기 위해 Chart.js native legend 를 폐기하고 커스텀 HTML 범례로 전환. 상세 섹션의 모델별·스킬별 도넛도 동일 처리.
+
+### 페이즈 결과
+- **핫픽스6** (`monitoring/index.html`, `monitoring/script.js`, `monitoring/styles.css`):
+  - `index.html`: 도넛 3 chart-card 와 detail-section 의 모델별·스킬별 섹션에 `has-html-legend` 클래스 추가, canvas 옆에 `<div class="chart-legend"></div>` 삽입.
+  - `script.js`: `renderHtmlLegend(containerEl, labels, values, bgs, opts)` 헬퍼 신설. 각 라벨에 색 박스 12×12 + 흰색 라벨 + 비교 모드 시 |델타| ≥ 0.1%p 인 경우만 라벨 아래 개행하여 ▲/▼ 표기 (▲ 파란색 = `#3b82f6`, ▼ 빨간색 = `#ef4444`). `renderChartModelDonut` / `renderChartSkillDonut` / `renderChartCacheDonut` 의 Chart.js options `plugins.legend.display: false` 로 native legend 끄고, chart 생성 후 부모 `.chart-body` 또는 `.detail-chart` 의 `.chart-legend` 자식을 찾아 `renderHtmlLegend` 호출. 캐시 도넛은 positional prevVals 를 label-키 기반 prevMap 으로 변환하여 동일 헬퍼 통일 적용.
+  - `styles.css`: `.chart-card.has-html-legend .chart-body` / `.detail-section.has-html-legend .detail-chart` 에 `display: grid; grid-template-columns: minmax(0, 1fr) auto;` 적용. `.chart-legend` / `.chart-legend-item` / `.dot` / `.label` / `.delta.up` / `.delta.down` 스타일 추가.
+  - 자산 cache-bust `?v=20260514-5` → `?v=20260514-6`.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+NOT APPLICABLE — UI 정정. 신규 메커니즘 추가 없음.
+
 ## v001.40.0
 
 > 통합일: 2026-05-14
