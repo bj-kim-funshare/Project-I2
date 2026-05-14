@@ -1,0 +1,19 @@
+{
+  "leader": "data-craft",
+  "timestamp": "2026-05-14T12:05:00Z",
+  "selected_targets": [
+    {
+      "name": "data-craft-server",
+      "role": "BE",
+      "tool": "other",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && git push origin main:aws-deploy",
+      "env_management": "git-tracked",
+      "target": "https://d3u7b7cxusjkuc.cloudfront.net",
+      "current_branch": "main",
+      "working_tree_porcelain": ""
+    }
+  ],
+  "prior_issue_number": 29
+}
