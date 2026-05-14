@@ -504,6 +504,10 @@ i { color: var(--muted); }
 }
 .chart-card.has-html-legend .chart-body canvas {
   min-width: 0;
+  width: auto !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1;
+  justify-self: center;
 }
 .chart-legend {
   display: flex;
@@ -551,6 +555,10 @@ i { color: var(--muted); }
 }
 .detail-section.has-html-legend .detail-chart canvas {
   min-width: 0 !important;
+  width: auto !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1;
+  justify-self: center;
 }
 
 /* ================= REALTIME MODE ================= */
