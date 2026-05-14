@@ -434,6 +434,8 @@ function renderChartModelDonut(data, opts) {
           align: 'center',
           labels: {
             color: '#e6e9f2',
+            boxWidth: 12,
+            boxHeight: 12,
             generateLabels: (chart) => {
               const ds = chart.data.datasets[0] || {};
               const bgColors = ds.backgroundColor || [];
@@ -451,6 +453,7 @@ function renderChartModelDonut(data, opts) {
                   text,
                   fillStyle: bgColors[i],
                   strokeStyle: bgColors[i],
+                  fontColor: '#e6e9f2',
                   lineWidth: 0,
                   hidden: !chart.getDataVisibility(i),
                   index: i,
@@ -506,6 +509,8 @@ function renderChartSkillDonut(data, opts) {
           align: 'center',
           labels: {
             color: '#e6e9f2',
+            boxWidth: 12,
+            boxHeight: 12,
             generateLabels: (chart) => {
               const ds = chart.data.datasets[0] || {};
               const bgColors = ds.backgroundColor || [];
@@ -523,6 +528,7 @@ function renderChartSkillDonut(data, opts) {
                   text,
                   fillStyle: bgColors[i],
                   strokeStyle: bgColors[i],
+                  fontColor: '#e6e9f2',
                   lineWidth: 0,
                   hidden: !chart.getDataVisibility(i),
                   index: i,
@@ -572,6 +578,8 @@ function renderChartCacheDonut(data, opts) {
           align: 'center',
           labels: {
             color: '#e6e9f2',
+            boxWidth: 12,
+            boxHeight: 12,
             generateLabels: (chart) => {
               const ds = chart.data.datasets[0] || {};
               const bgColors = ds.backgroundColor || [];
@@ -589,6 +597,7 @@ function renderChartCacheDonut(data, opts) {
                   text,
                   fillStyle: bgColors[i],
                   strokeStyle: bgColors[i],
+                  fontColor: '#e6e9f2',
                   lineWidth: 0,
                   hidden: !chart.getDataVisibility(i),
                   index: i,
