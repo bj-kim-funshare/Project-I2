@@ -244,7 +244,7 @@ The PENDING gate is only entered after a CLEAN automated loop result.
 
 If master's next message is not a recognized trigger:
 - Skill returns control. PR stays open, unmerged.
-- Master may finalize later by re-invoking `/dev-merge <from> <to>` — the skill detects the existing open PR and re-enters at the PENDING gate (skipping new PR creation + auto-iter).
+- Master may finalize later by re-invoking `/dev-merge <leader>` — the skill detects the existing open PR and re-enters at the PENDING gate (skipping new PR creation + auto-iter).
 
 ## Merge (on `머지 완료` / `플랜 완료`)
 
@@ -265,12 +265,13 @@ state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable +
 
 하드코딩 1차 목록: `i-dev`, `main`, `master`, `develop`. from-branch 가 이 목록에 정확히 일치하면 `gh pr merge` 호출 시 `--delete-branch` 를 생략하고, 머지 후 worktree 만 제거한다 (브랜치는 로컬·리모트 모두 보존 — long-running 통합 브랜치 정책 (`CLAUDE.md` §5) 정합).
 
-**판정 로직 (확장 적용 후)**:
+**판정 로직**:
 
-1. 호출이 leader-aware 인 경우 (예: `plan-enterprise` 등 상위 스킬이 leader 컨텍스트를 보유하고 dev-merge 를 호출하는 경로) — `.claude/project-group/<leader>/group.md` 의 `보호 브랜치` 행 / `## 보호 브랜치` 절을 읽어 1차 목록으로 사용. 그 그룹에 `protected_branches` 설정이 없으면 하드코딩 fallback (`i-dev` / `main` / `master` / `develop`) 사용.
-2. 호출이 leader-unaware 인 경우 (master 가 직접 `/dev-merge <from> <to>` 만 호출 — leader 인자 없음) — leader 추정 시도하지 않고 하드코딩 fallback 만 사용 (`i-dev` / `main` / `master` / `develop`).
+dev-merge 는 leader 인자 필수이므로 항상 leader 컨텍스트를 보유한다.
+- `<leader> == "아이OS"` → 본 harness 의 보호 브랜치 = `main` + 하드코딩 fallback (`master`, `develop` — 일반 git 관례).
+- 외부 leader → `.claude/project-group/<leader>/group.md` 의 `## 보호 브랜치` 절 또는 `protected_branches` 필드를 읽어 1차 목록으로 사용. 그 그룹에 설정이 없으면 하드코딩 fallback (`i-dev`, `main`, `master`, `develop`) 사용.
 
-group-policy 확장 후속 작업 (이슈 #31 핫픽스1) 으로 본 분기 정식화 완료.
+group-policy 확장 후속 작업 (이슈 #31 핫픽스1) 의 leader-aware 분기는 본 절차에 통합됨.
 
 ### Merge command
 
