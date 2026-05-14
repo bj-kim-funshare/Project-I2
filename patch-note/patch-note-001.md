@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.44.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스9)
+> 대상: 아이OS
+
+### 개요
+핫픽스8 에서 grid `grid-template-columns: 240px minmax(0, 1fr)` 로 두었으나 `.chart-body { height: 260px }` 와 정합되지 않아 canvas 가 240×260 직사각형 → 도넛 위아래 타원으로 늘어남. 핫픽스6~8 이 컬럼폭과 컨테이너 높이를 함께 고려하지 않고 만들어진 결과. 컬럼폭과 chart-body 높이를 모두 260px 로 정합, canvas 도 `width: 260px !important; height: 260px !important;` 절대 고정으로 정사각형 보장.
+
+### 페이즈 결과
+- **핫픽스9** (`monitoring/styles.css`, `monitoring/index.html`):
+  - `.chart-card.has-html-legend .chart-body`: `grid-template-columns: 240px ...` → `260px minmax(0, 1fr)`, `height: 260px` 명시.
+  - 동일 셀렉터의 canvas 룰을 `width: 260px !important; height: 260px !important;` 절대 고정 (max-height 폐기 — 정확한 정사각형 보장 우선).
+  - `.detail-section.has-html-legend .detail-chart` 도 동일 패턴 (260px × 260px).
+  - 자산 cache-bust `?v=20260514-8` → `?v=20260514-9`.
+
+### 영향 파일
+- `monitoring/styles.css`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 시각 정정 (정사각형 정합). 신규 메커니즘 추가 없음.
+
 ## v001.43.0
 
 > 통합일: 2026-05-14
