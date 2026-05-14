@@ -1,5 +1,18 @@
 # 아이OS — Patch Note (001)
 
+## v001.53.0
+
+> 통합일: 2026-05-14
+
+### 변경 파일
+
+- (추가) .agents/
+- (추가) .claude/inspection-runs/
+- (추가) .codex/
+- (추가) AGENTS.md
+- (추가) monitoring/data/hourly.json
+- (추가) temp/
+
 ## v001.52.0
 
 > 통합일: 2026-05-14
