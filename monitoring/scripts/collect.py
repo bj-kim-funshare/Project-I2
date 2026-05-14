@@ -90,6 +90,7 @@ def collect() -> dict[str, Any]:
     by_skill: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_session: dict[str, dict[str, Any]] = {}
     by_day: dict[str, dict[str, int]] = defaultdict(empty_token_record)
+    by_day_cost: dict[str, float] = defaultdict(float)
     total: dict[str, int] = empty_token_record()
 
     files_processed = 0
@@ -132,9 +133,14 @@ def collect() -> dict[str, Any]:
 
             add_usage(by_model[model], usage)
             add_usage(by_skill[skill], usage)
-            add_usage(by_day[(ts or "")[:10] or "unknown"], usage)
+            day_key = (ts or "")[:10] or "unknown"
+            add_usage(by_day[day_key], usage)
             add_usage(session_record["tokens"], usage)
             add_usage(total, usage)
+
+            msg_record = empty_token_record()
+            add_usage(msg_record, usage)
+            by_day_cost[day_key] += cost_of(model, msg_record)
 
             model_counts[model] += 1
             session_record["skills"].add(skill)
@@ -174,7 +180,7 @@ def collect() -> dict[str, Any]:
     ]
 
     by_day_out = [
-        {"day": d, **r}
+        {"day": d, **r, "cost_usd": round(by_day_cost.get(d, 0.0), 4)}
         for d, r in sorted(by_day.items())
     ]
 

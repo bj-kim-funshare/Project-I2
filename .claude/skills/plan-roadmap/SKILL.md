@@ -28,7 +28,7 @@ Parse rule:
 ## Pre-conditions
 
 1. cwd is the Project-I2 repo (the harness itself).
-2. Current branch = `i-dev` (or `main` for bootstrap).
+2. Current branch = `main` (always exists for I-OS — no bootstrap needed).
 3. `.claude/plan-roadmap/` exists or can be created on first run (lazy-create per `README.md` §G design).
 4. (Edit mode only) The target roadmap file exists.
 
@@ -147,11 +147,18 @@ Slug = master-provided title normalized — lowercase Latin/digits allowed, Hang
 
 ### Step 7 — Write the roadmap file
 
+> Worktree 절차: `.claude/md/worktree-lifecycle.md`.
+
 ```bash
-mkdir -p .claude/plan-roadmap
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+
+wip="plan-roadmap-{N}-{slug}-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
 ```
 
-Write the drafted content to `.claude/plan-roadmap/Roadmap-{N}-{slug}.md`.
+Write the drafted content to `<wt>/.claude/plan-roadmap/Roadmap-{N}-{slug}.md` (create `<wt>/.claude/plan-roadmap/` if not present). Main session does not change cwd. Counter `N` is determined in Step 6 by reading `.claude/plan-roadmap/` in the main cwd before the worktree is created.
 
 For edit mode: overwrite the existing file. The existing file's prior content is not preserved separately — `git log` is the only history (per spec "폐기되는 프롬프트는 따로 보존하지 않음").
 
@@ -160,14 +167,20 @@ For edit mode: overwrite the existing file. The existing file's prior content is
 Single WIP (doc work):
 
 ```bash
-git checkout i-dev
-git checkout -b plan-roadmap-{N}-{slug}-문서
-git add .claude/plan-roadmap/Roadmap-{N}-{slug}.md
-git commit -m "plan-roadmap: Roadmap-{N}-{slug} {create|update}"
-git push origin plan-roadmap-{N}-{slug}-문서
-git checkout i-dev
+git -C <wt> add .claude/plan-roadmap/Roadmap-{N}-{slug}.md
+git -C <wt> commit -m "plan-roadmap: Roadmap-{N}-{slug} {create|update}"
+git -C <wt> push -u origin plan-roadmap-{N}-{slug}-문서
+```
+
+Merge from main working tree (main cwd):
+
+```bash
+git checkout main
+git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff plan-roadmap-{N}-{slug}-문서
 ```
+
+머지 성공 후: `git worktree remove <wt>`
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
@@ -184,9 +197,8 @@ Korean output to master:
 | 파일 | .claude/plan-roadmap/Roadmap-{N}-{slug}.md |
 | 프롬프트 수 | <count> (🔴 <n> / 🟡 <n> / 🟢 <n>) |
 | 병렬 그룹 | <list of group numbers and their member counts> |
-| WIP | plan-roadmap-{N}-{slug}-문서 (i-dev 머지 ✅) |
+| WIP | plan-roadmap-{N}-{slug}-문서 (main 머지 ✅) |
 | advisor 검증 | PASS |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
 The roadmap is now ready for master to consult. Status updates on individual prompts happen via subsequent `plan-roadmap` edit-mode invocations or via direct master edit of the file (no auto-update on prompt execution in v1).
@@ -202,7 +214,8 @@ The roadmap is now ready for master to consult. Status updates on individual pro
 | Advisor BLOCK | `"advisor 차단: <reason>. 마스터 수정 또는 중단 결정 필요."` |
 | ExitPlanMode rejection | (return to Step 3 with master's revision) |
 | `mkdir` / `git` / write failure | verbatim error in Korean report |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
@@ -211,7 +224,7 @@ In scope:
 - Edit existing roadmaps — add / remove / reorder / regroup prompts, change status icons, append/replace description.
 - Local sequential numbering (max+1).
 - 5-perspective advisor verification.
-- Single doc WIP and single merge to i-dev.
+- Single doc WIP and single merge to main.
 - All status icons in new roadmaps default to 🔴 per spec.
 
 Out of scope (v1):

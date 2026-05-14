@@ -1,5 +1,292 @@
 # 아이OS — Patch Note (001)
 
+## v001.8.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #5
+> 대상: 아이OS — patch-confirmation push 자동화 + classifier 6 list 우회
+
+### 페이즈 결과
+
+- **Phase 1**: `.claude/skills/patch-confirmation/SKILL.md` 에 머지 후 `origin/main` push 단계 spec 추가. description 한 문장 + Final push 서브섹션 (코드 블록 + 설명) + Scope out-of-scope "Push" 제거 + Failure policy 표 main push 실패 row + Reporting 표 `origin/main push` row, 총 5건 변경.
+- **Phase 2**: `.claude/settings.json` 의 root JSON 에 `permissions.allow` 6 항목 추가 — `Bash(git push origin main)`, `Bash(git push -u origin *)`, `Bash(gh issue create *)`, `Bash(gh issue close *)`, `Bash(gh issue comment *)`, `Bash(gh pr *)`. classifier 의 main session git/gh 차단을 narrow carve-out 으로 우회 (broad wildcards `Bash(git *)` / `Bash(gh *)` 거부).
+
+### 영향 파일
+
+- `.claude/skills/patch-confirmation/SKILL.md` (수정)
+- `.claude/settings.json` (수정)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 기존 스킬 (patch-confirmation) 의 기능 확장 + permissions allow 6줄 carve-out. 새 룰/훅/페르소나/스킬/검증축 추가 없음, 메모리 `feedback_no_prevention_treadmill.md` 의 카테고리 직접 매칭 없음.
+
+### 마스터 결정 흐름
+
+- (a) narrow scope: `patch-confirmation` 한 스킬만, 다른 머지 스킬 별개 (메모리 `feedback_plan_enterprise_no_auto_push.md` 와 정합)
+- (i) bundle: spec 변경 + permissions 보강을 한 plan 안 2 phase 로
+- (B) 6 명시 list: broad wildcards 거부, narrow 1줄 거부, 6 명시 항목 채택
+
+### Verification
+
+작업 WIP main 머지 직후 `git push origin main` 1회 실 시도 → 통과 ✅. classifier 가 `Bash(git push origin main)` 룰 정상 인식. plan 의 verification 약속 충족.
+
+### 후속 plan 후보 (본 plan 범위 외)
+
+- 다른 머지 스킬 (`patch-update`, `group-policy`, `new-project-group`, `plan-roadmap`, `create-custom-project-skill`) 의 push 정책 일관성 검토. `plan-enterprise` / `-os` 는 메모리 `feedback_plan_enterprise_no_auto_push.md` 로 push 안 함 정책 명시 — 그 외 스킬은 결정 미정.
+
+## v001.7.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #3 (핫픽스 phase)
+> 대상: 아이OS — 모니터링 대시보드 일자별 토큰 차트
+
+### 페이즈 결과
+
+- **Hotfix 1 (누적 Phase 2)** — `monitoring/script.js` 의 `renderChartDayTokens()` datasets 에서 `'cache write'`, `'cache read'` 두 시리즈 제거. 남은 시리즈는 `input` (`fill: 'origin'`) + `output` (`fill: '-1'`) 2 개로 누적 영역 선 차트 유지.
+
+### 변경 요약
+
+- 차트가 4 시리즈 → 2 시리즈로 단순화 (input + output 만).
+- `type: 'line'` / `scales.{x,y}.stacked: true` / `tooltip` / `legend` / 색상 상수 / HTML / 기타 옵션 무변경.
+- 이슈 #3 의 PENDING 게이트에서 마스터 입력 `핫픽스, 선 그래프에서 캐시는 제외해줘` 로 진입.
+
+### 영향 파일
+
+- 수정: `monitoring/script.js` (datasets 2 줄 삭제)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 변경은 시각화 datasets 토글이며, 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 / invariant 추가 0.
+
+### 절차상 메모
+
+- 본 entry 는 plan-enterprise-os 핫픽스 path 의 단일 WIP (`-핫픽스1`) 안에서 코드 commit + patch-note commit 을 같은 worktree 에 묶어 진행. 새 §5 worktree 격리 규약 (v001.4.0) 적용.
+- patch-note 버전 번호는 worktree 생성 시점에 main HEAD 가 v001.5.0 이었으나 dispatch 중 다른 세션이 v001.6.0 을 머지하여, 본 entry 가 v001.7.0 으로 됨 (worktree-lifecycle.md 의 patch-note 버전 race known limitation 경로 — renumber 없이 다음 빈 슬롯으로 자연 정렬).
+
+---
+
+## v001.6.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2 (핫픽스2)
+> 대상: 아이OS — 이슈 lifecycle close 정합 (handoff orphan 폐기)
+
+### 페이즈 결과
+
+- **Phase 3 — handoff 스킬 lifecycle close 절차 추가**: pre-deploy 와 create-custom-project-skill 의 SKILL.md 에 이슈 close 단계 명시. 두 스킬 모두 자기 이슈를 자기 lifecycle 안에서 close 하도록 책임 귀속.
+
+### 변경 요약
+
+#### pre-deploy/SKILL.md
+
+(본 핫픽스2 작업물 일부 — 사이클 도중 commit 이 별도 세션 브랜치에 잘못 안착했고, 그 세션이 v001.4.0 머지로 흡수해 main 에 이미 존재. 본 entry 는 사이클 audit trail 보존 목적.)
+
+- Prior-issue lookup section 신설 — `pre-deploy: <leader> 배포 차단` title prefix 매칭으로 재호출 결정적 식별
+- Branch A: 첫 호출 신규 생성 / 재호출 기존 이슈 comment append + open 유지
+- Branch B: 모든 타겟 배포 성공 + prior_issue_number 존재 시 합격 보고서 comment + `gh issue close`. 부분 실패 시 open 유지
+- Failure policy: lookup / comment / close 실패 케이스 명시
+- Scope: 다른 스킬 이슈 close 금지 명시
+
+#### create-custom-project-skill/SKILL.md
+
+- Lifecycle 에 Step 10 (PENDING gate) + Step 11 (FINALIZE on `플랜 완료`) 신설
+- Step 9 → "작업 완료" 보고 (mechanical creation summary, 이슈 OPEN)
+- frontmatter description 갱신 — "Owns its issue lifecycle"
+- Scope: "Issue lifecycle ownership" 명시
+
+머지 시 v001.4.0 의 worktree 격리 변경과 같은 파일에서 자동 양측 보존 (ort strategy) — 두 변경의 hunk 가 겹치지 않아 conflict 없이 통합.
+
+### 영향 파일
+
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/skills/create-custom-project-skill/SKILL.md`
+- `patch-note/patch-note-001.md` (본 entry)
+
+### Treadmill Audit
+
+| Q | 답 |
+|---|---|
+| Q1 재발 사고? | YES — handoff 스킬 이슈 누적 / close 책임 부재 |
+| Q2 새 엣지 케이스? | pre-deploy 재호출 시 validator 가 다른 차단 발견 → 옛 이슈에 comment append + open 유지 (중복 이슈 회피). create-custom `중단` 입력 → 이슈 open 유지 |
+| Q3 retire | **"handoff orphan"** 패턴 — "다른 스킬이 close 한다" 는 암묵 가정. 본 변경으로 close 권한·책임이 이슈 생성 스킬 자체에 귀속. inspection 4 스킬은 본 retire 대상 아님 (그들은 open 유지가 의도된 동작) |
+
+### 사후 ratification 메모
+
+본 핫픽스2 는 이슈 #2 의 Step 11 PENDING 게이트에서 마스터의 `핫픽스, ...` 입력으로 진입. 작업 절차 중 working tree 공유로 인한 cross-session 격리 부재가 노출되어 commit 이 다른 세션 브랜치에 잘못 안착하는 사고 발생. 이는 별도 사이클 (이슈 #4 v001.4.0) 에서 `git worktree` 격리 도입으로 구조적 해결됨 — 본 v001.6.0 의 머지는 그 worktree 격리 도입 후 첫 양측 보존 머지 검증 케이스.
+
+본 핫픽스의 일부였던 메모리 `feedback_no_pre_session_collision_check.md` 는 v001.4.0 시점에 폐기됨 (Q3 retire — worktree 격리로 의미 상실). MEMORY.md 인덱스에서도 이미 제거됨.
+
+### 커밋
+
+- `beab4ad` hotfix(pre-deploy): 이슈 lifecycle close 절차 추가 (cherry-pick 안착, 내용은 main 에 이미 흡수됨)
+- `be1fcf0` hotfix(create-custom-project-skill): lifecycle close 절차 추가
+- `0567743` merge: main 통합 (worktree 격리 도입 v001.4.0 흡수, ort 자동 양측 보존)
+- 본 v001.6.0 entry 작성 commit (`-문서-핫픽스2` WIP)
+
+---
+
+## v001.5.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #3
+> 대상: 아이OS — 모니터링 대시보드 일자별 토큰 차트
+
+### 페이즈 결과
+
+- **Phase 1** — `monitoring/script.js` 의 `renderChartDayTokens()` 를 Chart.js v4.5.1 누적 영역 선 그래프로 전환. `type: 'bar' → 'line'`, 각 dataset 에 `borderColor` (원색) + `backgroundColor` (hex8 40% 알파, 원색 + `'66'`) + `fill` 체인 (`'origin'` → `'-1'` x3) 추가. `stack: 's'` 및 `scales.{x,y}.stacked: true` 유지 (Chart.js v4 누적 영역 관용구).
+
+### 변경 요약
+
+- 막대 차트를 4 시리즈 누적 영역 선으로 시각화 전환.
+- 누적 의미(스택)는 유지 — 마스터 sharpening 확인 (2026-05-13).
+- tooltip / legend / responsive / scales.y.ticks.callback / HTML / 색상 상수 무변경.
+- 마스터 요청 범위 밖 옵션 (tension / pointRadius 등) 추가 없음.
+
+### 영향 파일
+
+- 수정: `monitoring/script.js` (단일 함수 `renderChartDayTokens`, 10 줄 = 5 추가 / 5 삭제)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 변경은 단일 시각화 옵션 토글이며, 신규 규칙 / 훅 / 에이전트 / 스킬 / 검증축 / invariant 추가 0.
+
+### 절차상 메모
+
+- 본 entry 는 v001.4.0 worktree 격리 머지 이후 가장 먼저 도입되는 doc WIP — 새 §5 패턴 (`git worktree add ../Project-I2-worktrees/<wip> main`) 의 plan-enterprise-os doc WIP 첫 dogfood.
+- 본 계획의 code WIP (`-작업`) 는 worktree 격리 도입 직전 구 패턴으로 진행되어 다른 세션의 동시 commit 1 건 (`e862889`, 이슈 #2 핫픽스2 부분 1/3) 이 같은 branch 에 박힘. 해당 commit 은 origin/main 에 함께 push 되어 정합성 유지 (이슈 #2 의 후속 진행에서 정상 추적 가능).
+
+---
+
+## v001.4.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #4
+> 대상: 아이OS — 모든 write 스킬에 git worktree 격리 강제
+
+### 배경
+
+빌드 직후 24 시간 내 다중-세션 충돌 3회 이상 발생. 한 세션의 `git checkout` 이 같은 working tree 의 단일 HEAD 를 mutate 하여 다른 세션의 WIP 위에 commit 박힘 / 메인 working tree 의 미커밋 edit 손실 / phase-executor declared affected_files 위반 등. 원인은 cwd 가 아니라 **single working tree 의 single HEAD**. 해결: `git worktree add` 로 WIP 마다 독립 working tree + HEAD 부여.
+
+### 페이즈 결과
+
+- **Phase 1** — `.claude/md/worktree-lifecycle.md` 신설. 정확한 충돌 메커니즘, 경로 규약 (`../{repo}-worktrees/<wip>`), create/dispatch/merge/remove 시퀀스, prune 정책, 잔존 race 명시, "다른 세션의 worktree 는 이 세션의 관심사가 아니다" 원칙.
+- **Phase 2** — CLAUDE.md §5 WIP & merge protocol 을 4 단계 → 5 단계로 격상. 1 단계 = WIP worktree + branch (working-tree-level isolation). 절차 본문은 worktree-lifecycle.md 참조.
+- **Phase 3 (load-bearing)** — 4 개 write-capable sub-agent (phase-executor, code-fixer, db-migration-author, db-data-author) 에 `worktree_cwd` 입력 추가. 모든 git 호출이 `git -C <worktree_cwd>` 형식. code-fixer 의 `git checkout` 제거.
+- **Phase 4** — plan-enterprise + plan-enterprise-os SKILL.md 갱신. Step 6 / 7 / 9 / 10 / HOTFIX 경로에 worktree 절차 주입. 메인 세션 검증 ritual 에 `git fetch origin <wip_branch>` 추가.
+- **Phase 5** — task-db-structure + task-db-data SKILL.md 갱신. Phase 1 dispatch 에 worktree_cwd, Phase 3 WIP 블록을 worktree add 패턴으로, Phase 5 머지 후 worktree remove.
+- **Phase 6** — dev-merge SKILL.md 갱신. from-branch (이미 존재) 위에 worktree add (no -b), code-fixer dispatch 3 곳에 worktree_cwd, conflict-PENDING rebase 를 `git -C <wt_from>` 으로.
+- **Phase 7** — group-policy / new-project-group / plan-roadmap SKILL.md 갱신. 메인 세션이 worktree 절대경로로 Write/Edit, `git -C <wt>` 로 commit/push, 머지 후 remove. group-policy "유지 4" no-op 분기는 worktree 생성 전 halt.
+- **Phase 8** — create-custom-project-skill / patch-update / patch-confirmation SKILL.md 갱신. patch-confirmation 은 메인 cwd 미커밋 변경을 `git stash push -u → git -C <wt> stash pop` 으로 worktree 이동하는 7 단계 절차 명시.
+- **Phase 9 (post-advisor BLOCK)** — entry ritual 의 `git worktree list # report unrelated leftovers to master` 안티-패턴 제거. worktree-lifecycle.md + 9 SKILL.md 정리. 다른 세션의 worktree 는 본 세션의 관심사가 아님을 본문에 명시.
+
+### 영향 파일
+
+- 신규: `.claude/md/worktree-lifecycle.md`
+- 수정: `CLAUDE.md`, `.claude/agents/phase-executor.md`, `.claude/agents/code-fixer.md`, `.claude/agents/db-migration-author.md`, `.claude/agents/db-data-author.md`
+- 수정: `.claude/skills/{plan-enterprise, plan-enterprise-os, task-db-structure, task-db-data, dev-merge, group-policy, new-project-group, plan-roadmap, create-custom-project-skill, patch-update, patch-confirmation}/SKILL.md` (총 11)
+- 메모리 retire: `~/.claude/projects/.../memory/feedback_no_pre_session_collision_check.md` 삭제 + `MEMORY.md` 인덱스 정리
+
+### Treadmill Audit
+
+- **Q1 재발성**: PASS — 24 시간 내 3 회 이상 충돌 사고.
+- **Q2 새 엣지 케이스**:
+  - worktree dir stale (수동 삭제) → `git worktree prune` 으로 투명 정리.
+  - patch-confirmation 의 git stash race (메인 cwd 단일 stash 저장소, 동시 호출 시 stash 섞임) → worktree 로 해소 안 됨. §5 4 단계 + 마스터 복구. SKILL.md 본문에 명시.
+  - Korean 경로 (`-작업`, `-문서`) — macOS APFS 정상 동작 확인 (본 v001.4.0 WIP B 가 첫 dogfood, `git worktree add` 성공).
+  - worktree-lifecycle.md 의 `push -u origin` "optional" 표현 — 실제로는 dispatcher 가 mandatory 사용. 후속 fix 후보.
+- **Q3 trade-out 폐기**: PASS — `feedback_no_pre_session_collision_check.md` 메모리 삭제 + `MEMORY.md` 인덱스 한 줄 제거. worktree 격리가 도입되어 "다른 세션 사전 회피 금지" 의 보호 대상 (사전 회피) 자체가 의미를 잃음.
+
+### 잔존 known limitations
+
+- patch-confirmation 의 git stash race (위 Q2 참조).
+- patch-note 버전 번호 race (두 세션이 동시에 v001.K+1.0 산출 시 머지에서 충돌; §5 4 단계로 한쪽을 .K+2.0 으로 renumber). worktree-lifecycle.md 명시.
+- worktree-lifecycle.md 의 `push -u origin` "optional" 표현 정리 (단어 한 줄 수정 후보).
+
+### 다음 사이클 후보
+
+- 본 v001.4.0 의 dogfood 일주일 운영 후 결함 수집 → 마이크로 fix 패치 (예: lifecycle md `optional` 표현 정리)
+- 다중 세션 실 운영 검증 (두 세션 동시 write 스킬 호출 → 양측 머지 시 충돌 없이 양측 보존)
+
+## v001.3.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2 (핫픽스 phase)
+> 대상: 마스터 머신 사용자 환경 설정
+
+### 페이즈 결과
+
+- **Phase 2 — Claude Code 시작 시 기본 effort xhigh→medium**: `~/.claude/settings.json:147` `effortLevel` 키 값 변경. 이슈 #2 PENDING 게이트에서 마스터 핫픽스 입력으로 진입.
+
+### 변경 요약
+
+- **변경 위치**: `~/.claude/settings.json` line 147
+- **변경**: `"effortLevel": "xhigh"` → `"effortLevel": "medium"`
+- **영향 범위**: 모든 프로젝트의 Claude Code 메인 세션 — Project-I2 의 `.claude/settings.json` 에는 effort 키가 없어 글로벌 값을 상속하므로 본 변경이 즉시 적용됨. 본 레포 sub-agent 들은 별도로 frontmatter `effort: medium` 으로 이미 고정되어 영향 없음.
+
+### 영향 파일
+
+- `~/.claude/settings.json` — **untracked**, 본 레포 git 추적 밖. 변경 검증은 마스터 머신에서만 가능. 향후 독자가 git blame 으로 변경 출처를 못 찾는 이유.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축/invariant 추가 0. 단일 설정 값 변경.
+
+### 절차상 비대칭
+
+- 코드 변경 origin push 0 (변경 자체가 레포 밖)
+- 패치노트 origin push 1 (본 v001.3.0 entry 가 main 으로 머지·push 됨)
+
+### 사후 ratification 메모
+
+본 핫픽스는 이슈 #2 의 Step 11 PENDING 게이트에서 마스터가 `핫픽스, claude 시작 시 기본 effort가 지금 xhigh인데 medium으로 바꿔줘` 입력으로 진입. plan-enterprise-os 스킬 v1 spec 의 hotfix path 적용 (WIP `-문서-핫픽스1` 명명은 향후 컨벤션 시드).
+
+### 커밋
+
+- 본 v001.3.0 패치노트 작성 자체가 단일 commit (`-문서-핫픽스1` WIP, 그 후 main 머지 commit)
+
+---
+
+## v001.2.0
+
+> 통합일: 2026-05-13
+> 플랜 이슈: #2
+> 대상: 아이OS (monitoring 페이지)
+
+### 페이즈 결과
+
+- **Phase 1 — 다크테마 + 중앙정렬 + 고정 grid**: `monitoring/styles.css` 401줄 재작성 + `monitoring/script.js` 31줄 보강. 마스터 스크린샷 피드백 (라이트테마 / 풀폭 늘어남 / 빈 4번째 열 / KPI 카드 정렬) 4종 결함을 Project-I monitoring CSS 벤치마킹으로 일괄 해소.
+
+### 변경 요약
+
+- CSS 변수 다크 팔레트 (`--bg #0b0d12`, `--surface #141821`, `--accent #7c3aed`, …) — Project-I 토큰과 1:1 매핑
+- `.layout { max-width: 1480px; margin: 0 auto; }` — 풀폭 늘어남 해소
+- KPI grid `repeat(4, 1fr)` 고정, 차트 grid `repeat(3, 1fr)` 고정 + `.wide { grid-column: span 3; }` — `auto-fit` 의 빈 4번째 열 제거
+- KPI 카드 `min-height: 168px` 통일, `dt::before` 마커로 non-cache(●) / cache(▣) 색상 구분
+- `Chart.defaults.color / borderColor / tooltip` 다크 정합 — Chart.js 6 인스턴스 일괄 적용
+- 다크 BG 친화 팔레트: `input #3b82f6`, `cache #9b59b6`, `positive #10b981`
+- 반응형 1280px → 2-col, 800px → 1-col
+
+### 영향 파일
+
+- `monitoring/styles.css`
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축/invariant 추가 0. 순수 시각 정합 수정.
+
+### 사후 ratification 메모
+
+작업 commit `acb2b9d` 가 마스터 스크린샷 피드백 직후 선행 실행됨. 본 plan-enterprise-os 호출은 사후 ratification — 마스터가 `/plan-enterprise-os` 인자로 push 직접 위임 → Step 4 ExitPlanMode 생략. advisor 계획/완료 6 관점 모두 PASS.
+
+### 커밋
+
+- `acb2b9d` style: monitoring 다크테마 + 중앙정렬 + 고정 grid
+- `d616640` merge: monitoring 다크테마 polish (이슈 #2 phase 1)
+- 본 v001.2.0 패치노트 작성 자체가 추가 1 커밋 (`-문서` WIP)
+
+---
+
 ## v001.1.0
 
 > 통합일: 2026-05-12

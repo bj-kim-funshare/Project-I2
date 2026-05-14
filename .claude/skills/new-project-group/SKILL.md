@@ -34,7 +34,7 @@ The leader name will never be `아이OS` — that target is handled by `plan-ent
 
 1. `.claude/project-group/<leader>/` must **not** already exist.
 2. Every repository path must exist on disk.
-3. Current branch = `i-dev` (or `main` for i-dev bootstrap), per `CLAUDE.md` §5 convention used across the harness.
+3. Current branch = `main` (always exists for I-OS — no bootstrap needed), per `CLAUDE.md` §5 convention used across the harness.
 
 ## Pre-scan
 
@@ -72,7 +72,10 @@ Master may write `~` shortcuts; skill expands to absolute paths before saving. M
 
 ### Round 1 — dev
 
-Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`. These map 1:1 to the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract — that schema is the single source of truth; this skill emits conforming output.
+Fields per project: `cwd`, `dev_command`, `port`, `cache_paths`, `type`, `lint_command`. These extend the YAML schema declared in `.claude/skills/dev-start/SKILL.md` §Manifest contract.
+
+- `type`: `"project"` or `"monorepo"`. Master picks per target. Used by `dev-build` skill to surface monorepo selections.
+- `lint_command`: optional. Shell command for lint gate (used by `dev-merge` and `plan-enterprise` per-phase lint gate). Examples: `pnpm typecheck`, `pnpm lint`, `npx tsc --noEmit`, `cargo check`. Empty/omitted = lint gate skipped for that target (master signals no lint check desired).
 
 ### Round 2 — deploy
 
@@ -155,10 +158,12 @@ YAML frontmatter conforming to `dev-start` contract, free-text body below:
 targets:
   - name: {name1}
     cwd: {abs-path}
+    type: project          # "project" or "monorepo"
     dev_command: {command}
     port: {int}
     cache_paths:
       - {path}
+    lint_command: {command or empty}   # lint gate (omit/empty = skipped)
   - name: {name2}
     ...
 ---
@@ -212,12 +217,36 @@ No "이전" pointer (this is the first file).
 
 ## WIP / merge protocol
 
+> Worktree 절차: `.claude/md/worktree-lifecycle.md`.
+
 Single WIP — all writes are docs.
 
-- **i-dev bootstrap** — if missing, branch from `main` HEAD. Report in completion table.
-- **WIP branch** — `new-project-group-<leader>-문서`, branched from `i-dev`.
+```bash
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+
+wip="new-project-group-<leader>-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
+```
+
+- **Disk writes** — all new files are written under `<wt>/.claude/project-group/{leader}/`:
+  - `<wt>/.claude/project-group/{leader}/Index.md`
+  - `<wt>/.claude/project-group/{leader}/dev.md`
+  - `<wt>/.claude/project-group/{leader}/deploy.md`
+  - `<wt>/.claude/project-group/{leader}/db.md`
+  - `<wt>/.claude/project-group/{leader}/group.md`
+  - `<wt>/.claude/project-group/{leader}/patch-note/patch-note-001.md`
+- All git commands use `git -C <wt> add <relative-path>` and `git -C <wt> commit ...` form. Main session does not change cwd.
 - **Commit message** (Korean) — `new-project-group: {leader} 그룹 신규 등록`.
-- **Merge to i-dev** — preserve both on conflict; halt only if mutually exclusive (extremely unlikely for a brand-new folder).
+- **Merge to main** — from main working tree (main cwd):
+  ```
+  git checkout main
+  git pull --ff-only origin main 2>/dev/null || true
+  git merge --no-ff <wip>
+  ```
+- 머지 성공 후: `git worktree remove <wt>`
+- 충돌 시 §5 4단계 양측 보존; 상호 배타적이면 마스터에게 halt (신규 폴더이므로 충돌 극히 드묾).
 - No push, no tag, no remote operations.
 
 ## Reporting
@@ -235,8 +264,7 @@ Korean output after merge:
 | 정책 파일 | dev.md / deploy.md / db.md / group.md |
 | 초기 패치노트 | patch-note/patch-note-001.md |
 | WIP 브랜치 | new-project-group-{leader}-문서 |
-| i-dev 머지 | ✅ |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
+| main 머지 | ✅ |
 | advisor 검증 | ✅ (concerns: {count} non-blocker) |
 ```
 
@@ -252,10 +280,11 @@ Immediate Korean report + halt. No retry.
 | Leader name `아이OS` | `"아이OS 는 그룹 등록 대상 아님 — plan-enterprise-os 로 처리"` |
 | Repository path missing | `"저장소 경로 부재: <path>"` |
 | Path argument is relative | `"절대경로 필요: <path>"` |
-| Current branch not `i-dev` (and not `main` for bootstrap) | `"i-dev 브랜치에서만 호출 가능 (i-dev 부재 시 main 허용). 현재: <branch>"` |
+| Current branch not `main` | `"main 브랜치에서만 호출 가능. 현재: <branch>"` |
 | Master invocation lacks repository entries | `"멤버 저장소 1개 이상 필요. 예: /new-project-group data-craft fe=/path/dc-fe,be=/path/dc-be"` |
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
@@ -264,7 +293,7 @@ In scope:
 - 4-area policy collection with hybrid structured + free-text input.
 - Single advisor validation pass before write.
 - Initial `patch-note-001.md` matching `patch-update` template.
-- Single WIP commit-and-merge to `i-dev`.
+- Single WIP commit-and-merge to `main`.
 
 Out of scope:
 - Modifying existing groups (use `/group-policy`).

@@ -1,6 +1,7 @@
 ---
 name: code-inspector
 model: claude-opus-4-7
+effort: medium
 description: Read-only sub-agent that inspects code across a scoped set of files (not a single PR diff) for logic bugs, null/undefined paths, off-by-one, race conditions, error-handling gaps, and type-system holes. Same review focus as bug-detector — the difference is input shape: code-inspector receives a scope description (file list per repo, by version or today mode) and uses its own tools to read files, while bug-detector reviews a verbatim diff. Returns a JSON findings array (confidence ≥ 80 only) with severity tags and per-repo qualifiers. Does not modify code. Dispatched by dev-inspection.
 tools: Read, Grep, Glob, Bash
 ---

@@ -1,6 +1,7 @@
 ---
 name: bug-detector
 model: claude-opus-4-7
+effort: medium
 description: Read-only code reviewer focused exclusively on bugs likely to cause failure or wrong behavior at runtime — logic errors, null/undefined paths, off-by-one, race conditions, error-handling gaps, type-system holes, resource leaks. Returns a JSON array of findings (confidence ≥ 80 only). Does not modify code. Does not flag style or convention issues. Dispatched by dev-merge in parallel with claude-md-compliance-reviewer.
 tools: Read, Grep, Glob, Bash
 ---

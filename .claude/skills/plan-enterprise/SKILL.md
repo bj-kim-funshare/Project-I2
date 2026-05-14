@@ -133,17 +133,20 @@ Capture the issue number `N` and the issue URL.
 
 ## Step 6 — WIP A branch
 
-```bash
-git checkout i-dev
-git checkout -b plan-enterprise-<N>-<slug>-작업
-```
-
 Slug is a short Latin/Hangul-phonetic transliteration of the plan title (max 50 chars, no whitespace). If unclear, ask main session to derive one.
 
-Push the empty WIP:
 ```bash
-git push -u origin plan-enterprise-<N>-<slug>-작업
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+
+# Create WIP A worktree (working-tree-level isolation)
+wip_a="plan-enterprise-<N>-<slug>-작업"
+wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
+git worktree add -b "${wip_a}" "${wt_a}" i-dev
+git -C "${wt_a}" push -u origin "${wip_a}"
 ```
+
+> Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ## Step 7 — Phase execution loop
 
@@ -151,7 +154,7 @@ For each phase in order:
 
 ### 7a. Dispatch `phase-executor`
 
-Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number, phase metadata (number / title / type / description / affected_files), WIP branch name, group-policy summary, prior-phases summary.
+Via Task tool with `subagent_type: phase-executor`. Prompt includes: plan issue number, phase metadata (number / title / type / description / affected_files), WIP branch name, group-policy summary, prior-phases summary, `worktree_cwd` = absolute path of the WIP A worktree (`<wt_a>` resolved). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
 
 ### 7b. Receive sub-agent's JSON report
 
@@ -163,15 +166,24 @@ On success report → proceed to 7c.
 
 This is the load-bearing verification — advisor does NOT run per phase. The ritual:
 
+0. `git fetch origin <wip_branch>` — 메인 working tree 에서 sub-agent push 결과 가시화 (메인 cwd 의 HEAD 는 옮기지 않음).
 1. `git show <commit_sha> --stat` — read the actual diff statistics.
 2. Verify `files_changed ∪ files_added ∪ files_deleted` ⊆ `affected_files`. Surprise files → fail this phase (re-dispatch or halt).
 3. `git diff <prev_commit>..<commit_sha>` — inspect the actual code change. Read the diff, not just the agent's summary.
 4. Verify the diff substantively implements `<phase_description>` (not a no-op, not an over-implementation that creeps into the next phase's territory).
 5. Verify `blockers` field — if non-empty, decide whether they require master attention before the next phase or can be deferred.
+6. **Lint gate (NEW, 2026-05-13)** — for each `dev.md` target whose `cwd` contains any file changed in this phase, if the target has a non-empty `lint_command`, dispatch `gate-runner` (Haiku 4.5) with `gate_type: "lint"` + `command: <lint_command>` + `cwd: <target.cwd>`. Targets without `lint_command` are skipped (master signaled no lint check). Behavior on result:
+   - All lint runs `exit_code: 0` → lint gate PASS → proceed to next phase.
+   - Any non-zero exit → lint gate FAIL → enter **per-phase lint hotfix iter** (independent from phase iter):
+     a. Synthesize lint findings (same shape as `dev-merge`'s synthesis — confidence 100, category lint, failure excerpt as suggested_fix).
+     b. Dispatch `code-fixer` with the synthesized findings. Code-fixer applies + commits + pushes on the same WIP branch.
+     c. Re-dispatch `gate-runner`. Re-evaluate.
+     d. Up to 3 iter independent. Cap exhausted with failing lint → halt for master with cap-exhausted report; phase iter does NOT count this against the 3-attempt phase budget.
 
-Pass → comment on the issue (see 7d) and proceed to the next phase.
+Pass (all 6 steps) → comment on the issue (see 7d) and proceed to the next phase.
 
-Fail → see decision tree.
+Fail (steps 1–5) → see decision tree.
+Fail (step 6, lint) → handled by per-phase lint hotfix iter above; cap exhaustion halts for master.
 
 ### 7d. Per-phase issue comment
 
@@ -226,10 +238,15 @@ After all phases complete and pass per-phase verification, run advisor with the 
 
 After the final advisor passes:
 
-1. `git checkout i-dev` then `git merge --no-ff plan-enterprise-<N>-<slug>-작업`. (A merges first — phase commits land on i-dev before the patch-note entry references them.) On conflict → preserve both sides; halt on mutually-exclusive conflict.
-2. `git checkout -b plan-enterprise-<N>-<slug>-문서` from i-dev.
+1. In main working tree: `git checkout i-dev` then `git merge --no-ff plan-enterprise-<N>-<slug>-작업`. (A merges first — phase commits land on i-dev before the patch-note entry references them.) On conflict → preserve both sides; halt on mutually-exclusive conflict. After merge: `git worktree remove "${wt_a}"`.
+2. Create WIP B as a worktree from i-dev:
+   ```bash
+   wip_b="plan-enterprise-<N>-<slug>-문서"
+   wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
+   git worktree add -b "${wip_b}" "${wt_b}" i-dev
+   ```
 3. Resolve target patch-note path: `.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md` where `NNN` is the highest existing number. Parse the file for max `K` in `## v{NNN}.K.0` headers; new entry is `v{NNN}.K+1.0`.
-4. Author the patch-note entry inline (main session, no sub-agent). Source: the plan issue's body + phase comments. Entry shape:
+4. Author the patch-note entry inline (main session, Write/Edit to `<wt_b>/.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md`). Source: the plan issue's body + phase comments. Entry shape:
 
    ```markdown
    ## v<NNN>.<K+1>.0
@@ -248,8 +265,8 @@ After the final advisor passes:
 
    Mechanical summary. Master may edit afterward.
 
-5. `git add <patch-note-path> && git commit -m "plan-enterprise #<N>: patch-note v<NNN>.<K+1>.0 추가"`.
-6. `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`.
+5. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`.
+6. In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
 
 ## Step 10 — Merge
 
@@ -283,20 +300,29 @@ Then halt. Next master message routes per the gate parse rule.
 
 ### HOTFIX re-entry path
 
+Each hotfix uses its **own single WIP** — code + patch-note entry both live on the hotfix WIP. No `-작업/-문서` split for hotfixes (intentional carve-out from §G's code-doc separation rule: a hotfix is one atomic correction unit, so splitting it across two WIPs adds ceremony without isolation benefit, and a per-hotfix WIP keeps each hotfix's merge commit head-traceable independently from the base plan).
+
 When master types `핫픽스 <description>`:
 
 1. Treat `<description>` as a single new phase metadata. Main session infers `affected_files`:
    - From `<description>` semantically.
    - If unclear, ask master one sharpening question (text, no card).
 2. The new phase number = `prior_max_phase + 1` (cumulative across the plan; first hotfix on a 5-phase plan = phase 6).
-3. Re-enter Step 7 with this single phase:
+3. **Create hotfix WIP** as a worktree from `i-dev`:
+   ```bash
+   wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>"   # M = cumulative hotfix count, from 1
+   wt_h="../$(basename "$(pwd)")-worktrees/${wip_h}"
+   git worktree add -b "${wip_h}" "${wt_h}" i-dev
+   git -C "${wt_h}" push -u origin "${wip_h}"
+   ```
+4. Re-enter Step 7 against this hotfix WIP (phase-executor's WIP-branch argument = hotfix WIP, `worktree_cwd` = `<wt_h>` resolved):
    - **default flow**: dispatch `phase-executor` (1 phase, 3-iter cap reset).
    - **--codex flow**: generate a Codex prompt for just this hotfix phase (same packet shape, single phase). Output + halt. Master returns `코덱스 완료, {보고}` or `코덱스 실패, {보고}`.
-4. After phase-executor returns success (or Codex result accepted):
+5. After phase-executor returns success (or Codex result accepted):
    - **Step 8 advisor #2** re-runs on the hotfix commits only.
-   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor). Previous entries are not modified. The new entry summarizes only the hotfix phase.
-   - **Step 10 merge** the hotfix WIPs into i-dev.
-5. Return to **Step 11 PENDING**. Master may issue more `핫픽스` or finalize.
+   - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor) **on the same hotfix WIP** (not on the original `-문서`). Previous entries are not modified. The new entry summarizes only the hotfix phase.
+   - **Step 10 merge** the hotfix WIP into `i-dev` — single merge commit per hotfix. After merge: `git worktree remove "${wt_h}"`.
+6. Return to **Step 11 PENDING**. Master may issue more `핫픽스` (next gets a new WIP, `M+1`) or finalize.
 
 Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.
 
@@ -323,6 +349,7 @@ If master's next message is not a recognized trigger (`플랜 완료` / `핫픽�
 | 총 페이즈 수 | <N> + 핫픽스 <count> |
 | WIP 작업 | plan-enterprise-<N>-<slug>-작업 (i-dev 머지 ✅) |
 | WIP 문서 | plan-enterprise-<N>-<slug>-문서 (i-dev 머지 ✅) |
+| WIP 핫픽스 | plan-enterprise-<N>-<slug>-핫픽스1..<M> (각 i-dev 머지 ✅, 총 <M>개 / 0개 = 핫픽스 없음) |
 | 패치노트 최종 | v<NNN>.<K+M>.0 (총 <M>개 entry) |
 | advisor 계획 | PASS |
 | advisor 완료 | PASS (최종 핫픽스 포함) |
@@ -345,6 +372,7 @@ End of skill invocation.
 | Phase iter budget exhausted (3 per phase) | `"Phase <N> 3회 재시도 실패. 마스터 개입 필요. 이슈 #<N> 에 현 상태 코멘트됨."` |
 | Advisor #2 BLOCK | `"완료 시점 advisor 차단: <reason>. 패치노트 작성 보류, WIP 머지 보류. 마스터 결정 필요."` |
 | Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| `git worktree add` failure | `"worktree 생성 실패: <error>. 마스터 결정 필요."` |
 
 ## Scope (v1)
 

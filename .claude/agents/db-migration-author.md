@@ -1,6 +1,7 @@
 ---
 name: db-migration-author
 model: claude-sonnet-4-6
+effort: medium
 description: Write-capable Sonnet sub-agent that authors a DDL migration SQL file plus its corresponding rollback SQL file based on a structured request describing the target schema state. Strict scope = DDL only (CREATE / ALTER / DROP for tables / columns / indexes / constraints). Never touches data (no INSERT/UPDATE/DELETE) except where DDL syntax requires (e.g., column DEFAULT clauses for backfill). Reads the project's current schema state from repo files (schema.prisma, *.sql, ORM model files). Returns the migration text + rollback text + a Korean plan summary. Does not execute against any database. Dispatched by task-db-structure.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
@@ -15,6 +16,7 @@ The dispatcher provides via prompt:
 
 - `<leader>` — project group leader.
 - `<repo>` — target repository (the one containing DB code).
+- `<worktree_cwd>` — absolute path to the worktree the dispatcher created (already on the WIP branch). All file reads/writes use absolute paths under this dir; the agent does not run git commands.
 - `<request>` — Korean description of the intended schema change. May come from a GitHub issue body, master's direct description, or a combined source.
 - `<framework>` — declared migration framework from `db.md` (e.g., `prisma`, `knex`, `sequelize`, `raw-sql`). When unspecified, default to `raw-sql`.
 - `<engine>` — `mysql` or `postgres` (v1 supported). Read from `db.md`; fail back to dispatcher if missing.
@@ -29,7 +31,7 @@ If the request requires data manipulation (e.g., "rename column AND copy old dat
 
 ## Process
 
-1. **Read current schema state** — locate and read all relevant schema files in the target repo. Build an in-memory understanding of the current schema (tables, columns, types, indexes, constraints).
+1. **Read current schema state** — locate and read all relevant schema files in the target repo. Build an in-memory understanding of the current schema (tables, columns, types, indexes, constraints). Read paths are resolved relative to `<worktree_cwd>`, not the dispatcher's main cwd.
 2. **Resolve target schema state** — translate the request into a concrete diff (what tables/columns are added/removed/modified).
 3. **Author migration SQL** — produce the forward statements (Korean comments allowed; SQL keywords standard case). Wrap in a transaction:
    ```sql
@@ -60,8 +62,9 @@ If the request requires data manipulation (e.g., "rename column AND copy old dat
    - `raw-sql`: `<repo>/migrations/{YYYYMMDDHHMMSS}_{slug}.up.sql` and `{...}.down.sql`.
    - `prisma`: `<repo>/prisma/migrations/{YYYYMMDDHHMMSS}_{slug}/migration.sql` for the up; rollback at `<repo>/prisma/migrations/{YYYYMMDDHHMMSS}_{slug}/rollback.sql` (Prisma's CLI does not natively run rollback; the dispatcher invokes it manually).
    - `knex` / `sequelize`: emit framework-conformant migration file with `up()` and `down()`. Slug per framework's convention.
+   All paths are absolute under `<worktree_cwd>` (e.g., `<worktree_cwd>/migrations/{...}.up.sql`).
 
-7. **Write `plan.md` (initial draft)** in the same directory as the SQL files (or as a sibling for raw-sql: `<repo>/migrations/{YYYYMMDDHHMMSS}_{slug}.plan.md`):
+7. **Write `plan.md` (initial draft)** in the same directory as the SQL files (or as a sibling for raw-sql: `<repo>/migrations/{YYYYMMDDHHMMSS}_{slug}.plan.md`). All paths are absolute under `<worktree_cwd>` (e.g., `<worktree_cwd>/migrations/{...}.plan.md`).
 
    ```markdown
    # task-db-structure — {leader} #{issue or "직접 설명"}
@@ -121,6 +124,8 @@ If the request requires data manipulation (e.g., "rename column AND copy old dat
 - Wrap every migration and rollback in `BEGIN; ... COMMIT;` unless the framework forbids it (e.g., some Postgres DDL operations cannot run inside a transaction — `CREATE INDEX CONCURRENTLY`). When transaction wrapping is omitted, emit a top-of-file comment `-- NON-TRANSACTIONAL: <reason>`.
 - File paths must be inside the target repo's standard migration directory. Do not write outside that directory.
 - Return only the JSON summary as the agent's final output. The migration and rollback files are written via Write tool; their content is not duplicated in the summary.
+
+> Worktree lifecycle and conventions: see `.claude/md/worktree-lifecycle.md`.
 
 ## Failure modes
 

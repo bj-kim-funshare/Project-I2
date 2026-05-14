@@ -1,6 +1,6 @@
 ---
 name: create-custom-project-skill
-description: Author a new project-group-specific skill from master's intent description. Reads the 16 baseline skills' patterns as reference shape, drafts a SKILL.md skeleton at .claude/skills/{leader}-{slug}/SKILL.md, has master review via ExitPlanMode, and commits on a single doc WIP. The new skill may reference existing sub-agents but cannot create new ones — sub-agent creation is a separate concern outside v1 scope of this meta skill.
+description: Author a new project-group-specific skill from master's intent description. Reads the 16 baseline skills' patterns as reference shape, drafts a SKILL.md skeleton at .claude/skills/{leader}-{slug}/SKILL.md, has master review via ExitPlanMode, and commits on a single doc WIP. Owns its issue lifecycle — creates an issue at Step 5 and closes it at Step 11 on master `플랜 완료` input. The new skill may reference existing sub-agents but cannot create new ones — sub-agent creation is a separate concern outside v1 scope of this meta skill.
 ---
 
 # create-custom-project-skill
@@ -19,7 +19,7 @@ The description in master's invocation is free-form Korean. The skill clarifies 
 
 1. `.claude/project-group/<leader>/` exists (group must be registered first).
 2. cwd is the Project-I2 repo (the harness itself — where `.claude/skills/` lives).
-3. Current branch = `i-dev` (or `main` for bootstrap).
+3. Current branch = `main` (always exists for I-OS — no bootstrap needed).
 4. `gh` CLI installed and authenticated for the Project-I2 GitHub remote.
 
 ## Lifecycle
@@ -35,8 +35,10 @@ Auto mode:
   Step 5 — GitHub issue creation on Project-I2 repo
   Step 6 — WIP branch creation
   Step 7 — write the new SKILL.md to disk
-  Step 8 — commit + merge to i-dev
-  Step 9 — completion report
+  Step 8 — commit + merge to main
+  Step 9 — completion report (mechanical creation summary)
+  Step 10 — PENDING gate — master input awaited
+  Step 11 — FINALIZE on `플랜 완료` — gh issue close + final report
 ```
 
 ## Step 1 — Clarification (Plan mode)
@@ -147,10 +149,14 @@ Capture issue number `N`.
 
 ## Step 6 — WIP branch
 
+Entry ritual — see `.claude/md/worktree-lifecycle.md`.
+
 ```bash
-git checkout i-dev
-git checkout -b create-custom-project-skill-<N>-문서
-git push -u origin create-custom-project-skill-<N>-문서
+git worktree prune
+
+wip="create-custom-project-skill-<N>-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
 ```
 
 Single WIP because this is doc work only (creating a SKILL.md file).
@@ -158,44 +164,84 @@ Single WIP because this is doc work only (creating a SKILL.md file).
 ## Step 7 — Write the new SKILL.md
 
 ```bash
-mkdir -p .claude/skills/<leader>-<slug>
+mkdir -p "${wt}/.claude/skills/<leader>-<slug>"
 ```
 
-Write the SKILL.md content (from Step 2) to `.claude/skills/<leader>-<slug>/SKILL.md`.
+Write the SKILL.md content (from Step 2) to `${wt}/.claude/skills/<leader>-<slug>/SKILL.md` (absolute worktree path).
 
 Verify the file exists and contains the expected content.
 
 ## Step 8 — Commit + merge
 
 ```bash
-git add .claude/skills/<leader>-<slug>/SKILL.md
-git commit -m "create-custom-project-skill: <leader>-<slug> 스킬 신설 (#<N>)"
-git push origin create-custom-project-skill-<N>-문서
-git checkout i-dev
-git merge --no-ff create-custom-project-skill-<N>-문서
+git -C "${wt}" add .claude/skills/<leader>-<slug>/SKILL.md
+git -C "${wt}" commit -m "create-custom-project-skill: <leader>-<slug> 스킬 신설 (#<N>)"
+git -C "${wt}" push origin "${wip}"
+git checkout main
+git pull --ff-only origin main 2>/dev/null || true
+git merge --no-ff "${wip}"
+git worktree remove "${wt}"
 ```
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 
-## Step 9 — Completion report
+## Step 9 — Completion report (mechanical creation summary)
 
 Korean output to master:
 
 ```
-### /create-custom-project-skill 완료 — <leader>-<slug>
+### /create-custom-project-skill 작업 완료 — <leader>-<slug>
 
 | 항목 | 값 |
 |------|-----|
 | 신규 스킬 | <leader>-<slug> |
 | 파일 | .claude/skills/<leader>-<slug>/SKILL.md |
-| 플랜 이슈 | #<N> (<URL>) |
-| WIP | create-custom-project-skill-<N>-문서 (i-dev 머지 ✅) |
+| 플랜 이슈 | #<N> OPEN (<URL>) |
+| WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
 | advisor 검증 | PASS |
 | 참조 sub-agent | <list or "없음"> |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
-Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session).
+The new skill is now invocable as `/<leader>-<slug>` (after Claude Code's next skill-discovery scan — typically next session). Proceed to Step 10.
+
+## Step 10 — PENDING gate
+
+Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master finalizes.
+
+```
+### /create-custom-project-skill 대기 — 이슈 #<N> <leader>-<slug>
+
+스킬 파일 생성 + main 머지 완료. advisor 검증 PASS.
+
+마스터 입력 대기:
+  - `플랜 완료` → 이슈 close (Step 11) + 최종 종료
+  - `중단` → 이슈 open 유지, halt
+  - (다른 입력) → 본 플랜 미종결 유지
+```
+
+## Step 11 — FINALIZE (on `플랜 완료`)
+
+1. Close the plan issue:
+
+   ```bash
+   gh issue close <N> --comment "/create-custom-project-skill: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
+   ```
+
+2. Korean final report:
+
+   ```
+   ### /create-custom-project-skill 완료 — <leader>-<slug>
+
+   | 항목 | 값 |
+   |------|-----|
+   | 신규 스킬 | <leader>-<slug> |
+   | 플랜 이슈 | #<N> closed ✅ |
+   | WIP | create-custom-project-skill-<N>-문서 (main 머지 ✅) |
+   | advisor 검증 | PASS |
+   | 참조 sub-agent | <list or "없음"> |
+   ```
+
+End of skill invocation.
 
 ## Failure policy
 
@@ -208,16 +254,17 @@ Then halt. The new skill is now invocable as `/<leader>-<slug>` (after Claude Co
 | Advisor BLOCK | `"advisor 차단: <reason>. 마스터 수정 또는 중단 결정 필요."` (Step 4 ExitPlanMode 직전에 발생) |
 | Master rejects in ExitPlanMode | (return to Step 1 with revision feedback) |
 | `gh issue create` failure | `"gh issue create 실패: <error>. 스킬 파일 생성 보류."` |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
+| `git worktree add` failure | `"worktree 생성 실패: <error>. 수동 정리 후 재호출."` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 
 ## Scope (v1)
 
 In scope:
 - Authoring a new project-group-scoped skill at `.claude/skills/{leader}-{slug}/SKILL.md`.
 - Reference to any of the existing 14 sub-agents (`bug-detector`, `code-fixer`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`, `db-migration-author`, `db-data-author`, `phase-executor` + the 3 built-in Claude Code agents `Explore`/`general-purpose`/`Plan`).
-- Single doc WIP, single merge to i-dev.
+- Single doc WIP, single merge to main.
 - 5-perspective advisor including Treadmill check.
-- Issue on Project-I2 repo as the plan record.
+- **Issue lifecycle ownership** — create at Step 5, PENDING gate at Step 10, close at Step 11 on `플랜 완료`. The skill closes its own issue; no handoff.
 
 Out of scope (v1):
 - Creating new sub-agents (master adds those separately if needed; the custom skill's spec may reference a non-yet-existing sub-agent only if master explicitly intends to create it next, but this skill itself does not author the agent file).

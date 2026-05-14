@@ -1,8 +1,8 @@
-# I2 Monitoring (v1 minimal)
+# I2 Monitoring (v2 시각화)
 
-아이OS 자체 토큰 사용량 모니터링. 3 축 (모델 / 스킬 / 세션) + 일자별 타임라인을 로컬 대시보드에 시각화한다.
+아이OS 자체 토큰 사용량 모니터링. 3 축 (모델 / 스킬 / 세션) + 일자별 타임라인 + 비용을 로컬 대시보드에 시각화한다. Chart.js 기반.
 
-외부 네트워크 의존 0 — `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/*.jsonl` 만 읽음.
+외부 네트워크 의존 0 — `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/*.jsonl` 만 읽음. Chart.js 는 `lib/chart.umd.js` 로 번들링되어 있다 (MIT, `lib/LICENSE-chart.md`).
 
 ## 빠른 실행
 
@@ -54,12 +54,33 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
 
 `scripts/collect.py` 의 `PRICING` 표 (USD per million tokens). 모델 가격 변경 시 수동 갱신. v1 은 대략 추정용 — 정확한 청구액과 다를 수 있음.
 
-## v1 제한
+## 대시보드 구성
 
-- 그래프 X (테이블 view only). 향후 polish 단위에서 Chart.js 등 추가.
-- 세션별 비용 분배 X (모델 비율 알고리즘 미구현 — '—' 로 표시).
-- 일자별 비용 분배 X (모델 mix 가 일자별로 다른 경우 분배 알고리즘 필요).
-- `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/` 경로 하드코딩. 다른 프로젝트 경로 모니터링 X.
+**KPI 카드 (4)**
+- 전체 메시지 — 누적 assistant 메시지 수 + 처리 세션 수
+- 전체 토큰 — non-cache (input+output) `/` cache (write+read) 분리 표시, input/output/cache write/cache read 4 줄 내역
+- 캐시 효율 — `cache_read / (input + cache write + cache read)` 게이지
+- 추정 비용 — 캐시 단가 안내 툴팁 (ⓘ 호버)
+
+**차트 (6) — Chart.js**
+- 일자별 토큰 (스택 막대): input / output / cache write / cache read
+- 모델 분포 (도넛): 전체 토큰 기준
+- 스킬 점유 (도넛): Top 8 + 기타
+- 캐시 vs 비-캐시 비중 (도넛)
+- 세션 Top 10 (가로 막대): 빈 세션(messages=0) 자동 제외
+- 일자별 추정 비용 (막대): 일자별 모델 mix 기반
+
+**보조 테이블 (4, 펼침/접힘)**: 모델별 / 스킬별 / 일자별 / 세션별 (최근 50).
+
+## v2 제한
+
+- 페르소나 축 없음 — §D-1 폐기 결정.
+- 프로젝트 그룹 축 없음 — I-OS 자체 모니터링이라 그룹 개념이 본 페이지 범위에 없음.
+- 프롬프트 단위 데이터 미수집 — 따라서 프롬프트 Top 차트 없음.
+- 시간대별 (시·분 단위) 리듬 차트 없음 — `collect.py` 의 집계 단위가 일자.
+- 필터 UI 없음 — 모델/스킬 등 다중 선택 필터는 다음 단위로.
+- 세션별 비용 분배 X — 세션 막대는 토큰 기준.
+- `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/` 경로 하드코딩.
 - 인증/접근 제어 X. localhost 바인드가 기본 안전 장치.
 
 ## 파일
@@ -67,11 +88,14 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
 ```
 monitoring/
 ├── README.md               # 본 문서
-├── index.html              # 대시보드 페이지
-├── script.js               # 클라이언트 렌더링
+├── index.html              # 대시보드 페이지 (KPI + 차트 + 테이블)
+├── script.js               # 클라이언트 렌더링 + Chart.js 인스턴스
 ├── styles.css              # 스타일
+├── lib/
+│   ├── chart.umd.js        # Chart.js (MIT, vendored)
+│   └── LICENSE-chart.md
 ├── scripts/
-│   ├── collect.py          # JSONL → aggregate.json
+│   ├── collect.py          # JSONL → aggregate.json (by_day cost 포함)
 │   └── serve.py            # 로컬 HTTP 서버 + /api/refresh
 └── data/
     ├── .gitkeep

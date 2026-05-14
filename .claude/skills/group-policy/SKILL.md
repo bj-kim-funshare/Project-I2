@@ -21,7 +21,7 @@ One required argument: the leader name of a registered group. No area arg — th
 
 1. `.claude/project-group/<leader>/` exists.
 2. All four policy files exist: `dev.md`, `deploy.md`, `db.md`, `group.md`.
-3. Current branch = `i-dev` (or `main` with `i-dev` missing — bootstrap path).
+3. Current branch = `main` (or `main` with `main` missing — bootstrap path).
 
 Out of scope for v1: adding or removing projects from the group. Member set is fixed at `/new-project-group` time. If the group composition changes, that is a separate intervention (future skill or manual edit + re-run).
 
@@ -74,7 +74,7 @@ Same rule for deploy/db/group. The free-text addition slot in each area follows 
 
 ## No-op short-circuit
 
-If master responds `유지` to **all four areas**: halt immediately with the message `"변경사항 없음 — 작업 진행 안 함"`. **No WIP branch creation. No commit. No merge. No report.** This check runs before any git operation. Empty WIPs and empty merge commits are never produced by this skill.
+If master responds `유지` to **all four areas**: halt immediately with the message `"변경사항 없음 — 작업 진행 안 함"`. **No worktree creation. No WIP branch creation. No commit. No merge. No report.** This check runs before any git operation — worktree add is not reached. Empty WIPs and empty merge commits are never produced by this skill.
 
 ## Advisor validation
 
@@ -89,13 +89,30 @@ Advisor blockers → halt and report to master before any disk write. Non-blocke
 
 ## WIP / merge protocol
 
+> Worktree 절차: `.claude/md/worktree-lifecycle.md`.
+
 Reached only if at least one area changed. Single WIP — all writes are docs.
 
-- **i-dev bootstrap** — if missing, branch from `main` HEAD. Report in completion table.
-- **WIP branch** — `group-policy-<leader>-문서`, branched from `i-dev`.
-- **Disk writes** — only the changed files. Untouched policy files are not rewritten (preserves git history clarity).
+```bash
+# Entry ritual — see .claude/md/worktree-lifecycle.md
+git worktree prune
+
+wip="group-policy-<leader>-문서"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" main
+```
+
+- **Disk writes** — only the changed files, written as `<wt>/.claude/project-group/{leader}/<file>.md`. Untouched policy files are not rewritten (preserves git history clarity).
+- All git commands use `git -C <wt> add <relative-path>` and `git -C <wt> commit ...` form. Main session does not change cwd.
 - **Commit message** (Korean) — `group-policy: {leader} 정책 수정 ({changed-areas-csv})`.
-- **Merge to i-dev** — preserve both on conflict; halt only if mutually exclusive.
+- **Merge to main** — from main working tree (main cwd):
+  ```
+  git checkout main
+  git pull --ff-only origin main 2>/dev/null || true
+  git merge --no-ff <wip>
+  ```
+- 머지 성공 후: `git worktree remove <wt>`
+- 충돌 시 §5 4단계 양측 보존; 상호 배타적이면 마스터에게 halt.
 - No push, no tag, no remote operations.
 
 ## Reporting
@@ -110,9 +127,8 @@ Korean output after merge:
 | 수정된 영역 | {comma-separated changed areas, e.g. "dev, deploy"} |
 | 변경 파일 | {file list} |
 | WIP 브랜치 | group-policy-{leader}-문서 |
-| i-dev 머지 | ✅ |
+| main 머지 | ✅ |
 | advisor 검증 | ✅ (concerns: {count} non-blocker) |
-| i-dev 부트스트랩 | (해당 시) main → i-dev |
 ```
 
 If no-op short-circuit fired, the report is the short message `"변경사항 없음 — 작업 진행 안 함"` and nothing else.
@@ -125,10 +141,11 @@ Immediate Korean report + halt. No retry.
 |---|---|
 | `.claude/project-group/<leader>/` not found | `"그룹 <leader> 미등록 — /new-project-group 먼저 실행"` |
 | One or more of dev.md / deploy.md / db.md / group.md missing | `"<leader> 정책 파일 불완전: <missing-list>. 수동 복구 또는 /new-project-group 재실행 필요"` |
-| Current branch not `i-dev` (and not `main` for bootstrap) | `"i-dev 브랜치에서만 호출 가능 (i-dev 부재 시 main 허용). 현재: <branch>"` |
+| Current branch not `main` | `"main 브랜치에서만 호출 가능. 현재: <branch>"` |
 | Ambiguous modification response (field/project name unmatched) | `"수정 응답 모호: <line>. <leader> 현재 멤버: <list>. 재입력 필요."` |
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
-| Genuine mutually-exclusive merge conflict | `"i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
+| `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
