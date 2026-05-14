@@ -303,54 +303,37 @@ def finalize_by_prompt(
     return kept, {"total_count": total_count, "kept_top_n": len(kept)}
 
 
-AGENTS_DIR = Path(__file__).resolve().parent.parent.parent / ".claude" / "agents"
-
-
 def load_agent_descriptions() -> dict[str, str]:
-    """Read .claude/agents/*.md frontmatter description fields → {name: description}."""
-    out: dict[str, str] = {}
-    if not AGENTS_DIR.exists():
-        pass
-    else:
-        for md_path in AGENTS_DIR.glob("*.md"):
-            try:
-                text = md_path.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            if not text.startswith("---"):
-                continue
-            end = text.find("\n---", 3)
-            if end < 0:
-                continue
-            fm = text[3:end]
-            name = None
-            desc_lines: list[str] = []
-            in_desc = False
-            for line in fm.splitlines():
-                if line.startswith("name:"):
-                    name = line.split(":", 1)[1].strip()
-                    in_desc = False
-                elif line.startswith("description:"):
-                    desc_lines = [line.split(":", 1)[1].strip()]
-                    in_desc = True
-                elif in_desc and line.startswith((" ", "\t")):
-                    desc_lines.append(line.strip())
-                elif in_desc and ":" in line and not line.startswith((" ", "\t")):
-                    in_desc = False
-            agent_name = name or md_path.stem
-            if desc_lines:
-                out[agent_name] = " ".join(desc_lines)
-    builtins = {
-        "Explore": "Read-only 코드 탐색 sub-agent. 파일/심볼/패턴 검색에 사용.",
-        "Plan": "구현 계획 설계 sub-agent. 단계별 plan, critical file, 트레이드오프 검토.",
-        "general-purpose": "범용 sub-agent. 복잡한 다단계 조사·검색·실행.",
-        "claude": "FleetView default — 특정 에이전트가 없을 때의 fallback.",
-        "claude-code-guide": "Claude Code / Agent SDK / API 사용법 안내 sub-agent.",
-        "statusline-setup": "Claude Code statusline 설정 sub-agent.",
+    """Return Korean short descriptions of each sub-agent for tooltip display.
+
+    Hardcoded here (not parsed from .claude/agents/*.md) because those files
+    are English per CLAUDE.md §1; the tooltip needs simple Korean text.
+    """
+    return {
+        # Sonnet 4.6 work agents
+        "phase-executor": "플랜의 한 페이즈를 받아 실제 코드와 문서를 수정해 커밋·푸시까지 마치는 작업 에이전트.",
+        "code-fixer": "다른 검토자들이 찾은 문제점을 실제로 코드에 반영해 수정하는 작업 에이전트.",
+        "db-migration-author": "DB 스키마 변경(CREATE/ALTER/DROP) SQL 과 롤백 스크립트를 작성하는 에이전트. 실행은 안 함.",
+        "db-data-author": "DB 데이터 변경(INSERT/UPDATE/DELETE) SQL 과 롤백 스크립트를 작성하는 에이전트. 실행은 안 함.",
+        "completion-reporter": "스킬 완료/핫픽스 완료/종료 시 표준 형식의 한국어 보고서를 작성하는 에이전트.",
+        # Haiku 4.5 gate
+        "gate-runner": "린트·빌드 같은 기계적 명령을 실행하고 성공/실패만 보고하는 빠른 에이전트.",
+        # Opus 4.7 planning agents
+        "bug-detector": "PR 변경 코드에서 실제 동작에 문제될 수 있는 버그를 찾아 보고하는 검토자. 코드는 안 고침.",
+        "claude-md-compliance-reviewer": "PR 변경이 CLAUDE.md 규칙(언어 분리·WIP 머지 등)을 지키는지 검토하는 에이전트. 코드는 안 고침.",
+        "code-inspector": "지정된 파일 범위에서 버그·null 경로·경쟁 조건 같은 문제를 찾는 검토자. 코드는 안 고침.",
+        "security-reviewer": "코드의 보안 취약점(인젝션·인증·비밀 노출 등)과 의존성 보안 권고를 점검하는 검토자.",
+        "db-security-reviewer": "DB 관련 코드(스키마·마이그레이션·ORM·설정·SQL)의 보안과 무결성 문제를 점검하는 검토자.",
+        "refactoring-analyzer": "지정된 파일 범위에서 중복 코드·미사용 코드·큰 파일·import 문제 등 리팩터링 기회를 찾는 검토자.",
+        "deploy-validator": "배포 전 도구·환경 파일·빌드 명령 같은 준비 상태를 점검하는 검토자. 실제 빌드/배포는 안 함.",
+        # Built-in / system
+        "Explore": "파일과 심볼을 빠르게 찾아주는 코드 탐색 에이전트. 코드를 읽기만 함.",
+        "Plan": "구현 계획을 단계별로 설계해 주는 아키텍트 에이전트. 트레이드오프와 핵심 파일도 정리.",
+        "general-purpose": "특정 에이전트가 적합하지 않을 때 복잡한 다단계 조사나 실행을 맡는 범용 에이전트.",
+        "claude": "특정 에이전트가 지정되지 않았을 때의 기본 폴백.",
+        "claude-code-guide": "Claude Code / Agent SDK / API 사용법 관련 질문에 답하는 에이전트.",
+        "statusline-setup": "Claude Code 의 statusline(하단 상태바) 설정을 도와주는 에이전트.",
     }
-    for k, v in builtins.items():
-        out.setdefault(k, v)
-    return out
 
 
 def parse_jsonl(path: Path) -> list[dict[str, Any]]:
