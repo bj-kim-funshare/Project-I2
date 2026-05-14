@@ -501,11 +501,6 @@ i { color: var(--muted); }
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  height: 260px;
-}
-.chart-card.has-html-legend .chart-body canvas {
-  width: 260px !important;
-  height: 260px !important;
 }
 .chart-legend {
   display: flex;
@@ -550,11 +545,6 @@ i { color: var(--muted); }
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  height: 260px;
-}
-.detail-section.has-html-legend .detail-chart canvas {
-  width: 260px !important;
-  height: 260px !important;
 }
 
 /* ================= REALTIME MODE ================= */
