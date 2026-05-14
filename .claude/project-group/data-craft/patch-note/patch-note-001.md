@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.30.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#18
+
+### 페이즈 결과
+
+- **Phase 1** (`73f45b56` + hotfix `11daaf10`): `data-craft` 의 `pnpm typecheck:all` 26건 오류를 0으로 클린화. 5개 의미 그룹 일괄 해소 — (1) `FsDataViewerModel.kanbanCardAreas` 신설 후 누락된 5개 모델 빌드 사이트에 `kanbanCardAreas: null` 기본값 추가, (2) `HeaderSettings.tsx` 의 자식 다이얼로그 4개 (`CalendarHolidayDialog`, `CalendarLabelColumnDialog`, `GanttLabelColumnDialog`, `KanbanColumnDialog`) `setViewerModel` prop 을 `Dispatch<SetStateAction<RuntimeViewerModel>>` 로 widening 하여 부모/자식 setter 타입 invariance 해소, (3) `FsViewerMode` enum 에 `View = 'view'` 멤버 추가 (제3 모드 — readOnly 동작은 기존 분기 기본값으로 자연 흡수), (4) 대시보드 테스트 fixture/시그니처 정합 — `collectWidgetColumns.test.ts` (`w/h`→`width/height`), `WidgetTypeRegression.test.tsx` (vitest `toMatch` 2nd-arg 시그니처 미지원으로 메시지 인자 제거), `BarChartWidget.label-rotation.test.tsx` (`'bar'`→`'bar-vertical'` literal 정합), (5) `fs_api/src/index.ts` 에 `DashboardWidgetType` 재수출 추가, `loading-anim/types.ts` 의 `JSX.Element` → `ReactElement` 교체 (`react-jsx` transform 환경 정합), `aggregateUserScopedRows.ts` 의 `'../lib/...'` → `'../../lib/...'` 깊이 보정, `FsGanttChart.tsx` 의 `rowData.rowField` → `rowData.row.rowField` 접근 경로 교정 (`FsGanttRowData.row` 가 `FsGridRowModel` 을 보유), `CompactComponents.tsx` 의 `FsGridUserModel` cast 를 실제 스키마 (`id`/`name`/`imageBlob`) 에 맞게 매핑. Hotfix iter 에서 `kanban-drawer-header-separation.test.tsx` + `option-stability-repro.test.ts` 의 `no-explicit-any` 2건 동시 해소.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-api/src/index.ts`
+- `packages/fs-data-viewer/src/entities/data-viewer-model.types.ts`
+- `packages/fs-data-viewer/src/entities/grid-mode.types.ts`
+- `packages/fs-data-viewer/src/entities/grid/grid-helpers.ts`
+- `packages/fs-data-viewer/src/entities/model-adapter.ts`
+- `packages/fs-data-viewer/src/features/print/views/integration.test.tsx`
+- `packages/fs-data-viewer/src/__tests__/enterprise-448/kanban-drawer-header-separation.test.tsx` (hotfix)
+- `packages/fs-data-viewer/src/__tests__/enterprise-448/option-stability-repro.test.ts` (hotfix)
+- `packages/fs-data-viewer/src/widgets/dashboard/__tests__/WidgetTypeRegression.test.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/__tests__/collectWidgetColumns.test.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/loading-anim/types.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/__tests__/BarChartWidget.label-rotation.test.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/aggregateUserScopedRows.ts`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/CalendarHolidayDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/CalendarLabelColumnDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/GanttLabelColumnDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/KanbanColumnDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridModel.ts`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/gantt-chart/FsGanttChart.tsx`
+- `packages/fs-data-viewer/src/widgets/kanban-board/kanban-card/cell-renderers/compact/CompactComponents.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +37/-24, 18 파일 (phase) + hotfix 2 파일, 전부 affected_files 내 (`fs_api` 재수출 1건 포함, 본문에 사전 명시).
+- advisor 계획 / 완료 양 시점 5관점 PASS — 마스터 명령 의도 (lint gate 단계 1 = typecheck 통과) 일치, 의미 그룹 5개 일괄 처리의 논리적 완결성, 그룹 정책 (`data-craft/dev.md` lint_command) 단계 1 충족, 18 파일 diff 의 실 코드 근거, 단일 페이즈 종결로 명령 충족.
+- 페이즈 iter: 1회 디스패치, 재시도 0회. lint gate hotfix iter 1회 (no-explicit-any 해소).
+- Lint gate: typecheck 단계 PASS (`FULL TURBO` 0 오류). eslint 단계는 124건 pre-existing 오류 잔존 — 마스터 결정 (`단계 1 완료로 간주`) 에 따라 본 플랜 종결, 후속 플랜 권고.
+
+### 운영 메모
+
+- `FsViewerMode.View` 추가는 enum 멤버 확장만 수행, 분기 코드 무변경. 외부 caller 가 exhaustive switch 로 enum 을 사용하는 곳이 있다면 별도 회귀 가능 (현 패키지 내 사용처 grep 결과 영향 없음).
+- 자식 다이얼로그 setter widening 은 부모 owned `RuntimeViewerModel` 상태를 직접 받는 형태로 정합. 자식들이 `prev` 를 spread 하여 internal 필드 (`showHorizontalBorder` 등) 를 보존하는 패턴은 자동 안전.
+- `CompactComponents.tsx` 의 `FsGridUserModel` 매핑에서 `profileImage` 가 스키마에 없어 `undefined` 처리 — 기존 런타임 동작 (필드 부재로 항상 undefined) 동일.
+- **후속 권고**: eslint pre-existing 부채 124건 (특히 `KanbanCardConfigDialog` `react-hooks/refs`, 다수 `no-explicit-any` 테스트, react/prop-types 등) 정리를 위한 별도 `/plan-enterprise data-craft eslint 부채 일괄 해소` 권장.
+
 ## v001.29.0
 
 > 통합일: 2026-05-14
