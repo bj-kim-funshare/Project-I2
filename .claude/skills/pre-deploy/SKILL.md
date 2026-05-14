@@ -23,7 +23,7 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 
 ## Pre-conditions
 
-1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification. 본 스킬은 external context 의 **branch-overridden 예외**: 모든 멤버 레포 (`dev.md targets[].cwd` 전부) 를 **자동으로 `main` 으로 체크아웃** 한 뒤 진행. 멤버 레포에 `main` 브랜치가 없거나 checkout 실패 시에만 halt + 보고. **i-dev → main 머지 완료 여부, i-dev 가 main 보다 앞서있는지 여부 등은 본 스킬 검증 영역이 아님** — 마스터가 의도적으로 머지 스킬을 사용하지 않아 i-dev 변경을 배포에서 제외했을 수 있다. pre-deploy 는 현 시점 main HEAD 가 가리키는 코드만을 기준으로 동작한다. 정렬은 다중 선택 UI 이전에 실행. 복원은 touched cwd 만 `main` 으로 (이미 main 이므로 사실상 no-op).
+1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification. 본 스킬은 external context 의 **branch-overridden 예외**: 모든 멤버 레포 (`dev.md targets[].cwd` 전부) 를 **자동으로 `main` 으로 체크아웃** 한 뒤 진행. 멤버 레포에 `main` 브랜치가 없거나 checkout 실패 시에만 halt + 보고. **i-dev → main 머지 완료 여부, i-dev 가 main 보다 앞서있는지 여부 등은 본 스킬 검증 영역이 아님** — 마스터가 의도적으로 머지 스킬을 사용하지 않아 i-dev 변경을 배포에서 제외했을 수 있다. pre-deploy 는 현 시점 main HEAD 가 가리키는 코드만을 기준으로 동작한다. 정렬은 다중 선택 UI 이전에 실행. 복원은 touched cwd 를 external context 의 기본인 `i-dev` 로 — 스킬 종료 후 마스터의 일반 작업 흐름 (i-dev 위 개발) 과 정합. `i-dev` 가 없으면 lazy-create (from main).
 2. `.claude/project-group/<leader>/` exists with `deploy.md`.
 3. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
 4. cwd may be anywhere — the skill operates per target's declared `cwd`.
@@ -147,7 +147,7 @@ The "이슈번호" the WIP rule references is, for this skill, the issue that **
 
 ## 완료 후 HEAD 복원
 
-`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `i-dev` (external context — 멤버 레포 기본 정렬). 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 

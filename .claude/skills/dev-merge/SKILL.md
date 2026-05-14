@@ -338,7 +338,7 @@ Relay the agent's response verbatim to master.
 
 ## 완료 후 HEAD 복원
 
-`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = 호출 시점 HEAD 또는 to-branch (variable). 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = 컨텍스트 분기 — 호출 cwd 가 Project-I2 (아이OS) 이면 `main`, 그 외 외부 프로젝트 레포이면 `i-dev` (전 시스템 통일 규칙: 아이OS = main, 외부 = i-dev). 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 
