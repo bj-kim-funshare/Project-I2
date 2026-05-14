@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.20.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#12
+
+### 페이즈 결과
+
+`Project-I2/temp/data-craft-결제결함-32건.md` 의 🔴 HIGH 7건 검증 + 6건 수정 (B1 검증만, 후속 핸드오프).
+
+- **Phase 1** (`aff16d2104281385bab486c3a69cdbbcc34f120c`): G3+B3+B4 — `paymentGuards.ts` 신설 (assertValidAmount/assertValidSeats + MAX_AMOUNT_KRW=10B / MAX_SEATS_PER_PLAN=1000). charge.service 진입부 amount 가드, promotion/seatChange/billingSubscription seats 분기 가드.
+  - 보조 커밋 `35b2813`: i-dev-001 사전 lint 부채 6 errors + 1 warning 해소 (Phase 1 미터치 파일들).
+- **Phase 3** (`1f259b7f74f07e409b8fb421dd39a0005e4b919d`): G8 — `findClientSeatsForUpdate(connection, companyId)` 추가 (SELECT ... FOR UPDATE). billingRenewal 협업 프로모션 결제 직전 블록을 트랜잭션으로 감싸 race 차단.
+- **Phase 4** (`767ca3aa87170f55fe5fecca008355719c134a54`): G4 — webhook.controller secret 비교 `crypto.timingSafeEqual()` 로 교체 (length-mismatch dummy compare + 401). PAYMENT_STATUS_CHANGED 핸들러에 토스 `getPayment(paymentKey)` pull-after-push 추가. ABORTED/EXPIRED → FAILED 매핑.
+- **Phase 2** (`8247399eabb660a510363b6bc1cfb9101416072c` + lint fix `6dd9c60`): G1 (옵션 B) — logger.ts `critical` 레벨 신설. 4 catch 블록 (billingSubscription/billingRenewal/seatChange/promotion) 에서 cancelPayment 보상 호출 전부 제거 → `logger.critical({event_type:'PAYMENT_CHARGE_DB_FAILURE', ...})` 단일 호출 대체. billingRenewal 만 throw→return false 로 변경 (이중 청구 방지).
+- **Phase 5** (`8ad92fbf359c1881c638a8ea4b4928bc5e1035c1`): B2 — 잔존 호출처 3건 (billingRenewal:365, charge:83, charge:157) 도 모두 보상 cancel 경로로 payment_history 행 부재 → companyId 가드 양립 불가 (plan_contradicts_code). 옵션 B 일관 적용으로 3 호출처 모두 cancelPayment 제거 + 함수 자체 + TossCancelResponse 인터페이스 삭제. B2 자동 해결.
+- **Phase 6** (`411dfdcaca653c7273a458e3290d31dd708c1cb1`, FE cross-repo): G2 — SeatAddDialog.tsx `applyAt='immediate'` 분기에 AlertDialog confirm 1회 경유 추가. next-cycle 분기는 confirm 생략 (기존 유지).
+- **Phase 7** (코드 변경 없음): 핸드오프 이슈 2건 생성 — funshare-inc/data-craft-server#8 (B1 봉투암호화), funshare-inc/data-craft-server#9 (DB 컬럼 + 인프라 + 잔류 정리).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`):
+- `src/utils/paymentGuards.ts` (신규)
+- `src/utils/logger.ts` (critical 레벨 추가)
+- `src/services/charge.service.ts`
+- `src/services/promotion.service.ts`
+- `src/services/seatChange.service.ts`
+- `src/services/billingSubscription.service.ts`
+- `src/services/billingRenewal.service.ts`
+- `src/services/tossPayments.service.ts` (cancelPayment + getPayment)
+- `src/types/tossPayments.types.ts` (TossCancelResponse 제거)
+- `src/controllers/webhook.controller.ts`
+- `src/models/client.model.ts` (findClientSeatsForUpdate 추가)
+- 보조 lint debt: `src/services/auth.service.ts`, `src/services/inputStore.service.ts`, `src/services/seatChange.service.test.ts`, `tests/enterprise-482-p02-is-verified-removal.test.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`, FE cross-repo):
+- `src/features/subscription/ui/SeatAddDialog.tsx`
+
+### 마스터 결정 카브아웃
+- **G1 옵션 B**: 환불 가정 배제 → cancelPayment 자동 시도 자체 제거 (4 + 3 = 7 호출처). 사용자 카드값 차감 잔존 = 운영자 수동 토스 어드민 처리 전제.
+- **B1**: 본 플랜은 검증만, 마이그레이션 자체는 후속 task-db-* (data-craft-server#8).
+- **G2 cross-repo**: plan-enterprise 단일 work repo 가정 일탈 → FE 워크트리 별도 + 3-step 머지.
+- **data-craft 사전 lint 부채 163건**: 본 플랜 예외 인정. Project-I 시대 누적 — data-craft-server#9 로 후속 정리 트랙.
+
+### 검증 결과
+- Phase 1, 2, 3, 4, 5: data-craft-server `pnpm lint` exit 0 (모든 페이즈).
+- Phase 6: data-craft `pnpm typecheck:all && pnpm lint` 사전 부채로 미통과, file-specific (SeatAddDialog.tsx) 검증 PASS.
+- 5-perspective advisor: 계획 #1 PASS, 완료 #2 PASS (마스터 카브아웃 인정).
+
+### 후속 작업 (data-craft-server 호스팅)
+- **data-craft-server#8**: B1 billingKey/카드 봉투암호화 (task-db-structure + task-db-data + 코드)
+- **data-craft-server#9**: promotion.max_seats / client_promotion.snapshot_seats DB 컬럼, 토스 IP allowlist, Phase 1/5/6 잔류 정리
+
+---
+
 ## v001.19.0
 
 > 통합일: 2026-05-13
