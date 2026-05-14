@@ -1,0 +1,39 @@
+{
+  "skill": "pre-deploy",
+  "leader": "data-craft",
+  "timestamp": "20260514T111021Z",
+  "selected_targets": [
+    {
+      "name": "data-craft",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft",
+      "role": "FE",
+      "tool": "gh-pages",
+      "target_url": "https://funshare-inc.github.io/data-craft/",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && npx gh-pages -d dist",
+      "env_management": "git-tracked",
+      "branch_state": {
+        "current_branch": "main",
+        "working_tree": "clean",
+        "checked_out_from": "i-dev"
+      }
+    },
+    {
+      "name": "data-craft-server",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "role": "BE",
+      "tool": "other",
+      "target_url": "https://d3u7b7cxusjkuc.cloudfront.net",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && git push origin main:aws-deploy",
+      "env_management": "git-tracked",
+      "branch_state": {
+        "current_branch": "main",
+        "working_tree": "clean",
+        "checked_out_from": "i-dev"
+      }
+    }
+  ],
+  "leader_repo_cwd": "/Users/starbox/Documents/GitHub/data-craft",
+  "prior_issue_number": null
+}

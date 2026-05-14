@@ -1,0 +1,27 @@
+{
+  "leader": "data-craft",
+  "selected_targets": [
+    {
+      "name": "data-craft",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft",
+      "role": "FE",
+      "tool": "gh-pages",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && npx gh-pages -d dist",
+      "env_management": "git-tracked",
+      "current_branch": "main",
+      "working_tree": "clean"
+    },
+    {
+      "name": "data-craft-server",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "role": "BE",
+      "tool": "other",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && git push origin main:aws-deploy",
+      "env_management": "git-tracked",
+      "current_branch": "main",
+      "working_tree": "clean"
+    }
+  ]
+}

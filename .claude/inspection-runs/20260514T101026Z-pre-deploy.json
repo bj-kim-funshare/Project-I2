@@ -1,0 +1,40 @@
+{
+  "skill": "pre-deploy",
+  "leader": "data-craft",
+  "timestamp": "20260514T101026Z",
+  "selected_targets": [
+    {
+      "name": "data-craft",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft",
+      "role": "FE",
+      "tool": "gh-pages",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && npx gh-pages -d dist",
+      "env_management": "git-tracked",
+      "target_url": "https://funshare-inc.github.io/data-craft/",
+      "current_branch": "main",
+      "working_tree_clean": true,
+      "post_pull": "fast-forwarded to origin/main"
+    },
+    {
+      "name": "data-craft-server",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "role": "BE",
+      "tool": "aws",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && git push origin main:aws-deploy",
+      "env_management": "git-tracked",
+      "target_url": "https://d3u7b7cxusjkuc.cloudfront.net",
+      "current_branch": "main",
+      "working_tree_clean": true,
+      "post_pull": "already up-to-date"
+    }
+  ],
+  "leader_repo_cwd": "/Users/starbox/Documents/GitHub/data-craft",
+  "policy_files": {
+    "deploy_md": "/Users/starbox/Documents/GitHub/Project-I2/.claude/project-group/data-craft/deploy.md",
+    "group_md": "/Users/starbox/Documents/GitHub/Project-I2/.claude/project-group/data-craft/group.md",
+    "claude_md": "/Users/starbox/Documents/GitHub/Project-I2/CLAUDE.md"
+  },
+  "prior_issue_number": null
+}
