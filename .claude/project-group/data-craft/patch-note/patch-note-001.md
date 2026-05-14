@@ -1,5 +1,63 @@
 # data-craft — Patch Note (001)
 
+## v001.34.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#20
+
+### 페이즈 결과
+
+- **Phase 1** (`865b363d`): `data-craft` 의 `pnpm lint` 기계적 규칙 위반 100건 (실측, master 추정 102) 을 단일 페이즈로 일괄 해소. in-scope 3개 규칙 — `@typescript-eslint/no-unused-vars` 74건 (미사용 import / 지역 변수 삭제 또는 `_` prefix, 23개 간트 필드 테스트의 `buildRow`/`buildCell` 미사용 import 정리 포함), `@typescript-eslint/no-explicit-any` 23건 (전부 테스트 파일 한정 — `E.FsGridRowModel` / `E.FsDataViewerModel` / `FsGanttRowData` 등 실 타입 적용 또는 `unknown as <ConcreteType>` 2단 캐스트로 안전 교체, 프로덕션 의미 변경 없음), `Unused eslint-disable directive (no problems were reported from 'no-console')` 3건 (`useViewerMetaLoader.ts:166`, `settings-handlers.ts:95`, `generate-widget.tsx:149` 의 불필요한 disable 주석만 제거). 후속 플랜 (2/2) 영역인 `react-hooks/rules-of-hooks` / `react-refresh/only-export-components` / react-compiler diagnostics 는 일절 미터치.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`) — 73 파일:
+
+- `packages/fs-data-viewer/src/__tests__/field-types/gantt/` 내 23개 `*Field.test.tsx` 파일 (Checkbox/Color/Date/DateTime/Deadline/Document/File/Image/Link/Meta/MultiSelect/Nation/OnOff/Percent/Progress/Rating/SingleSelect/Tag/Time/Timer/User/Vote/WorldTime)
+- `packages/fs-data-viewer/src/__tests__/grid-residual/zone-03-items.test.tsx`
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/handlers/settings-handlers.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/__tests__/useServerPaging.test.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/useSubGrid.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/cellStyleUtils.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/row-management/rowAddUtils.ts`
+- `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/__tests__/rendererMap-text-unit.test.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/{file/FileRenderer.tsx,image/ImageRenderer.tsx,VoteRenderer.tsx}`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/UniversalCellRenderer.tsx`
+- `packages/fs-data-viewer/src/widgets/batch-input-dialog/batch-row/{BatchRowColumnInput.tsx,BatchRowCreateTab.tsx}`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar/CalendarHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/` 내 10개 (color-picker, connection, dual-widget, FsGridDocumentCellRenderer, FsGridFormulaCellRenderer, FsGridMultiSelectCellRenderer, FsGridSimpleFormulaCellRenderer × 2, timer-cell)
+- `packages/fs-data-viewer/src/widgets/dashboard/{DashboardGrid.tsx,FsDashboard.tsx,widgets/CardWidget.tsx,widgets/__tests__/BarChartWidget.scroll-alignment.test.tsx}`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/KanbanCardAreasDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_renderer/generate-widget.tsx`
+- `packages/fs-data-viewer/src/widgets/FsGridFooter.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/{__tests__/FsGanttBar.click-chain.test.tsx,__tests__/GanttDetailDrawerBody.test.tsx,gantt-chart/FsGanttChart.tsx}`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridFooter.tsx`
+- `packages/fs-data-viewer/src/widgets/kanban-board/` 내 6개 (3 테스트 + FsKanbanBoard, CompactComponents, KanbanDrawerHeader.test)
+- `packages/fs-external-data-viewer/src/widgets/{fs_grid_renderer/generate-widget.tsx,FsGridFooter.tsx,grid-table/components/GridFooter.tsx}`
+- `packages/fs-file-attachment/tests/FileGroupList.test.tsx`
+- `packages/fs-sub-data-viewer/src/widgets/{FsGridFooter.tsx,grid-table/components/GridFooter.tsx}`
+- `tests/enterprise-417/zone3-deprecate.test.ts`
+
+(74 enumerated → 73 modified — `KanbanCardAreasDialog.tsx` 가 enumerated 였으나 phase-executor 검토 결과 in-scope 라인 없음으로 무수정 결정. 정상.)
+
+### 검증 결과
+
+- 코드 다이프: +80/-98 (net -18) across 73 files. files_changed ⊆ affected_files (74 enumerated).
+- **Scoped lint 검증**: `pnpm lint 2>&1 | grep -E "(no-unused-vars|no-explicit-any|Unused eslint-disable directive.*no-console)" | wc -l` = **0** (in-scope 100 → 0 달성).
+- typecheck 회귀 검사: `pnpm typecheck:all` 8 tasks FULL TURBO PASS (직전 플랜 #18 의 클린 상태 유지).
+- 잔여 lint errors 27건 = 후속 플랜 (2/2) 스코프 (15 react-compiler diagnostics + 5 react-refresh/only-export-components + 5 react-hooks/rules-of-hooks + 2 unmatched). 본 플랜 미터치.
+- advisor 계획 / 완료 양 시점 5관점 PASS — Evidence 검토에서 `as unknown as <ConcreteType>` 2단 캐스트 13건 모두 실 타입 지정 (idiomatic 테스트 mock 패턴), `any` 우회 아님 확인.
+- 페이즈 iter: 1회 디스패치, 재시도 0회. lint hotfix iter: 0회 (scoped grep 즉시 0).
+
+### 운영 메모
+
+- master "기계적 102건, 의미 큰 변경은 페이즈 분할" 의 hint 검토 결과, in-scope 23 any 가 전부 테스트 파일이라 의미적 분할 불요로 판정 후 단일 페이즈 진행. 결과상 정확한 판단 (run-time 영향 0, prod 코드 의미 변경 0).
+- **lint gate 정책 조정**: skill 표준 lint gate (`pnpm typecheck:all && pnpm lint`) 가 후속 플랜 스코프의 24 errors 때문에 어차피 실패할 것을 사전 인식하여, 본 페이즈 한정 lint gate 를 **scoped grep** 으로 대체했다. hotfix iter 가 후속 플랜 영역을 침범할 위험을 차단하는 안전 장치 — 직전 #18 의 "단계 1 완료로 간주" 패턴을 사전 명시화한 진화.
+- **후속 권고**: 잔여 27 errors / 15 warnings 정리를 위한 **/plan-enterprise data-craft ESLint 오류 해소 2/2 — 의미적 리팩터** 권장. 스코프: react-hooks/rules-of-hooks 5건 (effect 동기 setState / 렌더 중 ref 접근 등), react-refresh/only-export-components 5건 (컴포넌트 모듈 export 분리), react-compiler 15건 (메모이제이션 보존 / setState cascade).
+- `_` prefix vs 삭제 판단의 일관성: 함수 시그니처 유지 필요한 곳은 `_` prefix, 진짜 무의미 import 는 삭제 — phase-executor 가 각 사이트 의미 검토 후 결정.
+
 ## v001.33.0
 
 > 통합일: 2026-05-14
