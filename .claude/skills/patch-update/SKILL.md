@@ -24,6 +24,10 @@ One required argument:
 | `아이OS` | `patch-note/` (repo root) |
 | `<leader>` | `.claude/project-group/<leader>/patch-note/` |
 
+## Pre-conditions
+
+- 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification (호출 인자 = `아이OS` 면 main, `<leader>` 면 i-dev — dual-target).
+
 ## Core work
 
 The simple part. The protocol section below is boilerplate per `CLAUDE.md` §5.

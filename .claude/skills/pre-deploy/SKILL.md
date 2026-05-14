@@ -23,11 +23,12 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 
 ## Pre-conditions
 
-1. `.claude/project-group/<leader>/` exists with `deploy.md`.
-2. Every selected target has `deploy_command` populated. Missing → fail with `/group-policy` redirect (groups created before the `deploy_command` field was added to the schema must be updated).
-3. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
-4. cwd may be anywhere — the skill operates per target's declared `cwd`.
-5. `dev.md` `targets[]` 에 `name == <leader>` 인 항목이 존재해야 한다 (= 리더 저장소 식별 가능). 컨벤션: targets[] 첫 항목이 리더 저장소.
+1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차. 본 스킬 컨텍스트 = external.
+2. `.claude/project-group/<leader>/` exists with `deploy.md`.
+3. Every selected target has `deploy_command` populated. Missing → fail with `/group-policy` redirect (groups created before the `deploy_command` field was added to the schema must be updated).
+4. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
+5. cwd may be anywhere — the skill operates per target's declared `cwd`.
+6. `dev.md` `targets[]` 에 `name == <leader>` 인 항목이 존재해야 한다 (= 리더 저장소 식별 가능). 컨벤션: targets[] 첫 항목이 리더 저장소.
 
 ## Context preparation (main session)
 
@@ -141,6 +142,10 @@ The universal `{skill}-{이슈번호}` WIP rule from `README.md` §G does not ap
 The "이슈번호" the WIP rule references is, for this skill, the issue that **Branch A** creates — but no branch is named after it because no commits are made under this skill's name.
 
 이슈 호스트는 리더 저장소이고 실제 work (빌드/배포) 는 각 selected target 의 cwd 에서 일어난다. 이슈와 work 가 다른 repo 일 수 있다는 점이 의도된 분리이며, 본 스킬의 합격/불합격 보고서는 본문에 work repo 목록을 명시해 추적성을 유지한다.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `i-dev`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 

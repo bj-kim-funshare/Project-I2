@@ -49,6 +49,10 @@ DB-related code only. Categories:
 
 NOT in focus: non-DB code (`dev-security-inspection`), non-security bugs (`dev-inspection`), style/naming.
 
+## Pre-conditions
+
+- 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차 수행. 본 스킬 컨텍스트 = external.
+
 ## Procedure
 
 Read `.claude/md/inspection-procedure.md` and follow it with the substitutions above. Skill-specific procedural notes:

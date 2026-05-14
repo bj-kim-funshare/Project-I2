@@ -62,6 +62,10 @@ Non-security runtime defects: logic errors (inverted conditions, off-by-one, dea
 
 NOT in focus: security (separate skill), style/naming, architectural opinions, performance speculation without a concrete defect.
 
+## Pre-conditions
+
+- 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차 수행. 본 스킬 컨텍스트 = external.
+
 ## Procedure
 
 Read `.claude/md/inspection-procedure.md` and follow it with the substitutions above:

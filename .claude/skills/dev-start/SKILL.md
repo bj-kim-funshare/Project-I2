@@ -17,6 +17,8 @@ Parse rule: 단일 토큰 — leader name only. I-OS-side work goes through plan
 
 ## Prerequisites
 
+- 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차 수행. 본 스킬 컨텍스트 = external.
+
 The project-group manifest must exist:
 
 - `.claude/project-group/<leader>/dev.md`

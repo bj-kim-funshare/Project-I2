@@ -27,7 +27,7 @@ Open-form description, optionally referencing an existing issue on this repo.
 ## Pre-conditions
 
 1. cwd is the Project-I2 repo (CLAUDE.md at root).
-2. Current branch = `main` (always exists for I-OS — no bootstrap needed).
+2. Current branch = `main` (always exists for I-OS — no bootstrap needed) (세부 절차: `.claude/md/branch-alignment.md` Entry verification — 본 스킬 컨텍스트 = 아이OS).
 3. `gh` CLI installed and authenticated for this repo's GitHub remote.
 4. `MEMORY.md` and the memory directory are accessible (used for the Treadmill Audit context).
 
@@ -243,6 +243,10 @@ Same as `plan-enterprise`. Skill state remains open; master can re-invoke later 
    Relay the agent's response verbatim to master.
 
 End of skill invocation.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 

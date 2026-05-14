@@ -19,7 +19,7 @@ The description in master's invocation is free-form Korean. The skill clarifies 
 
 1. `.claude/project-group/<leader>/` exists (group must be registered first).
 2. cwd is the Project-I2 repo (the harness itself — where `.claude/skills/` lives).
-3. Current branch = `main` (always exists for I-OS — no bootstrap needed).
+3. Current branch = `main` (always exists for I-OS — no bootstrap needed) (세부 절차: `.claude/md/branch-alignment.md` Entry verification — 본 스킬 컨텍스트 = 아이OS).
 4. `gh` CLI installed and authenticated for the Project-I2 GitHub remote.
 
 ## Lifecycle
@@ -221,6 +221,10 @@ Per `.claude/md/completion-gate-procedure.md`. Issue stays OPEN until master fin
    Relay the agent's response verbatim to master.
 
 End of skill invocation.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 

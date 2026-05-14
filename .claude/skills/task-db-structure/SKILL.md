@@ -28,7 +28,7 @@ This skill changes real databases. The full pipeline includes paired migration +
    - `connection_style`: standard values `DATABASE_URL` | `DB_* 환경변수` | `<custom description>`. Determines which env variable contract is used in Phase 4. **Field absence → fail-fast**: `"db.md 의 connection_style 필드 부재 — group-policy 로 보정 후 재호출"`.
    - Environment connection info — by environment variable name. Resolution depends on `connection_style` (see Phase 4 §b). Missing env → that environment is skipped (with master notice).
 3. The target repo (the one with DB code in the group) is identifiable. If the group has multiple repos, the skill asks via `AskUserQuestion` which repo carries the DB.
-4. Current branch = `i-dev` (or `main` for bootstrap). The skill creates a WIP from there.
+4. Current branch = `i-dev` (or `main` for bootstrap). The skill creates a WIP from there (세부 절차: `.claude/md/branch-alignment.md` Entry verification — 본 스킬 컨텍스트 = external).
 5. `gh` CLI 의존성은 없음 (PR 단계 폐기됨, 2026-05-12 master 결정). git CLI 만 사용.
 6. DB CLIs available: `mysql` (or `psql` for postgres) on PATH. v2 invokes the CLI directly; framework migration tools (`prisma migrate deploy` etc.) are NOT used in v2 — the skill applies SQL files explicitly.
 
@@ -247,6 +247,10 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
     Relay the agent's response verbatim to master.
 
 16. End of skill invocation. 마스터가 plan.md 의 audit 컨텍스트를 git log 로 추적 가능.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `i-dev`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 

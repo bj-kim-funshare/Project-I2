@@ -80,6 +80,17 @@ Before adding any rule, hook, agent, skill, or validation axis, audit with the n
 
 While the harness is under construction: one unit at a time, master describes → AI verifies (advisor call required before each substantive write) → both build. See memory `feedback_incremental_verified_build.md` and `feedback_advisor_per_unit.md`.
 
+### 9. Branch alignment policy (§B-1)
+
+Every skill must verify that the base branch is correctly aligned at entry, and restore it at exit (including failure paths). The two contexts are:
+
+- **아이OS context** (skill arg is `아이OS` or this repo itself): Project-I2 `main` branch is the required base.
+- **External context** (skill arg is `<leader>`): each member repo in the leader's project group must be on `i-dev`.
+
+Exception: `patch-confirmation` and `patch-update` accept either `아이OS` or a leader name as the target argument, but both skills always operate on **this repo's `main` branch** because patch-note files live here. For these two skills, apply the 아이OS alignment check regardless of which argument was supplied.
+
+Strict-universal default: all 18 skills enforce entry verification (read-only utilities included). Master may relax to writer-only via a separate policy change. Detailed procedure: `.claude/md/branch-alignment.md`.
+
 ### 8. Token budget (§F-1)
 
 Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md`; specialized content goes in `.claude/md/*` loaded on-demand by the skills and agents that reference them. If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.

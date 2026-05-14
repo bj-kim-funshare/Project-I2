@@ -21,7 +21,7 @@ One required argument: the leader name of a registered group. No area arg — th
 
 1. `.claude/project-group/<leader>/` exists.
 2. All four policy files exist: `dev.md`, `deploy.md`, `db.md`, `group.md`.
-3. Current branch = `main` (or `main` with `main` missing — bootstrap path).
+3. Current branch = `main` (or `main` with `main` missing — bootstrap path) (세부 절차: `.claude/md/branch-alignment.md` Entry verification — 본 스킬 컨텍스트 = 아이OS).
 
 Out of scope for v1: adding or removing projects from the group. Member set is fixed at `/new-project-group` time. If the group composition changes, that is a separate intervention (future skill or manual edit + re-run).
 
@@ -138,6 +138,10 @@ Otherwise, after merge, dispatch `completion-reporter` with:
 - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `group-policy` `skill_finalize` schema. Required: `leader`, `result_summary`, `modified_areas[]`, `wip_branch`; optional: `advisor_concerns_count`, `changed_files[]`.
 
 Relay the agent's response verbatim to master.
+
+## 완료 후 HEAD 복원
+
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 실패 경로 (머지 충돌 등) 에서도 동일 복원 의무 — failure policy 의 각 행 처리 후 본 절차 수행.
 
 ## Failure policy
 
