@@ -1,5 +1,48 @@
 # 아이OS — Patch Note (001)
 
+## v001.58.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #29 (핫픽스1)
+> 대상: 아이OS
+
+### 핫픽스1 요약
+
+본 plan #29 의 청소 스크립트가 분류 누락한 plan-enterprise-os 초기 변종 네이밍을 일괄 정리. 분류 누락 패턴: `-문서-NN`, `-핫픽스NN` (단독), `-문서-핫픽스NN`, `-작업-핫픽스NN` — 본 plan 의 merged 필터 정규식 `(-작업|-문서|-핫픽스[0-9]+-(작업|문서))$` 가 매칭하지 않은 케이스. 추가로 data-craft 의 `archive/stash-*` 8개 (Project-I 시대 archive stash) 도 명시 승인 받아 force-delete.
+
+### 청소 결과
+
+| Repo | 핫픽스1 전 | 핫픽스1 후 | 추가 삭제 |
+|------|------:|------:|------:|
+| Project-I2 | 20 | 5 | 15 |
+| data-craft | 130 | 97 | 33 |
+| data-craft-mobile | 8 | 8 | 0 |
+| data-craft-ai-preview | 3 | 3 | 0 |
+| data-craft-server | 21 | 20 | 1 |
+| **합계** | **182** | **133** | **49** |
+
+- 12개 `-d` 안전 삭제 (Project-I2 변종 머지 완료분).
+- 26개 `-d` 안전 삭제 (data-craft 25 + server 1, plan-enterprise-9/16 핫픽스 시리즈 + plan-enterprise-12 hotfix).
+- 1개 `-D` (Project-I2 plan-enterprise-os-3-monitoring-day-tokens-line-작업 — local 은 main 완전 머지, origin 발산만 존재; origin push 금지 정책상 무관).
+- 8개 `-D` (data-craft archive/stash-0~7, Project-I 시대 명시 archive; SHA 백업 `/tmp/branch-cleanup-29-hotfix1/data-craft-archive-stash-backup.txt`).
+- 활성 worktree 124개 무손상 유지.
+
+### 후속 개선 (script regex)
+
+`.claude/scripts/branch-cleanup.sh` 의 merged 모드 정규식이 다음 케이스를 매칭하지 않음 — 본 plan v2 에서 보강 권장:
+- `-핫픽스[0-9]+$` (작업/문서 접미사 없는 단독)
+- `-문서-[0-9]+$` (중복 호출 변종)
+- `-문서-핫픽스[0-9]+$`, `-작업-핫픽스[0-9]+$` (역순 변종)
+- `archive/stash-` 패턴 force-delete 통합 (현재 legacy --legacy-force 분기에 있으나 별도 mode 분기 고려)
+
+본 핫픽스에서는 정책 문서/스크립트는 수정 안 함 — 후속 plan 에서 처리.
+
+### 누적 (v001.56.0 + v001.58.0)
+
+- 전체 5 repo: 405 → 133 (272개 정리), 활성 worktree 124개 무손상.
+
+---
+
 ## v001.57.0
 
 > 통합일: 2026-05-14
