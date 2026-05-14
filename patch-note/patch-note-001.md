@@ -1728,3 +1728,11 @@ Project-I (구 아이OS) 가 자기 보수에 자원 소진되어 실패한 뒤,
 - monitoring polish v2 (그래프 / 비용 분배 / 가격표 동기화)
 - codex 협업 구현 (5 gate scripts + codex-packet-builder agent + plan-enterprise --codex)
 - lint / build / test 게이트 재설계 논의 (§D-23)
+
+## v001.61.0
+
+> 통합일: 2026-05-14
+
+### 변경 파일
+
+- (수정) monitoring/data/hourly.json
