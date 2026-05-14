@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.36.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 5)
+
+### 페이즈 결과
+
+- **Phase 9 (hotfix 5)** (`a219ced6`): hotfix 3c/4 의 시침 (테이퍼 polygon + 다층 hub circle) 이 마스터 검수 시점에 여전히 pivot 위치 불일치 / 시각적 거슬림으로 거절. 마스터 결정에 따라 **시침 완전 제거** + 값 표시를 반원 호 안쪽으로 이동.
+  - GaugeWidget `shape === 'semicircle'` 분기에서 시침 IIFE 블록 (motion.g + polygon 2개 + hub circle 3개) 통째로 삭제.
+  - SVG 를 `relative` div 로 래핑하고 값 표시 `<motion.span>` 을 `absolute` + `bottom: 10%` + `left-1/2 -translate-x-1/2` 로 호 baseline 바로 위 중앙에 배치 — 반원 호가 값을 시각적으로 감싸는 형태.
+  - min-max 캡션은 컨테이너 외부 (SVG 박스 아래) 에 그대로 유지.
+  - multi-color 세그먼트 mask 렌더링 / 단색 분기 / circle / linear 모드 모두 영향 없음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +109/-139, 1 파일. 줄 수 감소는 시침 제거가 신규 레이아웃 추가보다 큼.
+- 시침 잔재 검증: `git diff i-dev-001..HEAD -- GaugeWidget.tsx | grep -E '^\+.*(motion\.g|polygon|valueAngle|transformOrigin|needle)'` 결과 0 매치 — 시침 관련 코드가 신규 추가된 라인에 일절 없음을 확인.
+- 페이즈 iter: 1회 통과.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 수동 검증: 반원 게이지 위젯에서 시침이 더 이상 보이지 않고, 수치가 반원 호 안쪽 중앙 영역 (호가 감싸는 형태) 에 표시되는지 확인. min-max 캡션은 게이지 아래에 그대로 유지.
+- 게이지의 호 색상 / threshold / 애니메이션은 변동 없음.
+
 ## v001.35.0
 
 > 통합일: 2026-05-14
