@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.47.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스12)
+> 대상: 아이OS
+
+### 개요
+"모델 분포에 opus 100% 만 나온다" 보고. JSONL 분석 결과: 서브에이전트 (Task tool 디스패치) token usage 는 `type: "user"` 레코드의 `toolUseResult.usage` 에 담기고 `toolUseResult.agentType` 으로 에이전트 식별되는데, 현 collect.py 는 `if rec.get("type") != "assistant": continue` 로 user 레코드 전부 스킵해 sonnet/haiku 서브에이전트 사용량을 누락. 13 sub-agent 의 model 매핑표 (CLAUDE.md §4) 를 collector 에 내장하고 user-record 처리 분기 추가.
+
+### 페이즈 결과
+- **핫픽스12** (`monitoring/scripts/collect.py`):
+  - 파일 상단에 `AGENT_MODEL_MAP` 상수 추가 — 13 sub-agent (phase-executor / code-fixer / db-migration-author / db-data-author / completion-reporter = sonnet 4.6, gate-runner = haiku 4.5, 7 planning agents = opus 4.7) + 6 built-in (Explore / Plan / general-purpose / claude / claude-code-guide / statusline-setup = opus). 미매핑 agentType 은 default opus.
+  - `collect()` per-record 루프를 `if type=="assistant" / elif type=="user"` 구조로 리팩터링. user 분기에서 `toolUseResult.agentType` 검출 → `AGENT_MODEL_MAP` 으로 모델 결정 → `toolUseResult.usage` 를 by_model / by_skill / by_day / by_session / total / hourly / period_agg 모든 aggregator 에 add_usage. sticky_skill 그대로 적용 (서브에이전트는 호출 스킬에 종속). by_prompt 는 master-prompt 식별 의미 없으므로 스킵.
+  - 검증: 재실행 후 by_model — claude-opus-4-7 9667 / **claude-sonnet-4-6 269** / **claude-haiku-4-5 29** / API 에러 7 / 시스템 합성 1. sonnet/haiku 정상 등장.
+
+### 영향 파일
+- `monitoring/scripts/collect.py`
+
+### Treadmill Audit
+NOT APPLICABLE — 집계 로직 확장. 신규 메커니즘 추가 없음. 알려진 한계: `AGENT_MODEL_MAP` 은 하드코딩 상수로 신규 sub-agent 추가 시 수동 갱신 필요. 미매핑 agentType 은 default opus 로 집계 → 외부 프로젝트의 커스텀 agent 가 sonnet 이라도 opus 로 잘못 집계될 위험. 본 repo 의 13 sub-agent + 6 built-in 만 정확.
+
 ## v001.46.0
 
 > 통합일: 2026-05-14
