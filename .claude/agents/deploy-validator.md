@@ -25,7 +25,7 @@ The dispatcher (`pre-deploy`) provides via prompt:
 For each selected target, run these checks. Each failing check produces one finding.
 
 ### 1. `deploy_command` present
-Manifest field non-empty. Missing → `severity: block`, `suggested_fix` points to `/group-policy`.
+Manifest field non-empty. Missing/empty → `severity: warn`. Build runs; deploy step is skipped; master deploys manually.
 
 ### 2. Tool CLI invocable
 Map by `target.tool`:

@@ -313,6 +313,7 @@ All five inspection/pre-deploy skills follow the same moment set: `skill_finaliz
 
 ##### `skill_finalize`
 - Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`)
+  - `deploy_status` valid values: `"success"` | `"failed"` | `"manual"`. `manual` = `deploy_command` 빈값으로 deploy 단계 스킵된 경우 (build 는 성공).
 - Optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`
 - Narrative sections (emit per payload): `#### 🎯 명령원문` (리더 + 호출 컨텍스트), `#### ✅ 결과` (build/deploy 성공 타겟 수 / 실패 수 요약).
 - Table rows (short-scalar only): compact 메타 row. `targets[]` renders as a sub-table after the main table: `타겟 | build | deploy | URL` (≤4 cols, URL cells short).
