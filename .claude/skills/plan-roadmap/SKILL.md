@@ -180,7 +180,7 @@ git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff plan-roadmap-{N}-{slug}-문서
 ```
 
-머지 성공 후: `git worktree remove <wt>`
+머지 성공 후: `git worktree remove <wt>` 및 `git branch -d <wip>`
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.
 

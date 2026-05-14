@@ -124,7 +124,7 @@ git worktree add -b "${wip}" "${wt}" main
   git pull --ff-only origin main 2>/dev/null || true
   git merge --no-ff <wip>
   ```
-- 머지 성공 후: `git worktree remove <wt>`
+- 머지 성공 후: `git worktree remove <wt>` 및 `git branch -d <wip>`
 - 충돌 시 §5 4단계 양측 보존; 상호 배타적이면 마스터에게 halt.
 - No push, no tag, no remote operations.
 

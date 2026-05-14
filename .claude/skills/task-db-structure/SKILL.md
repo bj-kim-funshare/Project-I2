@@ -234,6 +234,7 @@ PR ceremony 폐기 — 마이그레이션 파일은 실행 *후* codification �
     머지 성공 후:
     ```bash
     git worktree remove <wt>
+    git branch -d task-db-structure-<id>-작업
     ```
     충돌 시:
     - 자동 양측 보존 시도 (§5)

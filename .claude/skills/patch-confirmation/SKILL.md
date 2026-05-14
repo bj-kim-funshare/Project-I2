@@ -77,6 +77,7 @@ git merge --no-ff "${wip_a}"
 
 # 6. Remove the code worktree
 git worktree remove "${wt_a}"
+git branch -d "${wip_a}"
 ```
 
 `git add -A` stages everything `git status` showed at pre-condition time — including untracked files.
@@ -116,6 +117,7 @@ git checkout main
 git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff "${wip_d}"
 git worktree remove "${wt_d}"
+git branch -d "${wip_d}"
 ```
 
 #### Final push (Case A)
@@ -223,6 +225,7 @@ git -C "${member_cwd}" push origin i-dev
 
 # 7. Remove the code worktree
 git -C "${member_cwd}" worktree remove "${wt_code}"
+git -C "${member_cwd}" branch -d "${wip_code}"
 ```
 
 Process member repos sequentially. If a member repo merge fails, record the failure, preserve the WIP branch, and continue with the next member repo. Already-merged members are not rolled back.
@@ -260,6 +263,7 @@ git -C "${I2_CWD}" checkout main
 git -C "${I2_CWD}" pull --ff-only origin main 2>/dev/null || true
 git -C "${I2_CWD}" merge --no-ff "${wip_d}"
 git -C "${I2_CWD}" worktree remove "${wt_d}"
+git -C "${I2_CWD}" branch -d "${wip_d}"
 ```
 
 #### Final push (Case B)

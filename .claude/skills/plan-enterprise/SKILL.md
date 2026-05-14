@@ -365,6 +365,7 @@ git -C <X-repo-dir> checkout i-dev
 git -C <X-repo-dir> pull --ff-only origin i-dev 2>/dev/null || true
 git -C <X-repo-dir> merge --no-ff <WIP-A_X>
 git worktree remove "${wt_a_x}"
+git branch -d "${wip_a_x}"
 ```
 
 (A merges first — phase commits land on i-dev before the patch-note entry references them.) 머지 충돌은 §5 step 4 (양측 보존; 상호 배타일 때만 마스터 보고).
@@ -375,6 +376,7 @@ git worktree remove "${wt_a_x}"
 git checkout i-dev
 git merge --no-ff plan-enterprise-<N>-<slug>-작업
 git worktree remove "${wt_a}"
+git branch -d "${wip_a}"
 ```
 
 ### 9.2 — leader repo 에서 WIP B (-문서) 생성 + patch-note 작성
@@ -409,7 +411,7 @@ git worktree remove "${wt_a}"
 
 ### 9.3 — leader repo i-dev 로 WIP B 머지
 
-In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
+In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"` and `git branch -d "${wip_b}"`.
 
 ## Step 10 — Merge
 
@@ -462,7 +464,7 @@ When master types `핫픽스 <description>`:
 5. After phase-executor returns success (or Codex result accepted):
    - **Step 8 advisor #2** re-runs on the hotfix commits only.
    - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor) **on the same hotfix WIP** (not on the original `-문서`). Previous entries are not modified. The new entry summarizes only the hotfix phase.
-   - **Step 10 merge** the hotfix WIP into `i-dev` — single merge commit per hotfix. After merge: `git worktree remove "${wt_h}"`.
+   - **Step 10 merge** the hotfix WIP into `i-dev` — single merge commit per hotfix. After merge: `git worktree remove "${wt_h}"` and `git branch -d "${wip_h}"`.
 6. Return to **Step 11 PENDING**. Master may issue more `핫픽스` (next gets a new WIP, `M+1`) or finalize.
 
 Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.
