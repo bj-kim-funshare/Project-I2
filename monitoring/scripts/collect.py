@@ -303,6 +303,56 @@ def finalize_by_prompt(
     return kept, {"total_count": total_count, "kept_top_n": len(kept)}
 
 
+AGENTS_DIR = Path(__file__).resolve().parent.parent.parent / ".claude" / "agents"
+
+
+def load_agent_descriptions() -> dict[str, str]:
+    """Read .claude/agents/*.md frontmatter description fields → {name: description}."""
+    out: dict[str, str] = {}
+    if not AGENTS_DIR.exists():
+        pass
+    else:
+        for md_path in AGENTS_DIR.glob("*.md"):
+            try:
+                text = md_path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if not text.startswith("---"):
+                continue
+            end = text.find("\n---", 3)
+            if end < 0:
+                continue
+            fm = text[3:end]
+            name = None
+            desc_lines: list[str] = []
+            in_desc = False
+            for line in fm.splitlines():
+                if line.startswith("name:"):
+                    name = line.split(":", 1)[1].strip()
+                    in_desc = False
+                elif line.startswith("description:"):
+                    desc_lines = [line.split(":", 1)[1].strip()]
+                    in_desc = True
+                elif in_desc and line.startswith((" ", "\t")):
+                    desc_lines.append(line.strip())
+                elif in_desc and ":" in line and not line.startswith((" ", "\t")):
+                    in_desc = False
+            agent_name = name or md_path.stem
+            if desc_lines:
+                out[agent_name] = " ".join(desc_lines)
+    builtins = {
+        "Explore": "Read-only 코드 탐색 sub-agent. 파일/심볼/패턴 검색에 사용.",
+        "Plan": "구현 계획 설계 sub-agent. 단계별 plan, critical file, 트레이드오프 검토.",
+        "general-purpose": "범용 sub-agent. 복잡한 다단계 조사·검색·실행.",
+        "claude": "FleetView default — 특정 에이전트가 없을 때의 fallback.",
+        "claude-code-guide": "Claude Code / Agent SDK / API 사용법 안내 sub-agent.",
+        "statusline-setup": "Claude Code statusline 설정 sub-agent.",
+    }
+    for k, v in builtins.items():
+        out.setdefault(k, v)
+    return out
+
+
 def parse_jsonl(path: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     try:
@@ -799,6 +849,7 @@ def collect() -> dict[str, Any]:
         "by_prompt": by_prompt,
         "by_prompt_meta": by_prompt_meta,
         "periods_index": periods_index,
+        "agent_descriptions": load_agent_descriptions(),
         "_period_agg": period_agg,  # internal — stripped before writing aggregate.json
         "_hourly_agg": hourly_agg,  # internal — used to write hourly.json, stripped before writing aggregate.json
         "_hourly_cost": hourly_cost,
