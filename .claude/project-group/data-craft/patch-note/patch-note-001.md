@@ -1,5 +1,53 @@
 # data-craft — Patch Note (001)
 
+## v001.41.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#21
+
+### 페이즈 결과
+
+- **Phase 1** (`08043134`): only-export-components 5 + rules-of-hooks 5 (총 10 errors) 해소. 비-컴포넌트 export 를 4개 sibling 파일 (`ActiveGridContext.context.ts`, `headerSlotsContext.context.ts`, `cardComponentMarker.helpers.ts`, `areColumnPropsEqual.ts`) 로 분리하여 fast-refresh 복원. 조건부 호출된 hook 5건은 early return 앞으로 재배치하되 `KanbanDrawerHeader` 의 `wrappedSaveChange` 콜백에 `kanbanColumnField` null 가드를 추가하여 의미 보존. import 사이트 9 파일 mechanical 갱신 동반.
+- **Phase 2** (`005ea82e`): react-hooks/refs 6 errors 해소. `useClipboardKeyboard` 의 ref 쓰기를 기존 `useLayoutEffect` 안으로 이동, `KanbanCardConfigDialog` (line 438) 의 render-time `getViewerModel()` 호출을 `useSyncExternalStore(noop, () => viewerRef.current?.getViewerModel())` 패턴으로 치환 — `getViewerModel()` 이 React 상태 객체를 동일 참조로 반환하므로 무한 루프 위험 없음.
+- **Phase 3** (`4fd42731`): set-state-in-effect 9 errors + Unused-disable 2 해소. 4개 헤더 다이얼로그 (`CalendarHolidayDialog`, `CalendarLabelColumnDialog`, `GanttLabelColumnDialog`, `KanbanColumnDialog`) 에 **Inner 컴포넌트 추출** 패턴 적용 — `isOpen=false` 시 Inner 가 언마운트되어 재오픈 시 자동 초기화. `useGridClipboard`/`useGridFocus`/`usePagination`/`FsLineChartColorPicker`/`GanttSubtaskAddDialog` 는 파생 state 또는 이벤트 핸들러 패턴으로 재구조. **단, prev-ref 렌더 중 setState 패턴 도입으로 react-hooks/refs 6건 신규 발생 + 인접 effect 2건 표출 — Phase 4 통합 처리.**
+- **Phase 4** (`4dc019fa`): Phase 3 regression 8 errors + Compilation Skipped 2 + warnings 15 일괄 정리, **lint gate FULL PASS** 도달. `useGridClipboard` 는 `clipboardSlot` 에서 직접 파생, `useGridFocus`/`usePagination`/`PieChartWidget` 은 `useState` prev-state 패턴 (React 공식 권장) 으로 재전환. `useDropdown` 은 이벤트 핸들러에서 위치 계산. `KanbanCardConfigDialog` 의 form init effect 는 Inner 컴포넌트 + open 마운트 패턴 추가 (Phase 2 의 useSyncExternalStore 와 공존). `ButtonRenderer` 와 `UpgradeDialog` 의 Compilation Skipped 는 누락된 deps (`pruneStateForRowField`, `promotionActive`) 추가로 해소. exhaustive-deps/immutability/Unused-disable 잔재 전부 정리.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`) — 37 파일 (4 신규 추가 포함):
+
+신규 추가 (Phase 1 sibling 분리):
+- `packages/fs-data-viewer/src/features/grid/context/ActiveGridContext.context.ts`
+- `packages/fs-data-viewer/src/shared/ui/RightDetailDrawer/cardComponentMarker.helpers.ts`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/headerSlotsContext.context.ts`
+- `packages/fs-data-viewer/src/widgets/kanban-board/kanban-column/areColumnPropsEqual.ts`
+
+수정:
+- Phase 1: `ActiveGridContext.tsx`, `cardComponentMarker.tsx`, `headerSlotsContext.tsx`, `UserListSettings.tsx`, `FsKanbanBoard.tsx`, `FsKanbanColumn.tsx`, `KanbanDrawerHeader.tsx`, import 사이트 9 파일 (`useClipboardKeyboard.ts`, `useGridClipboard.ts`, `useGridFocus.ts`, `FsGridHeader.tsx`, `GanttDetailDrawerBody.tsx`, `FsGanttChart.tsx`, `KanbanDetailDrawerBody.tsx`, RC-1 테스트 등)
+- Phase 2: `useClipboardKeyboard.ts`, `KanbanCardConfigDialog.tsx`
+- Phase 3: 헤더 다이얼로그 4 + `useGridClipboard.ts`, `useGridFocus.ts`, `useDropdown.ts`, `FsLineChartColorPicker.tsx`, `ButtonSettingsDialog.tsx`, `usePagination.ts`, `GanttSubtaskAddDialog.tsx`
+- Phase 4: `useGridClipboard.ts`, `useGridFocus.ts`, `useDropdown.ts`, `useServerPagingOrchestrator.ts`, `ButtonRenderer.tsx`, `useLogCell.ts`, `useConnectionCell.ts`, `PieChartWidget.tsx`, `usePagination.ts`, `ViewColumnManagerDialog.tsx`, `useFormWidgetHistory.ts`, `UpgradeDialog.tsx`, `KanbanCardConfigDialog.tsx`
+
+### 검증 결과
+
+- **최종 lint gate FULL PASS**: `pnpm typecheck:all && pnpm lint` 둘 다 exit 0 — typecheck 8 tasks FULL TURBO PASS, lint 0 errors / 0 warnings.
+- 누적 결과: 27 errors + 15 warnings → 0 + 0.
+- 페이즈별 scoped grep: Phase 1 (0), Phase 2 (0), Phase 3 (실제 6 — Phase 4 통합), Phase 4 표준 lint gate FULL PASS.
+- 페이즈 iter: 4회 디스패치, 재시도 0회. Phase 3 regression 은 plan-defined 허용 경로 (Phase 4 absorbs) 로 처리, 우회 아닌 설계된 복원 동선.
+- advisor 계획 / 완료 양 시점 5관점 PASS — Logic 검토에서 Phase 3→4 의 regression-tolerance 가 plan-defined 정상 경로임 확인.
+
+### 운영 메모
+
+- **lint gate 표준 복귀**: dev.md `lint_command` (`pnpm typecheck:all && pnpm lint`) 직렬 형태가 본 플랜 종료 시점부터 FULL PASS 도달. 후속 플랜은 scoped check 없이 표준 gate 사용 가능.
+- **Phase 3 regression 학습**: prev-ref 렌더 중 setState 는 react-hooks/refs 규칙 위반 — 향후 동일 패턴 회피, `useState` prev-state 또는 파생 `useMemo` 우선 (React 공식 권장).
+- **Inner 컴포넌트 추출 패턴** (4개 헤더 다이얼로그 + KanbanCardConfigDialog form): open=false 시 Inner 언마운트로 자동 초기화. init useEffect 제거의 정석. 향후 유사 다이얼로그 패턴에 적용 권장.
+- **수동 회귀 시나리오** (master 수행 권장):
+  - 4개 헤더 다이얼로그 (Calendar/Calendar/Gantt/Kanban Column): open → 모델 수정 → close → 재오픈 시 초기값 정상.
+  - KanbanCardConfigDialog 의 컬럼 메타 편집 (Phase 2 + Phase 4 fix).
+  - 그리드 클립보드/포커스/Pagination 동작.
+  - 헤더 위젯 fast-refresh 동작 (개발 모드 hot-reload 시 컴포넌트 보존).
+- master 정책 (실 deps 보정 우선, 1-2건 disable+사유 허용) 준수 — Phase 4 에서 누락 deps 추가 우선 적용, intentional disable 미도입.
+
 ## v001.40.0
 
 > 통합일: 2026-05-14
