@@ -1,5 +1,32 @@
 # 아이OS — Patch Note (001)
 
+## v001.63.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #31 (핫픽스1)
+> 대상: 아이OS
+
+### 핫픽스 사유
+
+본 이슈 #31 의 1차 페이즈는 dev-merge 보호 브랜치를 **하드코딩 4개** 로만 지원. 마스터 핫픽스 요청으로 group-policy 의 정식 `protected_branches` 필드를 추가하고 data-craft 그룹을 백필.
+
+### 변경
+
+- `.claude/project-group/data-craft/group.md`
+  - 확정 정책 표에 "보호 브랜치" 행 추가 (`i-dev`, `main`).
+  - `## 보호 브랜치 (마스터 명시)` 섹션 신설.
+- `.claude/skills/new-project-group/SKILL.md`
+  - Round 4 group 컬렉션에 `protected_branches` 선택 항목 안내 추가.
+  - group.md 템플릿 가이드에 protected_branches 언급 보강.
+- `.claude/skills/group-policy/SKILL.md`
+  - group 영역 수정 가능 필드에 `protected_branches` 명시.
+- `.claude/skills/dev-merge/SKILL.md`
+  - "보호 브랜치" 절의 추후 확장 문단을 정식 2-단 판정 로직으로 교체: leader-aware 호출은 group.md 우선, 미설정/leader-unaware 는 하드코딩 fallback.
+
+### Treadmill Audit
+
+PASS — 새 invariant 추가 없음. 기존 하드코딩 단일 디폴트가 "group.md 우선 + 하드코딩 fallback" 으로 폐기·교체 (Q3). leader-aware 호출 경로가 실재 존재 (Q1: plan-enterprise 등). 새 엣지 (Q2): 일부 그룹이 `master`/`develop` 미사용일 때 보호 대상이 좁아지는 케이스.
+
 ## v001.62.0
 
 > 통합일: 2026-05-14

@@ -83,6 +83,12 @@ The `db` area has two fields with known standard values that drive downstream sk
 - **Free-text → standard normalization**: if master requests normalizing an existing free-text value to a standard value (e.g., `같은 DB 사용 (분리 없음)` → `공유`, or `mysql2 직접 연결` → `DB_* 환경변수`), apply as stated.
 - Fields other than `dev_prod_separation` and `connection_style` are unaffected by this section.
 
+## Group area — recognized fields
+
+group 영역 수정 응답에서 인식되는 선택 필드:
+
+- `protected_branches` — `dev-merge` 의 `--delete-branch` 면제 대상 브랜치 목록 (예: `[i-dev, main]`). 미설정 시 dev-merge 가 하드코딩 fallback 사용.
+
 ## No-op short-circuit
 
 If master responds `유지` to **all four areas**: halt immediately with the message `"변경사항 없음 — 작업 진행 안 함"`. **No worktree creation. No WIP branch creation. No commit. No merge. No report.** This check runs before any git operation — worktree add is not reached. Empty WIPs and empty merge commits are never produced by this skill.

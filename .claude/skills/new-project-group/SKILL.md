@@ -107,6 +107,8 @@ Free-text slot for DB conventions.
 
 Single free-text section. Anything not captured by dev/deploy/db: commit conventions, branch policy, code review rules, internal SLAs, etc.
 
+**선택 항목**: `protected_branches` — `dev-merge` 의 `--delete-branch` 면제 대상 브랜치 목록. 명시 시 group.md 의 `## 보호 브랜치` 절 또는 확정 정책 테이블의 "보호 브랜치" 행으로 기록된다. 미명시면 dev-merge 가 하드코딩 fallback (`i-dev` / `main` / `master` / `develop`) 을 사용한다.
+
 ## Advisor validation
 
 After all four rounds, before any file write, call `advisor()` once. The call's purpose is sharp:
@@ -207,6 +209,8 @@ projects:
 
 (자유 입력 슬롯 내용)
 ```
+
+group.md 의 자유 입력 슬롯 또는 확정 정책 테이블에 `protected_branches: [i-dev, main]` 형태로 보호 브랜치 목록을 포함할 수 있다 (Round 4 에서 마스터가 명시한 경우). 미명시면 dev-merge 가 하드코딩 fallback 을 사용한다.
 
 ### `patch-note/patch-note-001.md`
 

@@ -230,7 +230,12 @@ state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable +
 
 하드코딩 1차 목록: `i-dev`, `main`, `master`, `develop`. from-branch 가 이 목록에 정확히 일치하면 `gh pr merge` 호출 시 `--delete-branch` 를 생략하고, 머지 후 worktree 만 제거한다 (브랜치는 로컬·리모트 모두 보존 — long-running 통합 브랜치 정책 (`CLAUDE.md` §5) 정합).
 
-추후 확장 여지: group-policy 의 `group.md` 에 `protected_branches:` 목록 정의를 허용하는 방향. 본 차수의 1차 스코프는 하드코딩만.
+**판정 로직 (확장 적용 후)**:
+
+1. 호출이 leader-aware 인 경우 (예: `plan-enterprise` 등 상위 스킬이 leader 컨텍스트를 보유하고 dev-merge 를 호출하는 경로) — `.claude/project-group/<leader>/group.md` 의 `보호 브랜치` 행 / `## 보호 브랜치` 절을 읽어 1차 목록으로 사용. 그 그룹에 `protected_branches` 설정이 없으면 하드코딩 fallback (`i-dev` / `main` / `master` / `develop`) 사용.
+2. 호출이 leader-unaware 인 경우 (master 가 직접 `/dev-merge <from> <to>` 만 호출 — leader 인자 없음) — leader 추정 시도하지 않고 하드코딩 fallback 만 사용 (`i-dev` / `main` / `master` / `develop`).
+
+group-policy 확장 후속 작업 (이슈 #31 핫픽스1) 으로 본 분기 정식화 완료.
 
 ### Merge command
 
