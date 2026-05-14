@@ -35,6 +35,7 @@ The leader name will never be `아이OS` — that target is handled by `plan-ent
 1. `.claude/project-group/<leader>/` must **not** already exist.
 2. Every repository path must exist on disk.
 3. Current branch = `main` (always exists for I-OS — no bootstrap needed), per `CLAUDE.md` §5 convention used across the harness.
+4. 각 멤버 repo 에 `main` 브랜치 존재 (로컬 또는 origin) — i-dev 부트스트랩의 베이스.
 
 ## Pre-scan
 
@@ -219,6 +220,23 @@ Template matches `patch-update` precedent:
 
 No "이전" pointer (this is the first file).
 
+## Member repo i-dev bootstrap
+
+After file writes complete (and before/after WIP merge — see ordering note), bootstrap each member repository's `i-dev` branch. This addresses the gap where `plan-enterprise` / `task-db-*` / `patch-confirmation` all assume `i-dev` exists but no skill previously created it.
+
+For each entry in `targets[].cwd` (the dev.md manifest):
+
+1. Verify the path is a git repository: `git -C <cwd> rev-parse --git-dir`. If not, fail-fast with master-decision message.
+2. Verify `main` branch exists locally or on origin: `git -C <cwd> show-ref --verify refs/heads/main` (fall back to `refs/remotes/origin/main`). Missing → fail-fast.
+3. Check if `i-dev` already exists locally: `git -C <cwd> show-ref --verify refs/heads/i-dev`. If yes, skip steps 4–5 for this repo (idempotent).
+4. Create `i-dev` from `main` HEAD: `git -C <cwd> branch i-dev main`.
+5. Push to origin and set upstream: `git -C <cwd> push -u origin i-dev`. Failure → master-decision.
+6. If member repo's working tree is clean (`git -C <cwd> status --porcelain` empty), set HEAD to `i-dev`: `git -C <cwd> checkout i-dev`. If working tree has uncommitted changes, skip checkout and report in the completion summary (do not auto-stash).
+
+Idempotency: re-running against an already-bootstrapped group results in all-skip + clean report — safe.
+
+Concurrency: invoked once per group at registration time. No race with other skills (i-dev is the long-running integration branch downstream skills consume).
+
 ## WIP / merge protocol
 
 > Worktree 절차: `.claude/md/worktree-lifecycle.md`.
@@ -278,6 +296,10 @@ Immediate Korean report + halt. No retry.
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
 | `targets[]` 첫 항목 name 이 leader 와 불일치 (리더 저장소 식별 불가) | `"리더 저장소 컨벤션 위반 — targets[] 첫 항목의 name 은 leader (<leader-name>) 와 일치해야 함. 현재: <first-target-name>. 입력 재확인 필요."` |
+| 멤버 repo 가 git repository 아님 | `"<member-path> 가 git 리포지토리 아님 — i-dev 부트스트랩 불가."` |
+| 멤버 repo 에 `main` 브랜치 부재 | `"<member-path> 에 main 브랜치 부재 — i-dev 부트스트랩 origin 없음. 마스터 결정 필요."` |
+| `git push -u origin i-dev` 실패 | `"<member-path> i-dev origin push 실패: <error>. 마스터 결정 필요."` |
+| 멤버 repo 미커밋 → i-dev checkout skip | (failure 아님, 완료 보고서에 alarm-visible 항목으로 기재 — "<member-path> 미커밋 있음, i-dev checkout skip") |
 
 ## Scope (v1)
 
@@ -287,10 +309,11 @@ In scope:
 - Single advisor validation pass before write.
 - Initial `patch-note-001.md` matching `patch-update` template.
 - Single WIP commit-and-merge to `main`.
+- 각 멤버 repo 의 `i-dev` 브랜치 부트스트랩 (`main` 으로부터 생성 + origin push + 깨끗한 working tree 일 때 checkout). 멱등.
 
 Out of scope:
 - Modifying existing groups (use `/group-policy`).
 - Auto-discovery of all the master's projects on disk (master supplies paths explicitly).
 - Per-project deep code analysis beyond stack hint pre-scan.
 - Live validation of build/deploy commands (skill records what master says, does not run).
-- Push, tag, or remote operations.
+- Push, tag, or remote operations — 단 멤버 repo 의 `i-dev` 부트스트랩 push 는 예외 (in scope).
