@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.50.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#28
+
+### 페이즈 결과
+
+- **Phase 1** (머지 `c215ee7` + 린트 hotfix `7cd57ca`): `data-craft-server` 의 `origin/aws-deploy` 를 i-dev 로 `--no-ff` 머지하여 분기 정합성을 회복. aws-deploy 단독 31 commit (그 중 운영 hotfix 7건 — `77aafbd` AWS 배포 준비 / `3f5950b`·`337742c`·`a5ca49e` Express 5 `req.params` 캐스팅 / `d0d9ab4` trust proxy / `e3f4eba` CORS GitHub Pages / `6738723` layout widget 타입) 의 net 변경 7개 파일이 i-dev 에 통합됨. 충돌 없이 ort 자동 머지. 머지 후 `pnpm lint` 가 `src/index.ts:15` 의 미사용 매개변수 `promise` 에서 fail — `_promise` 로 rename 하는 lint hotfix commit 1건을 code-fixer 가 추가. 재실행 결과 lint exit 0.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `.dockerignore` (신규)
+- `Dockerfile` (신규)
+- `src/app.ts` (helmet · rate-limit · CORS allowedOrigins · trust proxy · /health 엔드포인트)
+- `src/config/database.ts` (healthCheck 메소드 등)
+- `src/controllers/auth.controller.ts` (Express 5 `req.params as string` 캐스팅)
+- `src/controllers/inputStore.controller.ts` (동일 캐스팅)
+- `src/index.ts` (unhandledRejection / uncaughtException 핸들러 + lint hotfix `_promise`)
+
+### 검증 결과
+
+- 7c 의례: `git log origin/aws-deploy --not <wip-tip>` empty → WIP 가 aws-deploy superset 확인. `git log origin/i-dev..<wip-tip>` 에 머지 commit + 31 aws-deploy commit 가시.
+- spot-check: `src/app.ts` 에 aws-deploy 측 `/health` 엔드포인트 보존, `.env` git-tracked 상태 main 과 일치.
+- Lint gate (`pnpm lint`): exit 0 (post-hotfix).
+
+### 후속 (master 수동, 본 플랜 스코프 외)
+
+1. data-craft-server 에서 `git checkout main && git merge --no-ff i-dev` 로 reconciliation 머지 commit 을 main 으로 승격 (`origin/main..origin/i-dev` 가 본 플랜 직전 실측 0 이므로 blast radius = 본 플랜 commit 만).
+2. `/pre-deploy data-craft data-craft-server` 재호출 — `git push origin main:aws-deploy` 가 fast-forward 로 통과해야 정상.
+
+### 알려진 재발 리스크 (별도 plan 권장)
+
+- 본 정합성 회복은 일회성. 다시 aws-deploy 에 직접 commit 이 누적되면 동일 비-FF 거부 재발. `deploy_command` 에 fast-forward 가드 prepend 또는 aws-deploy 직접 commit 차단은 `/group-policy` 영역.
+- 회수된 hotfix 들의 코드 품질 (Express 5 `as string` 안전성 등) 별도 리뷰 권장.
+
 ## v001.49.0
 
 > 통합일: 2026-05-14
