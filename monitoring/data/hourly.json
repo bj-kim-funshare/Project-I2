@@ -1,0 +1,1803 @@
+{
+  "generated_at": "2026-05-14T05:27:22.174949+00:00",
+  "hours": [
+    {
+      "hour": "2026-05-10T02",
+      "input": 17,
+      "output": 3316,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 18489,
+      "cache_read": 167402,
+      "messages": 7,
+      "cost_usd": 1.0547,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 17,
+          "output": 3316,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 18489,
+          "cache_read": 167402
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 17,
+          "output": 3316,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 18489,
+          "cache_read": 167402
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T03",
+      "input": 640,
+      "output": 205800,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1322598,
+      "cache_read": 11726415,
+      "messages": 114,
+      "cost_usd": 72.7122,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 640,
+          "output": 205800,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1322598,
+          "cache_read": 11726415
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 492,
+          "output": 102504,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 965833,
+          "cache_read": 8766254
+        },
+        {
+          "skill": "메인 세션",
+          "input": 148,
+          "output": 103296,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 356765,
+          "cache_read": 2960161
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T04",
+      "input": 253,
+      "output": 222090,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 189920,
+      "cache_read": 11267387,
+      "messages": 42,
+      "cost_usd": 39.2592,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 253,
+          "output": 222090,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 189920,
+          "cache_read": 11267387
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 253,
+          "output": 222090,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 189920,
+          "cache_read": 11267387
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T10",
+      "input": 270,
+      "output": 280182,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 806917,
+      "cache_read": 11773266,
+      "messages": 71,
+      "cost_usd": 62.8851,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 270,
+          "output": 280182,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 806917,
+          "cache_read": 11773266
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 127,
+          "output": 146825,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 176646,
+          "cache_read": 2032653
+        },
+        {
+          "skill": "메인 세션",
+          "input": 143,
+          "output": 133357,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 630271,
+          "cache_read": 9740613
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T11",
+      "input": 384,
+      "output": 279376,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 428317,
+      "cache_read": 25319850,
+      "messages": 138,
+      "cost_usd": 71.7882,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 384,
+          "output": 279376,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 428317,
+          "cache_read": 25319850
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 247,
+          "output": 155760,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 231552,
+          "cache_read": 7630339
+        },
+        {
+          "skill": "메인 세션",
+          "input": 137,
+          "output": 123616,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 196765,
+          "cache_read": 17689511
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T12",
+      "input": 661,
+      "output": 589365,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 958558,
+      "cache_read": 19326936,
+      "messages": 122,
+      "cost_usd": 101.9594,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 661,
+          "output": 589365,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 958558,
+          "cache_read": 19326936
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 555,
+          "output": 465037,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 837408,
+          "cache_read": 7395204
+        },
+        {
+          "skill": "메인 세션",
+          "input": 106,
+          "output": 124328,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 121150,
+          "cache_read": 11931732
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T13",
+      "input": 6330,
+      "output": 403039,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 822245,
+      "cache_read": 24560394,
+      "messages": 133,
+      "cost_usd": 91.8308,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 6330,
+          "output": 403039,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 822245,
+          "cache_read": 24560394
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 6201,
+          "output": 280791,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 675621,
+          "cache_read": 9362721
+        },
+        {
+          "skill": "메인 세션",
+          "input": 129,
+          "output": 122248,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 146624,
+          "cache_read": 15197673
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T14",
+      "input": 127,
+      "output": 172639,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 175241,
+      "cache_read": 6671407,
+      "messages": 41,
+      "cost_usd": 28.2142,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 127,
+          "output": 172639,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 175241,
+          "cache_read": 6671407
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 101,
+          "output": 149173,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 150731,
+          "cache_read": 3281937
+        },
+        {
+          "skill": "메인 세션",
+          "input": 26,
+          "output": 23466,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 24510,
+          "cache_read": 3389470
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T20",
+      "input": 5,
+      "output": 23018,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 137271,
+      "cache_read": 433234,
+      "messages": 5,
+      "cost_usd": 6.4944,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 5,
+          "output": 23018,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 137271,
+          "cache_read": 433234
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 5,
+          "output": 23018,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 137271,
+          "cache_read": 433234
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T21",
+      "input": 86,
+      "output": 321663,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1574296,
+      "cache_read": 7554853,
+      "messages": 39,
+      "cost_usd": 82.6872,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 86,
+          "output": 321663,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1574296,
+          "cache_read": 7554853
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "master-key",
+          "input": 72,
+          "output": 315369,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 447822,
+          "cache_read": 6360411
+        },
+        {
+          "skill": "메인 세션",
+          "input": 14,
+          "output": 6294,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1126474,
+          "cache_read": 1194442
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T17",
+      "input": 245,
+      "output": 158645,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 550221,
+      "cache_read": 5026123,
+      "messages": 67,
+      "cost_usd": 35.9479,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 245,
+          "output": 158645,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 550221,
+          "cache_read": 5026123
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 245,
+          "output": 158645,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 550221,
+          "cache_read": 5026123
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T18",
+      "input": 12140,
+      "output": 687660,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 683279,
+      "cache_read": 40760547,
+      "messages": 156,
+      "cost_usd": 133.3958,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 12140,
+          "output": 687660,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 683279,
+          "cache_read": 40760547
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 12140,
+          "output": 687660,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 683279,
+          "cache_read": 40760547
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T19",
+      "input": 112,
+      "output": 192366,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 178787,
+      "cache_read": 21769902,
+      "messages": 47,
+      "cost_usd": 52.4476,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 112,
+          "output": 192366,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 178787,
+          "cache_read": 21769902
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 112,
+          "output": 192366,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 178787,
+          "cache_read": 21769902
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T20",
+      "input": 200,
+      "output": 285261,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 254403,
+      "cache_read": 44561660,
+      "messages": 85,
+      "cost_usd": 95.8722,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 200,
+          "output": 285261,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 254403,
+          "cache_read": 44561660
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 200,
+          "output": 285261,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 254403,
+          "cache_read": 44561660
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T21",
+      "input": 24883,
+      "output": 300479,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 298914,
+      "cache_read": 69445019,
+      "messages": 110,
+      "cost_usd": 136.0441,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 24883,
+          "output": 300479,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 298914,
+          "cache_read": 69445019
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 24883,
+          "output": 300479,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 298914,
+          "cache_read": 69445019
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T22",
+      "input": 224,
+      "output": 329450,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 360410,
+      "cache_read": 69618608,
+      "messages": 111,
+      "cost_usd": 139.9523,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 224,
+          "output": 329450,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 360410,
+          "cache_read": 69618608
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 224,
+          "output": 329450,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 360410,
+          "cache_read": 69618608
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T23",
+      "input": 417,
+      "output": 310021,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 2380714,
+      "cache_read": 70564437,
+      "messages": 127,
+      "cost_usd": 200.5259,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 417,
+          "output": 310021,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2380714,
+          "cache_read": 70564437
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 354,
+          "output": 282007,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2226748,
+          "cache_read": 69016905
+        },
+        {
+          "skill": "메인 세션",
+          "input": 63,
+          "output": 28014,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 153966,
+          "cache_read": 1547532
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T00",
+      "input": 439,
+      "output": 346973,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 445060,
+      "cache_read": 105647856,
+      "messages": 126,
+      "cost_usd": 197.8531,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 439,
+          "output": 346973,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 445060,
+          "cache_read": 105647856
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 439,
+          "output": 346973,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 445060,
+          "cache_read": 105647856
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T01",
+      "input": 76,
+      "output": 86384,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 140888,
+      "cache_read": 43598377,
+      "messages": 46,
+      "cost_usd": 76.1041,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 76,
+          "output": 86384,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 140888,
+          "cache_read": 43598377
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "init",
+          "input": 76,
+          "output": 86384,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 140888,
+          "cache_read": 43598377
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T09",
+      "input": 6212,
+      "output": 763123,
+      "cache_creation_5m": 19253,
+      "cache_creation_1h": 1956360,
+      "cache_read": 70162586,
+      "messages": 493,
+      "cost_usd": 221.6231,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 6212,
+          "output": 763123,
+          "cache_creation_5m": 19253,
+          "cache_creation_1h": 1956360,
+          "cache_read": 70162586
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise-os",
+          "input": 349,
+          "output": 274532,
+          "cache_creation_5m": 9613,
+          "cache_creation_1h": 349685,
+          "cache_read": 38480716
+        },
+        {
+          "skill": "메인 세션",
+          "input": 5863,
+          "output": 488591,
+          "cache_creation_5m": 9640,
+          "cache_creation_1h": 1606675,
+          "cache_read": 31681870
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T10",
+      "input": 7944,
+      "output": 490797,
+      "cache_creation_5m": 19020,
+      "cache_creation_1h": 1566565,
+      "cache_read": 61299874,
+      "messages": 323,
+      "cost_usd": 175.6981,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 7935,
+          "output": 487098,
+          "cache_creation_5m": 17731,
+          "cache_creation_1h": 1566565,
+          "cache_read": 61055824
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 9,
+          "output": 3699,
+          "cache_creation_5m": 1289,
+          "cache_creation_1h": 0,
+          "cache_read": 244050
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise-os",
+          "input": 7944,
+          "output": 490797,
+          "cache_creation_5m": 19020,
+          "cache_creation_1h": 1566565,
+          "cache_read": 61299874
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T11",
+      "input": 11250,
+      "output": 880831,
+      "cache_creation_5m": 13099,
+      "cache_creation_1h": 2242499,
+      "cache_read": 99294055,
+      "messages": 698,
+      "cost_usd": 282.1375,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 6,
+          "output": 76,
+          "cache_creation_5m": 203,
+          "cache_creation_1h": 0,
+          "cache_read": 11391
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 11233,
+          "output": 876914,
+          "cache_creation_5m": 10721,
+          "cache_creation_1h": 2242499,
+          "cache_read": 99060046
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 11,
+          "output": 3841,
+          "cache_creation_5m": 2175,
+          "cache_creation_1h": 0,
+          "cache_read": 222618
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 31,
+          "output": 4761,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 43624,
+          "cache_read": 815305
+        },
+        {
+          "skill": "group-policy",
+          "input": 243,
+          "output": 126611,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 235869,
+          "cache_read": 12945243
+        },
+        {
+          "skill": "new-project-group",
+          "input": 157,
+          "output": 84693,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 152961,
+          "cache_read": 2770351
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 10083,
+          "output": 232111,
+          "cache_creation_5m": 5941,
+          "cache_creation_1h": 539084,
+          "cache_read": 15526247
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 708,
+          "output": 423852,
+          "cache_creation_5m": 7158,
+          "cache_creation_1h": 1195043,
+          "cache_read": 66768335
+        },
+        {
+          "skill": "메인 세션",
+          "input": 28,
+          "output": 8803,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 75918,
+          "cache_read": 468574
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T12",
+      "input": 1096,
+      "output": 611746,
+      "cache_creation_5m": 6107,
+      "cache_creation_1h": 2514428,
+      "cache_read": 69745209,
+      "messages": 537,
+      "cost_usd": 225.7012,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 6,
+          "output": 129,
+          "cache_creation_5m": 232,
+          "cache_creation_1h": 0,
+          "cache_read": 9765
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1085,
+          "output": 609429,
+          "cache_creation_5m": 4140,
+          "cache_creation_1h": 2514428,
+          "cache_read": 69587789
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 5,
+          "output": 2188,
+          "cache_creation_5m": 1735,
+          "cache_creation_1h": 0,
+          "cache_read": 147655
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 14,
+          "output": 954,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 83448,
+          "cache_read": 81100
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 555,
+          "output": 387815,
+          "cache_creation_5m": 1569,
+          "cache_creation_1h": 1415682,
+          "cache_read": 43314348
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 527,
+          "output": 222977,
+          "cache_creation_5m": 4538,
+          "cache_creation_1h": 1015298,
+          "cache_read": 26349761
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T13",
+      "input": 2863,
+      "output": 731560,
+      "cache_creation_5m": 15258,
+      "cache_creation_1h": 2386934,
+      "cache_read": 94607446,
+      "messages": 811,
+      "cost_usd": 266.6725,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 14,
+          "output": 671,
+          "cache_creation_5m": 2559,
+          "cache_creation_1h": 0,
+          "cache_read": 18589
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 2821,
+          "output": 718306,
+          "cache_creation_5m": 5225,
+          "cache_creation_1h": 2386934,
+          "cache_read": 93707743
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 28,
+          "output": 12583,
+          "cache_creation_5m": 7474,
+          "cache_creation_1h": 0,
+          "cache_read": 881114
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 5,
+          "output": 1022,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 10086,
+          "cache_read": 223379
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 506,
+          "output": 189100,
+          "cache_creation_5m": 7436,
+          "cache_creation_1h": 349930,
+          "cache_read": 16749916
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 795,
+          "output": 348744,
+          "cache_creation_5m": 5528,
+          "cache_creation_1h": 1224119,
+          "cache_read": 53834108
+        },
+        {
+          "skill": "task-db-data",
+          "input": 1529,
+          "output": 189134,
+          "cache_creation_5m": 2294,
+          "cache_creation_1h": 666852,
+          "cache_read": 23528501
+        },
+        {
+          "skill": "메인 세션",
+          "input": 28,
+          "output": 3560,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 135947,
+          "cache_read": 271542
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T14",
+      "input": 1660,
+      "output": 721126,
+      "cache_creation_5m": 33016,
+      "cache_creation_1h": 1562254,
+      "cache_read": 93931896,
+      "messages": 556,
+      "cost_usd": 241.1419,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1644,
+          "output": 711424,
+          "cache_creation_5m": 26691,
+          "cache_creation_1h": 1562254,
+          "cache_read": 93369579
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 16,
+          "output": 9702,
+          "cache_creation_5m": 6325,
+          "cache_creation_1h": 0,
+          "cache_read": 562317
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 930,
+          "output": 253424,
+          "cache_creation_5m": 4699,
+          "cache_creation_1h": 726527,
+          "cache_read": 26121121
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 338,
+          "output": 201949,
+          "cache_creation_5m": 28317,
+          "cache_creation_1h": 381824,
+          "cache_read": 33269638
+        },
+        {
+          "skill": "task-db-data",
+          "input": 324,
+          "output": 244046,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 296366,
+          "cache_read": 33751493
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 56,
+          "output": 17119,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 130175,
+          "cache_read": 755400
+        },
+        {
+          "skill": "메인 세션",
+          "input": 12,
+          "output": 4588,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 27362,
+          "cache_read": 34244
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T15",
+      "input": 1365,
+      "output": 699531,
+      "cache_creation_5m": 94353,
+      "cache_creation_1h": 2234442,
+      "cache_read": 109231323,
+      "messages": 700,
+      "cost_usd": 282.0581,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 7,
+          "output": 257,
+          "cache_creation_5m": 427,
+          "cache_creation_1h": 0,
+          "cache_read": 10431
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1331,
+          "output": 683837,
+          "cache_creation_5m": 11131,
+          "cache_creation_1h": 2234442,
+          "cache_read": 108497641
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 27,
+          "output": 15437,
+          "cache_creation_5m": 82795,
+          "cache_creation_1h": 0,
+          "cache_read": 723251
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "group-policy",
+          "input": 48,
+          "output": 11895,
+          "cache_creation_5m": 10743,
+          "cache_creation_1h": 23089,
+          "cache_read": 2509344
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 278,
+          "output": 143659,
+          "cache_creation_5m": 24961,
+          "cache_creation_1h": 201762,
+          "cache_read": 31229352
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 659,
+          "output": 354842,
+          "cache_creation_5m": 57354,
+          "cache_creation_1h": 1608075,
+          "cache_read": 43323400
+        },
+        {
+          "skill": "task-db-data",
+          "input": 256,
+          "output": 129065,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 119687,
+          "cache_read": 26342278
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 112,
+          "output": 55158,
+          "cache_creation_5m": 1295,
+          "cache_creation_1h": 254193,
+          "cache_read": 5792705
+        },
+        {
+          "skill": "메인 세션",
+          "input": 12,
+          "output": 4912,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 27636,
+          "cache_read": 34244
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T16",
+      "input": 65689,
+      "output": 667907,
+      "cache_creation_5m": 274142,
+      "cache_creation_1h": 2238716,
+      "cache_read": 124930666,
+      "messages": 599,
+      "cost_usd": 304.4353,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 65656,
+          "output": 641070,
+          "cache_creation_5m": 15242,
+          "cache_creation_1h": 2238716,
+          "cache_read": 124225191
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 33,
+          "output": 26837,
+          "cache_creation_5m": 258900,
+          "cache_creation_1h": 0,
+          "cache_read": 705475
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 324,
+          "output": 133544,
+          "cache_creation_5m": 85874,
+          "cache_creation_1h": 195569,
+          "cache_read": 55622184
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 326,
+          "output": 196964,
+          "cache_creation_5m": 138895,
+          "cache_creation_1h": 1247174,
+          "cache_read": 22385026
+        },
+        {
+          "skill": "task-db-data",
+          "input": 396,
+          "output": 207737,
+          "cache_creation_5m": 19131,
+          "cache_creation_1h": 440287,
+          "cache_read": 37105258
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 129,
+          "output": 50141,
+          "cache_creation_5m": 16341,
+          "cache_creation_1h": 83786,
+          "cache_read": 8852482
+        },
+        {
+          "skill": "메인 세션",
+          "input": 64514,
+          "output": 79521,
+          "cache_creation_5m": 13901,
+          "cache_creation_1h": 271900,
+          "cache_read": 965716
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T17",
+      "input": 1615,
+      "output": 847039,
+      "cache_creation_5m": 271941,
+      "cache_creation_1h": 2633296,
+      "cache_read": 132938271,
+      "messages": 779,
+      "cost_usd": 341.7464,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 14,
+          "output": 801,
+          "cache_creation_5m": 2587,
+          "cache_creation_1h": 0,
+          "cache_read": 19107
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1575,
+          "output": 827040,
+          "cache_creation_5m": 36071,
+          "cache_creation_1h": 2633296,
+          "cache_read": 132476473
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 26,
+          "output": 19198,
+          "cache_creation_5m": 233283,
+          "cache_creation_1h": 0,
+          "cache_read": 442691
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-inspection",
+          "input": 50,
+          "output": 62650,
+          "cache_creation_5m": 17637,
+          "cache_creation_1h": 89542,
+          "cache_read": 2019593
+        },
+        {
+          "skill": "dev-security-inspection",
+          "input": 110,
+          "output": 92065,
+          "cache_creation_5m": 835,
+          "cache_creation_1h": 447188,
+          "cache_read": 4155761
+        },
+        {
+          "skill": "dev-start",
+          "input": 47,
+          "output": 8874,
+          "cache_creation_5m": 20851,
+          "cache_creation_1h": 132940,
+          "cache_read": 1467780
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 592,
+          "output": 357048,
+          "cache_creation_5m": 92717,
+          "cache_creation_1h": 765722,
+          "cache_read": 77504548
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 485,
+          "output": 184654,
+          "cache_creation_5m": 134852,
+          "cache_creation_1h": 705196,
+          "cache_read": 26816534
+        },
+        {
+          "skill": "task-db-data",
+          "input": 130,
+          "output": 42536,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 63325,
+          "cache_read": 15941461
+        },
+        {
+          "skill": "메인 세션",
+          "input": 201,
+          "output": 99212,
+          "cache_creation_5m": 5049,
+          "cache_creation_1h": 429383,
+          "cache_read": 5032594
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T18",
+      "input": 2463,
+      "output": 148186,
+      "cache_creation_5m": 34255,
+      "cache_creation_1h": 505744,
+      "cache_read": 24616215,
+      "messages": 120,
+      "cost_usd": 63.8898,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 2463,
+          "output": 148186,
+          "cache_creation_5m": 34255,
+          "cache_creation_1h": 505744,
+          "cache_read": 24616215
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 111,
+          "output": 66059,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 220806,
+          "cache_read": 21198074
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 2339,
+          "output": 80082,
+          "cache_creation_5m": 34255,
+          "cache_creation_1h": 283723,
+          "cache_read": 1885409
+        },
+        {
+          "skill": "task-db-data",
+          "input": 13,
+          "output": 2045,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1215,
+          "cache_read": 1532732
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T19",
+      "input": 20,
+      "output": 5543,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1411106,
+      "cache_read": 1027331,
+      "messages": 5,
+      "cost_usd": 44.2902,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 20,
+          "output": 5543,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1411106,
+          "cache_read": 1027331
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 20,
+          "output": 5543,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1411106,
+          "cache_read": 1027331
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-13T21",
+      "input": 227,
+      "output": 133487,
+      "cache_creation_5m": 31478,
+      "cache_creation_1h": 585675,
+      "cache_read": 27637521,
+      "messages": 161,
+      "cost_usd": 67.8595,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 46,
+          "output": 1635,
+          "cache_creation_5m": 9354,
+          "cache_creation_1h": 0,
+          "cache_read": 76561
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 166,
+          "output": 123824,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 585675,
+          "cache_read": 27083899
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 15,
+          "output": 8028,
+          "cache_creation_5m": 22124,
+          "cache_creation_1h": 0,
+          "cache_read": 477061
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 153,
+          "output": 80830,
+          "cache_creation_5m": 13935,
+          "cache_creation_1h": 502789,
+          "cache_read": 21810790
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 74,
+          "output": 52657,
+          "cache_creation_5m": 17543,
+          "cache_creation_1h": 82886,
+          "cache_read": 5826731
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T09",
+      "input": 2203,
+      "output": 527325,
+      "cache_creation_5m": 140159,
+      "cache_creation_1h": 5417161,
+      "cache_read": 105024388,
+      "messages": 543,
+      "cost_usd": 359.7008,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 22,
+          "output": 372,
+          "cache_creation_5m": 4221,
+          "cache_creation_1h": 0,
+          "cache_read": 38487
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 2168,
+          "output": 517153,
+          "cache_creation_5m": 32449,
+          "cache_creation_1h": 5417161,
+          "cache_read": 104763881
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 13,
+          "output": 9800,
+          "cache_creation_5m": 103489,
+          "cache_creation_1h": 0,
+          "cache_read": 222020
+        },
+        {
+          "model": "시스템 합성",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 17,
+          "output": 2028,
+          "cache_creation_5m": 21185,
+          "cache_creation_1h": 147687,
+          "cache_read": 314772
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 1740,
+          "output": 315820,
+          "cache_creation_5m": 64584,
+          "cache_creation_1h": 3257637,
+          "cache_read": 74749039
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 21,
+          "output": 2631,
+          "cache_creation_5m": 16731,
+          "cache_creation_1h": 318732,
+          "cache_read": 305842
+        },
+        {
+          "skill": "task-db-data",
+          "input": 176,
+          "output": 74027,
+          "cache_creation_5m": 2492,
+          "cache_creation_1h": 1265075,
+          "cache_read": 16923370
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 249,
+          "output": 132819,
+          "cache_creation_5m": 35167,
+          "cache_creation_1h": 428030,
+          "cache_read": 12731365
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T10",
+      "input": 5658,
+      "output": 750766,
+      "cache_creation_5m": 302241,
+      "cache_creation_1h": 2247573,
+      "cache_read": 98357066,
+      "messages": 819,
+      "cost_usd": 272.5634,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 48,
+          "output": 2080,
+          "cache_creation_5m": 13984,
+          "cache_creation_1h": 0,
+          "cache_read": 78846
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 5585,
+          "output": 733271,
+          "cache_creation_5m": 133210,
+          "cache_creation_1h": 2247573,
+          "cache_read": 97689549
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 25,
+          "output": 15415,
+          "cache_creation_5m": 155047,
+          "cache_creation_1h": 0,
+          "cache_read": 588671
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 89,
+          "output": 10870,
+          "cache_creation_5m": 127110,
+          "cache_creation_1h": 40491,
+          "cache_read": 3175173
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 5058,
+          "output": 549417,
+          "cache_creation_5m": 172928,
+          "cache_creation_1h": 1802085,
+          "cache_read": 69061040
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 207,
+          "output": 89744,
+          "cache_creation_5m": 2203,
+          "cache_creation_1h": 308982,
+          "cache_read": 6173468
+        },
+        {
+          "skill": "task-db-data",
+          "input": 304,
+          "output": 100735,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 96015,
+          "cache_read": 19947385
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T11",
+      "input": 1216,
+      "output": 643816,
+      "cache_creation_5m": 220604,
+      "cache_creation_1h": 1309328,
+      "cache_read": 99799909,
+      "messages": 642,
+      "cost_usd": 236.5195,
+      "by_model": [
+        {
+          "model": "claude-haiku-4-5",
+          "input": 12,
+          "output": 516,
+          "cache_creation_5m": 4251,
+          "cache_creation_1h": 0,
+          "cache_read": 29520
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1175,
+          "output": 625984,
+          "cache_creation_5m": 26773,
+          "cache_creation_1h": 1309328,
+          "cache_read": 99048721
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 29,
+          "output": 17316,
+          "cache_creation_5m": 189580,
+          "cache_creation_1h": 0,
+          "cache_read": 721668
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "dev-start",
+          "input": 17,
+          "output": 1808,
+          "cache_creation_5m": 21185,
+          "cache_creation_1h": 5213,
+          "cache_read": 695301
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 645,
+          "output": 394821,
+          "cache_creation_5m": 111623,
+          "cache_creation_1h": 675666,
+          "cache_read": 55193189
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 441,
+          "output": 191645,
+          "cache_creation_5m": 87796,
+          "cache_creation_1h": 545002,
+          "cache_read": 28609713
+        },
+        {
+          "skill": "task-db-data",
+          "input": 101,
+          "output": 52974,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 37345,
+          "cache_read": 15267462
+        },
+        {
+          "skill": "메인 세션",
+          "input": 12,
+          "output": 2568,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 46102,
+          "cache_read": 34244
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T12",
+      "input": 488,
+      "output": 359923,
+      "cache_creation_5m": 51355,
+      "cache_creation_1h": 435472,
+      "cache_read": 69245628,
+      "messages": 276,
+      "cost_usd": 143.3256,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 480,
+          "output": 352320,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 435472,
+          "cache_read": 68958288
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 8,
+          "output": 7603,
+          "cache_creation_5m": 51355,
+          "cache_creation_1h": 0,
+          "cache_read": 287340
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 212,
+          "output": 131336,
+          "cache_creation_5m": 51036,
+          "cache_creation_1h": 199373,
+          "cache_read": 30603641
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 205,
+          "output": 94574,
+          "cache_creation_5m": 319,
+          "cache_creation_1h": 120434,
+          "cache_read": 28601403
+        },
+        {
+          "skill": "task-db-data",
+          "input": 71,
+          "output": 134013,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 115665,
+          "cache_read": 10040584
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T13",
+      "input": 794,
+      "output": 423965,
+      "cache_creation_5m": 20298,
+      "cache_creation_1h": 571245,
+      "cache_read": 143635695,
+      "messages": 395,
+      "cost_usd": 263.1872,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 779,
+          "output": 414492,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 571245,
+          "cache_read": 143035250
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 15,
+          "output": 9473,
+          "cache_creation_5m": 20298,
+          "cache_creation_1h": 0,
+          "cache_read": 600445
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 273,
+          "output": 155591,
+          "cache_creation_5m": 19827,
+          "cache_creation_1h": 249782,
+          "cache_read": 39607335
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 302,
+          "output": 125200,
+          "cache_creation_5m": 471,
+          "cache_creation_1h": 167453,
+          "cache_read": 55689571
+        },
+        {
+          "skill": "task-db-data",
+          "input": 219,
+          "output": 143174,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 154010,
+          "cache_read": 48338789
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T14",
+      "input": 500,
+      "output": 157186,
+      "cache_creation_5m": 83769,
+      "cache_creation_1h": 290521,
+      "cache_read": 91946631,
+      "messages": 233,
+      "cost_usd": 158.2301,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 493,
+          "output": 150554,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 290521,
+          "cache_read": 91848289
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 7,
+          "output": 6632,
+          "cache_creation_5m": 83769,
+          "cache_creation_1h": 0,
+          "cache_read": 98342
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 68,
+          "output": 14601,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 50272,
+          "cache_read": 7579795
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 155,
+          "output": 46293,
+          "cache_creation_5m": 66924,
+          "cache_creation_1h": 81872,
+          "cache_read": 20742129
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 227,
+          "output": 90164,
+          "cache_creation_5m": 16845,
+          "cache_creation_1h": 154655,
+          "cache_read": 56180171
+        },
+        {
+          "skill": "task-db-data",
+          "input": 50,
+          "output": 6128,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 3722,
+          "cache_read": 7444536
+        }
+      ]
+    }
+  ]
+}
