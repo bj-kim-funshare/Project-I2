@@ -1,5 +1,24 @@
 # 아이OS — Patch Note (001)
 
+## v001.33.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #24
+> 대상: 아이OS
+
+### 개요
+어제(2026-05-13)~오늘(2026-05-14) 아이OS 시스템 개편 ~130 커밋 전수조사. 3 영역(스킬+에이전트 / md+config / monitoring) 병렬 Explore + 핵심 시임 4 건 (plan-enterprise ↔ -os cross-repo 어휘 / completion-reporter dispatch 18 사이트 / worktree-lifecycle 주입 doc-skill 3종 / task-db v2 `dev_prod_separation`+`connection_style` 분기) 직접 spot-check. 13 에이전트 frontmatter · 18 스킬 dispatch · settings.json · patch-note 단조 모두 clean 확인. 결함은 monitoring/ 신규 시스템 1건만 발견되어 동일 플랜에서 수정 (옵션 A).
+
+### 페이즈 결과
+- **Phase 1**: `monitoring/script.js` 에 `escapeHtml(s)` 헬퍼 추가 (shortTime 직하단) 후 innerHTML 보간 7 callsite 에 적용 — `renderByModel` 의 `r.model` / `renderBySkill` 의 `r.skill` / `renderByDay` 의 `r.day` / `renderBySession` 의 `r.model_primary || '?'` 및 skills join 결과 (IIFE 로 분리해 `<i>(no-skill)</i>` 정적 fallback 보존) / `renderKpi` cost-model-row 의 `${m.model}` / `renderPieCompareList` 의 `${d.lbl}`. `table()` 함수 자체는 미수정 (fallback HTML 리터럴 보존을 위해 per-callsite 이스케이프 채택). 11 추가 / 7 삭제. 실효 익스플로잇 가능성은 낮음 (소스 = 로컬 트랜스크립트) 이나 원칙적 정정.
+- **Phase 2**: monitoring/data/periods/*.json 추적 해제 — no-op. 전제(추적 잔존) 가 이미 이전 커밋 `99164b6 plan-enterprise-os #11 정리: ... periods JSON gitignore` 에서 해소되어 있었음. 현재 `git ls-files monitoring/data/periods/` = `.gitkeep` 만 반환, 작업 트리 JSON 파일은 untracked 로 정상 존재. 추가 변경 불필요.
+
+### 영향 파일
+- `monitoring/script.js`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 메커니즘 (규칙/훅/에이전트/스킬/검증축) 추가 없음. `escapeHtml` 은 product code 의 단일 헬퍼 함수로 `feedback_no_prevention_treadmill.md` Q1-Q3 비적용.
+
 ## v001.32.0
 
 > 통합일: 2026-05-13
