@@ -1,5 +1,59 @@
 # 아이OS — Patch Note (001)
 
+## v001.56.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #29
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1**: `.claude/scripts/branch-cleanup.sh` 신설 — legacy/merged/both 모드, --dry-run 기본, --legacy-force + --apply + --confirm-force 3중 인터락, 보호 목록(integration / HEAD / active worktree / fixed list) 자동 적용. 377줄, bash 3.2 호환.
+- **Phase 2**: `.claude/md/worktree-lifecycle.md` `### Remove` 섹션 재작성 + `CLAUDE.md` §5 step 3 갱신. 머지 직후 `git branch -d <wip>` 안전 삭제가 표준 단계로 의무화. `-d` 실패 = 머지 미완료 신호 → 절차 중단.
+- **Phase 3**: 11개 머지-스킬 SKILL.md 일괄 갱신 (`plan-enterprise`, `plan-enterprise-os`, `patch-confirmation`, `patch-update`, `group-policy`, `new-project-group`, `plan-roadmap`, `create-custom-project-skill`, `task-db-structure`, `task-db-data`, `dev-merge`). 22 라인 추가 / 11 라인 삭제. `dev-merge` 는 `gh pr merge --delete-branch` 로 전환 + 로컬 `git branch -d` fallback + Scope 갱신 + Failure policy 1행 추가.
+
+### 청소 실행 결과 (Post-Phase-3 런타임 시퀀스)
+
+| Repo | Before | After | Deleted |
+|------|------:|------:|------:|
+| Project-I2 | 165 | 20 | 145 |
+| data-craft | 175 | 130 | 45 |
+| data-craft-mobile | 20 | 8 | 12 |
+| data-craft-ai-preview | 3 | 3 | 0 |
+| data-craft-server | 42 | 21 | 21 |
+| **합계** | **405** | **182** | **223** |
+
+활성 worktree 124개 (Project-I2 7, data-craft 94, data-craft-server 17, data-craft-mobile 5, data-craft-ai-preview 1) 전부 보호 — 손상 없음.
+
+주: Project-I2 의 dry-run 예측(146) 대비 실측(145) 차이 1건은 동시 세션이 dry-run 직후 push 한 신규 브랜치로 추정 (수치 ±1 합리 범위).
+
+### 영향 파일
+
+- `.claude/scripts/branch-cleanup.sh` (신규)
+- `.claude/md/worktree-lifecycle.md`
+- `CLAUDE.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/skills/patch-confirmation/SKILL.md`
+- `.claude/skills/patch-update/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/plan-roadmap/SKILL.md`
+- `.claude/skills/create-custom-project-skill/SKILL.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `.claude/skills/task-db-data/SKILL.md`
+- `.claude/skills/dev-merge/SKILL.md`
+
+### Treadmill Audit
+
+PASS — Retired: worktree-lifecycle.md 64-65 'manual branch delete is optional' wording — replaced by mandatory git branch -d <wip> step in standard merge procedure.
+
+### Out of scope (후속)
+
+5개 repo 합계 88개 "보고만"(미머지) 스테일 브랜치는 본 플랜 범위 외. 별도 정리 플랜에서 처리 필요 (`plan-enterprise-9-board-widget-common-핫픽스1~15`, `wip/enterprise-44x~50x-hotfix-*` 등 미머지 시리즈).
+
+---
+
 ## v001.55.0
 
 > 통합일: 2026-05-14
