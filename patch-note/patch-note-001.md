@@ -1,5 +1,42 @@
 # 아이OS — Patch Note (001)
 
+## v001.62.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #31
+> 대상: 아이OS
+
+### 결함
+
+`dev-merge` 스킬이 PR 머지 후 `gh pr merge --merge --delete-branch` 를 from-branch 종류와 무관하게 무조건 적용. master 가 `/dev-merge i-dev main` 형태로 **long-running 통합 브랜치를 from-branch 로 지정** 한 경우 머지 후 `origin/i-dev` 가 삭제되어 CLAUDE.md §5 의 통합 브랜치 정책 (i-dev = long-running) 과 직접 충돌.
+
+### Phase 1 결과 (doc-only)
+
+dev-merge spec 에 보호 브랜치 분기 도입.
+
+- `.claude/skills/dev-merge/SKILL.md`
+  - 신규 "보호 브랜치 (from-branch 삭제 금지 대상)" 절: 하드코딩 1차 목록 `i-dev` / `main` / `master` / `develop` 정의, group-policy `protected_branches:` 확장 여지 명시.
+  - Merge command 분기: 보호 브랜치는 `gh pr merge <PR-num> --merge`, 비보호는 기존 `--merge --delete-branch`.
+  - 후처리 분기: 보호 브랜치는 worktree 만 제거 (로컬 브랜치 보존), 비보호는 기존 `git branch -d` 까지 실행.
+  - 머지 직후 `from_branch_deleted` (bool) 변수 도출 (보호 매칭이면 `false`, 비매칭이면 `true`).
+  - Step 11 `skill_finalize` dispatch 본문 Optional 에 `from_branch_deleted` 필드 추가.
+  - Failure policy 표 위 가드 1줄 + 마지막 정보성 행 1개 (보호-스킵 알림).
+  - Scope in-scope "Auto-deletion of the from-branch after merge" 행을 보호 목록 제외 조항으로 교체.
+- `.claude/md/completion-reporter-contract.md`
+  - `dev-merge` `skill_finalize` Optional 줄에 `from_branch_deleted: bool` 추가, Notes 에 렌더링 가이드 (`· from 브랜치 보존` 토큰 조건부) 보강.
+- `.claude/md/worktree-lifecycle.md`
+  - L73 `dev-merge` 의 `--delete-branch` 무조건 적용 서술을 보호/비보호 분기 사실관계로 정정 (self-consistency check #4 가 허가한 plan-authorized scope 확장).
+
+### 영향 파일
+
+- `.claude/skills/dev-merge/SKILL.md`
+- `.claude/md/completion-reporter-contract.md`
+- `.claude/md/worktree-lifecycle.md`
+
+### Treadmill Audit
+
+PASS — 새 invariant / 훅 / 에이전트 / 스킬 / 검증 축 추가 없음. **폐기 (Q3)**: 기존 무조건 `--delete-branch` 디폴트를 보호 브랜치 분기 디폴트로 폐기·교체. **재발 (Q1)**: long-running 통합 브랜치 from-branch 시나리오는 실제 가능 (예: `/dev-merge i-dev main`). **새 엣지 (Q2)**: 보호 브랜치 from-branch.
+
 ## v001.60.0
 
 > 통합일: 2026-05-14
