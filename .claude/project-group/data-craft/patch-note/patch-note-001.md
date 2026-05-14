@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.26.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#15
+
+### 페이즈 결과
+
+- **Phase 1** (`314a8da`): `data-craft-server/scripts/backfill-billing-encryption.ts` 신규. ENV 사전 검증(`BILLING_MASTER_KEY` base64 32바이트 + `DB_*` 5변수), `mysql2/promise` 단일 connection 으로 트랜잭션 개시, `SELECT id, billing_key, customer_key, card_number FROM billing_info WHERE billing_key NOT LIKE 'enc:v1:%' FOR UPDATE` 후 행별로 `encryptBillingField` 적용 — 컬럼별 `enc:v1:` prefix 검사로 idempotent 처리, `card_number IS NULL` 행은 SET 절에서 해당 컬럼 제외. UPDATE 루프 후 `SELECT COUNT(*) AS c FROM billing_info WHERE billing_key NOT LIKE 'enc:v1:%'` 사전 검증 (0 아니면 rollback) 후 commit. 예외 시 rollback + 사유 출력 + `process.exit(1)`. 평문 값은 어떤 로그 경로에도 출력되지 않음 (id + 컬럼명만 로깅). `package.json` scripts 에 `"backfill:billing": "ts-node scripts/backfill-billing-encryption.ts"` 추가.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev-001`, merge `4c7c65a`):
+- `scripts/backfill-billing-encryption.ts` (신규)
+- `package.json` (scripts 항목)
+
+### 검증 결과
+
+- Lint: `pnpm lint` exit 0 (Phase 1).
+- advisor: 계획 시점 + 완료 시점 5관점 2회 모두 PASS (BLOCK 없음).
+- 페이즈 iter: 1회 재시도 (1회차 `plan_contradicts_code` — WIP 베이스 `origin/i-dev-001` stale, 로컬 i-dev-001 88349b3 로 리베이스 후 재디스패치 성공).
+
+### 운영 메모
+
+- **스크립트 실행은 마스터 책임**. freeze 창에서 `BILLING_MASTER_KEY` env 설정 후 `pnpm backfill:billing` 수동 실행. `SELECT … FOR UPDATE` 가 대상 행 락을 점유하므로 freeze 미시행 시 동시 결제 요청이 락 대기.
+- 검증식: `SELECT COUNT(*) FROM billing_info WHERE billing_key NOT LIKE 'enc:v1:%'` = 0 (스크립트 내부 pre-commit guard 와 동일 — 마스터 명시).
+- 키 회전(rotation) 미고려 — `encryptBillingField` 가 단일 master key 사용. 회전 도입 시 별도 스크립트 필요.
+- 대규모 행수(수만+) 시 단일 트랜잭션 한계 — 현재는 마스터 운영 환경 추정 규모(수십~수백) 가정. 분할 옵션은 핫픽스로 대응.
+
 ## v001.25.0
 
 > 통합일: 2026-05-14
