@@ -1,5 +1,18 @@
 # 아이OS — Patch Note (001)
 
+## v001.72.0
+
+> 통합일: 2026-05-14
+
+### 변경 파일
+
+- (수정) monitoring/data/hourly.json
+- (추가) .claude/inspection-runs/20260514T101026Z-pre-deploy.json
+- (추가) .claude/inspection-runs/20260514T101200Z-pre-deploy.json
+- (추가) .claude/inspection-runs/20260514T111021Z-pre-deploy.json
+- (추가) .claude/inspection-runs/20260514T120000Z-pre-deploy.json
+- (추가) .claude/inspection-runs/20260514T120500Z-pre-deploy.json
+
 ## v001.71.0
 
 > 통합일: 2026-05-14
