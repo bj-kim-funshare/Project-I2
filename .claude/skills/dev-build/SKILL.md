@@ -79,37 +79,19 @@ For selected targets without `build_command`: skip with "no build_command" notic
 
 ### 4. Report
 
-Korean output:
+On all-success, dispatch `completion-reporter` with:
+- `skill_type: "dev-build"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-build` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, type, build_status, elapsed_seconds, exit_code}`); optional: `post_action_hints[]` (e.g., `"hard_refresh"`, `"dev_server_restart"` when the build changes FE assets or restarts are needed).
 
-```
-### /dev-build 완료 — <leader>
+Relay the agent's response verbatim to master.
 
-| 타겟 | type | build | 시간 | exit |
-|------|------|-------|------|------|
-| data-craft-fe | project | ✅ pnpm build | 12.3s | 0 |
-| data-craft-monorepo | monorepo | ✅ pnpm -r build | 45.7s | 0 |
-| data-craft-admin | project | ⏭ no build_command | — | — |
+On failure mid-sequence, dispatch `completion-reporter` with:
+- `skill_type: "dev-build"`
+- `moment: "skill_finalize.blocked"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-build` `skill_finalize.blocked` schema. Required: `leader`, `block_reason`, `failed_target`, `exit_code`; optional: `error_excerpt` (last ~30 lines of build output).
 
-전체 빌드 통과 / 실패 위치: <target> exit <code>
-```
-
-On failure mid-sequence:
-
-```
-### /dev-build 중단 — <leader>
-
-| 타겟 | type | build | 시간 | exit |
-|------|------|-------|------|------|
-| data-craft-fe | project | ✅ pnpm build | 12.3s | 0 |
-| data-craft-be | project | ❌ pnpm build | 23.1s | 1 |
-
-실패 타겟: data-craft-be
-실패 명령: pnpm build
-실패 excerpt (마지막 ~30줄):
-<text>
-
-후속 타겟 실행 안 됨 (sequential halt).
-```
+Relay the agent's response verbatim to master.
 
 ## Failure policy
 

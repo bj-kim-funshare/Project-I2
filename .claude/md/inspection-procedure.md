@@ -1,8 +1,8 @@
 # Shared inspection procedure
 
-Common procedure for skills that dispatch a single read-only sub-agent, then either create a GitHub issue (when blocking findings exist) or report cleanly. Consumed by `dev-inspection`, `dev-security-inspection`, `db-security-inspection` (and any future inspection skill following the same pattern). `pre-deploy` Branch A follows a similar shape but is not yet refactored to reference this file.
+Common procedure for skills that dispatch a single read-only sub-agent, then either create a GitHub issue (when blocking findings exist) or report cleanly. Consumed by `dev-inspection`, `dev-security-inspection`, `db-security-inspection`, `project-verification` (and any future inspection skill following the same pattern). `pre-deploy` uses its own SKILL.md flow with the same `completion-reporter` dispatch pattern but is not consolidated here.
 
-**v1 loading**: each consuming skill manually `Read`s this file at entry and follows it. A future hook (per `CLAUDE.md` §D-24) may auto-load it when an inspection-pattern skill is invoked; until that hook exists, the manual Read is the contract.
+**Loading**: each consuming skill manually `Read`s this file at entry and follows it. Manual Read is the contract — there is no auto-load mechanism for `.claude/md/*` (specialized rules are loaded on-demand by referencing skills/agents, per CLAUDE.md §8).
 
 This file is markdown only (no frontmatter). md/ files are referenced by path, not name-matched, so frontmatter is unnecessary.
 
@@ -78,6 +78,7 @@ Verify in order; halt with the corresponding Korean message on first failure:
 | Each target's `cwd` exists on disk | `"<target> 경로 부재: <cwd>. /group-policy 로 수정 필요."` |
 | Each target's `cwd` is a git repo | `"<target> git 저장소 아님: <cwd>."` |
 | `gh` CLI installed and authenticated | `"gh CLI 미설치 또는 미인증."` |
+| `dev.md` `targets[]` 에 `name == <leader>` 인 항목 존재 (= 리더 저장소 식별 가능) | `"리더 저장소 식별 실패 — <leader>/dev.md targets[] 에 name=<leader> 항목 없음. /group-policy 로 추가 필요 (컨벤션: targets[] 첫 항목은 리더 저장소)."` |
 
 ### Step 3 — Context preparation (main session, no sub-agent)
 
@@ -114,40 +115,30 @@ After receiving findings:
 #### Branch A — at least one finding has `severity: "block"`
 
 1. Group findings by repo. Format as a Korean issue body, one section per repo. Each finding's `file`/`line` (for code findings) or `package`/`advisory` (for dependency findings) referenced explicitly.
-2. Determine the issue's host repo: use the **first selected target's `cwd`** to resolve the GitHub repo via `gh -C <cwd> repo view --json nameWithOwner`. Multi-repo groups get **one** issue here.
+2. **Determine the issue's host repo — 항상 리더 저장소 (leader repo)**. 리더 저장소 = `dev.md` `targets[]` 중 `name == <leader>` 인 항목의 `cwd`. 검사 작업 자체는 여러 work repo (target cwd) 에서 일어나지만, 이슈는 리더 저장소 한 곳에 단일 호스트로 모인다 (마스터 운영 컨벤션). `gh -C <leader-cwd> repo view --json nameWithOwner` 로 owner/name 확인. 만약 리더 cwd 가 git 저장소가 아니거나 GitHub 원격이 없으면 fail-fast 로 `AskUserQuestion` 1회 발행하여 마스터가 호스트 repo 를 명시 (단 v1 정상 경로는 컨벤션상 발생 안 함).
 3. Create the issue:
    ```bash
-   gh -C <first-target-cwd> issue create \
+   gh -C <leader-cwd> issue create \
      --title "<skill-name>: <leader> 차단 finding (<block_count>건)" \
      --body-file <tmpfile>
    ```
-4. Korean halt report:
-   ```
-   ### /<skill-name> 중단 — <leader>
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "<invoking-skill>"` (the skill that invoked this procedure substitutes its own name; one of: `dev-inspection` / `dev-security-inspection` / `db-security-inspection` / `project-verification`)
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `<invoking-skill>` `skill_finalize.blocked` schema. Required: `leader`, `scope`, `block_finding_count`, `issue_url`, `issue_number`, `severity_breakdown`; optional: `warn_count`, `affected_repos[]`, `warn_findings[]` (and `finding_categories[]` for `dev-security-inspection`).
 
-   차단 finding <block_count>건. 깃허브 이슈 생성: <issue_url>
-
-   해결은 /plan-enterprise (또는 동등 스킬) 로 진행 후 재호출.
-
-   <findings table>
-
-   경고 finding (있을 시):
-   <warn findings table>
-   ```
+   Relay the agent's response verbatim to master.
 5. Skill exits. (Skills with a post-clean extension like `pre-deploy` Branch B skip the extension on Branch A — verify before extending.)
 
 #### Branch B — only `warn` findings or empty array
 
 1. (warn findings only) Carry them through to the report.
-2. Korean completion report:
-   ```
-   ### /<skill-name> 완료 — <leader>
+2. Dispatch `completion-reporter` with:
+   - `skill_type: "<invoking-skill>"` (the skill that invoked this procedure substitutes its own name; one of: `dev-inspection` / `dev-security-inspection` / `db-security-inspection` / `project-verification`)
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `<invoking-skill>` `skill_finalize` schema. Required: `leader`, `result_summary`, `scope`, `repos_inspected[]`, `finding_count_total`, `warn_count`; optional: `warn_findings[]` (and `dependency_audit_repos[]`, `dep_advisory_count` for `dev-security-inspection`; `db_files_inspected_count`, `empty_scope` for `db-security-inspection`).
 
-   <skill-specific result table>
-
-   경고 finding (있을 시):
-   <warn findings table>
-   ```
+   Relay the agent's response verbatim to master.
 3. Skills with a post-clean extension proceed to their own continuation (defined in skill file). Skills without an extension exit here.
 
 ### Step 7 — WIP rule note
@@ -167,6 +158,6 @@ In addition to skill-specific failures, every inspection-procedure skill handles
 
 ---
 
-## Cross-repo coordination — known v1 limit
+## Cross-repo coordination — leader repo 단일 호스트
 
-When a project group spans multiple GitHub repos, Branch A creates one issue in the first selected target's repo, listing findings from all repos. Cross-repo issue federation is a deferred v1 limit shared by all consuming skills. Master may resolve cross-repo issues by triaging within the single issue or by manually splitting after creation.
+When a project group spans multiple GitHub repos, Branch A creates one issue **in the leader repo** (target whose `name == <leader>`), listing findings from all work repos. 이슈와 work repo 가 다를 수 있다는 점이 의도된 분리이며, findings 본문은 각 repo 단위로 그룹핑되어 추적성을 유지한다. Master may triage within the single leader-hosted issue or split downstream — splitting 시에도 새 이슈는 리더 저장소에 머문다.

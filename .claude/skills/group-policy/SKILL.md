@@ -48,12 +48,14 @@ Concrete example — dev area, current state:
 [현재 상태]
 프로젝트 1: data-craft-fe
   cwd: /Users/starbox/data-craft-fe
+  role: FE
   dev_command: pnpm dev
   port: 5173
   cache_paths: node_modules/.vite,dist
 
 프로젝트 2: data-craft-be
   cwd: /Users/starbox/data-craft-be
+  role: BE
   dev_command: pnpm start:dev
   port: 3000
   cache_paths: dist
@@ -72,6 +74,15 @@ Resolution:
 
 Same rule for deploy/db/group. The free-text addition slot in each area follows additive semantics — new free-text appends to existing free-text (unless master explicitly writes "자유 입력 슬롯 전체 교체: ..." to replace). The skill flags ambiguous responses (e.g., field name not matching any current key, project name not matching any existing member) and asks master once to clarify.
 
+## DB area — standard value recognition
+
+The `db` area has two fields with known standard values that drive downstream skill behavior. When master's modification response targets these fields, apply the following rules (partial-update principle — "change only what is mentioned" — still holds; no other db fields are touched):
+
+- **`dev_prod_separation`**: standard values are `분리` and `공유`. When master explicitly requests a transition between standard values (e.g., `분리` → `공유`), apply directly without confirmation.
+- **`connection_style`**: standard values are `DATABASE_URL` and `DB_* 환경변수`. When master explicitly requests a transition between standard values, apply directly.
+- **Free-text → standard normalization**: if master requests normalizing an existing free-text value to a standard value (e.g., `같은 DB 사용 (분리 없음)` → `공유`, or `mysql2 직접 연결` → `DB_* 환경변수`), apply as stated.
+- Fields other than `dev_prod_separation` and `connection_style` are unaffected by this section.
+
 ## No-op short-circuit
 
 If master responds `유지` to **all four areas**: halt immediately with the message `"변경사항 없음 — 작업 진행 안 함"`. **No worktree creation. No WIP branch creation. No commit. No merge. No report.** This check runs before any git operation — worktree add is not reached. Empty WIPs and empty merge commits are never produced by this skill.
@@ -86,6 +97,8 @@ Advisor scope: **same as `.claude/skills/new-project-group/SKILL.md` §Advisor v
 - Cross-references between areas are checked against the **post-modification** state of both sides (e.g., if a port changed in dev and deploy's build_command happens to reference that port indirectly).
 
 Advisor blockers → halt and report to master before any disk write. Non-blocker concerns are surfaced but proceed.
+
+> **리더 저장소 컨벤션 보존 가드**: dev 영역 수정 응답이 `targets[]` 첫 항목의 `name` 을 변경하려 하거나, 첫 항목을 제거/이동시키면 advisor 가 blocker 로 차단한다 (리더 저장소 식별 불가). 첫 항목 == leader 컨벤션은 그룹 등록 시점에 LOCK 되며 이후 수정 불가; 변경 필요 시 그룹 폐기 + 재등록 (`/new-project-group`).
 
 ## WIP / merge protocol
 
@@ -117,21 +130,14 @@ git worktree add -b "${wip}" "${wt}" main
 
 ## Reporting
 
-Korean output after merge:
+If no-op short-circuit fired, output the short message `"변경사항 없음 — 작업 진행 안 함"` and nothing else.
 
-```
-### /group-policy 완료 — {leader}
+Otherwise, after merge, dispatch `completion-reporter` with:
+- `skill_type: "group-policy"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `group-policy` `skill_finalize` schema. Required: `leader`, `result_summary`, `modified_areas[]`, `wip_branch`; optional: `advisor_concerns_count`, `changed_files[]`.
 
-| 항목 | 값 |
-|------|-----|
-| 수정된 영역 | {comma-separated changed areas, e.g. "dev, deploy"} |
-| 변경 파일 | {file list} |
-| WIP 브랜치 | group-policy-{leader}-문서 |
-| main 머지 | ✅ |
-| advisor 검증 | ✅ (concerns: {count} non-blocker) |
-```
-
-If no-op short-circuit fired, the report is the short message `"변경사항 없음 — 작업 진행 안 함"` and nothing else.
+Relay the agent's response verbatim to master.
 
 ## Failure policy
 
@@ -146,6 +152,7 @@ Immediate Korean report + halt. No retry.
 | Advisor blocker-level concern | `"advisor 검증 차단: <summary>. 마스터 결정 필요."` (skill halts before write) |
 | Genuine mutually-exclusive merge conflict | `"main 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>"` |
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. 작업 미진입. 마스터 결정 필요."` |
+| 수정 응답이 `targets[]` 첫 항목의 `name` 변경 또는 위치 이동을 요청 | `"리더 저장소 컨벤션 보존 불가 — targets[] 첫 항목 (name == <leader>) 은 LOCK. 변경 필요 시 그룹 재등록."` |
 
 ## Scope (v1)
 

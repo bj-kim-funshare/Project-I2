@@ -27,22 +27,24 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 2. Every selected target has `deploy_command` populated. Missing → fail with `/group-policy` redirect (groups created before the `deploy_command` field was added to the schema must be updated).
 3. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
 4. cwd may be anywhere — the skill operates per target's declared `cwd`.
+5. `dev.md` `targets[]` 에 `name == <leader>` 인 항목이 존재해야 한다 (= 리더 저장소 식별 가능). 컨벤션: targets[] 첫 항목이 리더 저장소.
 
 ## Context preparation (main session)
 
-Before dispatching the validator, load:
+> 리더 저장소 (leader repo) = `dev.md` `targets[]` 중 `name == <leader>` 인 항목의 `cwd`. 모든 GitHub 이슈 작업은 이 cwd 에서 일어난다. **빌드/배포(work)** 는 각 selected target 의 `cwd` 에서 일어나며, 이슈 호스트와 work repo 는 다를 수 있다.
 
-- `.claude/project-group/<leader>/deploy.md` — full content, then filter to selected targets.
-- `.claude/project-group/<leader>/group.md` and other policy files — env management context.
-- `CLAUDE.md`.
+Before dispatching the validator, main session collects the selected-target list and per-target branch state:
+
 - For each selected target: `git -C <cwd> rev-parse --abbrev-ref HEAD` (current branch) + `git -C <cwd> status --porcelain` (working tree state).
+
+Main session writes the selected-target list and per-target branch state to `.claude/inspection-runs/<timestamp>-pre-deploy.json`, then passes that path plus `leader name` to deploy-validator. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): `deploy.md` and other policy files are not inlined. Deploy-validator reads `deploy.md`, `group.md`, and `CLAUDE.md` itself.
 
 ## Prior-issue lookup (before dispatch)
 
 Before invoking the validator, check whether a prior open pre-deploy block issue exists for this leader:
 
 ```bash
-gh -C <first-target-cwd> issue list \
+gh -C <leader-cwd> issue list \
   --search "pre-deploy: <leader> 배포 차단" \
   --state open --json number,title,url \
   --limit 5
@@ -50,7 +52,7 @@ gh -C <first-target-cwd> issue list \
 
 Capture `prior_issue_number` (or `null`). Used by Branch A (append) and Branch B (close on clean).
 
-Note: the title prefix `pre-deploy: <leader> 배포 차단` is the lookup contract — Branch A creates issues with this exact prefix to make lookup deterministic.
+Note: the title prefix `pre-deploy: <leader> 배포 차단` is the lookup contract — Branch A creates issues with this exact prefix to make lookup deterministic. **호스트는 리더 저장소 단일** — work repo 가 multiple 이라도 이슈는 리더에 모인다.
 
 ## Validator dispatch (single call)
 
@@ -65,13 +67,14 @@ After receiving the findings array:
 ### Branch A — at least one finding has `severity: "block"`
 
 1. Format the findings as a Korean 불합격 사유 body, grouped by target. Include each finding's check, message, and suggested_fix.
-2. Determine the issue's host repo: use the **first selected target's `cwd`** to resolve the GitHub repo (`gh repo view --json nameWithOwner` from that path). Multi-repo groups produce one issue here; cross-repo coordination is a known v1 limitation.
+   본문 상단에 빌드/배포 대상 work repo 목록을 1줄 명시: `> Work repo(s): <repo1>, <repo2>, ...` (이슈 = leader, 작업 = work 분리 추적성 확보).
+2. **Determine the issue's host repo — 항상 리더 저장소 (leader repo)**. `<leader-cwd>` = `dev.md` `targets[]` 중 `name == <leader>` 인 항목의 `cwd`. `gh -C <leader-cwd> repo view --json nameWithOwner` 로 owner/name 확인. work repo 가 여러 개여도 이슈는 리더 한 곳에 모인다 (단일 호스트 컨벤션). 리더 cwd 가 git 저장소 아니거나 GitHub 원격 없으면 fail-fast → `AskUserQuestion` 1회로 마스터가 호스트 명시.
 3. **Branch on `prior_issue_number`**:
 
    - **prior_issue_number is null** (first invocation or no open block issue) → create a new issue:
 
      ```bash
-     gh -C <first-target-cwd> issue create \
+     gh -C <leader-cwd> issue create \
        --title "pre-deploy: <leader> 배포 차단 finding (<block_count>건)" \
        --body-file <tmpfile>
      ```
@@ -81,31 +84,18 @@ After receiving the findings array:
    - **prior_issue_number is not null** (re-invocation, still blocked) → append the new 불합격 사유 as a comment on the existing issue, leaving it open:
 
      ```bash
-     gh -C <first-target-cwd> issue comment <prior_issue_number> \
+     gh -C <leader-cwd> issue comment <prior_issue_number> \
        --body-file <tmpfile>
      ```
 
      Reuse `prior_issue_number` as the report's `issue_number`. **Do NOT close.** Do NOT create a duplicate issue.
 
-4. Korean halt report to master:
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "pre-deploy"`
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize.blocked` schema. Required: `leader`, `block_reason`, `block_finding_count`, `issue_url`, `issue_number`; optional: `warn_count`, `warn_findings[]`, `severity_breakdown`, `repos_targeted[]`, `prior_issue_reused` (`true` when appended to an existing open issue).
 
-   ```
-   ### /pre-deploy 중단 — <leader>
-
-   차단 finding <block_count> 건. 깃허브 이슈 (open 유지): <issue_url>
-   <"신규 생성" 또는 "기존 이슈에 사유 append (재호출 #<count>)">
-
-   해결은 /plan-enterprise (또는 동등 스킬) 로 진행 후 재호출.
-
-   | 타겟 | check | 메시지 |
-   |------|-------|--------|
-   | ... | ... | ... |
-
-   경고 finding (있을 시):
-   | 타겟 | 메시지 |
-   |------|--------|
-   | ... | ... |
-   ```
+   Relay the agent's response verbatim to master.
 
 5. **No build. No deploy. Issue stays open.** Skill exits.
 
@@ -123,35 +113,23 @@ After receiving the findings array:
    Format a Korean 합격 보고서 (validator clean + per-target build/deploy success + URLs + warn findings if any). Then:
 
    ```bash
-   gh -C <first-target-cwd> issue comment <prior_issue_number> --body-file <합격보고서.md>
-   gh -C <first-target-cwd> issue close <prior_issue_number> \
+   gh -C <leader-cwd> issue comment <prior_issue_number> --body-file <합격보고서.md>
+   gh -C <leader-cwd> issue close <prior_issue_number> \
      --comment "/pre-deploy: 합격 — 배포 완료 ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
    ```
 
-   If any target failed (build or deploy non-zero exit), **do NOT close** the prior issue — the deploy state is incomplete. Append a 부분 실패 보고서 comment instead and leave the issue open.
+   If any target failed (build or deploy non-zero exit), **do NOT close** the prior issue — the deploy state is incomplete. Append a 부분 실패 보고서 comment (`gh -C <leader-cwd> issue comment ...` 형식) instead and leave the issue open.
 
    If `prior_issue_number` is null (first invocation, clean validator), nothing to close — proceed to report.
 
-4. Korean completion report:
+4. Dispatch `completion-reporter` with:
+   - `skill_type: "pre-deploy"`
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`); optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`.
 
-   ```
-   ### /pre-deploy 완료 — <leader>
+   Relay the agent's response verbatim to master.
 
-   | 타겟 | role | tool | build | deploy | URL |
-   |------|------|------|-------|--------|-----|
-   | ... | FE | gh-pages | ✅ | ✅ | https://... |
-   | ... | BE | docker | ✅ | ❌ exit 1 | — |
-
-   <if prior_issue_number was closed: "이전 차단 이슈 #<num> close ✅"
-    if prior_issue_number was kept open due to partial failure: "이전 차단 이슈 #<num> open 유지 (부분 실패)"
-    if prior_issue_number was null: omit this line>
-
-   경고 finding (있을 시):
-   | 타겟 | 메시지 |
-   |------|--------|
-   ```
-
-   If any target's build or deploy failed: the report ends with `"<target> 후속 타겟 중단됨. 마스터 결정 필요 (롤백 자동 X)."`
+   If any target's build or deploy failed: append `"<target> 후속 타겟 중단됨. 마스터 결정 필요 (롤백 자동 X)."` after relaying the reporter's output.
 
 ## WIP rule note
 
@@ -161,6 +139,8 @@ The universal `{skill}-{이슈번호}` WIP rule from `README.md` §G does not ap
 - Branch B runs deploy commands, whose side effects (artifacts, deployed assets) are operational, not source-tree changes. If the deploy tool itself creates commits (e.g., `gh-pages` publishes to a branch), that is the tool's behavior and is not subject to this skill's WIP discipline.
 
 The "이슈번호" the WIP rule references is, for this skill, the issue that **Branch A** creates — but no branch is named after it because no commits are made under this skill's name.
+
+이슈 호스트는 리더 저장소이고 실제 work (빌드/배포) 는 각 selected target 의 cwd 에서 일어난다. 이슈와 work 가 다른 repo 일 수 있다는 점이 의도된 분리이며, 본 스킬의 합격/불합격 보고서는 본문에 work repo 목록을 명시해 추적성을 유지한다.
 
 ## Failure policy
 
@@ -180,11 +160,14 @@ Immediate Korean report + halt. No retry.
 | Issue close failure (Branch B 합격) | `"gh issue close <num> 실패: <error>. 배포는 성공했으나 이슈 close 미완. 마스터 수동 close 필요."` |
 | Build command failure (Branch B) | `"<target> build 실패 (exit <code>): <tail>. 후속 타겟 중단."` |
 | Deploy command failure (Branch B) | `"<target> deploy 실패 (exit <code>): <tail>. 후속 타겟 중단."` |
+| 리더 저장소 식별 실패 (`targets[]` 에 `name == <leader>` 없음) | `"리더 저장소 식별 실패 — <leader>/dev.md targets[] 에 name=<leader> 항목 없음. /group-policy 로 추가 필요."` |
+| 리더 cwd 가 git 저장소 아니거나 GitHub 원격 없음 | `"리더 cwd <path> GitHub 원격 없음 — AskUserQuestion 1회로 마스터가 호스트 repo 명시 (예외 경로; 정상 컨벤션에선 발생 안 함)."` |
 
 ## Scope (v1)
 
 In scope:
-- Prior-issue lookup by title prefix `pre-deploy: <leader> 배포 차단` on the first selected target's repo.
+- **리더 저장소 정의**: 그룹 이름과 동일한 `name` 의 target 의 GitHub 원격. 모든 이슈 작업(생성/append/close)이 이곳 단일 호스트에 모인다.
+- Prior-issue lookup by title prefix `pre-deploy: <leader> 배포 차단` on the leader repo.
 - Validation via `deploy-validator` for all selected targets in one dispatch.
 - GitHub issue creation on first block; comment-append on subsequent block re-invocations (single open issue per leader).
 - Issue close on clean re-invocation after all selected targets deploy successfully — 합격 보고서 comment + `gh issue close`.
@@ -198,5 +181,5 @@ Out of scope (v1):
 - Parallel target deploys.
 - Smoke testing or post-deploy verification (would be a separate `/post-deploy` skill if needed).
 - Tag creation or release-note authoring (patch-confirmation's domain).
-- Cross-repo issue coordination when one group spans multiple GitHub repos — one issue is created in the first selected target's repo.
+- Cross-repo issue coordination when one group spans multiple GitHub repos — one issue is created in the leader repo (single host convention).
 - Validation of external secret stores (manifest's `secret-manager` env_management value is acknowledged but not probed in v1).

@@ -34,7 +34,7 @@ If **all** repos contribute zero DB-related files: the dispatch returns `[]`. Th
 
 ## Sub-agent
 
-`db-security-reviewer` (read-only). Single dispatch covering all selected repos. Input includes the per-repo scope objects, `CLAUDE.md`, and group-policy files with explicit emphasis on `db.md` (the DB policy locks define what counts as a violation — e.g., a group whose `db.md` says "dev and prod share one DB" should not have that flagged as a separation violation).
+`db-security-reviewer` (read-only). Single dispatch covering all selected repos. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): per-repo scope objects are not inlined. Main session writes them to `.claude/inspection-runs/<timestamp>-db-security-inspection.json` and passes only that path plus `leader name` to db-security-reviewer. Db-security-reviewer reads the scope JSON, `CLAUDE.md`, and group-policy files (with explicit emphasis on `db.md` for violation context) itself.
 
 ## Focus area (for sub-agent prompt)
 

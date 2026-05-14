@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# I2 statusline — v1.2 (3-line compact + last user prompt).
-# Reads Claude Code's statusline JSON from stdin, emits 3 colored lines.
+# I2 statusline — v1.3 (L3 multi-line + isMeta/제어 키워드 필터).
+# Reads Claude Code's statusline JSON from stdin, emits colored lines.
 # Spec: https://code.claude.com/docs/ko/statusline
 #
 # Registration (in .claude/settings.json):
@@ -11,10 +11,10 @@
 #     "refreshInterval": 15
 #   }
 #
-# Line layout (master directive 2026-05-12):
-#   L1 — Identity + limits: cwd · branch · model · effort · 5h · 7d
-#   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
-#   L3 — Last user prompt: 💬 (from ~/.claude/projects/.../<session>.jsonl)
+# Line layout (master directive 2026-05-13):
+#   L1 — Identity + limits: model · effort · 5h · 7d · ⏱ duration
+#   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens
+#   L3 — Last user prompt: 💬 (max 5 lines × 105 display-units/line — CJK=2, ASCII=1; wraps; isMeta + 제어 키워드 제외)
 #
 # Mandatory items (always shown with placeholder fallback):
 #   📊 ctx% / 🧠 effort / 🕐 5h / 📅 7d
@@ -36,8 +36,8 @@ jnum() { jq -r "$1 // 0" <<<"$input" 2>/dev/null | cut -d. -f1; }
 jraw() { jq -r "$1 // empty" <<<"$input" 2>/dev/null; }
 
 MODEL=$(jget '.model.display_name' '?')
+MODEL=${MODEL/ context/}
 EFFORT=$(jget '.effort.level' '')
-CC_VERSION=$(jraw '.version')
 VIM_MODE=$(jraw '.vim.mode')
 AGENT_NAME=$(jraw '.agent.name')
 PCT=$(jnum '.context_window.used_percentage')
@@ -85,12 +85,13 @@ fmt_tokens() {
   else printf '%s' "$n"; fi
 }
 
-# ISO8601 reset target → "Xh Ym" or "Xd Yh Zm".
 iso_to_epoch() {
-  local target=$1
-  [ -z "$target" ] && { echo ""; return; }
-  date -j -f "%Y-%m-%dT%H:%M:%S" "${target%%.*}" "+%s" 2>/dev/null || \
-    date -d "$target" "+%s" 2>/dev/null || echo ""
+  local v=$1
+  [ -z "$v" ] && { echo ""; return; }
+  case "$v" in
+    ''|*[!0-9]*) echo "" ;;
+    *) echo "$v" ;;
+  esac
 }
 
 fmt_reset_hm() {
@@ -192,9 +193,6 @@ case "$EFFORT" in
   *)      EFFORT_BADGE="🧠 ${DIM}${EFFORT}${RESET}"       ;;
 esac
 
-VERSION_SUFFIX=""
-[ -n "$CC_VERSION" ] && VERSION_SUFFIX=" · ${DIM}cc${CC_VERSION}${RESET}"
-
 EXT_BADGES=""
 [ -n "$VIM_MODE" ] && EXT_BADGES="${EXT_BADGES} ${DIM}[vim:${VIM_MODE}]${RESET}"
 [ -n "$AGENT_NAME" ] && EXT_BADGES="${EXT_BADGES} ${YELLOW}[agent:${AGENT_NAME}]${RESET}"
@@ -220,7 +218,7 @@ fi
 LAST_PROMPT=""
 if [ -f "$SESSION_JSONL" ] && command -v python3 >/dev/null 2>&1; then
   LAST_PROMPT=$(python3 - "$SESSION_JSONL" <<'PY' 2>/dev/null
-import json, sys
+import json, re, sys, unicodedata
 from pathlib import Path
 
 path = Path(sys.argv[1])
@@ -229,7 +227,8 @@ try:
 except Exception:
     sys.exit(0)
 
-LIMIT = 140  # single-line truncation length
+LINE_WIDTH = 105
+MAX_LINES = 5
 
 for line in reversed(lines):
     line = line.strip()
@@ -240,6 +239,8 @@ for line in reversed(lines):
     except json.JSONDecodeError:
         continue
     if d.get("type") != "user":
+        continue
+    if d.get("isMeta") is True:
         continue
     if d.get("userType") != "external":
         continue
@@ -261,16 +262,74 @@ for line in reversed(lines):
         text = str(content)
 
     # Skip command/system output records (they share type=user but aren't master prompts).
-    if text.startswith(("<local-command-", "<system-reminder>", "<command-")):
+    if text.startswith(("<local-command-", "<system-reminder>")):
         continue
+    if text.startswith("<command-"):
+        # Slash-skill messages: extract user-supplied args if present.
+        m = re.search(r'<command-args>(.*?)</command-args>', text, re.DOTALL)
+        if m:
+            extracted = m.group(1).strip()
+            if extracted:
+                text = extracted
+            else:
+                m2 = re.search(r'<command-name>(.*?)</command-name>', text, re.DOTALL)
+                if m2:
+                    text = m2.group(1).strip()
+                else:
+                    continue
+        else:
+            m2 = re.search(r'<command-name>(.*?)</command-name>', text, re.DOTALL)
+            if m2:
+                text = m2.group(1).strip()
+            else:
+                continue
     if not text.strip():
         continue
 
-    # Normalize whitespace, truncate to LIMIT.
+    # Normalize whitespace.
     text = " ".join(text.split())
-    if len(text) > LIMIT:
-        text = text[:LIMIT - 3] + "..."
-    sys.stdout.write(text)
+
+    # Skip skill control keywords — master inputs but not statusline-worthy.
+    if text == "플랜 완료" or text == "중단":
+        continue
+    if text == "핫픽스" or text.startswith("핫픽스 "):
+        continue
+
+    # Display width: East Asian wide/fullwidth chars (Korean/Chinese/Japanese, fullwidth ASCII) count as 2.
+    def cwidth(ch):
+        return 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+
+    # Wrap to LINE_WIDTH (display-weight) × up to MAX_LINES.
+    wrapped = []
+    cur = ""
+    cur_w = 0
+    for ch in text:
+        w = cwidth(ch)
+        if cur_w + w > LINE_WIDTH:
+            wrapped.append(cur)
+            cur = ch
+            cur_w = w
+        else:
+            cur += ch
+            cur_w += w
+    if cur:
+        wrapped.append(cur)
+
+    if len(wrapped) > MAX_LINES:
+        wrapped = wrapped[:MAX_LINES]
+        last = wrapped[-1]
+        target_w = LINE_WIDTH - 3  # "..." consumes 3 display units
+        truncated = ""
+        tw = 0
+        for ch in last:
+            w = cwidth(ch)
+            if tw + w > target_w:
+                break
+            truncated += ch
+            tw += w
+        wrapped[-1] = truncated + "..."
+
+    sys.stdout.write("\n".join(wrapped))
     break
 PY
 )
@@ -289,14 +348,15 @@ COST_FMT=$(fmt_cost "$COST")
 TOK_FMT=$(fmt_tokens "$TOTAL_TOK")
 CTX_BAR=$(ctx_bar "$PCT")
 
-# Line 1 — Identity + limits: model · effort · cc-ver · 5h · 7d · ext badges
+# Line 1 — Identity + limits: model · effort · 5h · 7d · ⏱ duration · ext badges
 # (cwd / git branch 표기는 마스터 지시로 제거 — 2026-05-12)
-LINE1=$(printf '%s%s%s · %s%s' "$CYAN" "$MODEL" "$RESET" "$EFFORT_BADGE" "$VERSION_SUFFIX")
+LINE1=$(printf '%s%s%s · %s' "$CYAN" "$MODEL" "$RESET" "$EFFORT_BADGE")
 LINE1+=" · ${SES_COLOR}🕐 5h ${SES_DISPLAY}${RESET}"
 LINE1+=" · ${WK_COLOR}📅 7d ${WK_DISPLAY}${RESET}"
+LINE1+=" · ${DIM}⏱ ${DUR_FMT}${RESET}"
 [ -n "$EXT_BADGES" ] && LINE1+="${EXT_BADGES}"
 
-# Line 2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens · duration
+# Line 2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens
 LINE2=$(printf '%s📊 %d%%%s %s%s%s' "$PCT_COLOR" "$PCT" "$RESET" "$DIM" "$CTX_BAR" "$RESET")
 LINE2+=" · ${ADD_COLOR}➕ ${GIT_ADD}${RESET}"
 LINE2+=" · ${MOD_COLOR}~ ${GIT_MOD}${RESET}"
@@ -306,7 +366,6 @@ if [ "$LINES_ADD" -gt 0 ] || [ "$LINES_DEL" -gt 0 ]; then
 fi
 LINE2+=" · 💰 \$${COST_FMT}"
 LINE2+=" · 🪙 ${TOK_FMT}${DELTA_DISPLAY}"
-LINE2+=" · ${DIM}⏱ ${DUR_FMT}${RESET}"
 
 # Line 3 — Last user prompt (always shown; empty placeholder when unavailable).
 if [ -n "$LAST_PROMPT" ]; then

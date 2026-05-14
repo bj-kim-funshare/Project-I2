@@ -1,1 +1,2 @@
 monitoring/data/aggregate.json
+monitoring/data/periods/**/*.json

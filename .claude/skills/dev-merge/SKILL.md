@@ -48,17 +48,16 @@ git worktree add "${wt_from}" <from-branch>   # checkout existing branch, no -b
 
 ## Context preparation (main session, no sub-agent)
 
-Before dispatching reviewers, main session collects context inline via Bash/gh. No sub-agent isolation is needed for fetching information — that overhead is wasted on retrieval.
+Before dispatching reviewers, main session confirms the PR exists and collects only identifiers:
 
-| Context | Source |
+| Info | Source |
 |---|---|
-| PR diff | `gh pr diff <PR-num>` |
-| Recent git log on from-branch | `git log --oneline -30 <from-branch>` |
-| Prior PR review comments (if iterating) | `gh pr view <PR-num> --json reviews,comments` |
-| CLAUDE.md text | Read |
-| Group-policy files (if cwd resolves to a registered group) | Read `.claude/project-group/<leader>/{dev,deploy,db,group}.md` |
+| PR number | `gh pr list --head <from-branch> --json number` |
+| Group leader (if any) | cwd matched against `targets[].cwd` in `.claude/project-group/*/dev.md` — leader name only |
 
-Group resolution: if cwd matches any `targets[].cwd` entry inside `.claude/project-group/*/dev.md`, the matching `<leader>` is identified and its four policy files are loaded. If no match, group-policy is omitted from the context bundle.
+PR diff, git log, prior PR review comments, CLAUDE.md text, and group-policy file contents are NOT pre-fetched and NOT inlined in reviewer dispatch prompts. Reviewers fetch what they need directly. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): PR diffs, prior-round findings JSON, and git logs are not inlined in dispatch prompts. Reviewers call `gh pr diff <PR#>` and `gh pr view <PR#> --json reviews,comments` themselves; code-fixer reads PR review comments via `gh pr view <PR#> --json reviews,comments` or `gh api repos/{owner}/{repo}/pulls/<PR#>/comments` — so code-fixer's input is the PR number alone.
+
+Group resolution: if cwd matches any `targets[].cwd` entry inside `.claude/project-group/*/dev.md`, the matching `<leader>` name is captured (for passing to reviewers as an identifier). If no match, group-policy is omitted.
 
 ## Reviewer dispatch (parallel)
 
@@ -67,7 +66,7 @@ Two read-only sub-agents, dispatched in a single message via the Task tool so th
 - **`claude-md-compliance-reviewer`** — diff vs CLAUDE.md and group-policy conventions.
 - **`bug-detector`** — logic bugs, null/undefined, off-by-one, race conditions, error handling, type holes.
 
-Each agent receives the same context bundle as a Task `prompt`. They form judgments independently — neither sees the other's findings — which is the actual reason for parallel dispatch.
+Each reviewer receives only: `PR number`, `from-branch`, `to-branch`, `worktree_cwd`, and (if resolved) `leader name`. Reviewers fetch the PR diff and prior review comments from GitHub directly. They form judgments independently — neither sees the other's findings — which is the actual reason for parallel dispatch.
 
 ## Finding contract
 
@@ -103,9 +102,9 @@ Each comment includes the SHA hash + line range so the user (and the next iterat
 
 If the combined findings array is non-empty:
 
-1. Dispatch `code-fixer` (write-capable Sonnet sub-agent) via Task, with the findings array and PR metadata.
-2. `code-fixer` reads `worktree_cwd` from input, runs all `git` operations as `git -C <worktree_cwd>` (no local `git checkout`), applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
-3. Main session re-fetches PR diff (now reflecting the new commit), re-collects prior PR comments (now including the just-posted ones), re-dispatches the 2 reviewers.
+1. Dispatch `code-fixer` (write-capable Sonnet sub-agent) via Task, with `PR number`, `from-branch`, and `worktree_cwd`. Code-fixer reads its own fix context from PR review comments via `gh pr view <PR#> --json reviews,comments`.
+2. `code-fixer` runs all `git` operations as `git -C <worktree_cwd>` (no local `git checkout`), applies fixes, commits with message `dev-merge: 핫픽스 (PR #<num>, iteration <n>)`, pushes to remote.
+3. Main session re-dispatches the 2 reviewers (passing the same PR number and branch identifiers — reviewers fetch the updated diff themselves).
 4. Loop until both reviewers return `[]`, OR iteration cap is hit.
 
 **Iteration cap = 3.** Rationale: caps the auto-fix loop short enough that master sees a non-converging problem quickly. Three rounds is empirically the point where mechanical fixes have either resolved or revealed they can't. More rounds = chasing a bug the fixer cannot grasp.
@@ -154,19 +153,12 @@ On lint fail:
 2. Dispatch `code-fixer` with the synthesized findings. Dispatch input includes `worktree_cwd = <wt_from>`. Code-fixer applies fixes, commits, pushes.
 3. Re-dispatch `gate-runner` for the same targets. Recompute lint pass/fail.
 4. If still failing → iter counter += 1, repeat from step 1 (up to 3 total iters).
-5. Iter cap reached with lint still failing → halt with **lint cap-exhausted report**:
-   ```
-   ### /dev-merge 중단 — PR #<num> (lint cap 도달)
+5. Iter cap reached with lint still failing → halt. Dispatch `completion-reporter` with:
+   - `skill_type: "dev-merge"`
+   - `moment: "skill_finalize.blocked"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"lint_cap_exhausted"`); optional `leader`, `lint_failure_targets[]`.
 
-   | 항목 | 값 |
-   |------|-----|
-   | lint 라운드 | 3/3 |
-   | 실패 타겟 | <list> |
-   | 마지막 failure excerpt | <text> |
-   | PR 상태 | open (수동 처리 대기) |
-
-   master 가 직접 lint 수정 후 재호출 또는 `--codex` 등 다른 경로 검토.
-   ```
+   Relay the agent's response verbatim to master.
 
 Lint hotfix iter is INDEPENDENT from the review iter — review iter (3) and lint iter (3) are separate budgets. Total max iter per PR = 6 (3 review + 3 lint), reasonable upper bound.
 
@@ -174,21 +166,16 @@ Lint hotfix iter is INDEPENDENT from the review iter — review iter (3) and lin
 
 When both reviewers return `[]` AND lint gate passes (within respective iter caps), the automated review + lint is clean. **Do NOT auto-merge yet.** Master gets a final intervention chance before the merge commit is created.
 
-Output the PENDING message and halt:
+Dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment`: `"work_complete"` on first arrival (initial clean); `"hotfix_complete"` when re-entering after a master-supervised hotfix iteration.
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` schema.
+  - For `work_complete`: required fields `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`; optional `leader`, `findings_breakdown`, `conflict_status`, `post_action_hints[]`.
+  - For `hotfix_complete`: all `work_complete` required fields plus `current_hotfix_number`, `prior_hotfix_summaries[]` (each `{hotfix_number, summary_ko}`); optional `next_hotfix_number`.
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /dev-merge 대기 — PR #<num>
-
-자동 리뷰 통과 (<n>/3 라운드, 게시 finding <count>건, 핫픽스 커밋 <count>건).
-머지 직전 — 마스터 최종 확인.
-
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 저장소 | <owner>/<repo> |
-| PR | #<num> |
-| 핫픽스 커밋 | <count> |
-
 마스터 입력 대기:
   - `머지 완료` (또는 `플랜 완료`) → `gh pr merge` 실행 → 종료
   - `핫픽스 <description>` → master 힌트로 code-fixer 재dispatch (4번째 iter+, master-supervised)
@@ -258,20 +245,14 @@ After `gh pr merge` returns success: `git worktree remove ${wt_from}`. On failur
 
 ### Conflict-PENDING 메시지
 
-Output and halt:
+Dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "work_complete"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `work_complete` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `master_intent_summary`, `result_summary`, `review_rounds`, `findings_count`, `hotfix_commits_count`; optional `leader`, `conflict_status` (set to the `mergeable,mergeStateStatus` output verbatim).
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /dev-merge 충돌 — PR #<num>
-
-`gh pr merge` 충돌 감지. PR mergeable=CONFLICTING.
-
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 충돌 상태 | <gh pr view --json mergeable,mergeStateStatus output> |
-| 핫픽스 커밋 (자동 iter) | <count> |
-| master-supervised 커밋 | <count> |
-
 마스터 입력 대기:
   - `핫픽스 <resolution hint>` → code-fixer 가 hint + 충돌 마커 + 양측 diff 받아 해결
                                   → push → mergeable 재확인 → PENDING/Conflict-PENDING 분기
@@ -324,37 +305,19 @@ state=$(gh pr view <PR-num> --json state,mergeable --jq '.state + " " + .mergeab
 
 ## Reporting
 
-Korean output after successful merge:
+After successful merge, dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `result_summary`, `merge_sha`, `review_rounds`, `findings_count`, `hotfix_commits_count`, `worktree_cleanup_status`; optional `leader`, `findings_breakdown`, `conflict_resolution_commits`.
 
-```
-### /dev-merge 완료 — PR #<num>
+Relay the agent's response verbatim to master.
 
-| 항목 | 값 |
-|------|-----|
-| from → to | <from> → <to> |
-| 저장소 | <owner>/<repo> |
-| PR 번호 | #<num> |
-| 리뷰 라운드 | <n>/3 |
-| 게시 finding | <count> (compliance: X, bug: Y) |
-| 핫픽스 커밋 | <count> |
-| 머지 방식 | merge commit (--no-ff) |
-| 머지 SHA | <sha> |
-```
+On review cap-exhausted halt, dispatch `completion-reporter` with:
+- `skill_type: "dev-merge"`
+- `moment: "skill_finalize.blocked"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-merge` `skill_finalize.blocked` schema. Required: `pr_number`, `pr_url`, `from_branch`, `to_branch`, `block_reason`, `block_type` (value `"review_cap_exhausted"`); optional `leader`, `remaining_findings[]`.
 
-On cap-exhausted halt:
-
-```
-### /dev-merge 중단 — PR #<num> (이터레이션 한계)
-
-| 항목 | 값 |
-|------|-----|
-| 라운드 | 3/3 |
-| 잔여 finding | <count> |
-| PR 상태 | open (수동 처리 대기) |
-
-### 잔여 finding
-<list with file:line, category, message>
-```
+Relay the agent's response verbatim to master.
 
 ## Failure policy
 

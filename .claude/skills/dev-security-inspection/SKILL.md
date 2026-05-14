@@ -37,7 +37,7 @@ In addition, the dispatcher pre-computes each repo's `package_manager` field by 
 
 ## Sub-agent
 
-`security-reviewer` (read-only). Single dispatch covering all selected repos. Input includes the per-repo scope objects (with `package_manager` added), `CLAUDE.md`, and group-policy files (with extra emphasis on `db.md` and `group.md` for DB security context and env-management policy).
+`security-reviewer` (read-only). Single dispatch covering all selected repos. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): per-repo scope objects (including `package_manager`) are not inlined. Main session writes them to `.claude/inspection-runs/<timestamp>-dev-security-inspection.json` and passes only that path plus `leader name` to security-reviewer. Security-reviewer reads the scope JSON, `CLAUDE.md`, and group-policy files (including `db.md` and `group.md`) itself.
 
 ## Focus area (for sub-agent prompt)
 
@@ -72,7 +72,7 @@ All other failures are handled by the shared procedure.
 In scope:
 - Code-level security pattern review across `version`-scoped or `today`-scoped changes per member repo.
 - Dependency advisory audit per repo with a detected package manager.
-- One-issue-per-skill on the first selected target's repo for block findings.
+- One-issue-per-skill hosted on the leader repo (`dev.md` `targets[]` entry where `name == <leader>`) for block findings. See `.claude/md/inspection-procedure.md` §"Cross-repo coordination — leader repo 단일 호스트".
 
 Out of scope (v1):
 - `all` mode (full-history audit).

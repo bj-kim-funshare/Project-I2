@@ -51,6 +51,34 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   backdrop-filter: blur(8px);
 }
 .topbar h1 { flex: 0 0 auto; }
+
+/* ================= PERIOD SELECTOR ================= */
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.period-selector label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.period-selector select {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.period-selector select:hover { border-color: var(--accent); }
+.period-selector select:focus { border-color: var(--accent); }
+.period-selector select:disabled { opacity: 0.45; cursor: default; }
 .meta {
   flex: 1;
   font-size: 12px;
@@ -70,6 +98,14 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .topbar button:hover { filter: brightness(1.12); }
 .topbar button:disabled { opacity: 0.55; cursor: progress; }
+.last-refresh-time {
+  color: var(--muted);
+  font-size: 12px;
+  margin-right: 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.last-refresh-time:empty { display: none; }
 
 /* ================= ERROR ================= */
 .error {
@@ -150,13 +186,21 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 /* KPI #2 전체 토큰 — non-cache / cache 분리 */
 .kpi-tokens .big-split {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
   row-gap: 2px;
   margin: 4px 0 0;
 }
+.big-split-col {
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  row-gap: 2px;
+}
+.big-split-col > .big-number-half { grid-row: 1; }
+.big-split-col > .kpi-delta { grid-row: 2; }
 .big-number-half {
   font-size: 26px;
   font-weight: 700;
@@ -234,6 +278,31 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   text-underline-offset: 3px;
 }
 
+/* KPI 카드 보조 수치 그리드 */
+.kpi-extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.kpi-extras > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.kpi-extras .lbl {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.kpi-extras .val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ================= CHARTS ================= */
 .charts {
   display: grid;
@@ -254,10 +323,11 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .chart-card.wide { grid-column: span 3; }
 .chart-card.span-2 { grid-column: span 2; }
 .chart-card h3 {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
+  padding-top: 2px;
 }
 .chart-body {
   position: relative;
@@ -269,6 +339,16 @@ h1 { font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   width: 100% !important;
   height: 100% !important;
 }
+.chart-wrap {
+  position: relative;
+  min-height: 600px;
+  width: 100%;
+}
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+#chart-prompt-bar .chart-wrap { min-height: 600px; }
 
 /* ================= TABLES ================= */
 .tables-section h2 {
@@ -332,6 +412,34 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:nth-child(even) { background: var(--surface-2); }
 tbody tr:hover { background: var(--surface-3); }
 
+/* ================= DETAIL SECTIONS ================= */
+.detail-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.detail-row-2col .detail-section {
+  margin-bottom: 0;
+}
+.detail-section {
+  margin-bottom: 24px;
+}
+.detail-section > h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.detail-chart {
+  position: relative;
+  height: 280px;
+}
+.detail-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* ================= FOOTER ================= */
 .footer {
   padding: 16px 24px;
@@ -350,6 +458,108 @@ code {
   font-size: 11.5px;
 }
 i { color: var(--muted); }
+
+/* ================= KPI DELTA BADGE ================= */
+.kpi-delta {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  vertical-align: middle;
+  display: inline-block;
+}
+.kpi-delta:empty { display: none; }
+.kpi-delta.up {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+.kpi-delta.down {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ================= COMPARE TARGET SELECT ================= */
+#period-compare-target {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#period-compare-target:hover { border-color: var(--accent); }
+#period-compare-target:focus { border-color: var(--accent); }
+#period-compare-target:disabled { opacity: 0.45; cursor: default; }
+
+/* ================= CHART COMPARE LIST ================= */
+.chart-compare-list {
+  font-size: 12px;
+  padding: 4px 8px;
+  color: var(--muted);
+}
+.chart-compare-list .cmp-up { color: #3b82f6; }
+.chart-compare-list .cmp-down { color: #ef4444; }
+
+/* ================= HTML LEGEND (DONUT CHARTS) ================= */
+.chart-card.has-html-legend .chart-body {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.chart-legend-item .dot {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  margin-top: 3px;
+  border-radius: 2px;
+}
+.chart-legend-item .text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chart-legend-item .label {
+  color: var(--text, #e6e9f2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chart-legend-item .delta {
+  font-weight: 600;
+  margin-top: 2px;
+}
+.chart-legend-item .delta.up { color: #3b82f6; }
+.chart-legend-item .delta.down { color: #ef4444; }
+
+.detail-section.has-html-legend .detail-chart {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: 260px;
+  margin-bottom: 12px;
+}
+
+/* ================= REALTIME MODE ================= */
+.period-key-hidden { display: none; }
 
 /* ================= ANIMATIONS ================= */
 @keyframes fadeInUp {

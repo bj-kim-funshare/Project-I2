@@ -10,10 +10,10 @@ Restart the frontend dev server(s) for a registered project group.
 ## Invocation
 
 ```
-/dev-start <leader-name> [<target-name>]
+/dev-start <leader-name>
 ```
 
-Parse rule: tokens are whitespace-separated. First token = leader name (Latin or Hangul-phonetic, as set by `new-project-group`). Second token, if present, = single target name to restart (otherwise all targets in the manifest are restarted sequentially). Leader name will never be I-OS-related — OS-side work is handled by `plan-enterprise-os`, not by this skill.
+Parse rule: 단일 토큰 — leader name only. I-OS-side work goes through plan-enterprise-os.
 
 ## Prerequisites
 
@@ -34,6 +34,8 @@ This manifest is produced by the `group-policy` skill (dev section). If it is ab
 targets:
   - name: <member-name>
     cwd: <absolute-path>
+    role: FE | BE            # FE = frontend (dev-start 의 기동 대상), BE = backend (dev-start 미기동, dev-build 등 다른 스킬은 정상 사용)
+    type: project | monorepo   # dev-build 가 모노레포 선택 UI 노출에 사용. dev-start 의 multiSelect 라벨에도 [monorepo] 인디케이터로 노출.
     dev_command: <shell-command-line>
     port: <integer>
     cache_paths:
@@ -46,13 +48,27 @@ targets:
 
 Field semantics:
 - `cwd`: absolute path to the member's project root. The dev command runs from here.
+- `role`: `FE` or `BE` (closed choice). dev-start only starts FE targets. BE targets remain in the manifest and are available to other skills (dev-build, etc.) but are excluded from dev-start's startup sequence.
+- `type`: `project` or `monorepo` (closed choice). dev-build uses this to expose monorepo selection sub-cards; dev-start uses it to append a `[monorepo]` indicator on the multiSelect option label.
 - `dev_command`: the exact shell command to start the dev server (e.g., `pnpm dev`, `npm run dev`, `vite`).
 - `port`: the port the dev server is expected to bind. Used for both kill-prior and readiness polling.
 - `cache_paths`: zero or more paths to delete before starting. Resolved relative to `cwd`. Missing paths are skipped silently.
 
 ## Procedure
 
-For each target (sequential — never parallel; port collisions and resource contention defeat the purpose):
+### 0. Filter and select targets
+
+Load `.claude/project-group/<leader>/dev.md` → `targets[]`. Filter to entries where `role: FE` → `fe_targets[]`.
+
+- **0개** — `"<leader> FE 타겟 없음 — 종료"` 출력 후 halt.
+- **1개** — 카드 없이 자동 선택. `selected_targets = fe_targets`.
+- **2개 이상** — `AskUserQuestion` (multiSelect):
+  - 질문 문구: `"<leader> — 기동할 FE 타겟 선택 (복수 선택 가능)"`
+  - 옵션 라벨: `<name>` (해당 타겟의 `type` 필드가 `monorepo` 이면 `<name> [monorepo]`)
+  - 0개 선택 → `"선택된 타겟 없음 — 종료"` 출력 후 halt.
+  - 1개 이상 선택 → `selected_targets = <선택된 항목>`.
+
+For each *selected* target (sequential — never parallel; port collisions and resource contention defeat the purpose):
 
 ### 1. Kill any prior process on the target port
 
@@ -100,27 +116,21 @@ done
 
 ## Reporting
 
-After every target succeeds, output a single table to the user (Korean, per language separation rule):
+After every target succeeds, dispatch `completion-reporter` with:
+- `skill_type: "dev-start"`
+- `moment: "skill_finalize"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-start` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, port, pid, cache_paths_cleared[]}`).
 
-```
-### /dev-start 완료 — <leader>
-
-| 멤버 | 포트 | 상태 | PID | 캐시 정리 |
-|------|------|------|-----|-----------|
-| <name> | <port> | ✅ http://localhost:<port> | <pid> | <paths> |
-```
-
-Then halt. No "next skill" suggestion, no follow-up prompt.
+Relay the agent's response verbatim to master. Then halt. No "next skill" suggestion, no follow-up prompt.
 
 ## Failure policy
 
-Any failure — manifest missing, malformed YAML, target not found, kill error, cache rm error, dev command not found, port timeout — produces an immediate Korean report to the user with:
+Any failure — manifest missing, malformed YAML, target not found, kill error, cache rm error, dev command not found, port timeout — dispatches `completion-reporter` with:
+- `skill_type: "dev-start"`
+- `moment: "skill_finalize.blocked"`
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `dev-start` `skill_finalize.blocked` schema. Required: `leader`, `block_reason`, `failed_target`, `failed_step`; optional: `error_detail` (verbatim error text).
 
-1. Which target failed.
-2. Which step failed.
-3. The exact error text (verbatim, not paraphrased).
-
-Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. Do not suggest fixes beyond the literal failure. The user re-invokes `/dev-start` after addressing the cause.
+Relay the agent's response verbatim to master. Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. Do not suggest fixes beyond the literal failure. The user re-invokes `/dev-start` after addressing the cause.
 
 ### Specific failure messages
 
@@ -129,18 +139,19 @@ Then halt. Do not retry. Do not investigate logs. Do not attempt alternatives. D
 | `.claude/project-group/<leader>/` does not exist | `"그룹 <leader> 미등록 — /new-project-group 먼저 실행"` |
 | Directory exists but `dev.md` missing | `"그룹 <leader> 에 dev 설정 없음 — /group-policy 먼저 실행"` |
 | Manifest YAML parse failure | `"<leader>/dev.md YAML 파싱 실패: <error>"` |
-| Specified target name not in manifest | `"<leader>/dev.md 에 타겟 '<target>' 없음. 사용 가능: <list>"` |
 | Step failure (1–4) | `"<member> / <step>: <verbatim error>"` |
+| FE 후보 0 (전체 BE 또는 매니페스트 비어있음) | `"<leader> FE 타겟 없음 — 종료"` |
+| multiSelect 0 선택 | `"선택된 타겟 없음 — 종료"` |
 
 ## Scope (v1)
 
 In scope:
-- Frontend dev server restart (single or all targets).
+- Frontend dev server restart (multi-select, role=FE filtered).
 - Port-based kill, cache wipe, background start, readiness polling, table report.
 - Fail-fast on every error path.
 
 Out of scope:
-- Backend dev servers (separate skill if ever needed).
+- Backend dev servers (excluded from dev-start by manifest role=BE filter — buildable via dev-build).
 - Wizards or first-run setup (lives in `group-policy`).
 - Persistence beyond the manifest (the manifest is the source of truth).
 - Hot-reload, log streaming, process supervision after startup. Once the port listens, the skill exits; the background process continues independently.

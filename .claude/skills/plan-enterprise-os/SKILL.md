@@ -31,6 +31,10 @@ Open-form description, optionally referencing an existing issue on this repo.
 3. `gh` CLI installed and authenticated for this repo's GitHub remote.
 4. `MEMORY.md` and the memory directory are accessible (used for the Treadmill Audit context).
 
+> **Leader/work repo 분리 일관성**: 본 harness 는 단일 저장소이므로 **leader repo = work repo = Project-I2 (자기 자신)**. plan-enterprise / pre-deploy / inspection-procedure 의 leader-repo 어휘와 동일한 형식으로 표현되지만 실효 분기는 없다.
+
+> 본 스킬은 항상 work repo = leader repo = Project-I2 단일. plan-enterprise 의 cross-repo phase 절차 (work_repo 필드, N+1-step 머지) 는 본 스킬에 적용되지 않으나, "한 페이즈 = 한 work repo" 어휘는 동일하다.
+
 ## Lifecycle (mirrors plan-enterprise, 11 steps)
 
 ```
@@ -91,6 +95,8 @@ Identical.
 
 ### Step 5 — Issue creation on this repo
 
+> 본 repo 가 곧 leader repo — `gh issue create` 는 cwd 의 origin 으로 자동 라우팅된다. 명시적 `--repo` 플래그는 불필요하나 외부 스킬과 일관성 위해 첨부해도 무해.
+
 ```bash
 gh issue create \
   --title "plan-enterprise-os: <plan title>" \
@@ -98,6 +104,8 @@ gh issue create \
 ```
 
 Issue body template extends `plan-enterprise`'s with one section:
+
+이슈 본문의 페이즈 분할 섹션에는 plan-enterprise 와 동일한 형식으로 `Phase N work repo: Project-I2` 라인을 포함한다 (단일-repo 고정이지만 어휘 정렬 우선).
 
 ```markdown
 ## advisor 계획 검증 (6 관점)
@@ -110,6 +118,8 @@ Issue body template extends `plan-enterprise`'s with one section:
 ```
 
 ### Step 6 — WIP A
+
+본 스킬은 N=1 고정 (work repo = Project-I2 한 개). plan-enterprise 가 N>1 일 때 가지는 lazy 생성 / repo-slug 접미사 분기는 본 스킬에 적용되지 않는다.
 
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
@@ -126,12 +136,9 @@ git -C "${wt_a}" push -u origin "${wip_a}"
 
 ### Step 7 — Phase execution
 
-Phase-executor receives `harness_context` instead of `group_policy_summary`. `harness_context` is the main session's short Korean summary of:
+Phase-executor receives: plan issue number (`#N`), `worktree_cwd` (absolute path of the WIP A worktree), harness marker `'os'`, and phase metadata (number / title / type / description / affected_files). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
 
-- Relevant CLAUDE.md hard rules (which apply to this phase).
-- Relevant memory entries (which behavioral norms apply).
-- Relevant shared-md content (e.g., if a phase touches inspection-procedure consumers, the procedure md itself is in context).
-- `worktree_cwd` = absolute path of the WIP A worktree (`<wt_a>` resolved). Sub-agent uses `git -C <worktree_cwd>` for all git ops.
+Dispatch follows `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k). The previous `harness_context` inline summary pattern — inlining CLAUDE.md hard-rule excerpts, memory excerpts, and shared-md content — is retired. Phase-executor reads `gh issue view <N>`, `CLAUDE.md`, `.claude/md/*`, and `MEMORY.md` from the worktree itself.
 
 Per-phase main-session verification ritual is identical to `plan-enterprise`'s 5-step ritual, with a fetch step prepended:
 
@@ -151,6 +158,8 @@ Iteration budget: 3 per phase, identical to `plan-enterprise`.
 Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts patch-note authoring.
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
+
+본 스킬의 머지는 N+1=2-step (WIP A 1번 + WIP B 1번) 으로 plan-enterprise 의 일반화된 (N+1)-step 머지 절차의 N=1 케이스와 동치.
 
 1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
 2. Create WIP B as a worktree from main:
@@ -191,20 +200,18 @@ Identical to `plan-enterprise` Step 10. Both WIPs merged to main. Issue stays op
 
 ### Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
 
-Identical semantics to `plan-enterprise` Step 11 with the same trigger keywords (`플랜 완료` / `핫픽스 <description>` / `중단` / other). Output the PENDING message and halt:
+Identical semantics to `plan-enterprise` Step 11 with the same trigger keywords (`플랜 완료` / `핫픽스 <description>` / `중단` / other). Dispatch `completion-reporter` and halt:
+
+Dispatch `completion-reporter` with:
+- `skill_type: "plan-enterprise-os"`
+- `moment`: `"work_complete"` on first arrival (initial work complete); `"hotfix_complete"` when re-entering after a HOTFIX iteration.
+- `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `plan-enterprise-os` schema.
+  - For `work_complete`: required fields `harness` (value `"os"`), `issue_number`, `issue_url`, `master_intent_summary`, `result_summary`, `phase_count`, `affected_files_total`, `treadmill_audit_result`; optional `solution_summary`, `manual_test_scenarios[]`, `next_action_guidance`, `post_action_hints[]`, `patch_note_version`, `advisor_plan_result`, `advisor_complete_result`.
+  - For `hotfix_complete`: all `work_complete` required fields plus `current_hotfix_number`, `prior_hotfix_summaries[]` (each `{hotfix_number, summary_ko}`); optional `next_hotfix_number`.
+
+Relay the agent's response verbatim to master, then append the gate prompt:
 
 ```
-### /plan-enterprise-os 대기 — 이슈 #<N> <plan title>
-
-작업 머지 완료. 루트 patch-note/ 에 v<NNN>.<K+1>.0 추가됨. advisor 계획/완료 6 관점 모두 PASS.
-
-| 항목 | 값 |
-|------|-----|
-| 플랜 이슈 | #<N> (<URL>) |
-| 페이즈 수 (지금까지) | <N>/<N> + 핫픽스 <count> |
-| 패치노트 마지막 | v<NNN>.<K+1>.0 |
-| Treadmill Audit | PASS / NOT APPLICABLE |
-
 마스터 입력 대기:
   - `플랜 완료` → 이슈 close (Step 12) + 최종 종료
   - `핫픽스 <description>` → 추가 phase 1개 작성 → Step 7 재진입
@@ -228,24 +235,12 @@ Same as `plan-enterprise`. Skill state remains open; master can re-invoke later 
    ```bash
    gh issue close <N> --comment "/plan-enterprise-os: 플랜 완료 (master finalized $(date -u +%Y-%m-%dT%H:%M:%SZ))"
    ```
-2. Korean terminal report:
+2. Dispatch `completion-reporter` with:
+   - `skill_type: "plan-enterprise-os"`
+   - `moment: "skill_finalize"`
+   - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `plan-enterprise-os` `skill_finalize` schema. Required: `harness` (value `"os"`), `issue_number`, `issue_url`, `result_summary`, `total_phase_count`, `total_hotfix_count`, `wip_branches_merged[]`, `patch_note_version`, `patch_note_file`, `issue_close_status`, `worktree_cleanup_status`, `treadmill_audit_result`; optional `advisor_plan_result`, `advisor_complete_result`, `phase_retry_count`.
 
-```
-### /plan-enterprise-os 완료 — 이슈 #<N> <plan title>
-
-| 항목 | 값 |
-|------|-----|
-| 플랜 이슈 | #<N> closed ✅ |
-| 총 페이즈 수 | <N> + 핫픽스 <count> |
-| WIP 작업 | plan-enterprise-os-<N>-<slug>-작업 (main 머지 ✅) |
-| WIP 문서 | plan-enterprise-os-<N>-<slug>-문서 (main 머지 ✅) |
-| WIP 핫픽스 | plan-enterprise-os-<N>-<slug>-핫픽스1..<M> (각 main 머지 ✅, 총 <M>개 / 0개 = 핫픽스 없음) |
-| 패치노트 최종 | patch-note/patch-note-{NNN}.md 에 v<NNN>.<K+M>.0 (총 <M>개 entry) |
-| advisor 계획 (6 관점) | PASS |
-| advisor 완료 (6 관점) | PASS (최종 핫픽스 포함) |
-| Treadmill Audit | PASS / NOT APPLICABLE |
-| 페이즈 재시도 | <count>/총 가능 <(N+hotfix)*3> |
-```
+   Relay the agent's response verbatim to master.
 
 End of skill invocation.
 
@@ -270,6 +265,7 @@ In scope:
 - Per-phase main-session verification (5-step ritual + Treadmill-aware check).
 - Two-WIP merge (`작업` first, then `문서`).
 - Patch-note at root `patch-note/`.
+- 본 스킬은 N=1 고정. plan-enterprise 의 cross-repo phase 절차 (work_repo 필드 / per-repo WIP A lazy 생성 / N+1-step 머지) 는 본 스킬에 N/A — '한 페이즈 = 한 work repo' 어휘만 정렬.
 
 Out of scope (v1):
 - External-project work (use `plan-enterprise`).
