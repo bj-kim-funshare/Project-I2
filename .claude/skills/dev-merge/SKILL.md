@@ -230,7 +230,12 @@ state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable +
 
 하드코딩 1차 목록: `i-dev`, `main`, `master`, `develop`. from-branch 가 이 목록에 정확히 일치하면 `gh pr merge` 호출 시 `--delete-branch` 를 생략하고, 머지 후 worktree 만 제거한다 (브랜치는 로컬·리모트 모두 보존 — long-running 통합 브랜치 정책 (`CLAUDE.md` §5) 정합).
 
-추후 확장 여지: group-policy 의 `group.md` 에 `protected_branches:` 목록 정의를 허용하는 방향. 본 차수의 1차 스코프는 하드코딩만.
+**판정 로직 (확장 적용 후)**:
+
+1. 호출이 leader-aware 인 경우 (예: `plan-enterprise` 등 상위 스킬이 leader 컨텍스트를 보유하고 dev-merge 를 호출하는 경로) — `.claude/project-group/<leader>/group.md` 의 `보호 브랜치` 행 / `## 보호 브랜치` 절을 읽어 1차 목록으로 사용. 그 그룹에 `protected_branches` 설정이 없으면 하드코딩 fallback (`i-dev` / `main` / `master` / `develop`) 사용.
+2. 호출이 leader-unaware 인 경우 (master 가 직접 `/dev-merge <from> <to>` 만 호출 — leader 인자 없음) — leader 추정 시도하지 않고 하드코딩 fallback 만 사용 (`i-dev` / `main` / `master` / `develop`).
+
+group-policy 확장 후속 작업 (이슈 #31 핫픽스1) 으로 본 분기 정식화 완료.
 
 ### Merge command
 
@@ -357,7 +362,7 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | Conflict-PENDING `핫픽스 <hint>` resolution still fails after code-fixer | "충돌 해결 미완 — code-fixer 가 마스터 hint 로 해결 못함. 추가 핫픽스 또는 수동 해결 필요." (Conflict-PENDING 재진입) |
 | `수동 머지 완료` claimed but PR state=CLOSED unmerged | "PR #<num> CLOSED (unmerged). 수동 머지 완료 trigger 와 불일치. 마스터 확인 필요." |
 | `gh pr merge --delete-branch` succeeded merge but branch deletion failed | `"PR #<num> 머지 완료. remote 브랜치 삭제 실패: <error>. 로컬 브랜치 잔존 확인 필요."` |
-| from-branch 가 보호 브랜치 (`i-dev` / `main` / `master` / `develop`) | (실패 아님 — 정보) `"from-branch <branch> 보호 — \`--delete-branch\` 건너뜀. 통합 브랜치 보존."` |
+| from-branch 가 보호 브랜치 (group.md `protected_branches` 매칭 또는 하드코딩 fallback `i-dev` / `main` / `master` / `develop`) | (실패 아님 — 정보) `"from-branch <branch> 보호 — \`--delete-branch\` 건너뜀. 통합 브랜치 보존."` |
 
 ## Scope (v1)
 
@@ -372,5 +377,5 @@ Out of scope (v1):
 - Squash or rebase merge methods.
 - Tag creation, push to additional remotes.
 - Multi-PR coordination (one PR per invocation).
-- Auto-deletion of the from-branch after merge (보호 브랜치 목록 (`i-dev` / `main` / `master` / `develop`) 에 미포함된 경우에 한함. group-policy 확장은 후속 차수).
+- Auto-deletion of the from-branch after merge (보호 브랜치 목록 — group.md `protected_branches` 설정 시 그 목록, 미설정 또는 leader-unaware 호출 시 하드코딩 fallback `i-dev` / `main` / `master` / `develop` — 에 미포함된 경우에 한함).
 - Reviewer language specialization (React-specific, Express-specific, TS-specific) — Claude's full 5-agent literal model was scoped down to 2 judgment agents + context-by-main-session, with master's confirmation. Specialization can be added if a project's review patterns demand it.

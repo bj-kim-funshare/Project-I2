@@ -13,6 +13,16 @@
 | 테스트 의무 | 없음 (PR 전 `pnpm test` 강제 안 함 — 마스터 명시) |
 | 버전 태그 | git tag 미부여 — `patch-confirmation` 의 패치노트 v{N}.K.0 으로만 버전 추적 (마스터 명시) |
 | SLA / 핫픽스 절차 | 본인 판단 (별도 명시 없음 — 마스터 명시) |
+| 보호 브랜치 (dev-merge `--delete-branch` 면제) | `i-dev`, `main` (4개 저장소 모두 적용) |
+
+## 보호 브랜치 (마스터 명시)
+
+`dev-merge` 가 본 그룹 저장소를 처리할 때 from-branch 가 다음 목록에 일치하면 `gh pr merge --delete-branch` 를 생략하여 브랜치를 보존한다 (long-running 통합/안정 브랜치 보호).
+
+- `i-dev` — 4개 저장소 통합 브랜치 (그룹 필수).
+- `main` — 승격된 안정 브랜치.
+
+`master`, `develop` 은 본 그룹 미사용이므로 본 정책에는 포함하지 않으나, dev-merge 의 하드코딩 fallback 에는 포함되어 있어 잘못 호출되어도 보호된다.
 
 ## i-dev / dev-merge 필수 정책 (마스터 명시)
 
