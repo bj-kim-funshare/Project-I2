@@ -50,7 +50,7 @@ Entry: **auto-align every member repo** declared in `dev.md targets[].cwd` to `m
 uncommitted changes block it). Apply the same "all member repos at entry" principle from §4
 Multi-repo handling. Alignment runs **before** the multiSelect UI — at entry there are no
 "selected targets" yet, so all member repos are aligned unconditionally.
-i-dev 가 main 보다 앞서 있어도 pre-deploy 의 검증 영역이 아님 — 마스터가 의도적으로 머지 스킬을 사용하지 않아 배포에서 제외한 변경일 수 있다.
+Note: i-dev being ahead of `main` is not pre-deploy's concern — master may have intentionally bypassed the merge skill to exclude that work from this deploy. pre-deploy operates strictly on the current `main` HEAD.
 
 Exit: restore only touched member repos to `main` (best-effort, per §3 pattern).
 
