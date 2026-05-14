@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.35.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 4)
+
+### 페이즈 결과
+
+- **Phase 8 (hotfix 4)** (`8553e952`): 핫픽스 3c 의 단순 line 시침이 시각적으로 빈약하다는 마스터 피드백 ("양심적으로 실망인데" — 스크린샷 첨부) 반영. `GaugeWidget` 의 `shape === 'semicircle'` 분기에서 시침을 다음 구성으로 재작성:
+  - 시침 본체: 테이퍼 `<polygon points="50,12 51.5,50 48.5,50">` — 베이스 폭 3 단위, 팁 (50, 12) 으로 pivot 에서 38 단위 길이 (호 r=40 근처까지 닿음).
+  - 균형감 꼬리: pivot 뒤로 7 단위 짧은 `<polygon points="49.2,50 50.8,50 50.4,57 49.6,57">`.
+  - 다층 hub (motion.g 외부, 회전 영향 없음): r=5 (`#1f2937` gray-800 다크) / r=3 (`#4b5563` gray-600 미드) / r=1 (`#9ca3af` gray-400 하이라이트) 의 3겹 원으로 깊이감.
+  회전·애니메이션 (`motion.g` 0.8s easeOut, -90도 → valueAngle), `transformOrigin: '50px 50px'` 는 그대로 유지. circle / linear 분기는 손대지 않음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +13/-9, 1 파일 affected_files 내.
+- 페이즈 iter: 1회 통과.
+- 좌표 검증: pivot (50, 50), 팁 (50, 12) → 길이 38, 호 반지름 40 대비 95% 도달. 베이스 폭 3 / 꼬리 폭 1.6 → 길이 7. hub 3겹 r=5/3/1.
+- Lint gate: advisory (베이스라인 동일).
+
+### 운영 메모
+
+- 수동 검증: 반원 게이지 위젯에서 시침이 호 근처까지 닿는 두툼한 테이퍼 형태로, hub 가 다층 원으로 보이는지 확인. 시침 회전 애니메이션 (0.8s) 정상.
+- 향후 색 동적화 (`useThresholdColors` 따라 시침 색 분기) 는 별도 핫픽스/플랜 가능 — 현재는 단색 그레이 스케일.
+
 ## v001.34.0
 
 > 통합일: 2026-05-14
