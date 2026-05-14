@@ -755,6 +755,20 @@ function aggregateHoursInWindow(hours, startMs, endMs) {
     cache_read: 0, messages: 0, cost_usd: 0,
   };
   const byDayMap = {};
+  const modelMap = {};
+  const skillMap = {};
+
+  function accTokens(map, key, entry) {
+    if (!map[key]) {
+      map[key] = { input: 0, output: 0, cache_creation_5m: 0, cache_creation_1h: 0, cache_read: 0 };
+    }
+    const r = map[key];
+    r.input += entry.input || 0;
+    r.output += entry.output || 0;
+    r.cache_creation_5m += entry.cache_creation_5m || 0;
+    r.cache_creation_1h += entry.cache_creation_1h || 0;
+    r.cache_read += entry.cache_read || 0;
+  }
 
   for (const h of (hours || [])) {
     const hourKey = h.hour || '';
@@ -782,15 +796,34 @@ function aggregateHoursInWindow(hours, startMs, endMs) {
     dr.cache_read += h.cache_read || 0;
     dr.messages += h.messages || 0;
     dr.cost_usd += h.cost_usd || 0;
+
+    for (const m of (h.by_model || [])) {
+      accTokens(modelMap, m.model, m);
+    }
+    for (const s of (h.by_skill || [])) {
+      accTokens(skillMap, s.skill, s);
+    }
   }
 
   const by_day = Object.keys(byDayMap).sort().map(k => byDayMap[k]);
 
+  function totalTok(r) {
+    return (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0);
+  }
+
+  const by_model = Object.entries(modelMap)
+    .map(([model, r]) => ({ model, ...r, cost_usd: 0 }))
+    .sort((a, b) => totalTok(b) - totalTok(a));
+
+  const by_skill = Object.entries(skillMap)
+    .map(([skill, r]) => ({ skill, ...r, cost_usd: 0 }))
+    .sort((a, b) => totalTok(b) - totalTok(a));
+
   return {
     total,
     by_day,
-    by_model: [],
-    by_skill: [],
+    by_model,
+    by_skill,
     by_session: [],
     by_prompt: [],
   };

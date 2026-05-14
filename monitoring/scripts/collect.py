@@ -437,6 +437,8 @@ def collect() -> dict[str, Any]:
     hourly_agg: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     hourly_cost: dict[str, float] = defaultdict(float)
     hourly_messages: dict[str, int] = defaultdict(int)
+    hourly_by_model: dict[str, dict[str, dict[str, int]]] = defaultdict(lambda: defaultdict(empty_token_record))
+    hourly_by_skill: dict[str, dict[str, dict[str, int]]] = defaultdict(lambda: defaultdict(empty_token_record))
 
     files_processed = 0
     files_skipped = 0
@@ -503,6 +505,9 @@ def collect() -> dict[str, Any]:
                 add_usage(hourly_agg[hour_key], usage)
                 hourly_cost[hour_key] += cost_of(model, msg_record)
                 hourly_messages[hour_key] += 1
+                add_usage(hourly_by_model[hour_key][model], usage)
+                if skill:
+                    add_usage(hourly_by_skill[hour_key][skill], usage)
 
             model_counts[model] += 1
             session_record["skills"].add(skill)
@@ -651,6 +656,8 @@ def collect() -> dict[str, Any]:
         "_hourly_agg": hourly_agg,  # internal — used to write hourly.json, stripped before writing aggregate.json
         "_hourly_cost": hourly_cost,
         "_hourly_messages": hourly_messages,
+        "_hourly_by_model": hourly_by_model,
+        "_hourly_by_skill": hourly_by_skill,
     }
 
 
@@ -678,8 +685,14 @@ def write_hourly_file(
     hourly_agg: dict[str, dict[str, int]],
     hourly_cost: dict[str, float],
     hourly_messages: dict[str, int],
+    hourly_by_model: dict[str, dict[str, dict[str, int]]] | None = None,
+    hourly_by_skill: dict[str, dict[str, dict[str, int]]] | None = None,
 ) -> None:
     """Write monitoring/data/hourly.json — sparse, last 14 days, sorted ascending."""
+    if hourly_by_model is None:
+        hourly_by_model = {}
+    if hourly_by_skill is None:
+        hourly_by_skill = {}
     now = datetime.now(timezone.utc)
     cutoff_hour = (now.timestamp() - 14 * 24 * 3600)
 
@@ -706,6 +719,18 @@ def write_hourly_file(
             "cache_read": rec["cache_read"],
             "messages": hourly_messages.get(hour_key, 0),
             "cost_usd": round(hourly_cost.get(hour_key, 0.0), 4),
+            "by_model": [
+                {"model": m, "input": r["input"], "output": r["output"],
+                 "cache_creation_5m": r["cache_creation_5m"], "cache_creation_1h": r["cache_creation_1h"],
+                 "cache_read": r["cache_read"]}
+                for m, r in sorted(hourly_by_model.get(hour_key, {}).items())
+            ],
+            "by_skill": [
+                {"skill": s, "input": r["input"], "output": r["output"],
+                 "cache_creation_5m": r["cache_creation_5m"], "cache_creation_1h": r["cache_creation_1h"],
+                 "cache_read": r["cache_read"]}
+                for s, r in sorted(hourly_by_skill.get(hour_key, {}).items())
+            ],
         })
 
     result = {"generated_at": generated_at, "hours": hours_out}
@@ -726,6 +751,8 @@ def main() -> int:
     hourly_agg = result.pop("_hourly_agg", {})
     hourly_cost = result.pop("_hourly_cost", {})
     hourly_messages = result.pop("_hourly_messages", {})
+    hourly_by_model = result.pop("_hourly_by_model", {})
+    hourly_by_skill = result.pop("_hourly_by_skill", {})
 
     output_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {output_path}", file=sys.stderr)
@@ -736,7 +763,7 @@ def main() -> int:
 
     # Write hourly aggregates
     hourly_path = output_path.parent / "hourly.json"
-    write_hourly_file(hourly_path, result.get("generated_at", ""), hourly_agg, hourly_cost, hourly_messages)
+    write_hourly_file(hourly_path, result.get("generated_at", ""), hourly_agg, hourly_cost, hourly_messages, hourly_by_model, hourly_by_skill)
     print(f"wrote {hourly_path}", file=sys.stderr)
 
     if "error" in result:
