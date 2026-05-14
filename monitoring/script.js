@@ -1004,7 +1004,7 @@ function renderAll(data, compareData) {
     renderChartCacheDonut(data);
   }
   renderChartSessionBar(data);
-  renderChartAgentBar(data);
+  renderChartAgentBar(aggData);
   renderChartDayCost(aggData);
   renderChartPromptBar(data);
 
