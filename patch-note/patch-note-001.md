@@ -1,5 +1,32 @@
 # 아이OS — Patch Note (001)
 
+## v001.48.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스13)
+> 대상: 아이OS
+
+### 개요
+마스터 2건 요구. (1) 상세 테이블 섹션의 4 detail-section 중 모델별·스킬별 2 개를 한 줄에 가로 배치 (각 50% 폭), 나머지 일자별·세션별은 100% 폭 유지. (2) 세션 Top 10 과 동일한 가로 막대 차트로 모든 서브에이전트 사용량 (메인 세션 제외) 노출.
+
+### 페이즈 결과
+- **핫픽스13** (`monitoring/index.html`, `monitoring/script.js`, `monitoring/styles.css`, `monitoring/scripts/collect.py`):
+  - `collect.py` 에 `by_agent` 차원 신설. user-record 분기에서 `add_usage(by_agent[agent_type], agent_usage)`. `new_period_state()` 의 dict 에 `"by_agent": defaultdict(empty_token_record)` 추가, `period_state_to_json` 출력에 `by_agent_out` 포함, `collect()` return 에도 추가. 메인 세션은 agentType 없는 assistant turn 이라 by_agent 에 자연 배제.
+  - `index.html`: `.tables-section` 의 모델별·스킬별 두 detail-section 을 `<div class="detail-row-2col">` 로 래핑. 새 chart-card `#chart-agent-bar` ("서브에이전트 사용량 (총 토큰)") 를 세션 Top 10 직후에 삽입.
+  - `script.js`: `renderChartAgentBar(data, opts)` 신규. `renderChartSessionBar` 패턴 모방, 데이터 = `data.by_agent`, 라벨 = `r.agent`, 값 = 총 토큰 합산. 정렬 내림차순 전체 노출 (Top 10 제한 없음). `renderAll()` 에서 호출.
+  - `styles.css`: `.detail-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }` 추가.
+  - 검증: collect.py 재실행 후 by_agent 상위 — phase-executor 188 / completion-reporter 68 / Explore 51 / gate-runner 29 / general-purpose 10 / ... (11 종 정상 노출).
+  - 자산 cache-bust `?v=20260514-10` → `?v=20260514-13`.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/scripts/collect.py`
+
+### Treadmill Audit
+NOT APPLICABLE — UI 재배치 + 신규 차트. 신규 메커니즘 추가 없음.
+
 ## v001.47.0
 
 > 통합일: 2026-05-14
