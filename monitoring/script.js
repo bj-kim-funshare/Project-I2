@@ -703,6 +703,25 @@ function renderChartAgentBar(data) {
                 `cache read: ${fmtNum(r.cache_read || 0)}`,
               ];
             },
+            afterBody: (items) => {
+              if (!items.length) return '';
+              const label = items[0].label;
+              const desc = (data.agent_descriptions || {})[label];
+              if (!desc) return '';
+              const wrapped = [];
+              const words = desc.split(/\s+/);
+              let line = '';
+              for (const w of words) {
+                if ((line + ' ' + w).trim().length > 60) {
+                  wrapped.push(line.trim());
+                  line = w;
+                } else {
+                  line = (line + ' ' + w).trim();
+                }
+              }
+              if (line) wrapped.push(line);
+              return ['', ...wrapped];
+            },
           },
         },
       },
