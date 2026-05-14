@@ -403,7 +403,6 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | Not inside a git repo | `"git 저장소 외부에서 호출됨. 대상 저장소 cwd 에서 재호출."` |
 | `<from-branch>` not found (local or remote) | `"브랜치 <from> 없음 (로컬 또는 리모트)."` |
 | `<to-branch>` not found | `"브랜치 <to> 없음 (로컬 또는 리모트)."` |
-| Open PR already exists for the pair | `"이미 <from>→<to> PR 존재 (#<num>). 기존 PR 처리 후 재호출."` |
 | Reviewer agent dispatch failure | `"리뷰어 sub-agent 디스패치 실패: <error>. PR #<num> 보존."` |
 | code-fixer dispatch failure | `"code-fixer 디스패치 실패: <error>. PR 및 이전 핫픽스 커밋 보존."` |
 | Iteration cap reached with findings remaining | (cap-exhausted report above) |
