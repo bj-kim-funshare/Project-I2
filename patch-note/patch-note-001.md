@@ -1,5 +1,30 @@
 # 아이OS — Patch Note (001)
 
+## v001.67.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #34 (핫픽스 1)
+> 대상: 아이OS
+
+### 변경 사유
+
+마스터 전수조사 지시 (2026-05-14): "아이OS만 main이고 나머지 외부 프로젝트는 전부 i-dev". 스킬 18 개의 "## 완료 후 HEAD 복원" 절을 점검한 결과 두 건이 규칙과 어긋났다 — `pre-deploy/SKILL.md` 의 종료 복원 베이스가 `main` 이고, `dev-merge/SKILL.md` 의 종료 복원 베이스가 "호출 시점 HEAD 또는 to-branch (variable)" 로 모호하게 적혀 있었다. 두 스킬 모두 외부 프로젝트 멤버 레포에서 동작하므로 종료 시 마스터의 일반 작업 흐름 (i-dev) 으로 복원되어야 한다. dev-merge 는 cwd 기반 컨텍스트 분기 명시.
+
+### 페이즈 결과
+
+- **핫픽스 1**: `pre-deploy/SKILL.md` Pre-conditions §1 의 복원 문구 ("touched cwd 만 main 으로") 와 "## 완료 후 HEAD 복원" 절 베이스 (`main` → `i-dev` external context). `dev-merge/SKILL.md` "## 완료 후 HEAD 복원" 절 베이스 ("호출 시점 HEAD 또는 to-branch (variable)" → 컨텍스트 분기: cwd = Project-I2 → `main`, 외부 레포 → `i-dev`). 다른 16 개 스킬은 audit 결과 규칙과 일치 (수정 불요).
+
+### 영향 파일
+
+- `.claude/skills/pre-deploy/SKILL.md`
+- `.claude/skills/dev-merge/SKILL.md`
+
+### Treadmill Audit
+
+PASS — Q3 trade-out 1건 이행: dev-merge 의 "variable baseline (호출 시점 HEAD 또는 to-branch)" 모호 규칙이 cwd 기반 컨텍스트 분기 명시로 retire/대체. pre-deploy 의 main 복원은 단순 오타 정정 (외부 context i-dev 정책의 이미 존재하는 일반 규칙으로 회귀). 신규 검증 축/스킬/에이전트 추가 없음.
+
+---
+
 ## v001.66.0
 
 > 통합일: 2026-05-14
