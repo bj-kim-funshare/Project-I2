@@ -102,6 +102,21 @@ function dateToIsoWeek(date) {
   return { year: d.getUTCFullYear(), week };
 }
 
+function formatWeekLabel(weekKey) {
+  const m = weekKey.match(/^(\d{4})-W(\d+)$/);
+  if (!m) return weekKey;
+  const year = parseInt(m[1], 10);
+  const week = parseInt(m[2], 10);
+  const monday = isoWeekToDate(year, week);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const mm1 = String(monday.getUTCMonth() + 1).padStart(2, '0');
+  const dd1 = String(monday.getUTCDate()).padStart(2, '0');
+  const mm2 = String(sunday.getUTCMonth() + 1).padStart(2, '0');
+  const dd2 = String(sunday.getUTCDate()).padStart(2, '0');
+  return `${mm1}/${dd1} ~ ${mm2}/${dd2} (월~일)`;
+}
+
 function prevPeriodKey(unit, key) {
   if (unit === 'weekly') {
     // key: "YYYY-WWW"
@@ -794,7 +809,22 @@ function populatePeriodKeys(periodsIndex, unit) {
     keyEl.innerHTML = '<option value="">—</option>';
     return;
   }
-  keyEl.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
+  let displayKeys = keys;
+  if (unit === 'weekly') {
+    const { year: cy, week: cw } = dateToIsoWeek(new Date());
+    const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
+    displayKeys = keys.filter(k => k !== currentWeekKey);
+  }
+  if (!displayKeys.length) {
+    keyEl.disabled = true;
+    keyEl.innerHTML = '<option value="">—</option>';
+    return;
+  }
+  if (unit === 'weekly') {
+    keyEl.innerHTML = displayKeys.map(k => `<option value="${k}">${formatWeekLabel(k)}</option>`).join('');
+  } else {
+    keyEl.innerHTML = displayKeys.map(k => `<option value="${k}">${k}</option>`).join('');
+  }
   keyEl.disabled = false;
 }
 
