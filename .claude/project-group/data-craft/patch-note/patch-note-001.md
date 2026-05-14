@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.29.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 5 (hotfix 1)** (`63332e31`): 막대 차트 다중 시리즈 (`valueColumns.length >= 2`) 일 때 시리즈별 색 사용자 지정 가능. `BarChartSettings` 에 다중 시리즈 조건 하에서 각 시리즈 카드에 `FsLineChartColorPicker` (Phase 2 신설 래퍼 재사용) 노출, `handleValueColumnChange` 시그니처에 `color` 필드 추가. 단일 시리즈 (`valueColumns.length === 1`) 는 색 입력기 미노출, 현행 `colorScheme` + 카테고리 인덱스 자동 색 유지 (Hotfix 3 동작 보존). `BarChartWidget` 은 `seriesColors` 배열을 데이터 집계 블록 내 단일 소스로 계산해 4개 범례 마커 (가로/세로 × 상단/우측) 에 적용, 데이터 빌드 루프 안에서는 인라인 `isSingleSeries ? getSchemeColor(groupIdx, ...) : (vc.color ?? getSchemeColor(colIndex, ...))` 분기로 막대 색을 결정 — 단일 시리즈 per-category 색은 `groupIdx` 기반 분기로 보존, 다중 시리즈는 사용자 hex 우선 + 팔레트 fallback.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/BarChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +53/-27, 2 파일 모두 affected_files 내.
+- advisor 완료 검토 (5관점) PASS — `seriesColors` 단일 계산 + 인라인 per-bar 결정의 분리 일관성, 단일 시리즈 카테고리 색 보존, 4개 범례 마커 통일 갱신 모두 실 코드 인용으로 검증.
+- 페이즈 iter: 1회 디스패치, 재시도 0회.
+- Lint gate: advisory (베이스라인 사전 결함 동일, hotfix 신규 심볼 `seriesColors` / `handleValueColumnChange` color 확장 회귀 grep 0건).
+
+### 운영 메모
+
+- 수동 검증 시나리오: (1) 막대 위젯에 값 컬럼 2개 추가 → 각 시리즈 카드의 색 입력기로 자유 hex 지정 → 막대와 범례 마커 색 동기. (2) 값 컬럼 1개로 줄였을 때 색 입력기 사라지고 카테고리별 colorScheme 색 자동 복귀. (3) 가로 막대 / 세로 막대 양쪽에서 동일 동작 확인.
+- `FsLineChartColorPicker` 가 막대 차트에도 재사용됨 — 래퍼명이 line-specific 으로 남아 있으나 기능적 호환. 별도 트랙 일반화 권장.
+- `ChartValueColumn.color` 의 타입 주석 "선 그래프 전용" 잔존 — 본 hotfix 의 affected_files 범위 밖이라 미수정. 별도 정리 권장.
+
 ## v001.28.0
 
 > 통합일: 2026-05-14
