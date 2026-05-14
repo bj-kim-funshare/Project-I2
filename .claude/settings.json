@@ -9,7 +9,9 @@
       "Bash(gh issue comment *)",
       "Bash(gh pr *)",
       "Bash(mysql *)",
-      "Bash(psql *)"
+      "Bash(psql *)",
+      "Bash(git checkout main && npx gh-pages *)",
+      "Bash(git checkout main && git push origin main:*)"
     ]
   },
   "autoMode": {
@@ -19,7 +21,8 @@
     ],
     "allow": [
       "$defaults",
-      "Direct mysql/psql CLI invocation during Phase 4 (capture / dry-run / apply / verify) of the task-db-structure and task-db-data skills is authorized — this is the core operation of these skills, with safety provided by the Phase 1 advisor review, per-environment master approval gates at Phase 4, and capture-based rollback."
+      "Direct mysql/psql CLI invocation during Phase 4 (capture / dry-run / apply / verify) of the task-db-structure and task-db-data skills is authorized — this is the core operation of these skills, with safety provided by the Phase 1 advisor review, per-environment master approval gates at Phase 4, and capture-based rollback.",
+      "Direct execution of a registered project group's <target>.deploy_command via Bash during pre-deploy Branch B (validator clean path, after build_command success) is authorized — this is the core operation of the pre-deploy skill, with safety provided by the validator's clean verdict (block=0), the per-target sequential halt-on-failure semantics in SKILL.md Branch B, and the master-facing 합격/부분 실패 보고서 at finalize."
     ]
   },
   "statusLine": {
