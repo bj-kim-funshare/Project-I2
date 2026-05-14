@@ -362,7 +362,7 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | Conflict-PENDING `핫픽스 <hint>` resolution still fails after code-fixer | "충돌 해결 미완 — code-fixer 가 마스터 hint 로 해결 못함. 추가 핫픽스 또는 수동 해결 필요." (Conflict-PENDING 재진입) |
 | `수동 머지 완료` claimed but PR state=CLOSED unmerged | "PR #<num> CLOSED (unmerged). 수동 머지 완료 trigger 와 불일치. 마스터 확인 필요." |
 | `gh pr merge --delete-branch` succeeded merge but branch deletion failed | `"PR #<num> 머지 완료. remote 브랜치 삭제 실패: <error>. 로컬 브랜치 잔존 확인 필요."` |
-| from-branch 가 보호 브랜치 (`i-dev` / `main` / `master` / `develop`) | (실패 아님 — 정보) `"from-branch <branch> 보호 — \`--delete-branch\` 건너뜀. 통합 브랜치 보존."` |
+| from-branch 가 보호 브랜치 (group.md `protected_branches` 매칭 또는 하드코딩 fallback `i-dev` / `main` / `master` / `develop`) | (실패 아님 — 정보) `"from-branch <branch> 보호 — \`--delete-branch\` 건너뜀. 통합 브랜치 보존."` |
 
 ## Scope (v1)
 
@@ -377,5 +377,5 @@ Out of scope (v1):
 - Squash or rebase merge methods.
 - Tag creation, push to additional remotes.
 - Multi-PR coordination (one PR per invocation).
-- Auto-deletion of the from-branch after merge (보호 브랜치 목록 (`i-dev` / `main` / `master` / `develop`) 에 미포함된 경우에 한함. group-policy 확장은 후속 차수).
+- Auto-deletion of the from-branch after merge (보호 브랜치 목록 — group.md `protected_branches` 설정 시 그 목록, 미설정 또는 leader-unaware 호출 시 하드코딩 fallback `i-dev` / `main` / `master` / `develop` — 에 미포함된 경우에 한함).
 - Reviewer language specialization (React-specific, Express-specific, TS-specific) — Claude's full 5-agent literal model was scoped down to 2 judgment agents + context-by-main-session, with master's confirmation. Specialization can be added if a project's review patterns demand it.
