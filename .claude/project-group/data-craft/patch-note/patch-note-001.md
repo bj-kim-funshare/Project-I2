@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.42.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 10)
+
+### 페이즈 결과
+
+- **Phase 14 (hotfix 10)** (`4538bb66`): UserCard UI 디자인 정리 3건 일괄 적용.
+  - **(A) 프로필 + 이름 통합 헤더**: 외곽 레이아웃 `flex-row` → `flex-col`. 헤더 행 = `flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 bg-gray-50` 안에 프로필 (`w-7 h-7 rounded-full`) + 이름 (`text-sm font-semibold truncate`) 같은 행 배치. 기존 본문/프로필 사이 수직 divider (`border-l border-gray-200`) 제거 — 시각 단위 일원화.
+  - **(B) primary/secondary 중복 가드**: secondary1 의 string value 가 빈 문자열이거나 primary 와 동일한 경우 미렌더 — `250 / 250` 같은 정보 노이즈 제거.
+  - **(C) 슬롯 한 줄 + 얇은 구분선**: 각 슬롯이 `flex flex-row items-baseline justify-between gap-2 py-1` — 라벨 왼쪽 / 값 오른쪽. 첫 슬롯 제외 `border-t border-gray-100` 적용. secondary1 은 primary 옆 괄호 안 작은 글씨 (예: `250 (245)`) — 중복 가드와 결합되어 의미 있는 경우만 표시.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/UserCard.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +59/-57, 1 파일.
+- 페이즈 iter: 1회 통과.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 수동 검증:
+  - 프로필과 이름이 같은 행에 한 덩어리로 보이는지 (좌측 floating 인상 해소).
+  - primary == secondary1 인 케이스 (예: `250 / 250`) 에서 secondary1 가 사라졌는지.
+  - 슬롯 라벨이 왼쪽, 값이 오른쪽, 슬롯 간 얇은 회색 구분선이 있는지.
+  - vertical / horizontal / grid 레이아웃 (hotfix 8a) 에서 카드가 컨테이너에 fit 되는 동작 유지.
+
 ## v001.41.0
 
 > 통합일: 2026-05-14
