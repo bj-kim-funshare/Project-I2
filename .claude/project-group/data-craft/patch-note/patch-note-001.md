@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.38.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 7)
+
+### 페이즈 결과
+
+- **Phase 11 (hotfix 7)** (`dcbeb3a3`): 원형 게이지 (circle) 의 우측 numeric value 에 단위 표기 추가. `GaugeConfig` 타입에 `unit?: string` / `unitPosition?: 'left' | 'right'` 필드 추가 (CardConfig 패턴 미러링). GaugeSettings 의 데이터 소스 섹션 multiplier 아래에 단위 텍스트 입력 (flex-1) + 단위 위치 셀렉트 (w-24) UI 추가. GaugeWidget circle 분기 우측 numeric span 을 `flex items-baseline` 컨테이너로 감싸 unitPosition 기준 좌/우 접미·접두로 unit 텍스트 렌더 (`text-base text-gray-600` 으로 수치 대비 시각 차등화). semicircle / linear 분기는 손대지 않음 (마스터 명시 범위 = circle 만).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/GaugeSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +64/-1, 3 파일 모두 affected_files 내.
+- 페이즈 iter: 1회 통과.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 수동 검증: 원형 게이지 위젯 설정에서 단위 입력 (예: "명", "h", "건") + 좌/우 위치 토글 후 우측 numeric value 옆에 단위가 표시되는지 확인. semicircle / linear 모드는 기존 동작 유지.
+- semicircle / linear 분기에도 unit 표기 확장은 별도 핫픽스 가능 — 본 핫픽스는 마스터 명시 범위에 한정.
+
 ## v001.37.0
 
 > 통합일: 2026-05-14
