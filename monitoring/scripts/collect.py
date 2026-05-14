@@ -101,6 +101,32 @@ def cost_breakdown_of(model: str, record: dict[str, int]) -> dict[str, float]:
     }
 
 
+AGENT_MODEL_MAP: dict[str, str] = {
+    # sonnet 4.6 work agents
+    "phase-executor": "claude-sonnet-4-6",
+    "code-fixer": "claude-sonnet-4-6",
+    "db-migration-author": "claude-sonnet-4-6",
+    "db-data-author": "claude-sonnet-4-6",
+    "completion-reporter": "claude-sonnet-4-6",
+    # haiku 4.5 gate
+    "gate-runner": "claude-haiku-4-5",
+    # opus 4.7 planning agents
+    "bug-detector": "claude-opus-4-7",
+    "claude-md-compliance-reviewer": "claude-opus-4-7",
+    "code-inspector": "claude-opus-4-7",
+    "security-reviewer": "claude-opus-4-7",
+    "db-security-reviewer": "claude-opus-4-7",
+    "refactoring-analyzer": "claude-opus-4-7",
+    "deploy-validator": "claude-opus-4-7",
+    # built-in agents — inherit main session, default opus
+    "Explore": "claude-opus-4-7",
+    "Plan": "claude-opus-4-7",
+    "general-purpose": "claude-opus-4-7",
+    "claude": "claude-opus-4-7",
+    "claude-code-guide": "claude-opus-4-7",
+    "statusline-setup": "claude-opus-4-7",
+}
+
 SHORT_TRIGGER_KEYWORDS = {
     "플랜 완료", "플랜완료", "핫픽스", "중단",
     "푸시", "네", "응", "ok", "yes", "y", "예", "확인",
@@ -475,103 +501,197 @@ def collect() -> dict[str, Any]:
         sticky_skill: str = "메인 세션"
 
         for rec in records:
-            if rec.get("type") != "assistant":
-                continue
-            msg = rec.get("message") or {}
-            usage = msg.get("usage") or {}
-            if not usage:
-                continue
+            rec_type = rec.get("type")
 
-            raw_model = msg.get("model") or "unknown"
-            if raw_model == "<synthetic>":
-                model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
-            else:
-                model = raw_model
-            raw_skill = rec.get("attributionSkill")
-            if raw_skill:
-                sticky_skill = raw_skill
-            skill = sticky_skill
-            ts = rec.get("timestamp")
-            cwd = rec.get("cwd")
-            branch = rec.get("gitBranch")
+            if rec_type == "assistant":
+                msg = rec.get("message") or {}
+                usage = msg.get("usage") or {}
+                if not usage:
+                    continue
 
-            add_usage(by_model[model], usage)
-            add_usage(by_skill[skill], usage)
-            day_key = (ts or "")[:10] or "unknown"
-            add_usage(by_day[day_key], usage)
-            add_usage(session_record["tokens"], usage)
-            add_usage(total, usage)
+                raw_model = msg.get("model") or "unknown"
+                if raw_model == "<synthetic>":
+                    model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
+                else:
+                    model = raw_model
+                raw_skill = rec.get("attributionSkill")
+                if raw_skill:
+                    sticky_skill = raw_skill
+                skill = sticky_skill
+                ts = rec.get("timestamp")
+                cwd = rec.get("cwd")
+                branch = rec.get("gitBranch")
 
-            msg_record = empty_token_record()
-            add_usage(msg_record, usage)
-            by_day_cost[day_key] += cost_of(model, msg_record)
-            msg_bd = cost_breakdown_of(model, msg_record)
-            day_bd = by_day_breakdown[day_key]
-            for k in day_bd:
-                day_bd[k] += msg_bd[k]
+                add_usage(by_model[model], usage)
+                add_usage(by_skill[skill], usage)
+                day_key = (ts or "")[:10] or "unknown"
+                add_usage(by_day[day_key], usage)
+                add_usage(session_record["tokens"], usage)
+                add_usage(total, usage)
 
-            hour_key = parse_ts_hour(ts)
-            if hour_key is not None:
-                add_usage(hourly_agg[hour_key], usage)
-                hourly_cost[hour_key] += cost_of(model, msg_record)
-                hourly_messages[hour_key] += 1
-                add_usage(hourly_by_model[hour_key][model], usage)
-                if skill:
-                    add_usage(hourly_by_skill[hour_key][skill], usage)
+                msg_record = empty_token_record()
+                add_usage(msg_record, usage)
+                by_day_cost[day_key] += cost_of(model, msg_record)
+                msg_bd = cost_breakdown_of(model, msg_record)
+                day_bd = by_day_breakdown[day_key]
+                for k in day_bd:
+                    day_bd[k] += msg_bd[k]
 
-            model_counts[model] += 1
-            session_record["skills"].add(skill)
-            if cwd and not session_record["cwd"]:
-                session_record["cwd"] = cwd
-            if branch and not session_record["git_branch"]:
-                session_record["git_branch"] = branch
-            if ts:
-                if not session_record["first_timestamp"] or ts < session_record["first_timestamp"]:
-                    session_record["first_timestamp"] = ts
-                if not session_record["last_timestamp"] or ts > session_record["last_timestamp"]:
-                    session_record["last_timestamp"] = ts
+                hour_key = parse_ts_hour(ts)
+                if hour_key is not None:
+                    add_usage(hourly_agg[hour_key], usage)
+                    hourly_cost[hour_key] += cost_of(model, msg_record)
+                    hourly_messages[hour_key] += 1
+                    add_usage(hourly_by_model[hour_key][model], usage)
+                    if skill:
+                        add_usage(hourly_by_skill[hour_key][skill], usage)
 
-            # Accumulate into period buckets (only when timestamp is parseable)
-            msg_date = parse_ts(ts)
-            if msg_date is not None:
-                pkeys = period_keys_for(msg_date)
-                for pt, pk in pkeys.items():
-                    ps = period_agg[pt][pk]
+                model_counts[model] += 1
+                session_record["skills"].add(skill)
+                if cwd and not session_record["cwd"]:
+                    session_record["cwd"] = cwd
+                if branch and not session_record["git_branch"]:
+                    session_record["git_branch"] = branch
+                if ts:
+                    if not session_record["first_timestamp"] or ts < session_record["first_timestamp"]:
+                        session_record["first_timestamp"] = ts
+                    if not session_record["last_timestamp"] or ts > session_record["last_timestamp"]:
+                        session_record["last_timestamp"] = ts
 
-                    add_usage(ps["by_model"][model], usage)
-                    add_usage(ps["by_skill"][skill], usage)
-                    add_usage(ps["by_day"][day_key], usage)
-                    add_usage(ps["total"], usage)
+                # Accumulate into period buckets (only when timestamp is parseable)
+                msg_date = parse_ts(ts)
+                if msg_date is not None:
+                    pkeys = period_keys_for(msg_date)
+                    for pt, pk in pkeys.items():
+                        ps = period_agg[pt][pk]
 
-                    ps["by_day_cost"][day_key] += cost_of(model, msg_record)
-                    ps_day_bd = ps["by_day_breakdown"][day_key]
-                    for k in ps_day_bd:
-                        ps_day_bd[k] += msg_bd[k]
+                        add_usage(ps["by_model"][model], usage)
+                        add_usage(ps["by_skill"][skill], usage)
+                        add_usage(ps["by_day"][day_key], usage)
+                        add_usage(ps["total"], usage)
 
-                    psk = (pt, pk)
-                    if psk not in period_session_records:
-                        period_session_records[psk] = {
-                            "session_id": session_id,
-                            "first_timestamp": None,
-                            "last_timestamp": None,
-                            "model_primary": None,
-                            "tokens": empty_token_record(),
-                            "skills": set(),
-                            "cwd": None,
-                            "git_branch": None,
-                        }
-                    psr = period_session_records[psk]
-                    add_usage(psr["tokens"], usage)
-                    psr["skills"].add(skill)
-                    if cwd and not psr["cwd"]:
-                        psr["cwd"] = cwd
-                    if branch and not psr["git_branch"]:
-                        psr["git_branch"] = branch
-                    if ts:
-                        if not psr["first_timestamp"] or ts < psr["first_timestamp"]:
-                            psr["first_timestamp"] = ts
-                        if not psr["last_timestamp"] or ts > psr["last_timestamp"]:
-                            psr["last_timestamp"] = ts
+                        ps["by_day_cost"][day_key] += cost_of(model, msg_record)
+                        ps_day_bd = ps["by_day_breakdown"][day_key]
+                        for k in ps_day_bd:
+                            ps_day_bd[k] += msg_bd[k]
+
+                        psk = (pt, pk)
+                        if psk not in period_session_records:
+                            period_session_records[psk] = {
+                                "session_id": session_id,
+                                "first_timestamp": None,
+                                "last_timestamp": None,
+                                "model_primary": None,
+                                "tokens": empty_token_record(),
+                                "skills": set(),
+                                "cwd": None,
+                                "git_branch": None,
+                            }
+                        psr = period_session_records[psk]
+                        add_usage(psr["tokens"], usage)
+                        psr["skills"].add(skill)
+                        if cwd and not psr["cwd"]:
+                            psr["cwd"] = cwd
+                        if branch and not psr["git_branch"]:
+                            psr["git_branch"] = branch
+                        if ts:
+                            if not psr["first_timestamp"] or ts < psr["first_timestamp"]:
+                                psr["first_timestamp"] = ts
+                            if not psr["last_timestamp"] or ts > psr["last_timestamp"]:
+                                psr["last_timestamp"] = ts
+
+            elif rec_type == "user":
+                tur = rec.get("toolUseResult")
+                if not isinstance(tur, dict):
+                    continue
+                agent_type = tur.get("agentType")
+                if not agent_type:
+                    continue
+                agent_usage = tur.get("usage")
+                if not agent_usage:
+                    continue
+                model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                ts = rec.get("timestamp")
+                cwd = rec.get("cwd")
+                branch = rec.get("gitBranch")
+                skill = sticky_skill
+
+                add_usage(by_model[model], agent_usage)
+                add_usage(by_skill[skill], agent_usage)
+                day_key = (ts or "")[:10] or "unknown"
+                add_usage(by_day[day_key], agent_usage)
+                add_usage(session_record["tokens"], agent_usage)
+                add_usage(total, agent_usage)
+
+                msg_record = empty_token_record()
+                add_usage(msg_record, agent_usage)
+                by_day_cost[day_key] += cost_of(model, msg_record)
+                msg_bd = cost_breakdown_of(model, msg_record)
+                day_bd = by_day_breakdown[day_key]
+                for k in day_bd:
+                    day_bd[k] += msg_bd[k]
+
+                hour_key = parse_ts_hour(ts)
+                if hour_key is not None:
+                    add_usage(hourly_agg[hour_key], agent_usage)
+                    hourly_cost[hour_key] += cost_of(model, msg_record)
+                    hourly_messages[hour_key] += 1
+                    add_usage(hourly_by_model[hour_key][model], agent_usage)
+                    if skill:
+                        add_usage(hourly_by_skill[hour_key][skill], agent_usage)
+
+                model_counts[model] += 1
+                session_record["skills"].add(skill)
+                if cwd and not session_record["cwd"]:
+                    session_record["cwd"] = cwd
+                if branch and not session_record["git_branch"]:
+                    session_record["git_branch"] = branch
+                if ts:
+                    if not session_record["first_timestamp"] or ts < session_record["first_timestamp"]:
+                        session_record["first_timestamp"] = ts
+                    if not session_record["last_timestamp"] or ts > session_record["last_timestamp"]:
+                        session_record["last_timestamp"] = ts
+
+                msg_date = parse_ts(ts)
+                if msg_date is not None:
+                    pkeys = period_keys_for(msg_date)
+                    for pt, pk in pkeys.items():
+                        ps = period_agg[pt][pk]
+
+                        add_usage(ps["by_model"][model], agent_usage)
+                        add_usage(ps["by_skill"][skill], agent_usage)
+                        add_usage(ps["by_day"][day_key], agent_usage)
+                        add_usage(ps["total"], agent_usage)
+
+                        ps["by_day_cost"][day_key] += cost_of(model, msg_record)
+                        ps_day_bd = ps["by_day_breakdown"][day_key]
+                        for k in ps_day_bd:
+                            ps_day_bd[k] += msg_bd[k]
+
+                        psk = (pt, pk)
+                        if psk not in period_session_records:
+                            period_session_records[psk] = {
+                                "session_id": session_id,
+                                "first_timestamp": None,
+                                "last_timestamp": None,
+                                "model_primary": None,
+                                "tokens": empty_token_record(),
+                                "skills": set(),
+                                "cwd": None,
+                                "git_branch": None,
+                            }
+                        psr = period_session_records[psk]
+                        add_usage(psr["tokens"], agent_usage)
+                        psr["skills"].add(skill)
+                        if cwd and not psr["cwd"]:
+                            psr["cwd"] = cwd
+                        if branch and not psr["git_branch"]:
+                            psr["git_branch"] = branch
+                        if ts:
+                            if not psr["first_timestamp"] or ts < psr["first_timestamp"]:
+                                psr["first_timestamp"] = ts
+                            if not psr["last_timestamp"] or ts > psr["last_timestamp"]:
+                                psr["last_timestamp"] = ts
 
         if model_counts:
             session_record["model_primary"] = max(model_counts.items(), key=lambda kv: kv[1])[0]
