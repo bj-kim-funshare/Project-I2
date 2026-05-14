@@ -1,5 +1,24 @@
 # 아이OS — Patch Note (001)
 
+## v001.54.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #27
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1**: 메모리 `feedback_plan_enterprise_no_auto_push.md` line 19 예외 리스트에 `patch-confirmation` 항목 추가 — `### Final push` 단계의 `git push origin main` 이 spec 명시 절차임을 enumeration 으로 표기해 classifier 가 동 스킬의 push 의도를 정상 인식하도록 보정 (v001.44 사건 후속). main-session-direct 편집 (메모리는 repo 외부, main-session 정상 쓰기 surface).
+
+### 영향 파일
+
+- `~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I2/memory/feedback_plan_enterprise_no_auto_push.md` (repo 외부)
+- `patch-note/patch-note-001.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 기존 메모리의 예외 enumeration 보정.
+
 ## v001.53.0
 
 > 통합일: 2026-05-14
