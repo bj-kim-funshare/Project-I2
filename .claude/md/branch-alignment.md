@@ -39,6 +39,19 @@ Do NOT attempt to verify i-dev in member repos for `patch-update`.
   entry is created against I2 `main`. Exit restoration restores all touched member repos to
   `i-dev` and I2 to `main`.
 
+**Branch-overridden skill** (`pre-deploy`):
+`pre-deploy`'s invocation argument is a `<leader>` name, which by default would place it in the
+External context (i-dev). However, this skill's base branch is **overridden to `main`** for both
+validation and deploy. Both verification and `deploy_command` execution operate from `main` in
+every member repo of the leader's project group.
+
+Entry: verify **every member repo** declared in `dev.md targets[].cwd` is on `main`. Apply the
+same "all member repos at entry" principle from §4 Multi-repo handling. Verification runs
+**before** the multiSelect UI — at entry there are no "selected targets" yet, so all member repos
+must be checked unconditionally.
+
+Exit: restore only touched member repos to `main` (best-effort, per §3 pattern).
+
 ## 2. Entry verification
 
 Run at the very start of skill execution, before any writes or WIP branch creation.
@@ -74,6 +87,22 @@ done
 
 Failure message template (Korean):
 > `베이스 브랜치 정렬 위반 — <member-repo> 는 i-dev 에서만 호출 가능합니다. 현재: <branch>`
+
+### Branch-overridden context (pre-deploy)
+
+```bash
+# LEADER_CWD_LIST = array of cwd values from targets[].cwd in dev.md
+for member_cwd in "${LEADER_CWD_LIST[@]}"; do
+  current_branch=$(git -C "${member_cwd}" branch --show-current)
+  if [ "${current_branch}" != "main" ]; then
+    echo "베이스 브랜치 정렬 위반 — pre-deploy 는 각 멤버 레포가 main 일 때만 호출 가능합니다. (${member_cwd}): 현재 ${current_branch}"
+    exit 1
+  fi
+done
+```
+
+Failure message template (Korean):
+> `베이스 브랜치 정렬 위반 — pre-deploy 는 각 멤버 레포가 main 일 때만 호출 가능합니다. (<member-repo>): 현재 <branch>`
 
 **Fail early**: all member repos are checked at entry before any work begins. This surfaces
 misalignment before any WIP branch is created or any file is changed.
@@ -122,6 +151,15 @@ Restoration is best-effort (`|| true`) because the skill may have only partially
 repo. The goal is to leave each repo on its correct base branch so that the next skill invocation
 passes the §2 entry check.
 
+### Branch-overridden context (pre-deploy)
+
+```bash
+# For each member repo that was touched (or all member repos for fail-early safety):
+for member_cwd in "${TOUCHED_MEMBER_CWD_LIST[@]}"; do
+  git -C "${member_cwd}" checkout main 2>/dev/null || true
+done
+```
+
 ## 4. Multi-repo handling (external context)
 
 Skills that operate on a subset of member repos in a leader group (e.g., acting on one specific
@@ -153,6 +191,7 @@ Write-capable skills additionally carry the exit-restoration obligation (§3):
 `plan-enterprise`, `plan-enterprise-os`, `task-db-structure`, `task-db-data`, `dev-merge`,
 `pre-deploy`, `patch-update`, `patch-confirmation`, `new-project-group`, `group-policy`,
 `plan-roadmap`, `create-custom-project-skill`.
+Note: `pre-deploy` uses the branch-overridden flow — `main` in every member repo, not `i-dev` (see §1 Branch-overridden skill subsection and §2–§3 Branch-overridden context subsections).
 
 ## Cross-references
 
