@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.43.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#22
+
+### 페이즈 결과
+
+- **Phase 1** (`85d55944`): `BarChartWidget.tsx` 단일 파일에서 잔여 ESLint 문제 2건 정리. (1) 파일 상단 line 1 의 무용 `eslint-disable @typescript-eslint/no-unused-vars` 주석 제거. (2) line 302 의 `useMemo(..., [chartData])` 보존 + `// eslint-disable-next-line react-hooks/preserve-manual-memoization` 1줄 + 사유 주석 추가. React Compiler 가 빌드 파이프라인 (vite.config / package.json) 에 활성화 안 되어 있어 useMemo 제거는 매 렌더 `canvas.measureText` 호출로 성능 저하 위험 — disable+사유 가 정합. master 정책 (실 deps 보정 우선, 1-2건 한도 내 disable+사유 허용) 준수.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`) — 1 파일:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- `pnpm typecheck:all && pnpm lint` exit 0, **0 problems** (0 errors / 0 warnings) FULL PASS 달성.
+- 직전 `#21` 종료 시점 FULL PASS 후 `#16 hotfix 9/10` 머지로 신규 도입된 2건 재정리 — lint gate 표준 형태 복귀.
+- advisor 계획 / 완료 양 시점 5관점 PASS — Group Policy (disable+사유 1건은 master 정책 한도 내).
+- 페이즈 iter: 1회 디스패치, 재시도 0회.
+
+### 운영 메모
+
+- 마스터 명령 "ESLint 경고 38건 해소" 의 38은 1-3단계 (#18/#20/#21) 시작 시점 카운트 — 1-3단계 진행 중 경고도 함께 해소되어 #21 종료 시 0+0. 본 플랜은 그 사이 hotfix 로 신규 도입된 2건 마무리.
+- React Compiler 미활성 환경에서 `preserve-manual-memoization` 규칙은 future-compat 체크로 fire — 수동 useMemo 가 정합. 향후 React Compiler 활성화 시 본 disable 재검토 권장.
+- BarChartWidget 의 `chartData` 가 상위 useMemo 로 안정 참조 — disable 안전.
+
 ## v001.42.0
 
 > 통합일: 2026-05-14
