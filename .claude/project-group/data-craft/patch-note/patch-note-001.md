@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.27.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#17
+
+### 페이즈 결과
+
+- **Phase 1** (`cfccecd8`): `packages/fs-api/src/core/client.auth.ts` 의 `handleAuthFailure()` 가 토큰 클리어 후·리다이렉트 직전 등록된 사전 정리 콜백을 실행하도록 확장. 모듈 변수 `preAuthFailureCleanup: (() => void) | null` + `setPreAuthFailureCleanup(cb)` export 추가. 함수 본문을 `savedCompanyId` 사전 캡처(try/catch) → `tokenStorage.clearTokens()` → `preAuthFailureCleanup?.()` (try/catch 보호) → `dc_session_expired` 플래그 → 캡처된 `savedCompanyId`/urlParams.tenant/subdomain 순으로 리다이렉트 결정의 순서로 재배치 — 콜백이 localStorage 를 만져도 테넌트 리다이렉트(`/login?tenant=`) 가 보존된다. `packages/fs-api/src/core/client.ts` 와 `packages/fs-api/src/index.ts` 에 `setPreAuthFailureCleanup` re-export 한 줄씩 추가, `src/shared/lib/apiClient.ts` 의 barrel 에도 한 줄 재수출 추가. `src/app/providers/AuthProvider.tsx` 의 부팅 useEffect 진입 직후 `setPreAuthFailureCleanup` 으로 테마 리셋 콜백(`USER_THEMES.includes(theme)` 일 때 `useThemeStore.getState().setThemeFromServer('light')`) 등록, 언마운트 시 `setPreAuthFailureCleanup(null)` 해제. 기존 init-경로 `handleAuthFailure` 클로저(`authApi.init` 에러 분기)의 테마 리셋 분기는 그대로 유지되어 두 경로(런타임 401 인터셉터 / 새로고침 init 실패) 가 각각 독립적으로 테마를 리셋한다.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`, merge `0c83ed9f`):
+- `packages/fs-api/src/core/client.auth.ts`
+- `packages/fs-api/src/core/client.ts`
+- `packages/fs-api/src/index.ts`
+- `src/shared/lib/apiClient.ts`
+- `src/app/providers/AuthProvider.tsx`
+
+### 검증 결과
+
+- 코드 다이프: 영향 파일 5개 모두 plan affected_files 내. fs_data_viewer 등 무관 영역 0-터치 (`git diff --name-only` 검증).
+- advisor: 계획 시점 + 완료 시점 5관점 2회 모두 PASS (BLOCK 없음).
+- 페이즈 iter: 1회 재시도 (1회차 `scope_expansion_needed` — `src/shared/lib/apiClient.ts` barrel 재수출 누락 보고, 승인 후 affected_files 확장하여 2회차 성공).
+- Lint gate: `pnpm typecheck:all && pnpm lint` exit 2 — 단 본 페이즈 변경과 무관한 사전 존재 오류 (`fs_data_viewer` `FsDataViewerModel.kanbanCardAreas` 누락, dashboard widget 테스트 인자 시그니처). 베이스라인 i-dev-001 에서 동일 재현 확인. CLAUDE.md §6 예방 트레드밀 회피 원칙에 따라 진행, 별도 트랙 처리 권장.
+
+### 운영 메모
+
+- **수동 검증 필요**: 본 스킬 세션에서는 dev 서버 / 브라우저 실행 검증을 수행하지 않음. 마스터가 다음 4개 시나리오로 골든 패스 확인 필요:
+  1. 만료 경로: 기업 테마(ocean 등) 적용 계정으로 로그인 → DevTools 에서 `dc_access_token`/`dc_refresh_token` 을 garbage 로 덮어쓰기 → 인증 API 트리거(새로고침/조회) → `/login?tenant={companyId}` 가 기본(light) 테마인지.
+  2. 수동 로그아웃 회귀: 설정 다이얼로그 → 로그아웃 → 기본 테마.
+  3. init-경로 회귀: 토큰 손상 + 새로고침(F5) → AuthProvider init 실패 경로 → 기본 테마.
+  4. 리다이렉트 보존: 시나리오 1 에서 URL `?tenant=` 가 원 companyId 와 일치.
+- 기업 테마 키 `dc_theme_{companyId}` 는 두 경로 모두 보존 — 다음 로그인 시 `seedBundleData` 가 복원할 사용자 선호값.
+
 ## v001.26.0
 
 > 통합일: 2026-05-14
