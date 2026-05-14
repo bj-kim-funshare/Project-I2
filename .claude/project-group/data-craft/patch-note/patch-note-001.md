@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.33.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 3)
+
+### 페이즈 결과
+
+핫픽스 3 은 3개 위젯의 독립 UI 확장을 한 hotfix WIP 위 3 sub-dispatch 로 분할 수행 (sub-agent context budget 준수).
+
+- **Phase 7 (hotfix 3a, `a88ed3d9`)** — 카드 위젯 중앙 컨텐츠 정렬 옵션 + 제목 아이콘 위치 옵션. `CardConfig` 에 `contentAlign` ('left'|'center'|'right', 기본 'center') 와 `iconPlacement` ('header'|'value-left'|'value-right', 기본 'header') 필드 추가. `WidgetContainer` 는 `iconPlacement !== 'header'` 일 때 헤더 아이콘 슬롯을 억제하도록 `headerIconVisible` 게이트 도입, `hasHeader` 계산도 함께 갱신해 "아이콘만 있고 제목 없는" 경우의 빈 헤더 행 렌더를 방지. `CardWidget` 은 `contentAlign` 에 따라 값 컨테이너 flex 정렬을 분기하고 `value-left`/`value-right` 시 값 행 안에 `InlineIconSlot` (wrapper 32px, icon 20px) 렌더. `CardSettings` 에 "값 표시" 섹션 신설 — 한국어 라벨 Select 두 개 ("값 정렬", "아이콘 위치"). **iter 2회** (1회차 `scope_expansion_needed` 보고 — `WidgetContainer.tsx` 가 affected_files 추가 필요, 승인 후 2회차 통과).
+- **Phase 7 (hotfix 3b, `aeb6e809`)** — 사용자 보드 위젯 UserCard 좌측 프로필 사진 + 우측 이름/수치 레이아웃. 카드 내부 구조를 `flex-col` → `flex-row` 로 재구성, 좌측 72px 고정 폭에 `ProfilePhoto` 서브 컴포넌트 신설 (`shared/hooks/useUserImageUrl` 기존 훅 재사용으로 `imageBlob → ObjectURL` 변환 + cleanup 처리). 이미지 로드 실패 시 `<img onError>` 로 `imageError` state 전환 → 이름 첫 글자 이니셜 + 회색 배경 fallback. 우측 영역은 `flex-col` 로 상단 이름 헤더 + 슬롯 세로 적층 (기존 1–3 슬롯 라벨/primary/secondary 구조 유지). 카드 외곽 크기 (240×120) 와 `PaginatedUserGrid` 의 vertical/horizontal/grid 레이아웃 옵션은 변경 없음.
+- **Phase 7 (hotfix 3c, `0e9c4b32`)** — 반원 게이지 자동차 계기판 시침. `GaugeWidget` 의 `shape === 'semicircle'` 분기에 multi-color 호 렌더 직후 `motion.g + line` 조합으로 시침 삽입. base orientation = 수직 위 (12시 방향), 0% → `rotate(-90deg)`, 100% → `rotate(+90deg)` 의 단일 rotate 값 보간 (framer-motion 0.8s easeOut). `transformOrigin: '50px 50px'` 을 CSS style prop 으로 `motion.g` 에 적용 (modern browser 의 SVG element 에 CSS `transform-origin` 적용 동작). 중심 허브 `<circle r=3 fill=#333>` 은 `motion.g` 바깥에 배치해 회전 영향 받지 않음. circle / linear 모드는 손대지 않음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/CardSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/UserCard.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +244/-62, 6 파일 모두 affected_files 내 (3a 의 `WidgetContainer.tsx` 는 1회차 `scope_expansion_needed` 보고 후 승인 확장).
+- 회귀 grep: `contentAlign | iconPlacement | headerIconVisible | InlineIconSlot | ProfilePhoto | useUserImageUrl | valueAngle | CardWidget | WidgetContainer | UserCard | GaugeWidget | CardSettings` 어느 항목도 typecheck 출력에 등장하지 않음 — 본 핫픽스가 새 typecheck 오류를 도입하지 않았음을 확인.
+- 3a 추가 검증: `iconPlacement` 의 `'in widget.config'` 가드로 non-card 위젯은 기본값 `'header'` → 기존 동작 보존. 제목만 있고 아이콘 없는 위젯은 `resolvedTitle` 으로 `hasHeader = true` 유지, `headerIconVisible = false` 로 슬롯만 비움.
+- 3b 추가 검증: `<img onError={() => setImageError(true)}>` 로 invalid blob 도 fallback (`imageBlob == null` 외 케이스도 처리). `useUserImageUrl` 훅 `URL.createObjectURL` cleanup 보장 (기존 훅 재사용).
+- 3c 추가 검증: `transformOrigin` CSS prop 으로 `motion.g` 에 적용 — SVG element 에 CSS `transform-origin` 이 modern browser (Chrome/Firefox/Safari) 에서 정상 동작. needle base 좌표 (50,50)→(50,15) 길이 35, 회전 중심 (50,50) 정확. hub circle 은 motion.g 외부.
+- Lint gate: advisory (베이스라인 동일).
+- advisor: 핫픽스 3 본 라운드는 SKIP — 1회차 advisor 호출에서 "diff-level checks 가 advisor 수준 검증을 이미 수행했다" 판단으로 검사 결과만 가지고 진행 결정.
+
+### 운영 메모
+
+- 수동 검증:
+  - **카드 위젯**: contentAlign 좌/중앙/우 시각 확인. iconPlacement = "값 왼쪽"/"값 오른쪽" 선택 시 헤더에서 아이콘 사라지고 값 옆에 표시 확인. iconConfig 가 없거나 name 빈 문자열이면 아이콘 미렌더 확인.
+  - **사용자 보드**: imageBlob 가 있는 사용자는 프로필 사진, 없는 사용자는 이니셜 회색 fallback 표시. 이미지 로드 실패 케이스도 fallback 전환. PaginatedUserGrid 의 grid/vertical/horizontal 레이아웃에서 카드 외곽 사이즈 (240×120) 유지.
+  - **반원 게이지**: 위젯 초기 렌더 시 시침이 왼쪽 끝 (0%) 에서 현재 값까지 0.8s 회전. 게이지 값 변경 시 새 위치로 부드럽게 보간. circle / linear 모드는 시침 없이 기존 동작 유지.
+
 ## v001.32.0
 
 > 통합일: 2026-05-14
