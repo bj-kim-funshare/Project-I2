@@ -24,7 +24,7 @@ Replaces the prior `merge-i` (work → `i-dev`) and `merge-main` (`i-dev` → `m
 1. 호출 시점 `cwd` = Project-I2 (`.claude/skills/dev-merge/SKILL.md` 이 보이는 위치).
 2. `<leader>` 가 `아이OS` 또는 `.claude/project-group/<leader>/` 디렉토리 존재.
 3. `gh` CLI 인증.
-4. Step 0 의 (from, to) 확정 후 추가 검증: 두 브랜치 로컬+원격 존재, 동일 쌍 PR 미존재, `from != to`.
+4. Step 0 의 (from, to) 확정 후 추가 검증: 두 브랜치 로컬+원격 존재, `from != to`. 동일 쌍 PR 존재 여부는 **분기 신호** — PR 있으면 PENDING 재진입 경로 (신규 PR 생성·auto-iter 건너뛰고 직행), PR 없으면 표준 PR 생성 경로.
 
 ### Branch alignment 정책
 
@@ -55,6 +55,7 @@ base 기준: `아이OS` 컨텍스트면 `main`, 외부 컨텍스트면 `i-dev`. 
 
 - 외부 컨텍스트 기본 후보: `i-dev` (권장 첫 옵션), `main`.
 - 아이OS 컨텍스트 기본 후보: `main` (권장 첫 옵션). 보호 브랜치 추가 있으면 함께 노출.
+- 옵션 후보가 2개 미만이면 (예: 아이OS 의 `main` 단일) AskUserQuestion 호출 생략. 텍스트로 기본 후보 자동 채택 안내 + "다른 to-branch 원하면 입력" 자유 입력 받기.
 - `Other` 자유 입력 허용 (브랜치 존재 검증).
 - `from == to` 거부 → 에러 후 Step 0.4 재시도.
 - to-branch ≠ 컨텍스트 기본 base 인 경우 "경고: 의도적 base-vs-base 머지로 진행" 한 줄 출력 후 계속.
