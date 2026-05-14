@@ -231,14 +231,14 @@ state=$(gh pr view <PR-num> --json mergeable,mergeStateStatus --jq '.mergeable +
 When mergeable check passes (`MERGEABLE CLEAN`):
 
 ```bash
-gh pr merge <PR-num> --merge --delete-branch=false
+gh pr merge <PR-num> --merge --delete-branch
 ```
 
-`--merge` selects merge-commit method, producing a non-fast-forward merge commit per master's lock — preserves the PR's scope visibly in history. `--delete-branch=false` keeps the from-branch in place; master decides cleanup separately.
+`--merge` selects merge-commit method, producing a non-fast-forward merge commit per master's lock — preserves the PR's scope visibly in history. `--delete-branch` deletes the remote from-branch on merge; the local-side `git branch -d` after worktree removal handles any residual local branch ref.
 
 If `gh pr merge` itself fails despite the mergeable check passing (rare — concurrent push intercepted the merge), retry the mergeable check once. Re-check → CONFLICTING means a concurrent push happened, enter Conflict-PENDING. Re-check → other failure means transient issue, halt with verbatim error.
 
-After `gh pr merge` returns success: `git worktree remove ${wt_from}`. On failure or master halt, the worktree is preserved for forensics; master decides cleanup.
+After `gh pr merge` returns success: `git worktree remove ${wt_from}` then `git branch -d <from-branch> 2>/dev/null || true` (may be no-op if `--delete-branch` already removed the local tracking ref). On failure or master halt, the worktree is preserved for forensics; master decides cleanup.
 
 ## Conflict-PENDING (PR 머지 충돌 처리)
 
@@ -343,6 +343,7 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | `gh pr merge` failure (conflict detected via mergeable check) | Conflict-PENDING 진입 (see PENDING gate section) |
 | Conflict-PENDING `핫픽스 <hint>` resolution still fails after code-fixer | "충돌 해결 미완 — code-fixer 가 마스터 hint 로 해결 못함. 추가 핫픽스 또는 수동 해결 필요." (Conflict-PENDING 재진입) |
 | `수동 머지 완료` claimed but PR state=CLOSED unmerged | "PR #<num> CLOSED (unmerged). 수동 머지 완료 trigger 와 불일치. 마스터 확인 필요." |
+| `gh pr merge --delete-branch` succeeded merge but branch deletion failed | `"PR #<num> 머지 완료. remote 브랜치 삭제 실패: <error>. 로컬 브랜치 잔존 확인 필요."` |
 
 ## Scope (v1)
 
@@ -357,5 +358,5 @@ Out of scope (v1):
 - Squash or rebase merge methods.
 - Tag creation, push to additional remotes.
 - Multi-PR coordination (one PR per invocation).
-- Auto-deletion of the from-branch after merge.
+- Auto-deletion of the from-branch after merge (now in scope via `--delete-branch` + local `git branch -d`).
 - Reviewer language specialization (React-specific, Express-specific, TS-specific) — Claude's full 5-agent literal model was scoped down to 2 judgment agents + context-by-main-session, with master's confirmation. Specialization can be added if a project's review patterns demand it.

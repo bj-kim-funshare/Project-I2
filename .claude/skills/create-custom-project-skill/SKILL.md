@@ -181,6 +181,7 @@ git checkout main
 git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff "${wip}"
 git worktree remove "${wt}"
+git branch -d "${wip}"
 ```
 
 On merge conflict → preserve both sides; halt on mutually-exclusive conflict.

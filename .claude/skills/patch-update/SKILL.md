@@ -75,6 +75,7 @@ git checkout main
 git pull --ff-only origin main 2>/dev/null || true
 git merge --no-ff "${wip}"
 git worktree remove "${wt}"
+git branch -d "${wip}"
 ```
 
 - **No push, no tag, no remote ops.** WIP branch is left alone after merge.

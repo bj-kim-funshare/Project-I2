@@ -161,7 +161,7 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 
 본 스킬의 머지는 N+1=2-step (WIP A 1번 + WIP B 1번) 으로 plan-enterprise 의 일반화된 (N+1)-step 머지 절차의 N=1 케이스와 동치.
 
-1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"`.
+1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업`. Conflict handling identical. After merge: `git worktree remove "${wt_a}"` and `git branch -d "${wip_a}"`.
 2. Create WIP B as a worktree from main:
    ```bash
    wip_b="plan-enterprise-os-<N>-<slug>-문서"
@@ -192,7 +192,7 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
    <PASS or NOT APPLICABLE; if PASS, restate Q3 in one line — what was retired>
    ```
 
-5. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise-os #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`. Then in main working tree: `git checkout main && git merge --no-ff plan-enterprise-os-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"`.
+5. `git -C "${wt_b}" add <patch-note-path> && git -C "${wt_b}" commit -m "plan-enterprise-os #<N>: patch-note v<NNN>.<K+1>.0 추가" && git -C "${wt_b}" push origin "${wip_b}"`. Then in main working tree: `git checkout main && git merge --no-ff plan-enterprise-os-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"` and `git branch -d "${wip_b}"`.
 
 ### Step 10 — Merge
 
