@@ -467,6 +467,13 @@ def collect() -> dict[str, Any]:
 
         model_counts: dict[str, int] = defaultdict(int)
 
+        # Sticky skill attribution: Claude Code runtime tags attributionSkill only on
+        # the first few assistant turns after a skill invocation; subsequent turns
+        # within the same skill flow drop to None → would fall back to "메인 세션",
+        # heavily under-attributing skills. Carry the last seen attributionSkill
+        # forward within a session until another non-null attributionSkill appears.
+        sticky_skill: str = "메인 세션"
+
         for rec in records:
             if rec.get("type") != "assistant":
                 continue
@@ -480,7 +487,10 @@ def collect() -> dict[str, Any]:
                 model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
             else:
                 model = raw_model
-            skill = rec.get("attributionSkill") or "메인 세션"
+            raw_skill = rec.get("attributionSkill")
+            if raw_skill:
+                sticky_skill = raw_skill
+            skill = sticky_skill
             ts = rec.get("timestamp")
             cwd = rec.get("cwd")
             branch = rec.get("gitBranch")
