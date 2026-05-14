@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.50.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스15)
+> 대상: 아이OS
+
+### 개요
+서브에이전트 가로 막대 차트의 막대 hover 시 기본 툴팁 (label/value) 아래에 그 서브에이전트의 역할 설명을 추가 표시. 설명 소스 = `.claude/agents/*.md` frontmatter 의 `description:` 필드 + built-in 6 에이전트 한국어 fallback.
+
+### 페이즈 결과
+- **핫픽스15** (`monitoring/scripts/collect.py`, `monitoring/script.js`, `monitoring/index.html`):
+  - `collect.py` 에 `AGENTS_DIR` 상수 + `load_agent_descriptions()` 헬퍼 추가. `.claude/agents/*.md` 의 YAML frontmatter 줄 단위 파싱으로 `name` / `description` 추출 (description 이 여러 줄에 걸치는 indented continuation 도 지원). built-in 6 에이전트 (Explore, Plan, general-purpose, claude, claude-code-guide, statusline-setup) 한국어 fallback 추가. `collect()` return dict 에 `agent_descriptions` 키로 포함되어 aggregate.json 출력. period 파일에는 미포함.
+  - `script.js` `renderChartAgentBar` 의 Chart.js options 에 `tooltip.callbacks.afterBody` 추가. `data.agent_descriptions[label]` 조회 → 60자씩 줄바꿈 wrap → 빈 줄 + wrapped 라인을 기본 툴팁 본문 아래에 출력.
+  - 자산 cache-bust `?v=20260514-14` → `?v=20260514-15`.
+
+### 영향 파일
+- `monitoring/scripts/collect.py`
+- `monitoring/script.js`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — UI 보강. 신규 메커니즘 추가 없음.
+
 ## v001.49.0
 
 > 통합일: 2026-05-14
