@@ -400,6 +400,45 @@ function totalTokens(r) {
   return (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0);
 }
 
+function renderHtmlLegend(containerEl, labels, values, bgs, opts) {
+  if (!containerEl) return;
+  const prevMap = (opts && opts.prevMap) || null;
+  const prevTotal = (opts && opts.prevTotal) || 0;
+  const totalVal = values.reduce((a, v) => a + v, 0);
+  containerEl.innerHTML = '';
+  labels.forEach((label, i) => {
+    const li = document.createElement('div');
+    li.className = 'chart-legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = bgs[i];
+    const textBox = document.createElement('span');
+    textBox.className = 'text';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = label;
+    textBox.appendChild(labelEl);
+    if (prevMap && prevTotal > 0 && totalVal > 0) {
+      const cs = values[i] / totalVal * 100;
+      const ps = (prevMap[label] || 0) / prevTotal * 100;
+      const delta = cs - ps;
+      if (Math.abs(delta) >= 0.1) {
+        const absDelta = values[i] - (prevMap[label] || 0);
+        const deltaEl = document.createElement('span');
+        deltaEl.className = 'delta ' + (delta >= 0 ? 'up' : 'down');
+        const sign = delta >= 0 ? '▲' : '▼';
+        const pctStr = `${sign} ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p`;
+        const absStr = `(${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
+        deltaEl.textContent = `${pctStr} ${absStr}`;
+        textBox.appendChild(deltaEl);
+      }
+    }
+    li.appendChild(dot);
+    li.appendChild(textBox);
+    containerEl.appendChild(li);
+  });
+}
+
 function renderChartModelDonut(data, opts) {
   const chartKey = (opts && opts.chartKey) || 'modelDonut';
   const canvasSel = (opts && opts.canvasSel) || '#chart-model-donut canvas';
@@ -429,44 +468,14 @@ function renderChartModelDonut(data, opts) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          align: 'center',
-          labels: {
-            color: '#e6e9f2',
-            boxWidth: 12,
-            boxHeight: 12,
-            generateLabels: (chart) => {
-              const ds = chart.data.datasets[0] || {};
-              const bgColors = ds.backgroundColor || [];
-              return (chart.data.labels || []).map((label, i) => {
-                let text = label;
-                if (prevMap && prevTotal > 0 && totalVal > 0) {
-                  const cs = values[i] / totalVal * 100;
-                  const ps = (prevMap[label] || 0) / prevTotal * 100;
-                  const delta = cs - ps;
-                  const sign = delta >= 0 ? '▲' : '▼';
-                  const absDelta = values[i] - (prevMap[label] || 0);
-                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
-                }
-                return {
-                  text,
-                  fillStyle: bgColors[i],
-                  strokeStyle: bgColors[i],
-                  fontColor: '#e6e9f2',
-                  lineWidth: 0,
-                  hidden: !chart.getDataVisibility(i),
-                  index: i,
-                };
-              });
-            },
-          },
-        },
+        legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
     plugins: [pieLabelsPlugin],
   });
+  const legendEl = ctx.parentElement.querySelector('.chart-legend');
+  renderHtmlLegend(legendEl, labels, values, bgs, { prevMap, prevTotal });
 }
 
 function renderChartSkillDonut(data, opts) {
@@ -504,44 +513,14 @@ function renderChartSkillDonut(data, opts) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          align: 'center',
-          labels: {
-            color: '#e6e9f2',
-            boxWidth: 12,
-            boxHeight: 12,
-            generateLabels: (chart) => {
-              const ds = chart.data.datasets[0] || {};
-              const bgColors = ds.backgroundColor || [];
-              return (chart.data.labels || []).map((label, i) => {
-                let text = label;
-                if (prevMap && prevTotal > 0 && totalVal > 0) {
-                  const cs = values[i] / totalVal * 100;
-                  const ps = (prevMap[label] || 0) / prevTotal * 100;
-                  const delta = cs - ps;
-                  const sign = delta >= 0 ? '▲' : '▼';
-                  const absDelta = values[i] - (prevMap[label] || 0);
-                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
-                }
-                return {
-                  text,
-                  fillStyle: bgColors[i],
-                  strokeStyle: bgColors[i],
-                  fontColor: '#e6e9f2',
-                  lineWidth: 0,
-                  hidden: !chart.getDataVisibility(i),
-                  index: i,
-                };
-              });
-            },
-          },
-        },
+        legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
     plugins: [pieLabelsPlugin],
   });
+  const legendEl = ctx.parentElement.querySelector('.chart-legend');
+  renderHtmlLegend(legendEl, labels, values, bgs, { prevMap, prevTotal });
 }
 
 function renderChartCacheDonut(data, opts) {
@@ -558,9 +537,12 @@ function renderChartCacheDonut(data, opts) {
   const totalVal = values.reduce((a, v) => a + v, 0);
   let prevVals = null;
   let prevTotal = 0;
+  let prevMap = null;
   if (prevRows) {
     prevVals = prevRows.map(r => r.val || 0);
     prevTotal = prevVals.reduce((a, v) => a + v, 0);
+    prevMap = {};
+    cacheLabels.forEach((lbl, i) => { prevMap[lbl] = prevVals[i] || 0; });
   }
   const bgs = [COLORS.noncache, COLORS.cacheWrite, COLORS.cacheRead];
   charts.cacheDonut = new Chart(ctx, {
@@ -573,44 +555,14 @@ function renderChartCacheDonut(data, opts) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          align: 'center',
-          labels: {
-            color: '#e6e9f2',
-            boxWidth: 12,
-            boxHeight: 12,
-            generateLabels: (chart) => {
-              const ds = chart.data.datasets[0] || {};
-              const bgColors = ds.backgroundColor || [];
-              return (chart.data.labels || []).map((label, i) => {
-                let text = label;
-                if (prevVals && prevTotal > 0 && totalVal > 0) {
-                  const cs = values[i] / totalVal * 100;
-                  const ps = prevVals[i] / prevTotal * 100;
-                  const delta = cs - ps;
-                  const sign = delta >= 0 ? '▲' : '▼';
-                  const absDelta = values[i] - prevVals[i];
-                  text = `${label}  ${sign}${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%p (${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)})`;
-                }
-                return {
-                  text,
-                  fillStyle: bgColors[i],
-                  strokeStyle: bgColors[i],
-                  fontColor: '#e6e9f2',
-                  lineWidth: 0,
-                  hidden: !chart.getDataVisibility(i),
-                  index: i,
-                };
-              });
-            },
-          },
-        },
+        legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
       },
     },
     plugins: [pieLabelsPlugin],
   });
+  const legendEl = ctx.parentElement.querySelector('.chart-legend');
+  renderHtmlLegend(legendEl, cacheLabels, values, bgs, { prevMap, prevTotal });
 }
 
 function clearPieCompareLists() {

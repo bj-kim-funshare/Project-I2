@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>아이OS 토큰 모니터링</title>
-  <link rel="stylesheet" href="styles.css?v=20260514-5">
+  <link rel="stylesheet" href="styles.css?v=20260514-6">
   <script src="lib/chart.umd.js" defer></script>
-  <script src="script.js?v=20260514-5" defer></script>
+  <script src="script.js?v=20260514-6" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -118,19 +118,28 @@
         <div class="chart-body"><canvas></canvas></div>
       </article>
 
-      <article class="chart-card" id="chart-model-donut">
+      <article class="chart-card has-html-legend" id="chart-model-donut">
         <h3>모델 분포 (전체 토큰)</h3>
-        <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-body">
+          <canvas></canvas>
+          <div class="chart-legend"></div>
+        </div>
       </article>
 
-      <article class="chart-card" id="chart-skill-donut">
+      <article class="chart-card has-html-legend" id="chart-skill-donut">
         <h3>스킬 점유 (Top 8 + 기타)</h3>
-        <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-body">
+          <canvas></canvas>
+          <div class="chart-legend"></div>
+        </div>
       </article>
 
-      <article class="chart-card" id="chart-cache-donut">
+      <article class="chart-card has-html-legend" id="chart-cache-donut">
         <h3>캐시 vs 비-캐시 비중</h3>
-        <div class="chart-body"><canvas></canvas></div>
+        <div class="chart-body">
+          <canvas></canvas>
+          <div class="chart-legend"></div>
+        </div>
       </article>
 
       <article class="chart-card wide" id="chart-session-bar">
@@ -153,10 +162,11 @@
     <section class="tables-section">
       <h2>상세 테이블</h2>
 
-      <section class="detail-section">
+      <section class="detail-section has-html-legend">
         <h3>모델별</h3>
         <div class="detail-chart">
           <canvas id="chart-detail-model"></canvas>
+          <div class="chart-legend" data-target="chart-detail-model"></div>
         </div>
         <details class="table-block">
           <summary>표 보기</summary>
@@ -164,10 +174,11 @@
         </details>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section has-html-legend">
         <h3>스킬별</h3>
         <div class="detail-chart">
           <canvas id="chart-detail-skill"></canvas>
+          <div class="chart-legend" data-target="chart-detail-skill"></div>
         </div>
         <details class="table-block">
           <summary>표 보기</summary>
