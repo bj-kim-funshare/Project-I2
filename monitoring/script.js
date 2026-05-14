@@ -709,6 +709,7 @@ function renderBySession(rows) {
 // ---------- Orchestration ----------
 
 let _aggregateCache = null;
+let _hourlyCache = null;
 let _autoRefreshInFlight = false;
 
 async function loadAggregate() {
@@ -719,6 +720,82 @@ async function loadAggregate() {
   return _aggregateCache;
 }
 
+async function loadHourlyData() {
+  if (_hourlyCache) return _hourlyCache;
+  const r = await fetch('data/hourly.json', { cache: 'no-store' });
+  if (!r.ok) throw new Error(`hourly.json 로딩 실패 (${r.status}) — collect.py 실행 필요`);
+  _hourlyCache = await r.json();
+  return _hourlyCache;
+}
+
+function currentWeekMondayMs() {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sunday
+  const daysFromMonday = (dayOfWeek + 6) % 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday);
+  return monday.getTime();
+}
+
+function computeRealtimeWindows(now, hoursBack) {
+  if (!hoursBack) {
+    return { baseStart: currentWeekMondayMs(), baseEnd: now, compareStart: null, compareEnd: null };
+  }
+  const windowMs = hoursBack * 3600 * 1000;
+  return {
+    baseStart: now - windowMs,
+    baseEnd: now,
+    compareStart: now - 2 * windowMs,
+    compareEnd: now - windowMs,
+  };
+}
+
+function aggregateHoursInWindow(hours, startMs, endMs) {
+  const total = {
+    input: 0, output: 0, cache_creation_5m: 0, cache_creation_1h: 0,
+    cache_read: 0, messages: 0, cost_usd: 0,
+  };
+  const byDayMap = {};
+
+  for (const h of (hours || [])) {
+    const hourKey = h.hour || '';
+    const d = new Date(hourKey + ':00:00');
+    const ms = d.getTime();
+    if (isNaN(ms) || ms < startMs || ms >= endMs) continue;
+
+    total.input += h.input || 0;
+    total.output += h.output || 0;
+    total.cache_creation_5m += h.cache_creation_5m || 0;
+    total.cache_creation_1h += h.cache_creation_1h || 0;
+    total.cache_read += h.cache_read || 0;
+    total.messages += h.messages || 0;
+    total.cost_usd += h.cost_usd || 0;
+
+    const dayKey = hourKey.slice(0, 10);
+    if (!byDayMap[dayKey]) {
+      byDayMap[dayKey] = { day: dayKey, input: 0, output: 0, cache_creation_5m: 0, cache_creation_1h: 0, cache_read: 0, messages: 0, cost_usd: 0 };
+    }
+    const dr = byDayMap[dayKey];
+    dr.input += h.input || 0;
+    dr.output += h.output || 0;
+    dr.cache_creation_5m += h.cache_creation_5m || 0;
+    dr.cache_creation_1h += h.cache_creation_1h || 0;
+    dr.cache_read += h.cache_read || 0;
+    dr.messages += h.messages || 0;
+    dr.cost_usd += h.cost_usd || 0;
+  }
+
+  const by_day = Object.keys(byDayMap).sort().map(k => byDayMap[k]);
+
+  return {
+    total,
+    by_day,
+    by_model: [],
+    by_skill: [],
+    by_session: [],
+    by_prompt: [],
+  };
+}
+
 async function loadPeriodData(unit, key) {
   const r = await fetch(`data/periods/${unit}/${key}.json`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`failed to load period data: ${unit}/${key} (${r.status})`);
@@ -727,7 +804,12 @@ async function loadPeriodData(unit, key) {
 
 function updateUrl(unit, key) {
   const params = new URLSearchParams();
-  if (unit && unit !== 'all') {
+  if (unit === 'realtime') {
+    params.set('period', 'realtime');
+    const compareEl = document.getElementById('period-compare-target');
+    const compareKey = compareEl ? compareEl.value : '';
+    if (compareKey) params.set('compare', compareKey);
+  } else if (unit && unit !== 'all') {
     params.set('period', unit);
     if (key) params.set('key', key);
     const compareEl = document.getElementById('period-compare-target');
@@ -801,7 +883,7 @@ function render(data) {
 function populatePeriodKeys(periodsIndex, unit) {
   const keyEl = $('#period-key');
   keyEl.innerHTML = '';
-  if (!unit || unit === 'all') {
+  if (!unit || unit === 'all' || unit === 'realtime') {
     keyEl.disabled = true;
     keyEl.innerHTML = '<option value="">—</option>';
     return;
@@ -835,8 +917,27 @@ function populateCompareTarget(periodsIndex, unit, selectedKey) {
   const el = document.getElementById('period-compare-target');
   if (!el) return;
   el.innerHTML = '<option value="">없음</option>';
-  if (!unit || unit === 'all' || unit === 'realtime') {
+  if (!unit || unit === 'all') {
     el.disabled = true;
+    return;
+  }
+  if (unit === 'realtime') {
+    const REALTIME_OPTIONS = [
+      { value: '1', label: '1시간 전' },
+      { value: '3', label: '3시간 전' },
+      { value: '7', label: '7시간 전' },
+      { value: '24', label: '24시간 전' },
+      { value: '48', label: '2일 전' },
+      { value: '72', label: '3일 전' },
+      { value: '120', label: '5일 전' },
+    ];
+    for (const opt of REALTIME_OPTIONS) {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      el.appendChild(o);
+    }
+    el.disabled = false;
     return;
   }
   const { year: cy, week: cw } = dateToIsoWeek(new Date());
@@ -875,8 +976,47 @@ async function applyPeriodSelection(unit, key, periodsIndex) {
   const compareTargetEl = document.getElementById('period-compare-target');
   const compareKey = compareTargetEl && !compareTargetEl.disabled ? compareTargetEl.value : '';
 
+  const keyEl = $('#period-key');
+  if (unit === 'realtime') {
+    keyEl.style.display = 'none';
+  } else {
+    keyEl.style.display = '';
+  }
+
   try {
-    if (!unit || unit === 'all') {
+    if (unit === 'realtime') {
+      const hoursBack = parseInt(compareKey, 10) || 0;
+      let hourly;
+      try {
+        hourly = await loadHourlyData();
+      } catch (fetchErr) {
+        $('#meta').textContent = `실시간 데이터 없음 — collect.py 실행 필요`;
+        err.hidden = false;
+        err.textContent = `${fetchErr.message}`;
+        updateUrl('realtime', null);
+        return;
+      }
+      const now = Date.now();
+      const windows = computeRealtimeWindows(now, hoursBack);
+      const baseData = aggregateHoursInWindow(hourly.hours, windows.baseStart, windows.baseEnd);
+      let compareData = null;
+      if (windows.compareStart != null) {
+        compareData = aggregateHoursInWindow(hourly.hours, windows.compareStart, windows.compareEnd);
+      }
+      if (compareData) {
+        const hoursLabel = compareKey === '48' ? '2일' : compareKey === '72' ? '3일' : compareKey === '120' ? '5일' : `${compareKey}시간`;
+        $('#meta').textContent = `실시간: 최근 ${hoursLabel} 합 vs 직전 동일 폭 (비교)`;
+      } else {
+        $('#meta').textContent = `실시간: 이번주 월요일 00:00 ~ 지금까지`;
+      }
+      renderAll(baseData, compareData);
+      if (compareData) {
+        applyDeltaBadgesFromValues(computeKpiSnapshot(compareData), computeKpiSnapshot(baseData));
+      } else {
+        clearDeltaBadges();
+      }
+      updateUrl('realtime', null);
+    } else if (!unit || unit === 'all') {
       const data = await loadAggregate();
       $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
       renderAll(data);
@@ -925,6 +1065,7 @@ async function refresh() {
       throw new Error(`refresh failed: ${r.status} ${body}`);
     }
     _aggregateCache = null;
+    _hourlyCache = null;
     const unit = $('#period-unit').value;
     const key = $('#period-key').value;
     await applyPeriodSelection(unit, key);
@@ -957,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     unitEl.value = initUnit;
     populatePeriodKeys(periodsIndex, initUnit);
 
-    if (initUnit !== 'all' && initKey) {
+    if (initUnit !== 'all' && initUnit !== 'realtime' && initKey) {
       const validKeys = (periodsIndex[initUnit] || []);
       if (validKeys.includes(initKey)) {
         keyEl.value = initKey;
@@ -980,7 +1121,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const unit = unitEl.value;
       populatePeriodKeys(periodsIndex, unit);
       populateCompareTarget(periodsIndex, unit, keyEl.value);
-      if (unit === 'all') {
+      if (unit === 'realtime') {
+        applyPeriodSelection('realtime', null, periodsIndex);
+      } else if (unit === 'all') {
         applyPeriodSelection('all', null, periodsIndex);
       } else {
         const key = keyEl.value;
@@ -999,13 +1142,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       compareTargetEl.addEventListener('change', () => {
         const unit = unitEl.value;
         const key = keyEl.value;
-        if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
+        if (unit === 'realtime') {
+          applyPeriodSelection('realtime', null, periodsIndex);
+        } else if (unit !== 'all' && key) {
+          applyPeriodSelection(unit, key, periodsIndex);
+        }
       });
     }
 
     const currentUnit = unitEl.value;
     const currentKey = keyEl.value;
-    if (currentUnit !== 'all' && currentKey) {
+    if (currentUnit === 'realtime') {
+      await applyPeriodSelection('realtime', null, periodsIndex);
+    } else if (currentUnit !== 'all' && currentKey) {
       await applyPeriodSelection(currentUnit, currentKey, periodsIndex);
     } else {
       render(agg);

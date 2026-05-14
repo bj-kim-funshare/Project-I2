@@ -486,6 +486,9 @@ i { color: var(--muted); }
 .chart-compare-list .cmp-up { color: #3b82f6; }
 .chart-compare-list .cmp-down { color: #ef4444; }
 
+/* ================= REALTIME MODE ================= */
+.period-key-hidden { display: none; }
+
 /* ================= ANIMATIONS ================= */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
