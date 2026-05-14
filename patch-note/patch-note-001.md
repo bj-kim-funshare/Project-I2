@@ -1,5 +1,38 @@
 # 아이OS — Patch Note (001)
 
+## v001.57.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #30
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 (D3)**: `.claude/skills/plan-enterprise-os/SKILL.md` 에 `[--codex]` 분기 추가 — invocation 옵션 / WIP A 명명 분기 (`-작업-codex`, WIP B 는 `-codex` 미접미) / Step 7 default vs codex 경로 분리 (7-codex-a 프롬프트 생성+halt, 7-codex-b 완료 검증, 7-codex-c 실패 옵션) / harness_context 처리 (CLAUDE.md 는 Codex 가 워크트리 직접 read, memory 발췌 + Treadmill Audit 결과는 이슈 본문 inline) / harness-aware Treadmill 검사 (rule/hook/agent/skill 수정 시 Q3 trade-out 검증) / HOTFIX codex 경로 확장 / Failure policy 3행 + Scope 갱신.
+- **Phase 2**: `.agents/skills/dev-build/SKILL.md` 신규 작성 — Claude 측 `dev-build` SKILL 의 Codex 측 미러. 어휘 치환만 (의미 변경 없음); `.claude/md/*` 경로는 single-source-of-truth 정책으로 유지.
+- **Phase 3**: `.codex/agents/` 누락 3개 .toml 추가 — `code-inspector.toml` (Opus 4.7, planning reviewer), `completion-reporter.toml` (Sonnet 4.6, read-only formatter), `gate-runner.toml` (Haiku 4.5, 기계적 실행). 모두 `effort: medium` 균일.
+- **Phase 4 (+ fix #1, #2)**: `AGENTS.md` 를 CLAUDE.md 현재 상태와 정렬 — §4 모델 표에 gate-runner / completion-reporter 행 추가 + advisor 모델 `claude-opus-4-7` 로 정정 (Sonnet-advisor 인버전 롤백 반영) / effort=medium 단락 신설; §5 worktree 기반 WIP 프로토콜 + repo-specific integration branch (I-OS=main / 외부=i-dev) + Codex variant 조항 + `git branch -d` 안전 삭제 단계; §9 branch alignment 정책 (18 skills) 신설; §8 token budget 의 sub-agent prompt 100k cap 반영; 폴더맵에서 `.Codex/rules/` `.Codex/hooks/` `.Codex/md/` 행 제거 + `.claude/md/` single-source 행 추가; References 에 `codex-collaboration.md` 참조 추가; "17 skills" → "18 skills". 의도적 비미러 한 줄 명시: "공유 절차 문서 `.claude/md/*.md` 는 Codex 측 skill/agent 도 직접 참조한다 (single source of truth — `.codex/md/` 미러를 별도로 만들지 않는다)."
+
+### 결정 사항 (Codex 자문 반영)
+
+- `.codex/md/` 디렉터리는 **만들지 않음**. Codex 측 skill/agent 가 `.claude/md/*.md` 를 직접 참조 — single source of truth, drift / sync 부담 / 트레드밀 회피.
+- 메모리 파일 (`~/.claude/projects/.../memory/*.md`) 은 워크트리 외부이므로 Codex sandbox 접근 불가 — `--codex` 모드에서 harness_context inline 위치는 prompt 본문이 아닌 **plan issue body**. `.claude/md/sub-agent-prompt-budget.md` 의 "save to permanent doc, pass identifier" 정책 준수.
+
+### 영향 파일
+
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.agents/skills/dev-build/SKILL.md` (신규)
+- `.codex/agents/code-inspector.toml` (신규)
+- `.codex/agents/completion-reporter.toml` (신규)
+- `.codex/agents/gate-runner.toml` (신규)
+- `AGENTS.md`
+
+### Treadmill Audit
+
+**NOT APPLICABLE** — 본 플랜은 신규 규칙/훅/에이전트/스킬/검증축을 추가하지 않았다. Phase 1 은 기존 `plan-enterprise-os` 스킬에 invocation 옵션 1개 (`--codex`) 추가로, 자매 스킬 `plan-enterprise` 의 D2 와 동형 — 동일 메커니즘의 sibling 미러일 뿐 신규 검증축이 아니다. Phase 2/3/4 는 이미 정해진 Codex 미러 구조의 누락분 보완.
+
+---
+
 ## v001.56.0
 
 > 통합일: 2026-05-14
