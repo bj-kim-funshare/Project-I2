@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.39.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 8)
+
+### 페이즈 결과
+
+- **Phase 12 (hotfix 8a)** (`5c9187f7`): 사용자 위젯 카드의 프로필 원형화 + 카드 반응형. `UserCard` 의 240×120 고정 inline style (width/height/flexShrink/borderRadius) 을 제거하고 `w-full h-full min-h-[80px] rounded` Tailwind 로 교체. ProfilePhoto 컨테이너를 PROFILE_WIDTH(72px) 고정 → `w-12 h-12 rounded-full overflow-hidden` 원형으로 변경 (이미지 + initials fallback 모두 원형). `PaginatedUserGrid` 의 grid 셀 크기를 기존 `minmax(0, 240px)` + `gridAutoRows: 120px` 에서 `minmax(0, 1fr)` + `gridTemplateRows: repeat(rows, 1fr)` 로 변경하여 vertical / horizontal / grid 세 레이아웃 모두 주어진 컨테이너 공간을 채우는 반응형 구조.
+- **Phase 12 (hotfix 8b)** (`4afc5818`): 가로 막대 그래프의 좌측 라벨 컬럼 적응형 폭. Canvas `measureText` (10px sans-serif, 실제 라벨 폰트와 동일) 로 모든 라벨의 픽셀 폭을 `useMemo` 한 번 측정, dot/gap/여백 22px 더해 `desiredLabelColWidth` 산출. **컨테이너 폭의 20% 상한** (마스터 직전 메시지로 15% → 20% 조정) 적용. 초기 렌더 (containerWidth=0) 시 상한 Infinity 로 두어 레이아웃 붕괴 방지, 최소 40px 보장. `desiredLabelColWidth` 가 상한 이내면 truncate 클래스/maxWidth 제거 → 라벨 자연 폭 + 남은 공간을 막대 영역이 흡수, 초과 시에만 고정 폭 + truncate 적용. 세로 막대 분기는 손대지 않음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/UserCard.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/PaginatedUserGrid.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +34/-32 across 3 files.
+- 페이즈 iter: 8a 1회, 8b 1회 모두 통과.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 사용자 위젯 수동 검증:
+  - 프로필 사진이 원형으로 보이는지 (이미지 + initials fallback 양쪽).
+  - vertical / horizontal / grid 레이아웃에서 위젯 영역에 카드가 fit 되며 겹침/잘림 없는지.
+  - PaginatedUserGrid 의 pagination 화살표 동작 유지.
+- 가로 막대 수동 검증:
+  - 라벨이 짧은 케이스 (예: "A", "B", "C") — 라벨 컬럼 자연 폭 (좁게), 막대 영역 더 넓게.
+  - 라벨이 긴 케이스 (예: "DB 마이그레이션", "백엔드 안정화") — 컨테이너 폭의 20% 초과 시 라벨 컬럼 20% 고정 + truncate 말줄임 적용.
+  - 위젯 폭 변화 (드래그 리사이즈) 시 컬럼 폭 즉시 재계산.
+
 ## v001.38.0
 
 > 통합일: 2026-05-14
