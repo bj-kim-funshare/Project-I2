@@ -1,0 +1,105 @@
+{
+  "skill": "dev-security-inspection",
+  "leader": "data-craft",
+  "scope_mode": "custom-payment-domain",
+  "scope_note": "master-supplied override — version/today 가 아니라 결제 도메인 전수. 구독·좌석·프로모션·웹훅·토스 호출 전 라인.",
+  "pre_inspection_report_path": "/Users/starbox/.claude/plans/data-craft-cryptic-cookie.md",
+  "hypotheses_to_revalidate": [
+    {"id": "G3", "category": "보안", "anchor": "/Users/starbox/Documents/GitHub/data-craft-server/src/services/promotion.service.ts:169-176", "claim": "FE→BE seats 상한선 무검증 → 금액 조작 가능성. seatChange/billingSubscription 동일 패턴 확인 요구"},
+    {"id": "G4", "category": "보안", "anchor": "/Users/starbox/Documents/GitHub/data-craft-server/src/controllers/webhook.controller.ts:34-42", "claim": "토스 웹훅 HMAC 서명 검증 부재. 토스 공식 PAYMENT_STATUS_CHANGED/BILLING_DELETED 본문에는 secret 필드가 정의돼 있지 않음 — 현 구현(env TOSS_WEBHOOK_SECRET vs event.secret 비교)이 토스 spec 과 어긋남"},
+    {"id": "G10", "category": "보안", "anchor": "promotion 만료 timezone boundary", "claim": "인증/세션/프로모션 만료가 모두 timezone boundary 우회 가능한 동일 패턴인지"}
+  ],
+  "mode_b_focus_axes": [
+    "injection (raw SQL, NoSQL, command, prototype pollution)",
+    "auth/authz — 다른 company 의 billingKey/payment_history 조회 가능성",
+    "secret exposure (TOSS_SECRET_KEY, TOSS_WEBHOOK_SECRET, billingKey 평문 저장/로그 출력)",
+    "crypto misuse — billingKey/카드정보 DB 저장 형태",
+    "SSRF / open redirect — /billing/success 콜백 URL 처리",
+    "IDOR — 타 유저 paymentKey/billingKey 로 cancelPayment/조회",
+    "amount client trust — amount FE→BE 신뢰 vs BE 재계산",
+    "환불 권한 — cancelPayment 가 admin 전용인지 본인 결제만인지",
+    "dependency advisory audit"
+  ],
+  "repos": [
+    {
+      "name": "data-craft-server",
+      "path": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "package_manager": "pnpm",
+      "target_files": [
+        "src/app.ts",
+        "src/config/constant.ts",
+        "src/config/envValidator.ts",
+        "src/controllers/billing.controller.ts",
+        "src/controllers/seatChange.controller.ts",
+        "src/controllers/subscription.controller.ts",
+        "src/controllers/webhook.controller.ts",
+        "src/middlewares/auth.middleware.ts",
+        "src/middlewares/plan-limit.middleware.ts",
+        "src/models/billing.model.ts",
+        "src/models/client.model.ts",
+        "src/models/clientSeatChangeRequests.model.ts",
+        "src/models/paymentHistory.model.ts",
+        "src/models/promotion.model.ts",
+        "src/models/webhook.model.ts",
+        "src/routes/promotion.routes.ts",
+        "src/routes/subscription.ts",
+        "src/services/auth.service.ts",
+        "src/services/billingRenewal.service.ts",
+        "src/services/billingScheduler.service.ts",
+        "src/services/billingSubscription.service.ts",
+        "src/services/charge.service.ts",
+        "src/services/promotion.service.ts",
+        "src/services/seatChange.service.ts",
+        "src/services/subscription.service.ts",
+        "src/services/tossPayments.service.ts",
+        "src/types/charge.types.ts",
+        "src/types/promotion.types.ts",
+        "src/types/tossPayments.types.ts",
+        "src/utils/sensitiveFieldMask.ts"
+      ]
+    },
+    {
+      "name": "data-craft",
+      "path": "/Users/starbox/Documents/GitHub/data-craft",
+      "package_manager": "pnpm",
+      "target_files": [
+        "src/app/router/index.tsx",
+        "src/features/subscription/api/billingApi.ts",
+        "src/features/subscription/api/cardApi.ts",
+        "src/features/subscription/lib/pendingPayment.ts",
+        "src/features/subscription/ui/PromotionPurchaseDialog.tsx",
+        "src/features/subscription/ui/SeatAddDialog.tsx",
+        "src/features/subscription/ui/UpgradeDialog.tsx",
+        "src/features/subscription/ui/UpgradeStepPayment.tsx",
+        "src/features/subscription/ui/UpgradeStepComplete.tsx",
+        "src/features/subscription/ui/CancelSubscriptionDialog.tsx",
+        "src/features/subscription/ui/DeleteCardDialog.tsx",
+        "src/features/subscription/model/subscriptionQueries.ts",
+        "src/features/subscription/model/types.ts",
+        "src/pages/billing-callback/ui/BillingSuccessPage.tsx",
+        "src/pages/billing-callback/ui/BillingFailPage.tsx",
+        "src/shared/config/env.ts",
+        "src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/PaymentHistorySection.tsx",
+        "src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx"
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "data-craft-mobile (결제 흐름 없음 가정 — 모바일은 WebView Shell)",
+    "data-craft-ai-preview (AI 프리뷰 페이지, 결제 없음)"
+  ],
+  "deliverable_extras": {
+    "comprehensive_report_path": "/Users/starbox/.claude/plans/data-craft-payment-security-review.md",
+    "report_sections": [
+      "모드 A 결과 표 (가설ID / verdict / 근거 file:line / 영향도)",
+      "모드 B 신규 발굴 표 (severity / file:line / 시나리오 / 권장 대응)",
+      "종합 우선순위 (HIGH/MEDIUM/LOW)",
+      "사전 조사 보고서와의 차이",
+      "토스 공식 정책 대조 결과",
+      "검증 메모"
+    ]
+  }
+}

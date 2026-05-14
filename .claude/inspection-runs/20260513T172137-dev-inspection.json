@@ -1,0 +1,178 @@
+{
+  "skill": "dev-inspection",
+  "leader": "data-craft",
+  "scope_mode": "custom-payment-domain",
+  "scope_note": "결제 도메인 전수 — 구독·좌석·프로모션·웹훅·토스 호출 전 라인. version/today 대신 master 명시 override. 비보안 시각만.",
+  "pre_inspection_report_path": "/Users/starbox/.claude/plans/data-craft-cryptic-cookie.md",
+  "security_inspection_report_path": "/Users/starbox/.claude/plans/data-craft-payment-security-review.md",
+  "consolidated_report_output_path": "/Users/starbox/.claude/plans/data-craft-payment-bug-review.md",
+  "exclude_already_covered": [
+    "G3 (seats 무상한 보안 측면 — 3개 경로 EXPANDED 까지 확정)",
+    "G4 (웹훅 HMAC 부재 보안 측면)",
+    "G10-security-verdict (timezone 보안 측면, 좁다고 verdict)",
+    "B1 (billingKey/카드 평문 저장)",
+    "B2 (cancelPayment companyId IDOR)",
+    "B5 (paymentHistory owner 가드)",
+    "B6 (웹훅 secret timing channel)",
+    "B8 (TOSS_*_SECRET fail-fast 부재)",
+    "dependency_audit (npm/pnpm — 1번에서 완료)"
+  ],
+  "revisit_in_nonsecurity_lens": [
+    "B7-collision (Math.random orderId 의 충돌 확률 — G13 이중결제 차단 깨질 조건)",
+    "B3-overflow (amount Number.MAX_SAFE_INTEGER 경계, BIGINT 정합성)",
+    "B4-overflow (amount 음수 입력 정합성)",
+    "G10-cron-race (promotion 만료 boundary × isWithinDisplayWindow 호출 시점 race)"
+  ],
+  "mode_a_hypotheses": [
+    {
+      "id": "G1",
+      "focus": "charge() 성공 + DB rollback + cancelPayment() 실패 3중 실패의 4개 호출지 동일 패턴 — cancel 실패 후 재시도/DLQ/alert/reconciliation 경로 부재 확인",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingSubscription.service.ts:247-265",
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingRenewal.service.ts:179-205",
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/seatChange.service.ts:158-165",
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/promotion.service.ts:266"
+      ]
+    },
+    {
+      "id": "G2",
+      "focus": "SeatAddDialog 즉시 추가 UX — '최종 결제 확인' 단계가 정말 confirm UI 0회인지",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft/src/features/subscription/ui/SeatAddDialog.tsx:102-134",
+        "/Users/starbox/Documents/GitHub/data-craft/src/features/subscription/ui/SeatAddDialog.tsx:310-320"
+      ]
+    },
+    {
+      "id": "G5",
+      "focus": "pending_promotion_id 무한 실패 루프 — 실패 횟수 카운트 / auto-clear 유무",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingRenewal.service.ts:46-61"
+      ]
+    },
+    {
+      "id": "G6",
+      "focus": "프로모션 회수 후 FREE 폴백 — findPromotionById null 분기 동작",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingRenewal.service.ts (findPromotionById null 분기)",
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/subscription.service.ts:40-56"
+      ]
+    },
+    {
+      "id": "G7",
+      "focus": "윤년 + 연간 갱신 setFullYear(+1) 처리 — 갱신/구독 비대칭",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingSubscription.service.ts:65-72",
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingRenewal.service.ts:100-113"
+      ]
+    },
+    {
+      "id": "G8",
+      "focus": "프로모션 갱신 시 currentSeats race",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/services/billingRenewal.service.ts:277-281"
+      ]
+    },
+    {
+      "id": "G9",
+      "focus": "웹훅 순서 역전 시 상태 일관성",
+      "anchors": [
+        "/Users/starbox/Documents/GitHub/data-craft-server/src/controllers/webhook.controller.ts:58-84"
+      ]
+    },
+    {
+      "id": "G11",
+      "focus": "cancelPromotion + payment_history.promotion_id 비동기 정합성",
+      "anchors": []
+    },
+    {
+      "id": "G13-G20",
+      "focus": "'차단 메커니즘 존재' 분류 항목 회귀 가드 — SELECT FOR UPDATE 가 트랜잭션 외부 charge() 호출 사이에서 깨지지 않는지 포함. G13 (orderId 충돌 이중결제) 의존성도 함께",
+      "anchors": []
+    }
+  ],
+  "mode_b_axes": [
+    "트랜잭션 경계 누락 (단일 INSERT 류 — createSeatChangeRequest 등)",
+    "charge() 호출이 트랜잭션 외부인 모든 지점의 race",
+    "swallow-and-continue try/catch 패턴 (에러 무시 + 후속 처리 없음)",
+    "cron 의 부분 실패 — 한 client 실패가 다음 client 실행을 차단하는지",
+    "JS Date 연산 (setMonth, setFullYear) 자동 오버플로우로 인한 날짜 변동",
+    "amount/seats/quantity 정수 오버플로우, 음수 입력 (Number.MAX_SAFE_INTEGER 경계, BIGINT 정합성)",
+    "Promise.all 안에서의 reject 처리 — 부분 성공 미보상",
+    "멱등키 생성 충돌 (Date.now()+random6 의 collision 분석)",
+    "웹훅 핸들러 비동기 작업이 200 응답 후에도 완주하는지 (fire-and-forget)",
+    "자원 누수: connection.release() 누락 경로 / 타이머·리스너 미해제"
+  ],
+  "repos": [
+    {
+      "name": "data-craft-server",
+      "path": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "package_manager": "pnpm",
+      "boundary_commit": null,
+      "files": [
+        "src/app.ts",
+        "src/config/constant.ts",
+        "src/config/envValidator.ts",
+        "src/controllers/billing.controller.ts",
+        "src/controllers/seatChange.controller.ts",
+        "src/controllers/subscription.controller.ts",
+        "src/controllers/webhook.controller.ts",
+        "src/middlewares/auth.middleware.ts",
+        "src/middlewares/plan-limit.middleware.ts",
+        "src/models/billing.model.ts",
+        "src/models/client.model.ts",
+        "src/models/clientSeatChangeRequests.model.ts",
+        "src/models/paymentHistory.model.ts",
+        "src/models/promotion.model.ts",
+        "src/models/webhook.model.ts",
+        "src/routes/promotion.routes.ts",
+        "src/routes/subscription.ts",
+        "src/services/auth.service.ts",
+        "src/services/billingRenewal.service.ts",
+        "src/services/billingScheduler.service.ts",
+        "src/services/billingSubscription.service.ts",
+        "src/services/charge.service.ts",
+        "src/services/promotion.service.ts",
+        "src/services/seatChange.service.ts",
+        "src/services/subscription.service.ts",
+        "src/services/tossPayments.service.ts",
+        "src/types/charge.types.ts",
+        "src/types/promotion.types.ts",
+        "src/types/tossPayments.types.ts",
+        "src/utils/sensitiveFieldMask.ts"
+      ]
+    },
+    {
+      "name": "data-craft",
+      "path": "/Users/starbox/Documents/GitHub/data-craft",
+      "package_manager": "pnpm",
+      "boundary_commit": null,
+      "files": [
+        "src/app/router/index.tsx",
+        "src/features/subscription/api/billingApi.ts",
+        "src/features/subscription/api/cardApi.ts",
+        "src/features/subscription/lib/pendingPayment.ts",
+        "src/features/subscription/ui/PromotionPurchaseDialog.tsx",
+        "src/features/subscription/ui/SeatAddDialog.tsx",
+        "src/features/subscription/ui/UpgradeDialog.tsx",
+        "src/features/subscription/ui/UpgradeStepPayment.tsx",
+        "src/features/subscription/ui/UpgradeStepComplete.tsx",
+        "src/features/subscription/ui/CancelSubscriptionDialog.tsx",
+        "src/features/subscription/ui/DeleteCardDialog.tsx",
+        "src/features/subscription/model/subscriptionQueries.ts",
+        "src/features/subscription/model/types.ts",
+        "src/pages/billing-callback/ui/BillingSuccessPage.tsx",
+        "src/pages/billing-callback/ui/BillingFailPage.tsx",
+        "src/shared/config/env.ts",
+        "src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/PaymentHistorySection.tsx",
+        "src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx",
+        "src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx"
+      ]
+    }
+  ],
+  "verdict_taxonomy": ["CONFIRMED", "CONFIRMED-WITH-MITIGATION", "REJECTED", "EXPANDED"],
+  "findings_schema": {
+    "fields": ["severity (block|warn)", "file", "line", "category", "summary", "evidence_quote", "suggested_fix", "mode_tag (A:Gxx | B:axis-name)", "verdict (mode A only)", "confidence"]
+  }
+}
