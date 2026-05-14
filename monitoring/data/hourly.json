@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-14T05:33:25.195451+00:00",
+  "generated_at": "2026-05-14T08:27:31.365850+00:00",
   "hours": [
     {
       "hour": "2026-05-10T02",
@@ -1739,39 +1739,39 @@
     },
     {
       "hour": "2026-05-14T14",
-      "input": 553,
-      "output": 215349,
-      "cache_creation_5m": 100455,
-      "cache_creation_1h": 354883,
-      "cache_read": 112210165,
-      "messages": 286,
-      "cost_usd": 194.9257,
+      "input": 842,
+      "output": 340622,
+      "cache_creation_5m": 150521,
+      "cache_creation_1h": 724599,
+      "cache_read": 140276827,
+      "messages": 414,
+      "cost_usd": 257.5419,
       "by_model": [
         {
           "model": "claude-opus-4-7",
-          "input": 545,
-          "output": 207945,
+          "input": 831,
+          "output": 330997,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 354883,
-          "cache_read": 112103573
+          "cache_creation_1h": 724599,
+          "cache_read": 140145636
         },
         {
           "model": "claude-sonnet-4-6",
-          "input": 8,
-          "output": 7404,
-          "cache_creation_5m": 100455,
+          "input": 11,
+          "output": 9625,
+          "cache_creation_5m": 150521,
           "cache_creation_1h": 0,
-          "cache_read": 106592
+          "cache_read": 131191
         }
       ],
       "by_skill": [
         {
           "skill": "patch-confirmation",
-          "input": 121,
-          "output": 72764,
-          "cache_creation_5m": 16686,
-          "cache_creation_1h": 114634,
-          "cache_read": 27843329
+          "input": 243,
+          "output": 119570,
+          "cache_creation_5m": 33372,
+          "cache_creation_1h": 168770,
+          "cache_read": 51234734
         },
         {
           "skill": "plan-enterprise",
@@ -1783,11 +1783,11 @@
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 227,
-          "output": 90164,
-          "cache_creation_5m": 16845,
-          "cache_creation_1h": 154655,
-          "cache_read": 56180171
+          "input": 394,
+          "output": 168631,
+          "cache_creation_5m": 50225,
+          "cache_creation_1h": 470235,
+          "cache_read": 60855428
         },
         {
           "skill": "task-db-data",
@@ -1796,6 +1796,192 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 3722,
           "cache_read": 7444536
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T15",
+      "input": 3505,
+      "output": 575682,
+      "cache_creation_5m": 170876,
+      "cache_creation_1h": 2518505,
+      "cache_read": 79248285,
+      "messages": 647,
+      "cost_usd": 236.7847,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-haiku-4-5",
+          "input": 34,
+          "output": 820,
+          "cache_creation_5m": 5775,
+          "cache_creation_1h": 0,
+          "cache_read": 58954
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 3449,
+          "output": 560864,
+          "cache_creation_5m": 15827,
+          "cache_creation_1h": 2518505,
+          "cache_read": 78560352
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 22,
+          "output": 13998,
+          "cache_creation_5m": 149274,
+          "cache_creation_1h": 0,
+          "cache_read": 628979
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 22,
+          "output": 5070,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 6416,
+          "cache_read": 4833149
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 880,
+          "output": 314663,
+          "cache_creation_5m": 93966,
+          "cache_creation_1h": 1620111,
+          "cache_read": 49134301
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 2354,
+          "output": 175974,
+          "cache_creation_5m": 58282,
+          "cache_creation_1h": 458232,
+          "cache_read": 16966173
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 151,
+          "output": 48061,
+          "cache_creation_5m": 18628,
+          "cache_creation_1h": 203708,
+          "cache_read": 7200763
+        },
+        {
+          "skill": "메인 세션",
+          "input": 98,
+          "output": 31914,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 230038,
+          "cache_read": 1113899
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T16",
+      "input": 898,
+      "output": 455786,
+      "cache_creation_5m": 67270,
+      "cache_creation_1h": 1183383,
+      "cache_read": 58318528,
+      "messages": 413,
+      "cost_usd": 156.4768,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 885,
+          "output": 447219,
+          "cache_creation_5m": 113,
+          "cache_creation_1h": 1183383,
+          "cache_read": 57952146
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 13,
+          "output": 8567,
+          "cache_creation_5m": 67157,
+          "cache_creation_1h": 0,
+          "cache_read": 366382
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 18,
+          "output": 7473,
+          "cache_creation_5m": 16686,
+          "cache_creation_1h": 11591,
+          "cache_read": 1130976
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 868,
+          "output": 444229,
+          "cache_creation_5m": 50584,
+          "cache_creation_1h": 1129752,
+          "cache_read": 57146072
+        },
+        {
+          "skill": "메인 세션",
+          "input": 12,
+          "output": 4084,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 42040,
+          "cache_read": 41480
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-14T17",
+      "input": 258,
+      "output": 112179,
+      "cache_creation_5m": 16046,
+      "cache_creation_1h": 319930,
+      "cache_read": 21094328,
+      "messages": 93,
+      "cost_usd": 49.6285,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 257,
+          "output": 110887,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 319930,
+          "cache_read": 21085270
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "input": 1,
+          "output": 1292,
+          "cache_creation_5m": 16046,
+          "cache_creation_1h": 0,
+          "cache_read": 9058
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 51,
+          "output": 8294,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 190060,
+          "cache_read": 566115
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 207,
+          "output": 103885,
+          "cache_creation_5m": 16046,
+          "cache_creation_1h": 129870,
+          "cache_read": 20528213
         }
       ]
     }
