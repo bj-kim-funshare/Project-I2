@@ -28,20 +28,24 @@ For each selected target, run these checks. Each failing check produces one find
 Manifest field non-empty. Missing/empty → `severity: warn`. Build runs; deploy step is skipped; master deploys manually.
 
 ### 2. Tool CLI invocable
-Map by `target.tool`:
+`target.tool` is a descriptive label. Probes run ONLY when the corresponding CLI trigger token appears in `target.deploy_command`. The `tool` field alone does not force probe execution.
 
-| Tool | Probe |
-|---|---|
-| `gh-pages` | `npx gh-pages --version` (or `[ -x node_modules/.bin/gh-pages ]`) |
-| `firebase` | `firebase --version` |
-| `docker` | `docker --version` AND `docker info` (daemon up) |
-| `kubernetes` | `kubectl version --client` |
-| `vercel` | `vercel --version` |
-| `netlify` | `netlify --version` |
-| `aws` | `aws --version` AND `aws sts get-caller-identity` (authenticated) |
-| `other` | Skip — master responsibility |
+**Token extraction**: split `target.deploy_command` on whitespace and on shell operators (`&&`, `||`, `|`, `;`) to produce a token set. Matching uses **exact string equality** (`token == "aws"`) — NOT prefix or substring matching (`awk` and `awscli2` must NOT match the `aws` trigger). For `npx <pkg>` invocations, include BOTH `npx` and `<pkg>` in the token set. Do not implement this as a single `grep -E` regex; use an exact-equality lookup against the split token set.
 
-Probe failure → `severity: block`.
+| Tool label | Trigger token | Probe(s) and failure severity |
+|---|---|---|
+| `gh-pages` | `gh-pages` | First check `[ -x node_modules/.bin/gh-pages ]`; if absent, fall back to `npx gh-pages --version`. Failure → `warn`. |
+| `firebase` | `firebase` | `firebase --version` → `block` on failure. |
+| `docker` | `docker` | `docker --version` (binary presence) → `block` on failure; `docker info` (daemon state) → `warn` on failure. |
+| `kubernetes` | `kubectl` | `kubectl version --client` → `block` on failure. |
+| `vercel` | `vercel` | `vercel --version` → `block` on failure. |
+| `netlify` | `netlify` | `netlify --version` → `block` on failure. |
+| `aws` | `aws` | `aws --version` (binary presence) → `block` on failure; `aws sts get-caller-identity` (credentials/network) → `warn` on failure. |
+| (other) | — | Skip — master responsibility. |
+
+**Skip rule**: if the trigger token is absent from the `deploy_command` token set, the entire row is skipped — emit no finding. The `tool` label alone never forces a probe.
+
+**Severity principle**: binary-presence probe failure → `severity: block` (locally non-functional, confirmed); environment-availability probe failure (network fetch, credentials, external daemon) → `severity: warn` (the validator sandbox is not the master's deploy environment, so the signal is not definitive).
 
 ### 3. `build_command` invocability
 Parse the first whitespace-separated token. Run `command -v <token>` (or `which`). Token unresolvable → `severity: block`. Do NOT execute the full build.
