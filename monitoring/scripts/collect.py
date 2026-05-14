@@ -362,6 +362,7 @@ def new_period_state() -> dict[str, Any]:
     return {
         "by_model": defaultdict(empty_token_record),
         "by_skill": defaultdict(empty_token_record),
+        "by_agent": defaultdict(empty_token_record),
         "by_session": {},
         "by_day": defaultdict(empty_token_record),
         "by_day_cost": defaultdict(float),
@@ -381,6 +382,7 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
     """Convert a period_state dict into the same JSON schema as aggregate.json."""
     by_model = state["by_model"]
     by_skill = state["by_skill"]
+    by_agent = state.get("by_agent", {})
     by_session = state["by_session"]
     by_day = state["by_day"]
     by_day_cost = state["by_day_cost"]
@@ -400,6 +402,11 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
     by_skill_out = [
         {"skill": s, **r}
         for s, r in sorted(by_skill.items(), key=lambda kv: -kv[1]["messages"])
+    ]
+
+    by_agent_out = [
+        {"agent": a, **r}
+        for a, r in sorted(by_agent.items(), key=lambda kv: -kv[1]["messages"])
     ]
 
     by_session_out = [
@@ -433,6 +440,7 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
         "total": {**total, "cost_usd": round(total_cost, 4), "cost_breakdown": total_breakdown},
         "by_model": by_model_out,
         "by_skill": by_skill_out,
+        "by_agent": by_agent_out,
         "by_session": by_session_out,
         "by_day": by_day_out,
         "by_prompt": period_by_prompt,
@@ -446,6 +454,7 @@ def collect() -> dict[str, Any]:
 
     by_model: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_skill: dict[str, dict[str, int]] = defaultdict(empty_token_record)
+    by_agent: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_session: dict[str, dict[str, Any]] = {}
     by_day: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_day_cost: dict[str, float] = defaultdict(float)
@@ -618,6 +627,7 @@ def collect() -> dict[str, Any]:
 
                 add_usage(by_model[model], agent_usage)
                 add_usage(by_skill[skill], agent_usage)
+                add_usage(by_agent[agent_type], agent_usage)
                 day_key = (ts or "")[:10] or "unknown"
                 add_usage(by_day[day_key], agent_usage)
                 add_usage(session_record["tokens"], agent_usage)
@@ -660,6 +670,7 @@ def collect() -> dict[str, Any]:
 
                         add_usage(ps["by_model"][model], agent_usage)
                         add_usage(ps["by_skill"][skill], agent_usage)
+                        add_usage(ps["by_agent"][agent_type], agent_usage)
                         add_usage(ps["by_day"][day_key], agent_usage)
                         add_usage(ps["total"], agent_usage)
 
@@ -739,6 +750,11 @@ def collect() -> dict[str, Any]:
         for s, r in sorted(by_skill.items(), key=lambda kv: -kv[1]["messages"])
     ]
 
+    by_agent_out = [
+        {"agent": a, **r}
+        for a, r in sorted(by_agent.items(), key=lambda kv: -kv[1]["messages"])
+    ]
+
     by_session_out = [
         {**s, "tokens": s["tokens"]}
         for s in sorted(by_session.values(), key=lambda x: x["last_timestamp"] or "", reverse=True)
@@ -777,6 +793,7 @@ def collect() -> dict[str, Any]:
         "total": {**total, "cost_usd": round(total_cost, 4), "cost_breakdown": total_breakdown},
         "by_model": by_model_out,
         "by_skill": by_skill_out,
+        "by_agent": by_agent_out,
         "by_session": by_session_out,
         "by_day": by_day_out,
         "by_prompt": by_prompt,
