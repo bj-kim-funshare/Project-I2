@@ -70,7 +70,7 @@ git branch -d "${wip}"            # 표준 단계 — 안전 삭제 (실패 시 
 
 보호 예외: 통합 브랜치 (`main`, `i-dev`) 는 본 단계의 `<wip>` 대상이 될 수 없음 (애초에 worktree-add 로 만든 WIP 만 해당).
 
-`dev-merge` 같이 PR 경유 머지를 수행하는 스킬은 `gh pr merge --delete-branch` 옵션으로 동일 의무를 충족 — 브랜치 삭제 책임은 스킬 측에 있음.
+`dev-merge` 같이 PR 경유 머지를 수행하는 스킬은 비보호 from-branch 의 경우 `gh pr merge --delete-branch` 로 동일 의무를 충족한다. 단 from-branch 가 보호 브랜치 목록 (`i-dev` / `main` / `master` / `develop`) 에 속하면 `--delete-branch` 를 생략하여 브랜치를 보존하며, 이때는 본 lifecycle 의 "삭제 의무" 가 적용되지 않는다 (long-running 통합 브랜치는 그 자체가 보존 대상). 세부 절차는 `.claude/skills/dev-merge/SKILL.md` 의 "보호 브랜치" 절 참조.
 
 ## Entry ritual (every write skill runs at start)
 
