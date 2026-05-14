@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.28.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16
+
+### 페이즈 결과
+
+- **Phase 1** (`6f6f7c86`): `packages/fs-data-viewer/src/entities/dashboard/types.ts` 에 `export const VALUE_COLUMN_MAX = 3` 상수를 `ChartValueColumn` 타입 정의 직전에 추가. `LineChartWidget` 과 `BarChartWidget` 양쪽에서 컴포넌트 스코프 최상단에 `valueColumns = (config?.valueColumns ?? []).slice(0, VALUE_COLUMN_MAX)` 로컬 변수를 선언하고 IIFE 내부 valueColumnConfigs 빌드 루프, `valueCount`, `isSingleSeries` 판별까지 truncate 된 로컬을 참조하도록 교체. 4+ 시리즈로 저장된 기존 위젯도 렌더 단에서 앞 3개만 적용된다.
+- **Phase 2** (`a1dc505d`): `packages/fs-data-viewer/src/shared/ui/ColorPicker/ColorPickerBase.tsx` 에 `allowCustomHex?: boolean` (기본 false) prop 추가 — true 시 팔레트 끝 "커스텀" 타일 렌더, 클릭 시 native color input 으로 임의 hex 를 `onSelectColor(-1)` 콜백. 기존 Gantt/Kanban 호출부는 prop 미전달로 동작 불변. 선 차트 전용 래퍼 `FsLineChartColorPicker.tsx` 신설 — `colorScheme` 8색 팔레트 + `allowCustomHex=true`, 인스턴스별 open/close/position 상태 내장. `LineChartSettings.tsx` 의 native input 을 본 래퍼로 교체, `valueColumns.length >= 3` 시 추가 Select 대신 "최대 3개" 안내 표시, 마운트 시 4+ 면 앞 3개로 마이그레이션 `useEffect`.
+- **Phase 3** (`7bd0bb78`): `BarChartSettings.tsx` 에 Phase 2 와 동일 패턴 적용 — `valueColumns.length >= 3` 시 추가 Select 대신 "최대 3개까지 추가할 수 있습니다." 안내, 마운트 시 4+ 면 앞 3개로 마이그레이션. 막대 차트는 색이 colorScheme 인덱스 자동 적용이므로 색 입력기는 추가하지 않음.
+- **Phase 4** (`58b51e98`): `LineChartWidget` / `BarChartWidget` 양쪽에 컨테이너 폭 측정 `ResizeObserver` 추가 (callback ref + `useState<HTMLElement | null>`, early-return placeholder 와의 hook 순서 충돌 없이). `containerWidth >= 360px` 일 때 외곽 `motion.div` 를 `flex-row` 로 전환하고 범례를 우측 `flex-col` (min-w-[80px]) 로 렌더링, 그 미만은 현행 상단 `flex-wrap` 유지. `BarChartWidget` 의 가로/세로 두 렌더링 분기는 단일 `legendOnRight` 플래그 공유.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`, merge SHA on i-dev-001 head):
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts`
+- `packages/fs-data-viewer/src/shared/ui/ColorPicker/ColorPickerBase.tsx`
+- `packages/fs-data-viewer/src/shared/ui/ColorPicker/FsLineChartColorPicker.tsx` (신규)
+- `packages/fs-data-viewer/src/shared/ui/ColorPicker/types.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/LineChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/BarChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/LineChartWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: 영향 파일 8개 모두 plan affected_files 내. 페이즈 간 surprise file 없음.
+- advisor: 계획 시점 + 완료 시점 5관점 2회 모두 PASS (BLOCK 없음). 완료 시점 advisor 는 lint baseline skip 결정 + Phase 4 ResizeObserver ref 위치 (외곽 motion.div, 그리드 셀 폭 기반, 레이아웃 토글 불변) 를 명시 검증.
+- 페이즈 iter: 4 페이즈 각 1회 디스패치 — 재시도 0회.
+- Lint gate: `pnpm typecheck:all && pnpm lint` exit 2 — **본 플랜 변경과 무관한 사전 존재 오류** (`fs_data_viewer` `FsDataViewerModel.kanbanCardAreas` 누락, `DashboardWidgetType` export 누락, `JSX` namespace, `BarChartWidget.label-rotation.test.tsx` 의 `'bar'` 리터럴 타입 등). 베이스라인 i-dev-001 에서 동일 재현. Phase 1-4 신규 심볼 (`VALUE_COLUMN_MAX` / `FsLineChartColorPicker` / `allowCustomHex` / `legendOnRight` / `containerWidth`) 어느 것도 typecheck 출력에 등장하지 않음을 grep 으로 확인. CLAUDE.md §6 예방 트레드밀 회피 원칙에 따라 진행, **별도 트랙 정리 권장**.
+
+### 운영 메모
+
+- **수동 검증 필요**: 본 스킬 세션은 dev 서버 / 브라우저 실행 검증을 수행하지 않음. 마스터 골든 패스 확인 시나리오:
+  1. 대시보드뷰에 신규 선 차트 위젯 → 값 컬럼 3개 추가 → 4개째 시 "최대 3개" 안내로 Select 차단 확인.
+  2. 각 라인 색을 `FsLineChartColorPicker` 의 팔레트 + 커스텀 hex 양쪽으로 지정 확인.
+  3. 막대 차트 위젯 → 값 컬럼 3개 cap + colorScheme 시리즈 인덱스 색 확인.
+  4. 위젯 폭을 360px 경계 전후로 드래그하여 범례 상단↔우측 자동 전환 확인 (오실레이션 없는지).
+  5. 4+ 시리즈로 저장된 기존 위젯이 있다면 (수동 JSON / DB 편집) 렌더 시 앞 3개만 표시 + 설정 진입 시 마이그레이션 저장 확인.
+- Lint baseline 결함은 본 플랜 무관 — 별도 핫픽스/플랜으로 정리 권장.
+
 ## v001.27.0
 
 > 통합일: 2026-05-14
