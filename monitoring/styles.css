@@ -460,25 +460,22 @@ i { color: var(--muted); }
   color: #ef4444;
 }
 
-/* ================= COMPARE TOGGLE ================= */
-.compare-toggle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+/* ================= COMPARE TARGET SELECT ================= */
+#period-compare-target {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font: inherit;
   font-size: 13px;
-  color: var(--muted);
   cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
+  outline: none;
+  transition: border-color 0.15s;
 }
-.compare-toggle input[type="checkbox"] {
-  cursor: pointer;
-  accent-color: var(--accent);
-}
-.compare-toggle input[type="checkbox"]:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
+#period-compare-target:hover { border-color: var(--accent); }
+#period-compare-target:focus { border-color: var(--accent); }
+#period-compare-target:disabled { opacity: 0.45; cursor: default; }
 
 /* ================= CHART COMPARE LIST ================= */
 .chart-compare-list {

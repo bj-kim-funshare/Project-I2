@@ -730,6 +730,9 @@ function updateUrl(unit, key) {
   if (unit && unit !== 'all') {
     params.set('period', unit);
     if (key) params.set('key', key);
+    const compareEl = document.getElementById('period-compare-target');
+    const compareKey = compareEl ? compareEl.value : '';
+    if (compareKey) params.set('compare', compareKey);
   }
   const qs = params.toString();
   history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
@@ -828,15 +831,32 @@ function populatePeriodKeys(periodsIndex, unit) {
   keyEl.disabled = false;
 }
 
-function updateCompareToggleState(unit, periodsIndex) {
-  const compareEl = document.getElementById('period-compare');
-  if (!compareEl) return;
-  if (!unit || unit === 'all') {
-    compareEl.disabled = true;
-    compareEl.checked = false;
-  } else {
-    compareEl.disabled = false;
+function populateCompareTarget(periodsIndex, unit, selectedKey) {
+  const el = document.getElementById('period-compare-target');
+  if (!el) return;
+  el.innerHTML = '<option value="">없음</option>';
+  if (!unit || unit === 'all' || unit === 'realtime') {
+    el.disabled = true;
+    return;
   }
+  const { year: cy, week: cw } = dateToIsoWeek(new Date());
+  const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
+  let keys = ((periodsIndex || {})[unit] || []).slice().sort().reverse();
+  keys = keys.filter(k => k !== selectedKey);
+  if (unit === 'weekly') {
+    keys = keys.filter(k => k !== currentWeekKey);
+  }
+  if (!keys.length) {
+    el.disabled = true;
+    return;
+  }
+  for (const k of keys) {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = unit === 'weekly' ? formatWeekLabel(k) : k;
+    el.appendChild(opt);
+  }
+  el.disabled = false;
 }
 
 function updateLastRefreshDisplay() {
@@ -852,8 +872,8 @@ function updateLastRefreshDisplay() {
 async function applyPeriodSelection(unit, key, periodsIndex) {
   const err = $('#error');
   err.hidden = true;
-  const compareEl = document.getElementById('period-compare');
-  const compareOn = compareEl && !compareEl.disabled && compareEl.checked;
+  const compareTargetEl = document.getElementById('period-compare-target');
+  const compareKey = compareTargetEl && !compareTargetEl.disabled ? compareTargetEl.value : '';
 
   try {
     if (!unit || unit === 'all') {
@@ -868,16 +888,15 @@ async function applyPeriodSelection(unit, key, periodsIndex) {
       const agg = await loadAggregate();
       const idx = periodsIndex || (agg.periods_index || {});
 
-      if (compareOn) {
-        const prevKey = prevPeriodKey(unit, key);
-        const prevKeys = idx[unit] || [];
-        if (prevKey && prevKeys.includes(prevKey)) {
-          const prevData = await loadPeriodData(unit, prevKey);
-          $('#meta').textContent = `기간: ${key} vs ${prevKey} (비교) | 생성일: ${shortTime(agg.generated_at)}`;
-          renderAll(data, prevData);
-          applyDeltaBadgesFromValues(computeKpiSnapshot(prevData), computeKpiSnapshot(data));
+      if (compareKey && compareKey !== key) {
+        const compareKeys = idx[unit] || [];
+        if (compareKeys.includes(compareKey)) {
+          const compareData = await loadPeriodData(unit, compareKey);
+          $('#meta').textContent = `기간: ${key} vs ${compareKey} (비교) | 생성일: ${shortTime(agg.generated_at)}`;
+          renderAll(data, compareData);
+          applyDeltaBadgesFromValues(computeKpiSnapshot(compareData), computeKpiSnapshot(data));
         } else {
-          $('#meta').textContent = `기간: ${key} | 비교 불가: 직전 기간 데이터 없음 | 생성일: ${shortTime(agg.generated_at)}`;
+          $('#meta').textContent = `기간: ${key} | 비교 불가: 선택한 비교 기간 데이터 없음 | 생성일: ${shortTime(agg.generated_at)}`;
           clearDeltaBadges();
           renderAll(data);
         }
@@ -933,11 +952,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const unitEl = $('#period-unit');
     const keyEl = $('#period-key');
-    const compareEl = document.getElementById('period-compare');
+    const compareTargetEl = document.getElementById('period-compare-target');
 
     unitEl.value = initUnit;
     populatePeriodKeys(periodsIndex, initUnit);
-    updateCompareToggleState(initUnit, periodsIndex);
 
     if (initUnit !== 'all' && initKey) {
       const validKeys = (periodsIndex[initUnit] || []);
@@ -946,14 +964,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         unitEl.value = 'all';
         populatePeriodKeys(periodsIndex, 'all');
-        updateCompareToggleState('all', periodsIndex);
       }
+    }
+
+    const resolvedUnit = unitEl.value;
+    const resolvedKey = keyEl.value;
+    populateCompareTarget(periodsIndex, resolvedUnit, resolvedKey);
+
+    const initCompare = urlParams.get('compare') || '';
+    if (initCompare && compareTargetEl && !compareTargetEl.disabled) {
+      compareTargetEl.value = initCompare;
     }
 
     unitEl.addEventListener('change', () => {
       const unit = unitEl.value;
       populatePeriodKeys(periodsIndex, unit);
-      updateCompareToggleState(unit, periodsIndex);
+      populateCompareTarget(periodsIndex, unit, keyEl.value);
       if (unit === 'all') {
         applyPeriodSelection('all', null, periodsIndex);
       } else {
@@ -965,11 +991,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     keyEl.addEventListener('change', () => {
       const unit = unitEl.value;
       const key = keyEl.value;
+      populateCompareTarget(periodsIndex, unit, key);
       if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
     });
 
-    if (compareEl) {
-      compareEl.addEventListener('change', () => {
+    if (compareTargetEl) {
+      compareTargetEl.addEventListener('change', () => {
         const unit = unitEl.value;
         const key = keyEl.value;
         if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
