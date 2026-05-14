@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.47.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#24
+> 대상 저장소: data-craft-server
+
+### 페이즈 결과
+
+- **Phase 1** (fix): `processAutoRenewals` for 루프에 per-client try/catch 추가. `renewSingleClient` 미처리 예외가 propagate 해도 다음 client 로 진행 — cron 부분 실패 격리 (B7:cron-partial-fail). 동일 파일 `processExpiredPlans` 의 형제 패턴 차용.
+
+### 영향 파일
+
+- data-craft-server: (수정) src/services/billingScheduler.service.ts
+
+### 참고
+
+- 이슈 funshare-inc/data-craft#11 잔여 finding 정리의 일환. G1 (1~4) 는 마스터 결정으로 폐기 (환불 보상, 고객 문의 경로 유지). G5/G6 는 plan-enterprise #23 에서 기처리.
+
 ## v001.46.0
 
 > 통합일: 2026-05-14
