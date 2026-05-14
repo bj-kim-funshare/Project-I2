@@ -1,5 +1,32 @@
 # 아이OS — Patch Note (001)
 
+## v001.71.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #38
+> 대상: 아이OS
+
+### 변경 사유
+
+직전 v001.70.0 (이슈 #37) 이 dev-merge 에 leader 인자 + Step 0 UI (repo 선택 카드 + from-branch 카드 + to-branch 카드) 를 도입했으나, 마스터의 실사용 시점에서 결함이 드러났다 — dev-merge 는 배포 스킬 (pre-deploy) 과 달리 그룹만 입력하면 **그룹 내 모든 멤버 repo 에 대해 자동 수행** 해야 한다. 즉 v001.70.0 의 repo 선택 카드 자체가 잘못된 디자인이었다. 본 v001.71.0 으로 repo 선택 카드를 제거하고, from/to 도 개별 두 카드 대신 **하나의 "브랜치 조합" 카드** (프리셋 `i-dev → main`, `main → i-dev` + Other) 로 통합하며, 같은 (from, to) 쌍을 모든 멤버 repo 에 자동 순회 적용한다. 동시에 dev-merge 의 책임 영역을 **long-running 통합 브랜치 (i-dev ↔ main) 승격 전용** 으로 좁히고, 임의 WIP 머지 (plan-enterprise auto-merge 영역) 와 main → 배포 타겟 브랜치 동기화 (pre-deploy 의 `deploy_command` 영역, 예: `aws-deploy`, `gh-pages` force-publish) 를 명시적으로 out-of-scope 화.
+
+### 페이즈 결과
+
+- **Phase 1 — dev-merge SKILL.md 멀티-repo + 브랜치 조합 단일 카드 재설계** (`480ca59`): Frontmatter description / L8 본문을 멀티-repo 자동 순회 어휘로 교체. `## Step 0` 전체 재작성 — 0.1 (Leader 해석, 유지) / 0.2 (브랜치 조합 단일 카드 — 외부 컨텍스트 프리셋 `i-dev → main` / `main → i-dev` + Other, 아이OS 텍스트 폴백) / 0.3 (멀티-repo 검증 + 진행 큐 — 부재 repo skip 로그). 신규 `## 멀티-repo 순회 (외부 loop)` 섹션 — per-iter 7단계 (cd / Entry ritual / Context preparation / Reviewer + auto-iter / Lint 게이트 / PENDING 단일 게이트 / Merge + ff-pull) + per-repo failure halt 정책 (완료/처리중/미처리 리스트). `## Worktree 격리` 의 `$(pwd)` 매 iter 갱신 명시. `## Context preparation` 표에 "Member repo (current iter)" 행 추가. `## Pre-conditions` #4 를 Step 0.3 진행 큐 ≥ 1 으로 갱신. `## Failure policy` 표에 3개 신규 행 (진행 큐 비어있음 / 0.2 자유 입력 파싱 실패 / 멀티-repo N번째 실패) 추가, from/to 부재 행 4개 제거 (0.3 skip 로그로 일반화). `## Scope` In-scope 에 멀티-repo 자동 순회 추가, Out-of-scope 에 (a) 임의 WIP 머지 (plan-enterprise auto-merge 영역) / (b) main → 배포 타겟 브랜치 동기화 (pre-deploy 의 `deploy_command` 영역) 명시.
+
+### 영향 파일
+
+- `.claude/skills/dev-merge/SKILL.md`
+
+### Treadmill Audit
+
+PASS — 신규 mechanism 순증 0. Q3 trade-out 3건 명시:
+1. **폐기**: v001.70.0 의 Step 0.2 repo 선택 카드.
+2. **폐기**: v001.70.0 의 Step 0.3 / 0.4 분리 from-branch / to-branch 카드 (단일 브랜치 조합 카드로 통합).
+3. **폐기**: dev-merge 의 임의 WIP 브랜치 머지 능력 — plan-enterprise auto-merge 가 이미 담당. 동시에 main → 배포 타겟 브랜치 동기화는 pre-deploy 의 `deploy_command` 영역으로 명시 (영역 분리 차원의 책임 경계 정리).
+
+Q1 (재발 사고) = 마스터의 `/dev-merge data-craft` 실사용 결함 지적이 직접 트리거. Q2 (엣지 케이스) = 부재 repo skip / from==to / 단일-repo (아이OS) / 부분-성공 halt 보고 포맷 / 배포 타겟 브랜치 영역 분리.
+
 ## v001.70.0
 
 > 통합일: 2026-05-14
