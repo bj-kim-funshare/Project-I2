@@ -1,5 +1,77 @@
 # 아이OS — Patch Note (001)
 
+## v001.59.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #29 (핫픽스2)
+> 대상: 아이OS
+
+### 핫픽스2 요약
+
+본 plan #29 의 청소 스크립트가 "active-worktree" 로 보호 분류한 worktree 들이 사실은 폐기 하네스 Project-I 의 좀비였음을 마스터가 GitHub Desktop 가시화로 확인. 추가 정리 + origin remote 청소 + 파일시스템 orphan 폴더 청소까지 완수.
+
+**진단:** I2 규약은 `../<repo>-worktrees/<wip>` (sibling, hyphen), Project-I 규약은 `<repo>/.worktrees/<wip>`, `<repo>.worktrees/<wip>`, `<repo>-wt-<wip>` 등 3종. 본 plan 의 청소 스크립트는 `git worktree list` 결과만으로 "active" 판정 → Project-I 좀비를 보호 처리하는 결함. 별도 한방 스크립트 (`/tmp/branch-cleanup-29-hotfix2/zombie-cleanup*.sh`) 로 일괄 처리.
+
+### 청소 결과 (3단계)
+
+#### 1단계: I2 stale post-merge worktree (4건)
+
+동시 세션이 머지만 하고 본 plan 의 새 정책 적용 못 한 잔재. main 의 조상 검증 후 `worktree remove --force` + `branch -D` + `push origin --delete`.
+
+- plan-enterprise-os-25-monitoring-period-ux-realtime-핫픽스14-문서 (84a8af7)
+- plan-enterprise-os-25-monitoring-period-ux-realtime-핫픽스16-문서 (97886ea)
+- plan-enterprise-os-25-monitoring-period-ux-realtime-핫픽스16-작업 (29f32c9)
+- plan-enterprise-os-25-monitoring-period-ux-realtime-핫픽스17-문서 (7ebda6e)
+
+#### 2단계: Project-I 좀비 worktree + 브랜치 일괄 force-cleanup
+
+| Repo | zombie worktrees | local branches deleted | origin deleted | 사후 local/wt/origin |
+|------|--:|--:|--:|--:|
+| data-craft | 93 | 93 | (이전 단계 완료) | 4 / 1 / 7 |
+| data-craft-mobile | 4 | 4 | 0 | 4 / 1 / 3 |
+| data-craft-ai-preview | 0 | 0 | 0 | 3 / 1 / 4 |
+| data-craft-server | 16 | 16 | 10 (Phase Final) | 4 / 1 / 5 |
+| **소계** | **113** | **113** | **10** | - |
+
+#### 3단계: origin orphan + 파일시스템 청소
+
+- **data-craft-server origin 10건** (force push --delete): 9개 `plan-enterprise-N-*-작업` (origin/i-dev 와 발산 — 이전 plan-enterprise 실행 잔재) + 1개 `feature/enterprise-031` (Project-I 시대).
+- **Orphan sibling 디렉토리 5건 rm -rf**: `data-craft.worktrees`, `data-craft-server.worktrees`, `data-craft-mobile-worktrees`, `data-craft-server-worktrees`, `data-craft-worktrees` (모두 빈 파일시스템 husk 0MB).
+- **data-craft origin 잔존 2건 의도 보존**: `firebase-deploy`, `test/dataviewer-widget` (deploy/test 특수 목적).
+
+### 최종 5 repo 상태
+
+| Repo | local | worktrees | origin | 의미 |
+|------|--:|--:|--:|--|
+| Project-I2 | 1 | 1 | 1 | main 만 |
+| data-craft | 4 | 1 | 7 | 보호 4 / 5 + special 2 |
+| data-craft-mobile | 4 | 1 | 3 | 보호 |
+| data-craft-ai-preview | 3 | 1 | 4 | 보호 |
+| data-craft-server | 4 | 1 | 5 | 보호 |
+
+### plan #29 누적 (v001.56.0 + v001.58.0 + v001.59.0)
+
+- **로컬 브랜치:** 405 → 16 (**389개 정리**)
+- **로컬 worktree:** ~120 → 5 (**115개 정리**)
+- **origin 브랜치:** ~360 → 20 (**340개 정리**)
+- **파일시스템 orphan:** 5개 디렉토리 제거
+- **합계:** 약 **850개 git/파일시스템 잔재 청소**
+
+### Treadmill Audit
+
+PASS (재확인) — 본 핫픽스는 추가 규칙/스킬/훅 도입 없이 일회성 청소 작업. 새 메커니즘 추가 0.
+
+### 후속 plan 권장 사항
+
+본 핫픽스에서 손대지 않은 script 보강 후속:
+
+1. **branch-cleanup.sh active-worktree 판정 강화** — `git worktree list` 만 신뢰하지 말고 path convention 검증 추가 (I2 규약 = `../<repo>-worktrees/` sibling). Project-I 규약 path 는 active 가 아닌 zombie 로 분류.
+2. **merged 모드 정규식 보강** — `-핫픽스N$` 단독, `-문서-N$`, `-문서-핫픽스N$`, `-작업-핫픽스N$` 패턴 추가 (핫픽스1 에서 발견).
+3. **origin push --delete 통합** — 현재 로컬만 처리. origin 정리는 별도 한방 스크립트로 수행 — `--include-origin` 플래그 도입.
+4. **orphan sibling dir 감지** — `<repo>.worktrees/`, `<repo>-worktrees/`, `<repo>-wt-*` 파일시스템 husk 자동 보고 (rm -rf 는 마스터 결정 게이트).
+
+---
+
 ## v001.58.0
 
 > 통합일: 2026-05-14
