@@ -466,7 +466,8 @@ function renderChartModelDonut(data, opts) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
@@ -511,7 +512,8 @@ function renderChartSkillDonut(data, opts) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
@@ -553,7 +555,8 @@ function renderChartCacheDonut(data, opts) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => `${c.label}: ${fmtNum(c.parsed)}` } },
