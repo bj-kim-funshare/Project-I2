@@ -1,5 +1,31 @@
 # 아이OS — Patch Note (001)
 
+## v001.35.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25
+> 대상: 아이OS
+
+### 개요
+monitoring/ 대시보드 기간 선택 UX 3대 결함 정비 + "실시간" 모드 신설. (1) 주간 드롭다운 항목을 `2026-W20` → `MM/DD ~ MM/DD (월~일)` 라벨로 가독화하고 현재 ISO 주는 옵션에서 제외. (2) "비교" 체크박스를 per-scope 비교대상 `<select>` 로 교체하여 어떤 주/월/분/반/연과 비교할지 사용자가 선택 가능하도록 함. (3) "실시간" 모드를 "전체" 위에 신설 — 비교 대상 없이 = 현재주 월요일 00:00 ~ 지금까지 누적, 비교 대상 선택 시 (1h/3h/7h/24h/2d/3d/5d) `[now-N, now]` vs `[now-2N, now-N]` 동일 폭 윈도우 페어 비교. 데이터 입자도를 시간 단위(hour)까지 확장하여 `monitoring/data/hourly.json` (최근 14일·sparse·by_model/by_skill 분할 포함) 을 신규 출력. advisor #2 직전 갭 픽스로 Phase 5 (실시간 도넛/비교 enable) 추가 — 사후 추가는 이슈 본문에 반영.
+
+### 페이즈 결과
+- **Phase 1** (`monitoring/scripts/collect.py`, `monitoring/README.md`): `parse_ts_hour()` 헬퍼 (ISO 8601 → 로컬 `"YYYY-MM-DDTHH"`), 누산기 `hourly_agg`/`hourly_cost`/`hourly_messages` 추가, `write_hourly_file()` 신설하여 `monitoring/data/hourly.json` 출력 (최근 14일·sparse·시간순). README 데이터 흐름 다이어그램에 `hourly.json` 출력 라인 추가. `collect.py` 가 매 실행마다 전체 JSONL 재집계하는 구조이므로 과거 시간 데이터 자동 소급 채워짐.
+- **Phase 2** (`monitoring/script.js`): `formatWeekLabel(weekKey)` 추가 — `"YYYY-Www"` → `"MM/DD ~ MM/DD (월~일)"`. `populatePeriodKeys()` 에서 `unit === 'weekly'` 일 때 `dateToIsoWeek(new Date())` 로 현재주 키 계산 후 옵션에서 필터링, 남은 키에 `formatWeekLabel` 적용. `option.value` 는 원본 키 유지 — 데이터 로딩 경로 무영향.
+- **Phase 3** (`monitoring/index.html`, `monitoring/script.js`, `monitoring/styles.css`): `#period-compare` 체크박스 제거, `#period-compare-target <select>` 신설. `updateCompareToggleState()` 를 `populateCompareTarget(periodsIndex, unit, selectedKey)` 로 재작성 — unit 별로 동일 단위 과거 키 목록 (selectedKey 와 현재주 제외, 주간일 때 `formatWeekLabel` 라벨) 으로 옵션 채움. `applyPeriodSelection()` 가 DOM 에서 compareKey 를 읽어 `loadPeriodData()` 로 비교 데이터 로드 후 `renderAll(data, compareData)` 호출. URL 에 `?compare=<key>` 직렬화/복원. `prevPeriodKey()` 는 KPI delta badges 용으로 유지.
+- **Phase 4** (`monitoring/index.html`, `monitoring/script.js`, `monitoring/styles.css`, `monitoring/README.md`): `<option value="realtime">실시간</option>` 을 period-unit 최상단 (전체 위) 에 추가. `loadHourlyData()` (`data/hourly.json` fetch+cache), `currentWeekMondayMs()`, `computeRealtimeWindows(now, hoursBack)` (compare=0 시 누적, 아니면 [now-N, now]/[now-2N, now-N] 페어), `aggregateHoursInWindow(hours, startMs, endMs)` 신설. `applyPeriodSelection()` realtime 분기 — `#period-key` 숨김, 7개 고정 비교 옵션, KPI/차트 모두 동일 폭 윈도우 base 로 렌더, 비교 시 `applyDeltaBadgesFromValues()` 호출. `hourly.json` 미존재 시 한국어 안내 후 graceful 종료. URL `?period=realtime&compare=24` 직렬화/복원. README 에 "실시간 모드" 단락 추가.
+- **Phase 5** (사후 추가, `monitoring/scripts/collect.py`, `monitoring/script.js`): Phase 4 의 `aggregateHoursInWindow()` 가 `by_model`/`by_skill` 을 빈 배열로 반환하여 실시간 모드 도넛·비교 리스트가 무용 상태가 되는 갭을 advisor #2 직전 발견. `collect.py` 에 `hourly_by_model`/`hourly_by_skill` 누산기 추가, `write_hourly_file()` 가 각 hour 레코드에 `by_model`/`by_skill` 배열 (input/output/cache_5m/cache_1h/cache_read; cost_usd/messages 미수록) 출력. JS 측 `aggregateHoursInWindow()` 가 윈도우 내 모델·스킬 토큰을 머지하여 도넛 4종 (model/skill/cache, compare 도넛 list) 정상 렌더. 한계: realtime 모드의 by_model/by_skill 레코드는 `cost_usd = 0`, `messages = undefined` (→ `fmtNum` 으로 "0" 표기) — 코어 비교 UX 영향 없음, 후속 plan 으로 보강 가능.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/scripts/collect.py`
+- `monitoring/README.md`
+
+### Treadmill Audit
+NOT APPLICABLE — 본 플랜은 새 규칙/훅/에이전트/스킬/검증 축을 추가하지 않음. 순수 UI/데이터-수집 기능 작업.
+
 ## v001.34.0
 
 > 통합일: 2026-05-14
