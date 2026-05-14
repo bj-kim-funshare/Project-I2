@@ -49,6 +49,10 @@ In addition, the dispatcher pre-computes each repo's `package_manager` field by 
 
 NOT in focus: SQL injection or any DB-coupled defect (`db-security-inspection`), non-security bugs (`dev-inspection`), style/convention.
 
+## Pre-conditions
+
+- 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차 수행. 본 스킬 컨텍스트 = external.
+
 ## Procedure
 
 Read `.claude/md/inspection-procedure.md` and follow it with the substitutions above, with these inspection-procedure-aware notes:

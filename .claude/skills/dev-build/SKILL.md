@@ -26,9 +26,10 @@ Optional argument forms (future v2 — not in v1):
 
 ## Pre-conditions
 
-1. `.claude/project-group/<leader>/dev.md` exists.
-2. `dev.md` has at least one target with non-empty `build_command`. (Note: `build_command` lives in `deploy.md`, not `dev.md` — see Build command source below.)
-3. cwd may be anywhere — the skill operates per target's declared `cwd`.
+1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification 절차 수행. 본 스킬 컨텍스트 = external.
+2. `.claude/project-group/<leader>/dev.md` exists.
+3. `dev.md` has at least one target with non-empty `build_command`. (Note: `build_command` lives in `deploy.md`, not `dev.md` — see Build command source below.)
+4. cwd may be anywhere — the skill operates per target's declared `cwd`.
 
 ## Build command source
 
