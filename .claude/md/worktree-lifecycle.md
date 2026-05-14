@@ -61,9 +61,16 @@ git merge --no-ff "${wip}"
 ### Remove (after successful merge)
 
 ```bash
-git worktree remove "${wt_path}"   # removes dir + metadata; branch itself stays
-# Manual branch delete is optional
+# Run from the main repo working tree
+git worktree remove "${wt_path}"
+git branch -d "${wip}"            # 표준 단계 — 안전 삭제 (실패 시 머지 미완료 신호)
 ```
+
+`-d` (안전 삭제) 가 실패하면 해당 WIP 의 모든 커밋이 integration 에 반영되지 않은 상태 — 절차 중단하고 master 보고. `-D` 강제 삭제는 금지.
+
+보호 예외: 통합 브랜치 (`main`, `i-dev`) 는 본 단계의 `<wip>` 대상이 될 수 없음 (애초에 worktree-add 로 만든 WIP 만 해당).
+
+`dev-merge` 같이 PR 경유 머지를 수행하는 스킬은 `gh pr merge --delete-branch` 옵션으로 동일 의무를 충족 — 브랜치 삭제 책임은 스킬 측에 있음.
 
 ## Entry ritual (every write skill runs at start)
 

@@ -58,7 +58,7 @@ Every code or document change — even one character — follows:
 
 1. **WIP worktree + branch** — `git worktree add -b <wip> ../{repo}-worktrees/<wip> <integration>`. Working-tree-level isolation: each WIP has its own HEAD so cross-session `git checkout` cannot mutate it. Procedure: `.claude/md/worktree-lifecycle.md`.
 2. Work (inside the worktree — sub-agents receive `worktree_cwd`; main-session-write skills use `git -C <wt_path>`).
-3. Merge from main working tree into integration branch (`git merge --no-ff <wip>`), then `git worktree remove <wt_path>`.
+3. Merge from main working tree into integration branch (`git merge --no-ff <wip>`), then `git worktree remove <wt_path>`, then `git branch -d <wip>` (안전 삭제 — 실패 시 머지 미완료 신호이므로 절차 중단하고 master 보고).
 4. On conflict: analyze both sides, merge preserving both. Pause and report to master **only** if the two sides are genuinely mutually exclusive.
 
 WIP naming: `{skill}-문서` for doc work, `{skill}-작업` for code work. Never combine code and doc into one WIP.
