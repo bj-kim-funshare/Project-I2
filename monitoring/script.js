@@ -68,6 +68,10 @@ function destroyChart(key) {
 
 function shortSha(s) { return (s || '').slice(0, 8); }
 function shortTime(s) { return (s || '').replace('T', ' ').replace(/\..+/, ''); }
+// HTML-escape user-supplied strings before inserting into innerHTML
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 function table(headers, rows) {
   const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
@@ -223,7 +227,7 @@ function renderKpi(data) {
   const topModelsEl = $('#kpi-cost-top-models');
   if (topModelsEl) {
     topModelsEl.innerHTML = topModels.map(m =>
-      `<div class="cost-model-row"><span class="lbl">${m.model}</span><span class="val">${USD(m.cost_usd || 0)}</span></div>`
+      `<div class="cost-model-row"><span class="lbl">${escapeHtml(m.model)}</span><span class="val">${USD(m.cost_usd || 0)}</span></div>`
     ).join('');
   }
 }
@@ -507,7 +511,7 @@ function renderPieCompareList(listId, currRows, prevRows, labelKey, valueKey) {
     const cls = d.pctDelta >= 0 ? 'cmp-up' : 'cmp-down';
     const pctStr = `${sign} ${d.pctDelta >= 0 ? '+' : ''}${d.pctDelta.toFixed(1)}%p`;
     const absStr = `(${d.absDelta >= 0 ? '+' : ''}${fmtKMB(d.absDelta)})`;
-    return `<div><span class="${cls}">${d.lbl}: ${pctStr} ${absStr}</span></div>`;
+    return `<div><span class="${cls}">${escapeHtml(d.lbl)}: ${pctStr} ${absStr}</span></div>`;
   }).join('');
   el.hidden = false;
 }
@@ -644,7 +648,7 @@ function renderByModel(rows) {
   return table(
     ['모델', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read', '비용'],
     rows.map(r => [
-      r.model, fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
+      escapeHtml(r.model), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
       fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
       USD(r.cost_usd || 0),
     ]),
@@ -655,7 +659,7 @@ function renderBySkill(rows) {
   return table(
     ['스킬', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read'],
     rows.map(r => [
-      r.skill, fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
+      escapeHtml(r.skill), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
       fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
     ]),
   );
@@ -665,7 +669,7 @@ function renderByDay(rows) {
   return table(
     ['일자', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read', '비용'],
     rows.map(r => [
-      r.day, fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
+      escapeHtml(r.day), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
       fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
       USD(r.cost_usd || 0),
     ]),
@@ -680,9 +684,9 @@ function renderBySession(rows) {
       shortSha(r.session_id),
       shortTime(r.first_timestamp),
       shortTime(r.last_timestamp),
-      r.model_primary || '?',
+      escapeHtml(r.model_primary || '?'),
       fmtNum(r.tokens.messages),
-      (r.skills || []).filter(s => s !== '(no-skill)').join(', ') || '<i>(no-skill)</i>',
+      (() => { const live = (r.skills || []).filter(s => s !== '(no-skill)'); return live.length ? escapeHtml(live.join(', ')) : '<i>(no-skill)</i>'; })(),
     ]),
   );
 }
