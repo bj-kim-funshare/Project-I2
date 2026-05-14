@@ -1,11 +1,11 @@
 ---
 name: dev-merge
-description: Code-reviewed merge of one branch into another via GitHub PR. Main session prepares context (git log, prior PR comments, code-comment cross-checks) inline; dispatches two read-only reviewer sub-agents in parallel (claude-md-compliance-reviewer + bug-detector). Findings with confidence ≥ 80 are posted as PR review comments. A write-capable code-fixer sub-agent applies fixes between rounds. Up to 3 iteration rounds before halting for master. Merge method = merge commit (--no-ff equivalent). Accepts a single `<leader>` argument and guides repo / from-branch / to-branch selection via AskUserQuestion cards. Operates exclusively against the GitHub remote — creates the PR, posts review comments, and merges via `gh pr merge`; never produces local merge commits.
+description: Code-reviewed merge of one branch into another via GitHub PR. Main session prepares context (git log, prior PR comments, code-comment cross-checks) inline; dispatches two read-only reviewer sub-agents in parallel (claude-md-compliance-reviewer + bug-detector). Findings with confidence ≥ 80 are posted as PR review comments. A write-capable code-fixer sub-agent applies fixes between rounds. Up to 3 iteration rounds before halting for master. Merge method = merge commit (--no-ff equivalent). Accepts a single `<leader>` argument and **auto-iterates all member repos** of the leader group sequentially; presents one **branch-combination card** (presets: `i-dev → main`, `main → i-dev` + Other) — the chosen pair is applied to every member repo where both branches exist (others skip with log). Operates exclusively against the GitHub remote — creates the PR, posts review comments, and merges via `gh pr merge`; never produces local merge commits.
 ---
 
 # dev-merge
 
-Accept `<leader>` and pick the member repo + from/to branches via UI, then merge with auto-iterated code review on that repo's GitHub remote.
+Accept `<leader>` and auto-iterate all member repos of the leader group, applying a single branch-combination choice (long-running integration pair: i-dev ↔ main), then merge with auto-iterated code review on each repo's GitHub remote.
 
 Replaces the prior `merge-i` (work → `i-dev`) and `merge-main` (`i-dev` → `main`) skills — same skill, master specifies the branch pair. Inherits leader-arg form from other leader skills (`plan-enterprise`, `pre-deploy`, `dev-build`).
 
@@ -24,41 +24,40 @@ Replaces the prior `merge-i` (work → `i-dev`) and `merge-main` (`i-dev` → `m
 1. 호출 시점 `cwd` = Project-I2 (`.claude/skills/dev-merge/SKILL.md` 이 보이는 위치).
 2. `<leader>` 가 `아이OS` 또는 `.claude/project-group/<leader>/` 디렉토리 존재.
 3. `gh` CLI 인증.
-4. Step 0 의 (from, to) 확정 후 추가 검증: 두 브랜치 로컬+원격 존재, `from != to`. 동일 쌍 PR 존재 여부는 **분기 신호** — PR 있으면 PENDING 재진입 경로 (신규 PR 생성·auto-iter 건너뛰고 직행), PR 없으면 표준 PR 생성 경로.
+4. Step 0.2 의 (from, to) 확정 후 Step 0.3 멀티-repo 검증 통과 — 진행 큐 ≥ 1 repo. (per-repo 단위 "동일 쌍 PR 존재 시 PENDING 재진입 분기" 는 inner loop 의 Context preparation 에서 처리.)
 
 ### Branch alignment 정책
 
 base 기준: `아이OS` 컨텍스트면 `main`, 외부 컨텍스트면 `i-dev`. to-branch 가 컨텍스트 기본 base 와 다를 때 경고만 표시하고 진행 (예: 의도적 `i-dev → main`). 세부 exit-restoration 절차: `.claude/md/branch-alignment.md`.
 
-## Step 0 — Leader 해석 + 대상 repo / 브랜치 UI 선택
+## Step 0 — Leader 해석 + 브랜치 조합 + 멀티-repo 검증
 
 ### Step 0.1 — Leader 해석
 
 - `<leader> == "아이OS"` → 대상 repo 후보 = Project-I2 단일 (현재 cwd).
 - 그 외 → `.claude/project-group/<leader>/dev.md` 의 frontmatter `targets[]` 로드. 파일 부재 시 failure policy.
 
-### Step 0.2 — Repo 선택 (AskUserQuestion single-select)
+### Step 0.2 — 브랜치 조합 선택 (AskUserQuestion single-select)
 
-- 후보 1개 → 질문 생략하고 자동 채택.
-- 후보 ≥ 2개 → AskUserQuestion 1개 카드 (single-select, `multiSelect: false`). `options[]` 에 각 target 의 `name` 라벨 + `role/type` description (최대 4). data-craft 의 4개 멤버 repo 가 정확히 4개 옵션에 맞음.
-- 선택 결과의 `cwd` 로 모든 후속 git/gh 동작 이동.
+본 스킬은 **모든 멤버 repo 에 대해 자동 순회** — repo 선택 카드는 없다. 하나의 브랜치 조합을 마스터로부터 받아 진행 큐의 모든 repo 에 동일 적용한다.
 
-### Step 0.3 — From-branch 선택 (AskUserQuestion single-select)
+옵션 (외부 컨텍스트 기본 프리셋, `options[]` 명시 = 2개):
+1. `i-dev → main` (권장 첫 옵션 — 정상 승격 경로)
+2. `main → i-dev` (싱크 다운 — main 핫픽스를 i-dev 에 반영)
 
-- 후보 = 선택된 repo 의 로컬+원격 브랜치 중 기본 보호 브랜치 (`main`, `master`, `develop`, `i-dev`) 를 제외하고 `git for-each-ref --sort=-committerdate refs/heads refs/remotes/origin` 순으로 상위 3개.
-- AskUserQuestion `options[]` 에 3개 명시 (`Other` 는 AskUserQuestion 이 자동 제공하므로 options 에 포함하지 않음 — 제약: minItems=2, maxItems=4).
-- description 에 마지막 커밋 SHA 단축형 + 날짜 한 줄.
-- 후보 브랜치가 2개 미만이면 AskUserQuestion 호출 생략하고 텍스트로 자유 입력 안내 (마스터 직접 브랜치명 타이핑).
-- `Other` 선택 시 마스터 자유 입력 → 브랜치 로컬/원격 존재 검증.
+`Other` 는 AskUserQuestion 이 자동 제공 — 자유 입력 (`from→to` 한 줄 또는 두 줄). `from == to` 거부 후 카드 재표시.
 
-### Step 0.4 — To-branch 선택 (AskUserQuestion single-select)
+**프리셋 범위 메모**: 옵션은 **long-running 통합 브랜치 쌍 (i-dev / main) 만 노출**. 배포 타겟 브랜치 (`aws-deploy`, `gh-pages` 등) 는 pre-deploy 의 `deploy_command` 가 `git push origin main:<deploy-target-branch>` 형식의 fast-forward push 로 별도 처리하므로 dev-merge 옵션에 포함하지 않는다 (영역 분리).
 
-- 외부 컨텍스트 기본 후보: `i-dev` (권장 첫 옵션), `main`.
-- 아이OS 컨텍스트 기본 후보: `main` (권장 첫 옵션). 보호 브랜치 추가 있으면 함께 노출.
-- 옵션 후보가 2개 미만이면 (예: 아이OS 의 `main` 단일) AskUserQuestion 호출 생략. 텍스트로 기본 후보 자동 채택 안내 + "다른 to-branch 원하면 입력" 자유 입력 받기.
-- `Other` 자유 입력 허용 (브랜치 존재 검증).
-- `from == to` 거부 → 에러 후 Step 0.4 재시도.
-- to-branch ≠ 컨텍스트 기본 base 인 경우 "경고: 의도적 base-vs-base 머지로 진행" 한 줄 출력 후 계속.
+아이OS 컨텍스트 (단일 repo · 단일 base) 는 프리셋 의미가 약하므로 AskUserQuestion 호출 생략 + 텍스트로 "from→to 입력" 안내 + 자유 입력 받기.
+
+### Step 0.3 — 멀티-repo 검증 (진행 큐 구성)
+
+각 멤버 repo `target.cwd` 에 대해:
+- `git -C <repo_cwd> rev-parse --verify <from-branch>` 및 `<to-branch>` 둘 다 성공 (로컬+원격 어느 쪽이라도) 인지 확인.
+- 둘 다 존재 → 진행 큐에 추가.
+- 한쪽이라도 부재 → skip 로그 출력 (`"<repo> skip — <missing-branch> 부재"`) 후 다음 repo.
+- 진행 큐 비어있음 → failure policy (모든 repo 가 skip 된 경우).
 
 ## WIP rule note
 
@@ -68,7 +67,7 @@ base 기준: `아이OS` 컨텍스트면 `main`, 외부 컨텍스트면 `i-dev`. 
 
 `code-fixer` 의 fix-apply 와 conflict-PENDING 의 rebase 둘 다 메인 working tree 에서 직접 수행하면 다른 세션의 HEAD 를 mutate 할 위험이 있다. 본 스킬은 호출 직후 from-branch 위에 worktree 를 만들어 모든 fix / conflict-resolve 작업을 그 worktree 안에서만 수행한다. 절차: `.claude/md/worktree-lifecycle.md`.
 
-아래 코드블록의 `$(pwd)` 는 Step 0 에서 선택·확정된 대상 repo 의 cwd 를 가리킨다 (Project-I2 루트가 아닌 대상 repo 경로).
+본 스킬은 멀티-repo 자동 순회이므로 `$(pwd)` 는 **외부 loop 의 매 iter 마다 갱신** 되는 멤버 repo cwd 다 (Step 0.3 진행 큐의 각 항목). 매 iter 시작 시 `cd <repo_cwd>`. 워크트리 경로 베이스는 해당 멤버 repo 의 디렉토리명: `../<repo-name>-worktrees/devmerge-<from-branch>`.
 
 ```bash
 # Entry ritual
@@ -91,10 +90,28 @@ Before dispatching reviewers, main session confirms the PR exists and collects o
 |---|---|
 | PR number | `gh pr list --head <from-branch> --json number` |
 | Group leader (always — invocation arg, even for 아이OS) | Step 0 에서 인자로 확정 — 추론 불필요. `<leader>` 그대로 사용 |
+| Member repo (current iter) | Step 0.3 진행 큐의 현재 항목 — reviewer 디스패치에 `leader` 와 `repo` 둘 다 전달 |
 
 PR diff, git log, prior PR review comments, CLAUDE.md text, and group-policy file contents are NOT pre-fetched and NOT inlined in reviewer dispatch prompts. Reviewers fetch what they need directly. Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): PR diffs, prior-round findings JSON, and git logs are not inlined in dispatch prompts. Reviewers call `gh pr diff <PR#>` and `gh pr view <PR#> --json reviews,comments` themselves; code-fixer reads PR review comments via `gh pr view <PR#> --json reviews,comments` or `gh api repos/{owner}/{repo}/pulls/<PR#>/comments` — so code-fixer's input is the PR number alone.
 
 Group resolution: leader 는 Step 0 에서 인자로 확정 — cwd 매칭 추론 불필요. 외부 컨텍스트면 `<leader>` 그대로 reviewer 에 전달, 아이OS 면 reviewer 디스패치에 leader 전달 생략 (또는 `"아이OS"` 식별자 전달 — 기존 reviewer 사용처 따라 자연스럽게).
+
+## 멀티-repo 순회 (외부 loop)
+
+본 스킬은 Step 0.3 진행 큐의 각 멤버 repo 에 대해 다음 절차를 **순차 (sequential)** 로 반복한다 — 병렬 금지 (gh CLI / worktree 모두 cwd 기반).
+
+각 iter 단위:
+1. `cd <repo_cwd>` — 메인 세션의 cwd 이동.
+2. Entry ritual (worktree prune + worktree add for from-branch).
+3. Context preparation (PR 조회 또는 신규 생성).
+4. Reviewer dispatch (parallel) + auto-iter (cap=3).
+5. Lint 게이트 (gate-runner per target).
+6. PENDING gate 도달 — **PENDING 은 per-repo halt 가 아니라 진행 큐 전체에 대한 단일 게이트** (모든 repo 의 reviewer-iter 완료 후 1회만 표시).
+7. 머지 결정 시: Pre-merge mergeable check → `gh pr merge` → post-merge `git pull --ff-only origin <to-branch>` → 워크트리 제거.
+
+**PENDING gate 정책**: 마스터 입력 `머지 완료` → 진행 큐 전체의 PR 일괄 머지 / `중단` → 모든 PR open 유지 / `핫픽스 <hint>` → 핫픽스 대상 repo 명시 후 재진입.
+
+**Per-repo failure 정책**: 한 repo 의 머지 파이프라인 (위 1–7 중 어느 단계) 실패 시 — 전체 halt + 마스터 보고 (이미 완료된 repo / 처리 중이던 repo / 미처리 repo 리스트 명시).
 
 ## Reviewer dispatch (parallel)
 
@@ -401,8 +418,6 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | `git worktree add` 실패 | `"worktree 생성 실패: <error>. dev-merge 진입 보류. 마스터 결정 필요."` |
 | `gh` CLI missing or unauthenticated | `"gh CLI 미설치 또는 미인증. 사전 설치/인증 후 재호출."` |
 | Not inside a git repo | `"git 저장소 외부에서 호출됨. 대상 저장소 cwd 에서 재호출."` |
-| `<from-branch>` not found (local or remote) | `"브랜치 <from> 없음 (로컬 또는 리모트)."` |
-| `<to-branch>` not found | `"브랜치 <to> 없음 (로컬 또는 리모트)."` |
 | Reviewer agent dispatch failure | `"리뷰어 sub-agent 디스패치 실패: <error>. PR #<num> 보존."` |
 | code-fixer dispatch failure | `"code-fixer 디스패치 실패: <error>. PR 및 이전 핫픽스 커밋 보존."` |
 | Iteration cap reached with findings remaining | (cap-exhausted report above) |
@@ -416,9 +431,10 @@ Immediate Korean report + halt. No retry, no auto-recovery.
 | 호출 시점 cwd ≠ Project-I2 | `"dev-merge 는 Project-I2 cwd 에서만 호출 (leader 해석은 .claude/project-group/<leader>/ 기준). 현재: <cwd>"` |
 | 외부 leader 의 `.claude/project-group/<leader>/dev.md` 부재 | `"leader '<leader>' 의 project-group 미등록. /new-project-group 으로 등록하거나 leader 이름 확인 필요."` |
 | 선택된 repo 의 cwd 디렉토리 부재 | `"<repo>.cwd 디렉토리 부재: <path>"` |
-| from-branch 로컬/원격 둘 다 부재 | `"from-branch '<branch>' 미존재 (로컬/원격 둘 다 확인)"` |
-| to-branch 부재 | `"to-branch '<branch>' 미존재"` |
 | from == to | `"from-branch 와 to-branch 가 동일: <branch>"` |
+| 진행 큐 비어있음 (모든 repo 가 from/to 부재로 skip) | `"<leader> 그룹 내 어떤 repo 도 (<from>, <to>) 둘 다 보유하지 않음. skip 로그: <list>. 브랜치 조합 재선택 또는 통합 브랜치 부재 확인 필요."` |
+| Step 0.2 자유 입력 파싱 실패 | `"브랜치 조합 입력 형식 오류: '<input>'. 'from→to' 한 줄 또는 두 줄 형식 사용."` |
+| 멀티-repo 처리 중 N번째 repo 실패 | `"<repo> 처리 실패: <error>. 완료된 repo: [<list>]. 처리 중이던 repo: <repo>. 미처리 repo: [<list>]. 마스터 결정 필요."` |
 
 ## Scope (v1)
 
@@ -427,11 +443,14 @@ In scope:
 - Up to 3 auto-fix iterations via `code-fixer`.
 - PR-based workflow (`gh` CLI), merge-commit method.
 - Leader-aware via invocation arg; supports `아이OS` (this harness) and any registered external project-group leader.
+- Multi-repo auto-iteration — 그룹 전체 일괄 머지 (per-iter sequential, gh CLI cwd-bound).
+- 단일 브랜치 조합 카드 + 모든 멤버 repo 순회.
 
 Out of scope (v1):
 - Lint / build / test gates (`README.md` §D-23 — abolished, pending redesign).
 - Squash or rebase merge methods.
 - Tag creation, push to additional remotes.
-- Multi-PR coordination (one PR per invocation).
 - Auto-deletion of the from-branch after merge (보호 브랜치 목록 — group.md `protected_branches` 설정 시 그 목록, 미설정 시 하드코딩 fallback `i-dev` / `main` / `master` / `develop` — 에 미포함된 경우에 한함).
 - Reviewer language specialization (React-specific, Express-specific, TS-specific) — Claude's full 5-agent literal model was scoped down to 2 judgment agents + context-by-main-session, with master's confirmation. Specialization can be added if a project's review patterns demand it.
+- 임의 WIP 브랜치 머지 (repo 마다 이름이 다른 plan-enterprise 의 `-작업-<repo-slug>` 등) — plan-enterprise 의 auto-merge 가 이미 담당. 중복 책임 차단.
+- main → 배포 타겟 브랜치 (aws-deploy / gh-pages 등) 동기화 — pre-deploy 의 `deploy_command` 가 `git push origin main:<deploy-target>` fast-forward push 로 담당. 영역 분리.
