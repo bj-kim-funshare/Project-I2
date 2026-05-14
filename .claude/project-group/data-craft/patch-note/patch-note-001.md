@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.46.0
+
+> 통합일: 2026-05-14
+> 대상 저장소: data-craft-server
+
+### 변경 파일
+
+- (수정) .env
+- (추가) hotfix-devinsights-page.sql
+- (추가) hotfix-devinsights-v2.sql
+- (추가) hotfix-executive-dashboard-v20.sql
+
 ## v001.45.0
 
 > 통합일: 2026-05-14
