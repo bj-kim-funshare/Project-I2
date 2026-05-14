@@ -10,10 +10,12 @@ The most-used skill in the system per master's testing: the procedure that actua
 ## Invocation
 
 ```
-/plan-enterprise <leader-name> <plan description in Korean (may reference an existing issue with #N)>
+/plan-enterprise <leader-name> <plan description in Korean (may reference an existing issue with #N)> [--codex]
 ```
 
 `<leader-name>` required. Plan description is open-form — master writes the intent in Korean. If master references an existing issue (`#N`), the skill loads that issue's body as additional context but still creates its own plan issue.
+
+`--codex` is optional. When present, Claude performs planning, issue creation, Codex prompt generation, and verification, while Codex executes the phase commits on the `-작업-codex` WIP branch.
 
 ## Pre-conditions
 
@@ -147,14 +149,20 @@ Slug is a short Latin/Hangul-phonetic transliteration of the plan title (max 50 
 
 > wt_path 계산 규칙은 `.claude/md/worktree-lifecycle.md` §"Path convention" 의 `../{repo-dir-name}-worktrees/{wip}` 패턴을 그대로 따른다 (이미 repo 별).
 
+If `--codex` is set and N > 1, halt before creating WIP branches: codex variant + multi-repo is out of v1 scope.
+
 ### N == 1 (단일-repo 케이스 — 기존 동작)
 
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
 
-# Create WIP A worktree (working-tree-level isolation)
+# Create WIP A worktree (working-tree-level isolation).
+# Default: plan-enterprise-<N>-<slug>-작업
+# --codex: plan-enterprise-<N>-<slug>-작업-codex
 wip_a="plan-enterprise-<N>-<slug>-작업"
+# if --codex is set:
+wip_a="plan-enterprise-<N>-<slug>-작업-codex"
 wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
 git worktree add -b "${wip_a}" "${wt_a}" i-dev
 git -C "${wt_a}" push -u origin "${wip_a}"
@@ -179,6 +187,13 @@ git -C "${wt_a_x}" push -u origin "${wip_a_x}"
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ## Step 7 — Phase execution loop
+
+Step 7 branches on the invocation flag:
+
+- Default path (no `--codex`): use the existing `phase-executor` dispatch loop below. Do not change the retry budget, lint gate, issue comments, or worktree semantics.
+- `--codex` path: generate one Codex prompt for the active phase set, halt for master's bridge message, then verify Codex commits before Step 8.
+
+### Default path — `phase-executor`
 
 For each phase in order:
 
@@ -259,9 +274,73 @@ gh issue comment <N> --repo <leader-owner-repo> --body-file <file>
 
 If the dispatcher decides to re-dispatch, it first resets the WIP branch state by `git reset --hard <prev_commit>` so the next dispatch starts clean. This may abandon the failed attempt's work — that is the cost of the retry budget.
 
+### `--codex` path — master-mediated Codex execution
+
+Use this path instead of dispatching `phase-executor` when the invocation includes `--codex`. The path applies to the initial full phase set and to a HOTFIX re-entry's single hotfix phase.
+
+#### 7-codex-a. Generate Codex prompt and halt
+
+Generate a prompt for master to paste into Codex. Output it under this Korean framing:
+
+```text
+Codex 에게 paste 할 프롬프트입니다:
+
+<prompt>
+```
+
+The prompt includes:
+
+- Plan issue number and URL.
+- Leader name and leader repo.
+- Target work repo and absolute repo path.
+- Target branch name: `plan-enterprise-<N>-<slug>-작업-codex` for initial work, or the current `-codex` hotfix WIP branch when re-entering from `핫픽스`.
+- Base branch: `i-dev`.
+- Full phase breakdown for the active phase set: `phase_number`, `title`, `type`, `description`, `affected_files`, and `work_repo`.
+- Group-policy summary, or explicit instruction for Codex to read `.claude/project-group/<leader>/{dev,deploy,db,group}.md`.
+- Instruction to work phase by phase and make one commit per phase.
+- Instruction to keep every commit inside that phase's `affected_files`.
+- Instruction to stop and report if scope expansion is required.
+- Fact-only report requirements: commits, files changed, lines changed if available, commands run if any, blockers, and notes.
+- Explicit reminder that Codex cannot declare final completion.
+- Expected master return forms: `코덱스 완료, {report}` or `코덱스 실패, {report}`.
+
+After outputting the prompt, halt. Do not proceed until master returns one of the Codex trigger forms.
+
+#### 7-codex-b. On `코덱스 완료, {report}`
+
+1. Surface the Codex report in the skill's working notes.
+2. Fetch the Codex branch:
+   ```bash
+   git fetch origin plan-enterprise-<N>-<slug>-작업-codex
+   ```
+   For hotfix re-entry, fetch the active hotfix WIP branch instead.
+3. Verify the branch exists. Missing branch → failure policy.
+4. Verify the branch has commits since `i-dev`:
+   ```bash
+   git log --oneline i-dev..origin/<codex-wip-branch>
+   ```
+   Empty result → failure policy.
+5. For each Codex commit in `i-dev..origin/<codex-wip-branch>`, run the same main-session verification ritual:
+   - `git show <commit> --stat`.
+   - Verify changed files are within the cumulative active phase `affected_files`. When commit messages or Codex report map a commit to a specific phase, prefer that phase's own `affected_files`; otherwise use the active phase set's cumulative allowed files.
+   - `git diff <prev_commit>..<commit>` inspection.
+   - Verify the diff substantively matches the corresponding phase description and does not creep into later phases.
+   - Parse blockers from Codex's master-reported text and decide whether they require master attention before Step 8.
+6. If all commits pass, append the normal per-phase issue comments using Codex's report and the verified commit SHAs, then proceed to Step 8.
+7. If any check fails, halt and report the mismatch to master. Do not run advisor #2.
+
+#### 7-codex-c. On `코덱스 실패, {report}`
+
+Surface master's reported Codex context and halt. Master options:
+
+- Retry with a revised Codex prompt (return to 7-codex-a).
+- Abort the plan.
+- Re-plan from Step 3 if the scope or phase breakdown was wrong.
+- Switch to the default `phase-executor` path for the remaining active phase set.
+
 ## Step 8 — Final advisor call #2
 
-After all phases complete and pass per-phase verification, run advisor with the same 5-perspective rubric on the **complete plan outcome**:
+Step 8 onward is identical regardless of whether Step 7 used `phase-executor` or Codex. After all phases complete and pass per-phase verification, run advisor with the same 5-perspective rubric on the **complete plan outcome**:
 
 | 관점 | 질문 (완료 시점 표현) |
 |------|----------------------|
@@ -371,7 +450,8 @@ When master types `핫픽스 <description>`:
 2. The new phase number = `prior_max_phase + 1` (cumulative across the plan; first hotfix on a 5-phase plan = phase 6).
 3. **Create hotfix WIP** as a worktree from `i-dev`:
    ```bash
-   wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>"   # M = cumulative hotfix count, from 1
+   wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>"          # default; M = cumulative hotfix count, from 1
+   wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>-codex"    # when the original invocation used --codex
    wt_h="../$(basename "$(pwd)")-worktrees/${wip_h}"
    git worktree add -b "${wip_h}" "${wt_h}" i-dev
    git -C "${wt_h}" push -u origin "${wip_h}"
@@ -426,6 +506,9 @@ End of skill invocation.
 | work_repo `<X>` 가 `<leader>/dev.md` `targets[]` 에 미등록 | `"work repo <X> 가 <leader>/dev.md targets[] 에 없음 — /group-policy 로 추가 후 재호출."` |
 | work repo `<X>` 의 i-dev 머지 충돌 (양측 보존 불가) | `"<X> i-dev 머지 충돌 — 양측 보존 불가, 마스터 결정 필요: <files>."` |
 | codex 변형 + multi-repo 조합 | `"codex 변형 + multi-repo 조합은 v1 미지원, 마스터 결정 필요."` |
+| `--codex` 완료 통보 후 Codex branch 없음 | `"Codex branch 부재. master 가 완료 통보했으나 plan-enterprise-<N>-<slug>-작업-codex 브랜치 없음."` |
+| `--codex` 완료 통보 후 Codex commit 없음 | `"Codex commit 부재. master 가 완료 통보했으나 i-dev 이후 Codex commit 없음."` |
+| Codex commit 이 phase `affected_files` 초과 | `"Codex output scope mismatch — <commit> 이 affected_files 외 파일 변경: <files>. 마스터 결정 필요."` |
 
 iter 카운트 (페이즈당 3회 재시도) 는 페이즈별 독립 유지 — multi-repo 라도 변경 없음.
 
@@ -441,6 +524,8 @@ In scope:
 - 3 iterations per phase.
 - Patch-note authoring at completion.
 - Two-WIP merge (작업 first, then 문서).
+- `--codex` invocation mode for single-repo plans.
+- Codex-mediated hotfix re-entry for plans that started with `--codex`.
 
 Out of scope (v1):
 - I-OS internal work (use `plan-enterprise-os`).
@@ -452,3 +537,4 @@ Out of scope (v1):
 - Reverting / rolling back phases after merge to i-dev (master uses git for that).
 - Bundling multiple plans into one invocation (one plan per invocation).
 - Lint / build / test gates (`README.md` §D-23 — abolished, pending redesign).
+- `--codex` + multi-repo execution.

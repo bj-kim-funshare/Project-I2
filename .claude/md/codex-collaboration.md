@@ -1,210 +1,109 @@
-# Codex Collaboration v1 — Design Doc (not yet implemented)
+# Codex Collaboration
 
-> ⚠️ **OUTDATED — pending rewrite via Codex iteration build (2026-05-13)**
->
-> 본 문서는 초기 elaborate design (5 defense-in-depth gates / packet builder / worktree / lock_uuid) 으로 작성됐으나, master 의 **simplified design** (2026-05-13) 으로 대체될 예정. 본 문서 아래 내용은 historical reference only.
->
-> ### Master simplified design 요약 (Codex iteration 으로 본 문서가 재작성될 spec)
-> 1. **단일 통합 지점** — `plan-enterprise` / `plan-enterprise-os` 의 `--codex` 옵션만.
-> 2. **호출 형태** — `/plan-enterprise <leader> <description> --codex`.
-> 3. **분기점** — ExitPlanMode 후 plan issue 생성 + Codex 용 프롬프트 출력 + halt. 마스터 보고.
-> 4. **마스터가 다리** — Codex 에게 작업 지시 (manual paste).
-> 5. **재진입 트리거** — 마스터가 `코덱스 완료, {Codex 보고}` 또는 `코덱스 실패, {보고}` 입력.
-> 6. **그 이후 절차** — Step 8 (advisor #2) → Step 9 (패치노트) → Step 10 (머지) → Step 11 (PENDING gate per completion-gate-procedure) 동일 적용.
-> 7. **Codex 역할** — 작업만 (페이즈 분할 받음, fact-only 보고, "완료 선언" 권한 없음).
-> 8. **WIP 시스템** — Codex 가 자체 WIP 구축, Claude 가 검증. WIP 명에 `-codex` suffix (예: `plan-enterprise-<N>-<slug>-작업-codex`).
->
-> ### 마스터 5 결정 (2026-05-13)
-> - **Q1 "코덱스 완료" 통보 형식**: `코덱스 완료, {Codex 자유 보고}` — Claude 가 자유 텍스트 파싱
-> - **Q2 phase 분할 정보**: Codex 프롬프트에 전체 phase 분할 포함, Codex 가 페이즈별 commit
-> - **Q3 Codex 작업 시작 브랜치**: target repo 의 integration branch — `plan-enterprise` (외부 프로젝트) = `i-dev` (Claude 가 부트스트랩 보장 후 위임), `plan-enterprise-os` (I-OS 하네스) = `main` (master 2026-05-13 lock: I-OS 는 i-dev 불사용)
-> - **Q4 Codex 실패 보고**: `코덱스 실패, {Codex 보고}` — Claude halt + master 결정 대기
-> - **Q5 advisor 호출**: 기존 동일 (계획 시 #1, 완료 시 #2) — Codex 결과물에도 같은 5 관점 적용
->
-> ### 폐기된 elaborate design 요소 (본 문서 아래 historical 부분)
-> - 5 gate verify-codex-*.sh 스크립트
-> - codex-packet-builder agent
-> - worktree 격리 모델 (`/tmp/codex-worktrees/<task_id>/`)
-> - `lock_uuid` 동시성 방지
-> - JSON work-packet schema + execution-report schema (replaced by master-mediated text bridge)
->
-> Codex iteration build (next step) 이 본 문서를 simplified design 으로 재작성할 예정.
+Codex collaboration lets `plan-enterprise` and `plan-enterprise-os` route phase execution to Codex (GPT-5.5) while Claude remains the planner, verifier, and final authority. The purpose is cost leverage from README §E-3: use GPT-5.5 for bounded mechanical implementation work when that is cheaper or stronger for the task, while preserving Opus 4.7 / advisor-based judgment for plan quality, completion decisions, and harness integrity.
 
----
+## Responsibility split
 
-## Historical reference (v1 design — to be replaced)
-
-External LLM (Codex / GPT-5.5 / similar) integration for I2. **Design only** at v1 — no scripts or skill wiring yet. This document defines the architecture so a future implementation unit can build straight from spec.
-
-Rationale per `README.md` §E-3: "GPT-5.5 의 토큰 비용 감소와 성능 우수 + Opus 4.7 의 성능 저하와 비용 증가가 동시에 발생하면서 협업 시스템은 필수적." External-LLM cost/quality leverage is the value proposition.
-
-## v1 Scope
-
-- Design philosophy + responsibility split (this doc).
-- Work-packet schema + Codex execution-report schema (this doc).
-- Defense-in-depth gate list (this doc).
-- **Out of v1**: actual scripts, skill integration code, beta run.
-
-A future `/plan-enterprise-os` invocation can pick this design up and implement.
-
-## Responsibility Split (load-bearing invariant)
-
-The split keeps Claude as the authoritative judge and Codex as a parallel executor with no final-decision authority. This avoids the failure mode where two LLMs argue about completion.
-
-| Authority | Owner |
+| Responsibility | Owner |
 |---|---|
-| Final PASS / "플랜 완료" declaration | Claude (main session) |
-| advisor 5/6-perspective verdict | Claude (advisor) |
-| `git commit` / `git push` | Claude (via `phase-executor` or `patch-confirmation`) |
-| patch-note authoring | Claude (`patch-confirmation`) |
-| DB structural / data work | Claude (`task-db-structure` / `task-db-data`) |
-| Code execution (write capable) | **Codex** (within bounded packet scope) OR Claude (`phase-executor`) |
-| Test execution / fact capture | Codex (within packet scope) |
-| Self-evaluation of "task complete" | **Forbidden for Codex** — fact-only reports |
+| Final PASS / `플랜 완료` declaration | Claude main session |
+| advisor verdict #1 at plan time | Claude via `advisor()` |
+| advisor verdict #2 at completion time | Claude via `advisor()` |
+| Plan formulation | Claude main session |
+| GitHub plan issue creation | Claude main session |
+| Patch-note authoring | Claude main session |
+| Phase execution when `--codex` is absent | Claude `phase-executor` |
+| Phase execution when `--codex` is present | Codex |
+| Code writing, file modification, phase commits in `--codex` mode | Codex |
+| Bridge between Claude and Codex sessions | Master |
+| Self-evaluation that the task is complete | Forbidden for Codex; Codex reports facts only |
 
-Codex is treated as a swappable backend for the `phase-executor` role with one fundamental difference: Codex cannot declare completion. Codex reports facts (commands run, exit codes, tests passed/failed, files changed); Claude reads those facts and decides.
+Codex is an alternate executor for the phase work, not an alternate judge. Codex may report what it changed, what it committed, what it could not do, and what blockers it observed. Codex must not declare the plan complete, ready, passing, or final.
 
-## Work Packet Schema
+## Trigger semantics
 
-Claude (the dispatching skill, e.g., `plan-enterprise`) generates a work packet for Codex. The packet is JSON with strict shape.
+After Claude generates the Codex prompt and halts, master manually pastes that prompt into Codex. Master later returns to the waiting Claude session with one of two trigger forms.
 
-```json
-{
-  "packet_version": "1.0",
-  "task_id": "plan-enterprise-<issue>-phase-<N>",
-  "plan_issue": <int>,
-  "phase_number": <int>,
-  "phase_title": "<title>",
-  "intent_ko": "<2-4 sentence Korean description>",
-  "affected_files": ["path/relative/to/cwd", ...],
-  "allowed_write_set": ["affected_files paths only — file glob"],
-  "forbidden_paths": [".git/**", ".claude/**", "patch-note/**", ".claude/project-group/**"],
-  "worktree_root": "/abs/path/to/codex/worktree",
-  "base_branch": "i-dev",
-  "wip_branch": "plan-enterprise-<issue>-<slug>-작업",
-  "tests_required": true,
-  "test_command": "<shell command — pnpm test / pytest / etc.>",
-  "lock_uuid": "<UUID for this packet>",
-  "expires_at": "<ISO8601>"
-}
-```
+`코덱스 완료, {Codex 자유 보고}` means Codex claims its assigned execution attempt is finished. Claude parses the Korean free-form report, reads the Codex commits on the Codex work branch, verifies the branch and commit history, then proceeds to Step 8 only if the same main-session verification ritual passes.
 
-`allowed_write_set` and `forbidden_paths` are both verified by the gate scripts. Overlap → forbidden wins.
+`코덱스 실패, {Codex 보고}` means Codex could not complete the assigned execution attempt. Claude halts, surfaces master's reported context, and waits for master to choose retry, abort, re-plan, or fallback to the default `phase-executor` path.
 
-## Codex Execution Report Schema
+Codex commits go to a work branch named:
 
-After Codex executes, it produces an execution report. Fact-only — no judgments.
+- `plan-enterprise-<N>-<slug>-작업-codex` for external project plans.
+- `plan-enterprise-os-<N>-<slug>-작업-codex` for harness plans.
 
-```json
-{
-  "report_version": "1.0",
-  "task_id": "<echoes packet>",
-  "lock_uuid": "<echoes packet>",
-  "started_at": "<ISO8601>",
-  "completed_at": "<ISO8601>",
-  "commands_run": [
-    {"command": "<verbatim>", "exit_code": <int>, "duration_ms": <int>}
-  ],
-  "files_changed": ["path", ...],
-  "files_added": ["path", ...],
-  "files_deleted": ["path", ...],
-  "lines_added": <int>,
-  "lines_deleted": <int>,
-  "commit_sha": "<full sha or null if no commit>",
-  "tests_run": {
-    "command": "<verbatim>",
-    "exit_code": <int>,
-    "summary": "<single line — '12 passed, 0 failed' or similar>"
-  },
-  "notes_ko": "<observational notes — what was tried, NOT judgments of success>"
-}
-```
+The Codex branch is created from `i-dev`. Claude ensures `i-dev` exists before delegation.
 
-**Forbidden fields** in execution report (gate rejects):
-- `task_complete`, `verdict`, `pass`, `success`, `ready_to_merge`, or any field implying judgment.
+## Codex prompt format
 
-## Defense-in-depth Gates
+When `--codex` is set, Claude stops at Step 7 and outputs a prompt for master to paste into Codex. The prompt is plain text and includes at minimum:
 
-Five sequential gates between Codex's report and Claude's acceptance. Each gate is a deterministic script with `exit 0` (pass) / `exit ≥1` (block). Located at `.claude/scripts/codex/` (future).
+1. Plan issue number and URL.
+2. Full phase breakdown: phase number, title, type, description, and `affected_files`.
+3. Target branch name: `plan-enterprise-<N>-<slug>-작업-codex` or `plan-enterprise-os-<N>-<slug>-작업-codex`.
+4. Base branch: `i-dev`.
+5. Group-policy summary for `plan-enterprise`, or harness context for `plan-enterprise-os`.
+6. Instructions to work phase by phase.
+7. Instructions to make one commit per phase.
+8. Instructions to keep changes inside each phase's `affected_files`; if scope expansion is necessary, stop and report it as a blocker.
+9. Instructions to provide a fact-only report: commits, files changed, commands run if any, blockers, and notes.
+10. Explicit reminder that Codex has no authority to declare final completion.
+11. Expected master return format to Claude: `코덱스 완료, {report}` or `코덱스 실패, {report}`.
 
-### Gate 1 — Work Packet Validity
-`verify-codex-packet.sh` — packet JSON schema-validates, `task_id` format, `affected_files` paths exist relative to cwd, `worktree_root` is an actual git worktree, `expires_at` is in the future.
+For `plan-enterprise-os`, `harness_context` replaces `group_policy_summary` and must include the relevant `CLAUDE.md` hard rules plus relevant memory excerpts. The prompt must preserve the Treadmill Audit context when the plan touches rules, hooks, agents, skills, or validation axes.
 
-### Gate 2 — Worktree / Path Scope
-`verify-codex-worktree-scope.sh` — Codex's diff stays inside `worktree_root`. No relative paths escaping (`../`), no absolute paths outside, no writes to `forbidden_paths` (case-insensitive glob match).
+## WIP suffix rule
 
-### Gate 3 — Allowed Write Set
-`verify-codex-write-set.sh` — every file in `files_changed ∪ files_added ∪ files_deleted` is in `allowed_write_set`. Surprise files → block.
+The Codex work branch appends `-codex` to the standard work WIP name, per `CLAUDE.md` §5.
 
-### Gate 4 — TDD Flow (when applicable)
-`verify-codex-tdd-flow.sh` — if `tests_required: true` in packet, the report must show `tests_run.exit_code: 0` AND at least one test was modified or added (signal: tests weren't faked). For non-TDD tasks, gate is skipped.
+Default work WIPs:
 
-### Gate 5 — Report Fact-Only Discipline
-`verify-codex-report-discipline.sh` — execution report contains no forbidden judgment fields. `task_id` and `lock_uuid` match the packet. Required factual fields all present.
+- `plan-enterprise-<N>-<slug>-작업`
+- `plan-enterprise-os-<N>-<slug>-작업`
 
-## Integration with Existing Skills
+Codex work WIPs:
 
-### `plan-enterprise` — Codex as phase-executor alternative
+- `plan-enterprise-<N>-<slug>-작업-codex`
+- `plan-enterprise-os-<N>-<slug>-작업-codex`
 
-Phase dispatch in `plan-enterprise` Step 7a is currently `Task subagent_type: phase-executor`. With Codex enabled, the dispatcher checks a per-invocation flag (e.g., `/plan-enterprise <leader> --codex <description>`) and routes to a Codex packet build instead.
+Claude's downstream patch-note WIP remains the normal document WIP:
 
-The 5-step main-session verification ritual (`plan-enterprise` Step 7c) extends with:
-- Run all 5 codex gates against the execution report.
-- Any gate fail → re-dispatch (with feedback) OR halt for master. Iteration cap remains 3 per phase.
+- `plan-enterprise-<N>-<slug>-문서`
+- `plan-enterprise-os-<N>-<slug>-문서`
 
-advisor's per-phase scope is unchanged — advisor still runs only at plan + completion (per master's 2026-05-12 lock).
+The document WIP never receives the `-codex` suffix because Claude authors the patch-note after Codex execution is accepted.
 
-### `dev-merge` — Codex hotfix executor alternative
+## Advisor scope
 
-Future v1.1 enhancement: when `dev-merge` would dispatch `code-fixer` for hotfix iterations, master can opt into Codex via flag (e.g., `--codex-fixer`). Same gate stack applies.
+The advisor schedule is unchanged from the default flow.
 
-### `task-db-*` — explicitly excluded from v1
+Advisor #1 runs before the Codex prompt is generated. It verifies the draft plan at plan time, and master sees the verdict in the plan issue body.
 
-DB work involves credentials, live database execution, and high-risk operations. v1 keeps `task-db-structure` / `task-db-data` Claude-only. Codex integration deferred until the bounded-executor model has run successfully on code work for a meaningful period.
+Advisor #2 runs only after master returns `코덱스 완료, {report}` and Claude verifies the Codex commits. It uses the same completion-time rubric as the default flow:
 
-## Worktree Isolation Model
+- `plan-enterprise`: 5 perspectives.
+- `plan-enterprise-os`: 6 perspectives, including Treadmill Audit.
 
-Each Codex packet runs in its own git worktree under a path predictable from the packet's `task_id`. The dispatcher:
+Codex output does not skip, replace, or weaken advisor #2.
 
-1. Creates worktree: `git worktree add -b <wip_branch> /tmp/codex-worktrees/<task_id> i-dev`.
-2. Writes packet to `/tmp/codex-worktrees/<task_id>/.codex-packet.json`.
-3. Hands worktree path to Codex.
-4. Codex works inside the worktree, commits to `wip_branch`, pushes.
-5. Dispatcher reads execution report, runs gates.
-6. On all-pass: dispatcher merges `wip_branch` back via the normal WIP merge (after Claude's own verification).
-7. Dispatcher removes the worktree: `git worktree remove /tmp/codex-worktrees/<task_id>`.
+## completion-gate-procedure inheritance
 
-Worktree isolation prevents Codex from accidentally touching the main checkout's state (other in-flight work, `.claude/` content, etc.) — gate 2 enforces this structurally.
+After advisor #2 passes and Claude creates the patch-note entry, Step 11 PENDING gate applies identically to Codex and non-Codex flows.
 
-## Lock Coverage
+Master may answer:
 
-Each packet carries `lock_uuid`. Worktree creation acquires a file lock at `/tmp/codex-locks/<task_id>.lock`. Concurrent packets with the same `task_id` → lock fail → halt. Used to prevent double dispatch of the same phase.
+- `플랜 완료` to let Claude close the plan issue and emit the final completion report.
+- `핫픽스 <description>` to request one additional phase.
+- `중단` to preserve the current state and halt.
+- Any other input to leave the plan pending without action.
 
-Lock release on packet completion (success OR failure). Crash recovery: locks older than `expires_at` are reclaimable.
+On `핫픽스 <description>` in a `--codex` context, Claude generates a Codex prompt for only the hotfix phase and halts again. The hotfix re-entry keeps the same Codex branch suffix rule, same fact-only reporting rule, same Claude verification ritual, and same advisor #2 completion check after the hotfix commits are accepted.
 
-## Open Questions (resolve in implementation unit)
+For `plan-enterprise-os`, the hotfix path also keeps the harness-aware Treadmill check. A Codex hotfix that adds or substantially modifies a rule, hook, agent, skill, or validation axis must still honor the previously approved Treadmill Audit trade-out.
 
-- Codex tool stack: which Codex variant (web UI, API, IDE plugin)? v1 design assumes API-callable variant with shell execution capability.
-- Authentication: where do Codex credentials live? Probably an env var per group-policy `env_management` rule.
-- Cost attribution: monitoring's `attributionSkill` axis is Claude-native. Codex runs produce no JSONL entries in `~/.claude/projects/`. Need a separate log path (likely `.claude/state/codex-runs/`) for Codex monitoring — but `.claude/state/` was abolished (§D-10). Pick a new home, document.
-- Retry policy: gate failure → re-dispatch with the same packet or a new packet (different lock_uuid)? Per phase iteration cap of 3 in `plan-enterprise`.
-- Codex side prompts: what's the prompt Claude generates for Codex? Likely the packet JSON + Korean intent + the worktree path. Lock format in implementation unit.
-- net-positive Q3 (Treadmill Audit): adding Codex integration introduces a 5-gate verifier stack. What gets retired? Possibly: the per-phase advisor consideration master ruled out (which doesn't exist). Or: implicit Claude-only assumption. Document the Q3 answer when implementing.
+## Scope (v1)
 
-## v1 Implementation Path
+In scope: `plan-enterprise <leader> <description> --codex`, `plan-enterprise-os <description> --codex`, the manual master bridge, Codex execution on phase-broken work, Claude verification of Codex branches and commits, existing advisor #1 and #2 checks, existing completion-gate consumer behavior, and Codex-mediated hotfix phases for plans that started in `--codex` mode.
 
-When master decides to implement (separate `/plan-enterprise-os` invocation):
-
-1. Create `.claude/scripts/codex/` with the 5 gate scripts.
-2. Create `.claude/agents/codex-packet-builder.md` — Claude-side agent that converts phase metadata into a packet.
-3. Extend `plan-enterprise` with `--codex` flag and the gate-stack integration.
-4. Add a small `monitoring/scripts/codex-collect.py` if Codex runs need separate tracking.
-5. Beta scope: one phase of one plan-enterprise invocation, master observing.
-6. Iterate based on beta findings.
-
-## References
-
-- Project-I prep (Phase 1): `Project-I/.agents/scripts/verify-codex-*.sh` (8 scripts) — read-only reference, conservative adapt only.
-- Project-I plan doc: `Project-I/temp/plans/2026-05-08_codex-joyful-origami.md` — original design rationale.
-- Project-I B-026 ordinance: discarded (no ordinance system in I2); core invariants ported here.
-- Master directive (`README.md` §E-3): GPT-5.5 / Opus pricing shift justifies the collaboration system.
+Out of scope: `dev-merge --codex-fixer` (future only), `task-db-structure --codex`, `task-db-data --codex`, new Codex packet schemas, gate scripts, lock files, worktree isolation, new sub-agents, and any Codex authority to finalize, close issues, author patch-notes, or bypass advisor. DB execution stays Claude-only for safety.
