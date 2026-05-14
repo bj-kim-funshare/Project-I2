@@ -162,7 +162,8 @@ advisor 의 prose 응답에서 `BLOCK: <reason>` 으로 시작하는 라인이 �
 
 ### dev → i-dev 머지
 ```
-/dev-merge <from-branch> i-dev
+/dev-merge <leader>
+→ Step 0 UI: 멤버 repo 선택 → from-branch 선택 → to-branch 선택 (외부 컨텍스트 기본 i-dev)
 → PR 생성 → 리뷰어 2 (compliance + bug-detector) 병렬
 → findings ≥ 80 confidence 시 code-fixer 핫픽스 (max 3 iter)
 → 클린 시 merge commit (--no-ff)
