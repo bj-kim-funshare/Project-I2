@@ -21,11 +21,23 @@ Required base: `main` in the Project-I2 working directory.
 Required base: `i-dev` in **each member repo** declared in the leader's project-group manifest
 (`.claude/project-group/<leader>/dev.md` → `targets[].cwd`).
 
-**Dual-target exception** (`patch-confirmation`, `patch-update`):
-These two skills accept either `아이OS` or a leader name as their target argument, but they
-always operate on patch-note files in the I-OS repo (Project-I2). Apply the **아이OS alignment
-check** unconditionally — verify `main` in Project-I2 — regardless of which argument was supplied.
-Do NOT attempt to verify i-dev in member repos for these skills.
+**Dual-target exception** (`patch-update` only):
+`patch-update` accepts either `아이OS` or a leader name as its target argument but always writes
+patch-note files inside the I-OS repo (Project-I2). Apply the **아이OS alignment check**
+unconditionally — verify `main` in Project-I2 — regardless of which argument was supplied.
+Do NOT attempt to verify i-dev in member repos for `patch-update`.
+
+**Case-branching skill** (`patch-confirmation`):
+`patch-confirmation` operates in two contexts depending on the invocation argument:
+
+- `아이OS` argument → **아이OS context**: Project-I2 current branch must be `main`. Entry
+  verification, WIP creation, and exit restoration follow the 아이OS rules in §2–§3.
+- `<leader>` argument → **external context**: Project-I2 current branch must be `main` (the
+  patch-note file for the leader lives in I2's `.claude/project-group/<leader>/patch-note/`).
+  Each member repo declared in `targets[].cwd` must also be on `i-dev`. Entry verification checks
+  both. Code WIPs are created per member repo against `i-dev`; the doc WIP for the patch-note
+  entry is created against I2 `main`. Exit restoration restores all touched member repos to
+  `i-dev` and I2 to `main`.
 
 ## 2. Entry verification
 
