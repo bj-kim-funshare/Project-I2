@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.40.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: funshare-inc/data-craft#16 (hotfix 9)
+
+### 페이즈 결과
+
+- **Phase 13 (hotfix 9)** (`767346c6`): hotfix 8b 가 도입한 `BarChartWidget` 의 `desiredLabelColWidth` `useMemo` 가 **두 개의 React Rules-of-Hooks 위반**을 동시에 가지고 있어 다수 위젯이 에러 바운더리에 잡힘 ("Rendered more hooks than during the previous render"):
+  1. `chartData.length === 0` early return **이후** 에 hook 호출.
+  2. `if (isHorizontal)` 조건 분기 **안** 에서 hook 호출 (세로 막대 렌더 시 hook 누락).
+  
+  두 위반 모두 해소: `useMemo` 를 IIFE 집계 직후 (early return 이전, isHorizontal 분기 외부) 로 이동. `eslint-disable-next-line react-hooks/rules-of-hooks` 주석 제거 (위반 해소로 불필요).
+  
+  진단 결과: GaugeWidget / CardWidget / UserCard / LineChartWidget / PieChartWidget 은 hooks 순서 정상 — 수정 없음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev-001`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/BarChartWidget.tsx`
+
+### 검증 결과
+
+- 코드 다이프: +12/-11, 1 파일.
+- 페이즈 iter: 1회 통과.
+- 진단 범위 검사 (BarChartWidget, GaugeWidget, CardWidget, UserCard, LineChartWidget, PieChartWidget) — BarChartWidget 외엔 정상.
+- Lint gate: advisory.
+
+### 운영 메모
+
+- 수동 검증: 대시보드 새로고침 후 위젯 ⚠ 에러 사라지고 모든 위젯이 정상 렌더되는지 확인. 가로 막대 / 세로 막대 둘 다 정상 그려지는지 확인.
+- 회고: hotfix 8b 디스패치 시 새 `useMemo` 의 정확한 배치 위치 (early return 이전 + 분기 외부) 를 명시했어야 함. 향후 hook 추가 dispatch 시 동일 검증 routine 권장.
+
 ## v001.39.0
 
 > 통합일: 2026-05-14
