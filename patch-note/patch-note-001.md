@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.39.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스4)
+> 대상: 아이OS
+
+### 개요
+v001.35.0 (이슈 #25 Phase 4) 의 실시간 비교 의미 오해석 정정. Phase 4 는 `[now-N, now]` 윈도우 합 vs `[now-2N, now-N]` 윈도우 합 (rolling-window pair) 로 구현되어 ▼ 음수 델타 발생 가능. 마스터 의도 = "N시간 전의 누적값과 현재 누적값 비교 = N시간 동안의 증가분"; 토큰은 누적이므로 음수 불가. 의미 재정의.
+
+### 페이즈 결과
+- **핫픽스4** (`monitoring/script.js`, `monitoring/index.html`):
+  - `computeRealtimeWindows(now, hoursBack)` 재작성. 비교 미선택 시: `baseStart = weekStart, baseEnd = now` (기존과 동일). 비교 선택 시: `baseStart = weekStart, baseEnd = now`, `compareStart = weekStart, compareEnd = max(weekStart, now - N*3600*1000)`. 즉 base 는 항상 "이번주 월~지금" 누적, 비교는 "이번주 월~N시간 전 시점" 누적. 델타 = N시간 동안의 추가 사용량 (>= 0). compareEnd 가 weekStart 보다 이르면 clamp → 비교 윈도우 빈 합 = 0 → 델타 = 현재 누적 (주 초입 N시간 이내 케이스 graceful).
+  - 메타 텍스트 변경: `실시간: 최근 N시간 합 vs 직전 동일 폭 (비교)` → `실시간: 이번주 월요일 00:00 ~ 지금까지 (vs N시간 전 누적 — 그동안의 증가분)`.
+  - 자산 cache-bust 쿼리 `?v=20260514-3` → `?v=20260514-4`.
+
+### 영향 파일
+- `monitoring/script.js`
+- `monitoring/index.html`
+
+### Treadmill Audit
+NOT APPLICABLE — 의미 정정. 신규 메커니즘 추가 없음.
+
 ## v001.38.0
 
 > 통합일: 2026-05-14
