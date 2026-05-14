@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.37.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스2)
+> 대상: 아이OS
+
+### 개요
+v001.36.0 머지 후 마스터 브라우저 검증에서 4건 결함 보고. (1) 일자별 토큰 스택·일자별 추정 비용 차트가 헤더 기간 선택에 영향받아 풀 timeline 표시 못함. (2) 도넛 3종 (모델 분포 / 스킬 점유 / 캐시 vs 비-캐시) 범례가 캔버스 아래 가로 배치되어 파이가 카드 중앙에 떠있고 비교 모드에서 증감 표시 부재. (3) 실시간 모드에서 세션 Top 10 / 프롬프트 / 세션 디테일 테이블이 비어있음 (hourly.json 이 세션·프롬프트 축을 갖지 않음). (4) 차트 카드 제목 가시성 부족. 한 phase 에 통합 정정.
+
+### 페이즈 결과
+- **핫픽스2** (`monitoring/index.html`, `monitoring/script.js`, `monitoring/styles.css`):
+  - 이슈 1: `renderAll(data, compareData)` 에서 `_aggregateCache` 를 `aggData` 로 래핑해 `renderChartDayTokens` / `renderChartDayCost` 에 전달, `compareData` 인자 제거. 두 차트는 항상 풀 aggregate 의 `by_day` 사용 (기간 선택·비교 비scope화). detail-section 의 `dayTokensDetail` 도 동일 처리.
+  - 이슈 2: `renderChartModelDonut` / `renderChartSkillDonut` / `renderChartCacheDonut` 의 Chart options `plugins.legend.position` 을 `'bottom'` → `'right'` 로 변경, `align: 'center'` 추가, `labels.generateLabels` 콜백으로 비교 모드 (`opts.prevRows` 전달 시) 각 범례 라벨에 `▲/▼ ±%p (±absKMB)` 합성. `renderAll` 에서 `compareData.by_model`/`by_skill` 을 `prevRows` 로 전달. 기존 `renderPieCompareList` / `clearPieCompareLists` 호출 제거, `index.html` 의 `#compare-model-list`/`#compare-skill-list`/`#compare-cache-list` 3개 빈 div 제거.
+  - 이슈 3: `applyPeriodSelection` realtime 분기에서 현재 ISO 주의 weekly period 파일 (`loadPeriodData('weekly', currentWeekKey)`) 을 추가 로드하여 `baseData.by_session` / `baseData.by_prompt` 에 주입. compareData 에는 fallback 미적용. `loadAggregate()` 사전 로드로 `_aggregateCache` null 방지.
+  - 이슈 4: `.chart-card h3` 에 `margin-bottom: 10px` + `font-weight: 700` 적용해 카드 제목 가시성 강화.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+NOT APPLICABLE — 핫픽스는 순수 UI/렌더링 정정 및 데이터 fallback. 신규 규칙/훅/에이전트/스킬/검증축 추가 없음.
+
 ## v001.36.0
 
 > 통합일: 2026-05-14
