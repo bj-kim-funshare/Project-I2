@@ -1,5 +1,32 @@
 # 아이OS — Patch Note (001)
 
+## v001.70.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #37
+> 대상: 아이OS
+
+### 변경 사유
+
+`/dev-merge data-craft` 호출이 거부된 사례에서 시작. 기존 `/dev-merge <from-branch> <to-branch>` 2-인자 형식은 마스터가 단순히 leader 이름만 알고 있을 때 어디서 어디로 머지해야 하는지를 스킬이 안내하지 못해 매번 클로드 측의 해석/되묻기로 빠졌다. 다른 leader-skill (`plan-enterprise`, `pre-deploy`, `dev-build`) 은 이미 leader 인자 + AskUserQuestion 카드로 멤버 repo / 옵션을 선택받는 패턴을 정착시켰으므로, `dev-merge` 도 이 패턴에 정렬한다. 기존 2-인자 형식은 폐기.
+
+### 페이즈 결과
+
+- **Phase 1 — dev-merge SKILL.md leader-arg 재설계** (`a0edc90` + 정합 4개: `f08125b`, `b9f1008`, `e789cb0`, `3ef5675`): frontmatter description / L8 본문 / `## Invocation` / `## Pre-conditions` 를 leader-only 인자 형식으로 전면 재작성. `## Branch alignment 정책` subsection 분리 (아이OS=`main`, 외부=`i-dev`, to-branch ≠ 기본 base 면 경고만 표시하고 진행). 신규 `## Step 0` 섹션 삽입 — 0.1 leader 해석 (`아이OS` → Project-I2 / 외부 → `dev.md` targets[]), 0.2 repo 선택 (후보 1개 자동 / 2개 이상 AskUserQuestion single-select max 4), 0.3 from-branch 선택 (보호 브랜치 제외 최신순 상위 3개 옵션 + `Other` 자유 입력 + 후보 < 2 면 텍스트 폴백), 0.4 to-branch 선택 (컨텍스트 기본 base 권장 + 후보 1개일 때 자동 채택 폴백 + `from==to` 거부). `## Worktree 격리`, `## Context preparation`, `## Failure policy` (7개 신규 행 추가), `## Scope` 갱신. 보호 브랜치 판정 로직의 leader-aware / leader-unaware 이분법을 단일 분기로 통합. Pre-conditions #4 의 "동일 쌍 PR 미존재" 를 failure 가 아닌 PENDING 재진입 분기 신호로 재정의 + 관련 failure 행 제거. README §G dev → i-dev 머지 예시도 leader-arg 형식으로 갱신.
+
+### 영향 파일
+
+- `.claude/skills/dev-merge/SKILL.md`
+- `README.md`
+
+### Treadmill Audit
+
+PASS — 신규 mechanism 순증 0. Q3 trade-out 2건 명시:
+1. **폐기**: `dev-merge` 의 "leader-unaware ⇒ 정렬 검증 면제" 어휘 (구 L27).
+2. **폐기**: 임의 git+gh repo (project-group 미등록) 머지 능력. 필요 시 마스터가 `/new-project-group` 으로 1회 등록 후 사용.
+
+Q1 (재발 사고) = `/dev-merge data-craft` 거부 케이스가 직접 트리거. Q2 (엣지 케이스) = `아이OS` / 외부 두 갈래 + 옵션 1개 폴백 + base-vs-base 경고 모두 명시.
+
 ## v001.69.0
 
 > 통합일: 2026-05-14
