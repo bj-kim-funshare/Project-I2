@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.38.0
+
+> 통합일: 2026-05-14
+> 플랜 이슈: #25 (핫픽스3)
+> 대상: 아이OS
+
+### 개요
+v001.36.0 (핫픽스1) 에서 적용한 `.big-split-col` flex column stacking 이 마스터 브라우저에서 여전히 옆에 붙어 보이는 증상 재보고. 원인 추정 = 브라우저 캐시 또는 flex column 의 wrap 동작 비결정성. 결정적 grid 레이아웃으로 전환 + 자산 cache-bust 쿼리 부여로 새 CSS 강제 적용.
+
+별도 보고된 "실시간 비교에서 토큰이 감소" 건은 버그가 아니므로 코드 정정 없음. 의미: 실시간 비교는 `[now-N, now]` 윈도우 합 vs `[now-2N, now-N]` 윈도우 합 — 최근 윈도우 사용량이 직전 윈도우보다 적으면 ▼ 음수 정상. 토큰은 누적이 아니라 윈도우별 합이며, 새로고침마다 윈도우가 슬라이드하므로 동일 폭이라도 진폭에 따라 ↑↓ 가능.
+
+### 페이즈 결과
+- **핫픽스3** (`monitoring/index.html`, `monitoring/styles.css`):
+  - `.big-split-col` 의 `display: flex; flex-direction: column;` 을 `display: grid; grid-template-rows: auto auto; justify-items: center;` 로 변경. 두 자식 (`.big-number-half`, `.kpi-delta`) 에 `grid-row: 1` / `grid-row: 2` 명시. flex column 의 wrap 비결정성 제거.
+  - `index.html` 의 `<link rel="stylesheet" href="styles.css">` / `<script src="script.js" defer>` 에 `?v=20260514-3` 쿼리 추가. 브라우저가 새 자산을 무조건 가져오도록 강제.
+
+### 영향 파일
+- `monitoring/index.html`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+NOT APPLICABLE — 순수 레이아웃·캐시 정정. 신규 메커니즘 추가 없음.
+
 ## v001.37.0
 
 > 통합일: 2026-05-14
