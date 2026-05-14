@@ -23,7 +23,7 @@ The skill never auto-fixes code, env files, or infrastructure. Hotfix-on-main ri
 
 ## Pre-conditions
 
-1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification. 본 스킬은 external context 의 **branch-overridden 예외**: 모든 멤버 레포 (`dev.md targets[].cwd` 전부) 가 `main` 위에 있어야 한다 (i-dev 아님). 검증은 다중 선택 UI 이전에 실행. 복원은 touched cwd 만 `main` 으로.
+1. 베이스 브랜치 정렬 — `.claude/md/branch-alignment.md` Entry verification. 본 스킬은 external context 의 **branch-overridden 예외**: 모든 멤버 레포 (`dev.md targets[].cwd` 전부) 를 **자동으로 `main` 으로 체크아웃** 한 뒤 진행. 멤버 레포에 `main` 브랜치가 없거나 checkout 실패 시에만 halt + 보고. **i-dev → main 머지 완료 여부, i-dev 가 main 보다 앞서있는지 여부 등은 본 스킬 검증 영역이 아님** — 마스터가 의도적으로 머지 스킬을 사용하지 않아 i-dev 변경을 배포에서 제외했을 수 있다. pre-deploy 는 현 시점 main HEAD 가 가리키는 코드만을 기준으로 동작한다. 정렬은 다중 선택 UI 이전에 실행. 복원은 touched cwd 만 `main` 으로 (이미 main 이므로 사실상 no-op).
 2. `.claude/project-group/<leader>/` exists with `deploy.md`.
 3. `gh` CLI installed and authenticated (needed when validation produces blocking findings — used to create the GitHub issue).
 4. cwd may be anywhere — the skill operates per target's declared `cwd`.
@@ -157,7 +157,8 @@ Immediate Korean report + halt. No retry.
 |---|---|
 | `.claude/project-group/<leader>/` not found | `"그룹 <leader> 미등록 — /new-project-group 먼저 실행"` |
 | `deploy.md` missing | `"<leader>/deploy.md 부재 — /group-policy 실행 필요"` |
-| 멤버 레포 cwd 가 `main` 위에 있지 않음 (entry 검증) | `"<cwd> 가 main 아님 (현재: <branch>). pre-deploy 는 모든 멤버 레포가 main 일 때만 호출 가능."` |
+| 멤버 레포에 `main` 브랜치 부재 | `"pre-deploy 진입 정렬 실패 — <cwd> 에 main 브랜치 없음."` |
+| 멤버 레포 `git checkout main` 실패 (미커밋 변경 등) | `"pre-deploy 진입 정렬 실패 — <cwd> checkout main 실패 (작업 트리 미커밋 변경 등). 마스터 수동 처리 필요."` |
 | `gh` CLI missing or unauthenticated (when issue creation is needed) | `"gh CLI 미설치 또는 미인증. 이슈 생성 불가 — 사전 설치/인증 후 재호출."` |
 | Validator dispatch failure | `"deploy-validator 디스패치 실패: <error>."` |
 | Prior-issue lookup failure | `"gh issue list 실패: <error>. prior_issue_number=null 로 진행 (안전 측 — 신규 이슈 생성, 옛 이슈 close 안 함)."` |
@@ -180,7 +181,7 @@ In scope:
 - Sequential build + deploy execution when validation is clean.
 - Sequential halt on first build/deploy failure within Branch B (prior issue stays open).
 - 항상 노출되는 multiSelect 선택 UI (target args 폐기 / 자동 선택 폐기 / 단일 타겟도 UI 노출).
-- main 기준 검증/배포 (branch-overridden — external context 의 i-dev 일괄 룰에서 본 스킬만 분리).
+- 진입 시 모든 멤버 레포를 `main` 으로 자동 체크아웃 후 빌드/배포 (branch-overridden — external context 의 i-dev 일괄 룰에서 본 스킬만 분리. 검증이 아닌 정렬 액션). i-dev → main 머지 완료 여부, i-dev 가 main 보다 앞서있는지 여부는 본 스킬 검증 범위 아님.
 - 빈 `deploy_command` 타겟은 선택 가능 — build 만 실행, deploy 스킵, `deploy_status: "manual"` 표시 + master-facing 안내.
 
 Out of scope (v1):

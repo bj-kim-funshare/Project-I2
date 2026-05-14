@@ -42,13 +42,15 @@ Do NOT attempt to verify i-dev in member repos for `patch-update`.
 **Branch-overridden skill** (`pre-deploy`):
 `pre-deploy`'s invocation argument is a `<leader>` name, which by default would place it in the
 External context (i-dev). However, this skill's base branch is **overridden to `main`** for both
-validation and deploy. Both verification and `deploy_command` execution operate from `main` in
+alignment and deploy. Both alignment and `deploy_command` execution operate from `main` in
 every member repo of the leader's project group.
 
-Entry: verify **every member repo** declared in `dev.md targets[].cwd` is on `main`. Apply the
-same "all member repos at entry" principle from §4 Multi-repo handling. Verification runs
-**before** the multiSelect UI — at entry there are no "selected targets" yet, so all member repos
-must be checked unconditionally.
+Entry: **auto-align every member repo** declared in `dev.md targets[].cwd` to `main` via
+`git checkout`. Fail only when the repo has no `main` branch, or checkout fails (e.g.,
+uncommitted changes block it). Apply the same "all member repos at entry" principle from §4
+Multi-repo handling. Alignment runs **before** the multiSelect UI — at entry there are no
+"selected targets" yet, so all member repos are aligned unconditionally.
+Note: i-dev being ahead of `main` is not pre-deploy's concern — master may have intentionally bypassed the merge skill to exclude that work from this deploy. pre-deploy operates strictly on the current `main` HEAD.
 
 Exit: restore only touched member repos to `main` (best-effort, per §3 pattern).
 
@@ -93,16 +95,23 @@ Failure message template (Korean):
 ```bash
 # LEADER_CWD_LIST = array of cwd values from targets[].cwd in dev.md
 for member_cwd in "${LEADER_CWD_LIST[@]}"; do
+  if ! git -C "${member_cwd}" rev-parse --verify --quiet main >/dev/null; then
+    echo "pre-deploy 진입 정렬 실패 — ${member_cwd} 에 main 브랜치 없음."
+    exit 1
+  fi
   current_branch=$(git -C "${member_cwd}" branch --show-current)
   if [ "${current_branch}" != "main" ]; then
-    echo "베이스 브랜치 정렬 위반 — pre-deploy 는 각 멤버 레포가 main 일 때만 호출 가능합니다. (${member_cwd}): 현재 ${current_branch}"
-    exit 1
+    if ! git -C "${member_cwd}" checkout main 2>/dev/null; then
+      echo "pre-deploy 진입 정렬 실패 — ${member_cwd} checkout main 실패 (작업 트리 미커밋 변경 등). 마스터 수동 처리 필요."
+      exit 1
+    fi
   fi
 done
 ```
 
-Failure message template (Korean):
-> `베이스 브랜치 정렬 위반 — pre-deploy 는 각 멤버 레포가 main 일 때만 호출 가능합니다. (<member-repo>): 현재 <branch>`
+Failure message templates (Korean):
+> `pre-deploy 진입 정렬 실패 — <member-repo> 에 main 브랜치 없음.`
+> `pre-deploy 진입 정렬 실패 — <member-repo> checkout main 실패 (작업 트리 미커밋 변경 등). 마스터 수동 처리 필요.`
 
 **Fail early**: all member repos are checked at entry before any work begins. This surfaces
 misalignment before any WIP branch is created or any file is changed.
