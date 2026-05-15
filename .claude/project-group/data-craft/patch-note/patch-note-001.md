@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.68.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#42
+
+### 페이즈 결과
+
+- **Phase 1** (`42fbeed`): `SettingsSidebar.tsx` 의 사용자 설정 섹션 연필 아이콘 가시성 게이트와 그에 연동된 `EditSettingsFormDialog` 마운트 게이트 두 곳을 `isOwner` 단일 체크에서 `usePermission('settings_edit')` 결과로 교체. `usePermission` 훅이 오너 패스를 내장하므로 `canSettingsEdit` 단독으로 (오너 || 권한 보유 비-오너) 자동 충족 (`isOwner ||` 합성 없음, DRY). 부정확한 주석 두 곳 (사용자 설정 섹션의 "settings_manage 권한 필요", 편집 다이얼로그의 "오너만") 도 `settings_edit` 기준으로 정정. 변경: +5 / -4 across 1 file. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0 (228.8s).
+
+### 마스터 명령 의도 (재기)
+
+비-오너 계정에서 "앱 설정 편집" (`settings_edit`) 권한이 부여된 사용자임에도 설정 → "사용자 설정" 텍스트 우측의 편집(연필) 아이콘이 노출되지 않던 문제. 동일 dialog 의 부모 `SettingsDialog` 는 같은 폼 컨텐츠 접근에 `usePermission('settings_edit')` 를 이미 사용 중이었지만, sidebar 의 아이콘 가시성과 그 클릭으로 마운트되는 편집 다이얼로그만 `isOwner` 로 하드코딩되어 있어 권한 표면이 어긋남. 본 수정으로 가시성 + 다이얼로그 도달 두 단계 모두 권한 체계와 정합.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/settings-dialog/ui/SettingsSidebar.tsx`
+
+### 잔여 위험 / 후속
+
+- `EditSettingsFormDialog` 컴포넌트 내부 / 서버 측 `settings_edit` 추가 권한 가드 여부는 본 플랜에서 미조사. 머지 후 권한 보유 비-오너가 dialog 내부 동작 (저장 / 삭제 등) 에서 server 측 거부를 받을 가능성 있음 — 확인 후 거부 발생 시 핫픽스로 후속.
+- 본 명령은 `data-craft` (web) 만 대상. `data-craft-mobile` 의 동등 화면 존재 시 별도 명령으로 처리.
+
 ## v001.67.0
 
 > 통합일: 2026-05-15
