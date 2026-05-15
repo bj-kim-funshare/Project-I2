@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.118.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#67 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 3 / Hotfix 1** (`3066ca3`, data-craft): v001.115.0 으로 14개 카테고리가 된 아이콘 피커 `CategoryTabs.tsx` 의 가로 스크롤 컨테이너에서, 마우스 클릭+드래그로 가로 스크롤이 되지 않아 오른쪽 끝 탭들 (자연/교통/개발) 접근 불가하다는 마스터 보고. pointer 이벤트 핸들러 (`onPointerDown/Move/Up/Cancel`) 를 인라인으로 부착해 마우스 클릭+드래그 가로 스크롤 추가. 마우스 (`pointerType === 'mouse'`) 만 처리, 터치/펜은 native 스크롤 보존. 5px 이동 임계 초과 시 드래그로 판정하며 드래그 종료 직후의 `click` 이벤트를 window-level capture once 리스너로 차단해 Radix `TabsTrigger` 의 의도치 않은 탭 활성화 방지. 정지 시 `cursor: grab` / 드래그 중 `grabbing`, `user-select: none` 으로 시각적 어포던스. 휠/터치/키보드 동작 보존.
+
+### advisor 검증
+
+- 완료 시점 (#2 / hotfix 1): no BLOCK (5관점 PASS). lint 게이트 (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 후속 후보
+
+- 본 hotfix 적용 후 data-craft 의 `CategoryTabs.tsx` 가 data-craft-mobile 의 동일 파일과 바이트 동일성을 잃음. mobile 은 native 터치 스크롤로 기능적 결함 없으나, 향후 mobile 에도 드래그 핸들러 평행 적용 가능 (후속 hotfix 후보).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/shared/ui/icon-picker/CategoryTabs.tsx`
+
 ## v001.117.0
 
 > 통합일: 2026-05-15
