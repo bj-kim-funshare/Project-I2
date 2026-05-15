@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.79.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#50
+
+### 페이즈 결과
+- **Phase 1**: `discardChanges` (`src/entities/layout/model/layoutPersistence.ts`) 가 layoutStore 만 서버 상태로 복원하고 `useWidgetStore.widgets` 는 손대지 않던 결함을 수정. `widgetCrudActions.ts` 에 `replacePageWidgets(pageScopedIds, serverWidgets)` 액션 신설 (page-scoped — 다른 페이지 위젯 보존), `WidgetStore` 타입에도 시그니처 추가. 폐기 진입 시 현재 layout 의 areas/subAreas 를 순회해 page-scoped widget id 집합 수집 후, 서버 응답 성공 분기에서는 `response.data.widgets` 로 replacePageWidgets 호출 (서버 위젯으로 덮어쓰기 + 신규 생성분 제거), snapshot 폴백 분기 두 군데에서는 snapshot 에 없는 신규 생성 id 만 best-effort 로 제거 + "새로고침 권장" 콘솔 경고. viewer refreshMeta 루프는 widget 교체 이후로 순서 이동.
+
+### 배경
+QA 보고: 탭화면 페이지의 디자인 모드에서 위젯 (탭위젯 사용) 을 다른 위젯으로 변경 후 뷰 모드로 전환 시 저장 안내 다이얼로그에서 "저장 안함" 을 선택해도 화면상에는 변경사항이 그대로 보이고, F5 새로고침해야 비로소 원본 상태로 정상 반영. 서버 데이터는 미저장 (정상) — 클라이언트 widgetStore 상태만 오염되는 패턴. 근본 원인은 `discardChanges` 의 layout 만 복원하고 widget 은 손대지 않는 비대칭. `widgetStore.widgets` 가 탭 페이지의 `mergeWidgets` 호출로 cross-page flat map 이 되어 있어 전체 reset 은 금지 — page-scoped 복원 필수.
+
+### 영향 파일
+- data-craft:
+  - `src/entities/widget/model/widgetTypes.ts`
+  - `src/entities/widget/model/widgetCrudActions.ts`
+  - `src/entities/layout/model/layoutPersistence.ts`
+
+### 미해결 / 후속 검토
+- QA 보고문의 "탭위젯 사용" 표현이 (a) 외부 탭 위젯 자체 교체 / (b) 탭 내부 위젯 교체 두 가지로 해석 가능. 본 fix 는 (a) 를 확실히 커버. (b) 의 경우 `useTabPageLayout` 이 inner pageId 로 별도 `layouts[layout-<innerPageId>]` 엔트리를 등록하므로 본 fix 의 `pageScopedIds` 수집 범위 (outer 만) 가 미달 → 동일 증상 잔존 가능. QA 재현 경로 정확히 확인 후 (b) 면 hotfix 로 inner layout entries scope 확장 + React Query 캐시 invalidate 처리 필요.
+- `replacePageWidgets` 가 제거하는 viewer-type widget id 에 대해 `unregisterViewerRef` 호출 누락 (`deleteWidget` 과의 일관성 미확보). 실질 누수 가능성은 낮으나 (React 컴포넌트 unmount 시 자동 정리) 후속 정리 대상.
+
 ## v001.78.0
 
 > 통합일: 2026-05-15
