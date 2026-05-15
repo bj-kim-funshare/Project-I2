@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.71.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#43 (hotfix-1)
+
+### 페이즈 결과
+
+- **Phase 2 (hotfix-1)** (`651d4f35`): v001.70.0 (Phase 1) 의 진단 정정. Phase 1 은 BlockNote 슬래시 메뉴(`.bn-suggestion-menu`)가 `document.body` 로 portal 된다고 가정하고 `DocumentEditor.tsx` 의 `attach(el)` 에 `overscroll-behavior: contain` 한 줄을 추가했으나, master 실측 결과 본문과 드롭다운이 여전히 함께 스크롤. 재조사 결과 BlockNote `GenericPopover` (`@blocknote/react/src/components/Popovers/GenericPopover.tsx`) 는 `createPortal`/`FloatingPortal` 을 사용하지 않으며 (`SuggestionMenu/`, `Popovers/`, `@blocknote/mantine`, `BlockNoteDefaultUI.tsx` 모두 portal 부재 grep 으로 확정), `.bn-suggestion-menu` 는 ContentArea `scrollRef` 의 descendant 로 렌더됨. 실제 root cause = `ContentArea.tsx:33-60` 의 wheel 핸들러가 `{ passive: false, capture: true }` 로 등록되어 W3C 캡처 단계 순서상 dropdown 의 wheel 핸들러보다 먼저 발화 → 본문에 스크롤 여유가 있는 동안 매 wheel tick 마다 본문이 우선 움직이고 본문 끝단 이후에야 dropdown 차례. master 의 "둘 다 스크롤" 체감은 이 tick 별 선점의 누적. **수정**: `ContentArea.tsx` `handleWheel` 최상단에 `e.target.closest('.bn-suggestion-menu')` 조기 반환 추가하여 중첩 스크롤 컨테이너 내부 wheel 은 본문 핸들러가 가로채지 않고 dropdown 핸들러로 흘려보내도록 정합. `DocumentEditor.tsx` 에서 v001.70.0 의 `overscroll-behavior: contain` 주석 + 대입 2줄 제거 (오진단 dead code 정리). 변경: +6/-2 across 2 files. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### hotfix-1 평가
+
+v001.70.0 의 1차 진단은 "scroll-chaining = 브라우저 기본 동작" 이라는 가정 위에서 출발했고, `.bn-suggestion-menu` 의 portal 여부를 코드/grep 으로 확인하기 전에 MutationObserver 가 `document.body` 를 관찰한다는 정황만으로 portal 을 추정했다. 실측에서 어긋난 뒤 BlockNote 의 `GenericPopover` 소스를 직접 읽어 portal 부재 + capture-phase JS 선점이라는 정합 메커니즘으로 정정. 1차의 mechanism error 를 layer 위에 또 한 겹 가설로 덮는 대신 v001.70.0 의 코드를 같이 제거하여 잔여 dead code 없음. 본 hotfix 의 진단은 W3C 표준 캡처 순서 + 3중 grep (Popovers / SuggestionMenu / mantine + BlockNoteDefaultUI) 으로 근거.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어 → 문서 타입 셀의 문서 모달 본문에서, 본문에 스크롤이 발생할 정도의 긴 블록이 있을 때 블록 왼쪽 `+` 아이콘으로 블록 추가 드롭다운을 열고 드롭다운을 스크롤하면 뒤의 본문이 함께 스크롤되는 문제 차단. v001.70.0 의 1차 수정이 실효 없음을 master 가 실측한 뒤 발급된 hotfix.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/ContentArea.tsx`
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor 5-관점 (완료 시점): Intent / Logic / Group Policy / Evidence PASS, Command Fulfillment PARTIAL — 메커니즘 기반 진단이 확보되어 v001.70.0 의 false-positive 클래스는 종료되었으나 master 실측 PENDING. BLOCK 토큰 없음.
+
+### 잔여 위험 / 후속
+
+- 동일 결합 두 곳: `DocumentEditor.tsx` 의 MutationObserver selector `.bn-suggestion-menu` 와 `ContentArea.tsx` 조기 반환 selector `.bn-suggestion-menu`. BlockNote 0.46+ 클래스명 변경 시 두 곳을 동시 갱신 필요.
+- BlockNote 의 다른 inline floating UI (`FormattingToolbar`, `LinkToolbar`, `TableHandles`, `FilePanel`) 도 동일 capture 선점 결함의 잠재 대상. 본 hotfix 는 마스터 보고 범위(슬래시 메뉴) 만 정합. 후속 보고 시 동일 패턴(selector 확장 또는 일반화된 nested-scroll detector)으로 확장 권장.
+
+### 마스터 수동 검증 시나리오
+
+1. `pnpm dev` (포트 5173) 으로 data-craft 기동.
+2. 데이터 뷰어 → document 타입 셀 클릭 → 문서 모달 오픈.
+3. 본문에 스크롤이 발생할 만큼 텍스트 블록 길게 작성.
+4. 임의 블록 왼쪽 `+` 아이콘 클릭 → 슬래시/블록 추가 드롭다운 오픈.
+5. 드롭다운 내부를 휠/트랙패드로 스크롤 — 드롭다운 자체 스크롤만 발생, 본문 위치는 고정 유지 (핵심 회귀 케이스, v001.70.0 에서 실패한 시나리오).
+6. 드롭다운 외부 본문 휠 스크롤 — 본문 정상 스크롤 (regression 확인).
+
 ## v001.70.0
 
 > 통합일: 2026-05-15
