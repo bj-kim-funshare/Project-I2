@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.64.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#37
+
+### 페이즈 결과
+
+- **Phase 1** (data-craft `4126ed4b`): 칸반 기준열(group-by 열) 인라인 헤더 편집 시 변경된 항목이 그리드 뷰에 정상 표시되지 않던 결함을 수정. **진단**: `SingleSelectCellRenderer` 가 cellValue 를 옵션 label 텍스트로 저장하므로 in-memory cascade 자체는 올바르게 동작하나, `addChangeWithHierarchy` 가 변경을 insertion 순서대로 서버로 전송하기 때문에 구 순서(`cells → customDataList`)에서는 서버가 아직 갱신 전 enum 으로 cell Put 을 검증 → 거절하여 cell 값이 옛 값으로 회귀하던 것이 root cause. 동일 핸들러는 이미 enterprise-436 Hotfix-001/002 두 차례 패치된 곳이라 트레드밀 회피 차원에서 진단을 우선했다. **해결**: `handleColumnRenamed` 의 `saveChange` enqueue 순서를 `(d) customDataList → (b) kanbanColumnOrder → (c) kanbanColumnColors → (a) cells` 로 재배치하여 서버가 신규 옵션을 먼저 등록한 뒤 cell Put 들을 수용하도록 정정. in-memory mutation 위치 및 Hotfix-001/002 의 `columnModelList`/`rowModelList` ref 갱신 로직은 그대로 유지. 회귀 테스트 신규 `PHASE-04-column-rename-grid-sync.test.tsx` 3건 추가(row cascade / saveChange payload 순서 / 부분 rename 위치 보존). 기존 `PHASE-04-column-rename-behavioral.test.tsx` 의 호출 인덱스 단언과 `PHASE-04-column-rename.test.ts` 의 source-regex slice 길이를 새 순서에 동기화. 변경 +217 / -52 across 4 files. lint gate (`pnpm typecheck:all && pnpm lint`) PASS.
+- **Phase 2** (data-craft `98699893` + lint hotfix `eb3a0c06`): 칸반 카드영역 배치 다이얼로그(`KanbanCardAreasDialog`, 헤더 타이틀 "카드 구성") 의 컬럼 palette 에서 현재 기준열(`viewerModel.kanbanColumnField`) 제외. **이유**: 기준열은 이미 칸반 그룹화에 점유 중이므로 카드영역(A/B/C/D/E) 후보로 노출될 이유가 없음. **변경**: `palette` useMemo 의 filter 조건에 `c.columnField !== viewerModel.kanbanColumnField` 1개 추가 + 의존성 배열에 `kanbanColumnField` 포함. 단위 테스트 1건 추가 (`kanbanColumnField` 설정 시 해당 컬럼이 palette DOM 에 미노출 검증). 초기 commit 에서 spread 타입 오류 1건 발생 → lint hotfix 1회로 해소. 변경 +32 / -3 across 2 files. lint gate PASS.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어의 칸반 뷰에서 (i) 기준열 헤더 인라인 편집 시 변경 후 그리드 뷰가 옛 값을 표시하던 데이터 연동 결함을 수정해달라는 요구, (ii) 추가로 칸반 뷰의 카드 구성 다이얼로그의 컬럼 목록에서 현재 기준열로 지정된 열을 노출에서 제외해달라는 요구.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/kanban/handlers/kanban-reorder-handlers.ts`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/KanbanCardAreasDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/__tests__/KanbanCardAreasDialog.test.tsx`
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename-behavioral.test.tsx`
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename-grid-sync.test.tsx` (신규)
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename.test.ts`
+
+### 마스터 수동 검증 시나리오
+
+1. 칸반 뷰 진입 → 디자인 모드에서 기준열의 한 칸반 열 제목을 인라인 편집으로 변경 (예: "대기" → "대기중") → 칸반 뷰 안에서 해당 그룹의 카드들이 새 제목 아래에 그대로 유지됨 확인.
+2. 같은 데이터 뷰어에서 그리드 뷰로 전환 → 변경된 행들의 기준열 셀이 모두 새 텍스트("대기중") 로 표시되고, 행이 누락 없이 정상 노출됨 확인.
+3. 부분 rename (옵션 3개 중 1개만 변경) 시 비변경 그룹/카드의 위치 변동 없음 확인.
+4. 데이터 뷰어 헤더 설정에서 "카드 구성" 다이얼로그 열기 → 좌측 컬럼 palette 에 현재 기준열로 지정된 열이 노출되지 않음 확인 (다른 모든 열은 기존대로 노출).
+5. 다이얼로그 안에서 기준열을 다른 컬럼으로 변경 후 다시 열어 보아 새 기준열만 palette 에서 빠짐 확인 (구 기준열은 다시 palette 에 등장).
+
+### 사전 결함 (본 플랜 무관)
+
+- `KanbanCardAreasDialog.test.tsx` 의 "저장 클릭 시 setViewerModel + forceUpdate + onClose" 테스트가 `forceUpdate` 미호출로 실패하나, 본 결함은 i-dev 기준 (`6521c969 WIP(kanban-card): PHASE-10 lint/test 수정 (enterprise-444 통합 게이트)`) 사전 결함으로 확인됨. 본 플랜 변경과 무관하며 별도 처리.
+
 ## v001.63.0
 
 > 통합일: 2026-05-15
