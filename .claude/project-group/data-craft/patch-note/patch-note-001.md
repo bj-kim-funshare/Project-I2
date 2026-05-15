@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.57.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#31 (Hotfix 2)
+
+### 페이즈 결과
+
+- **Phase 5 / Hotfix 2** (`0931deec` + lint fix `a35c842a`): 마스터가 v001.54.0 (Hotfix 1) 검증 후 후속 발견. 서버 다운 / 네트워크 장애 시 페이지 변경 → "레이아웃을 불러오는 중" 무한 로딩, 로그아웃으로도 빠지지 않음. 원인 — `packages/fs-api/src/core/client.fetch.ts:31` 및 `interceptor.ts` 의 raw `fetch()` 호출에 타임아웃 부재. 브라우저 기본 (수십초~무한) 까지 promise pending → React Query `isError` 전이 불가 → `LayoutErrorState` UI 도 렌더되지 않음.
+
+  수정 — (1) 두 fetch wrapper 의 `executeFetch` 에 `AbortController` 기반 **15초 타임아웃** 추가. 사용자 signal (React Query 취소 등) 이 있으면 이벤트 리스너로 타임아웃 컨트롤러에 연결하여 동시 abort 지원. (2) `isNetworkOrTimeoutError` 판별자 (`TypeError` ‖ `AbortError`) 추가. `interceptedFetch` / `interceptedFetchBinary` 의 catch 에서 네트워크/타임아웃 에러 발생 시 `refreshHandler.handleTokenExpired` 라우팅 → refresh 도 같은 이유로 실패 → `onAuthFailure` → v001.53.0 Phase 3 의 cleanup + `/signin` 리다이렉트 체인 발화. (3) `skipAuth` 경로는 타임아웃만 적용, `handleTokenExpired` 라우팅 제외. 4xx/5xx HTTP 응답은 기존 처리 유지 (네트워크 단절 아님). lint iter 1회 (`a35c842a`) — `interceptor.ts` 의 helper 인자 타입을 `AbortSignal | null | undefined` 로 확장하여 RequestInit signal 의 nullable 와 정합. 변경 +130 / -16 (2 files). advisor #2 (hotfix 2) 5-perspective PASS, FetchOptions/InterceptedFetchOptions 모두 `RequestInit` 확장 확인 (signal 포워딩 dead code 아님).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-api/src/core/client.fetch.ts` (executeFetch 타임아웃 + interceptedFetch/interceptedFetchBinary catch 분기 + isNetworkOrTimeoutError)
+- `packages/fs-api/src/core/interceptor.ts` (factory 클로저 executeFetch 타임아웃 + 동일 catch 분기)
+
+### 마스터 수동 검증 시나리오
+
+v001.53.0 + v001.54.0 의 시나리오에 더해 다음을 확인:
+1. `data-craft-server` (port 8000) 를 중지 → authenticated 라우트에서 페이지 클릭 → 최대 **약 30초** 이내 `/signin` 으로 리다이렉트 (원 요청 15s 타임아웃 + refresh 15s 타임아웃 합산). 무한 로딩 X.
+2. `data-craft-server` 재시작 후 다시 로그인 → 정상 동작 회귀 없음.
+3. 정상 응답 시간 ≤ 15초인 요청은 회귀 없음 (정상 시나리오 일체 영향 없음).
+4. 4xx/5xx HTTP 응답을 받는 시나리오 (예: 권한 없음 403, 서버 내부 오류 500 응답) 는 기존대로 에러 상태로 처리 — 자동 로그아웃 트리거 안 함.
+
+> **타이밍 caveat**: 워스트케이스 ~30초 대기 (원 요청 타임아웃 15s → refresh 시도 타임아웃 15s → onAuthFailure 발화). 무한 로딩 대비 strict improvement 이며, 추가로 단축이 필요하면 후속 hotfix 에서 타임아웃 값 또는 refresh 시도 스킵 로직 조정.
+>
+> **React Query retry**: 일부 쿼리는 글로벌 기본 `retry: 1` 을 사용할 수 있어 일부 화면에서 30s × 2 = 약 60초까지 대기 후 redirect 가능. 후속 튜닝 후보.
+
 ## v001.56.0
 
 > 통합일: 2026-05-15
