@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.72.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#36 (hotfix-1)
+
+### 페이즈 결과
+
+- **Phase 4 (hotfix-1)** (`a3227c5b`): v001.69.0 Phase 1 의 root cause 수정. v001.69.0 에서는 `MultiSelectRenderer.toggleOption` 에 방어 로직만 추가해 클릭 시 동작은 sanitize 했으나, 사용자 화면에는 여전히 콤마 결합 복합 옵션이 드롭다운 list 에 하나의 항목으로 노출되는 표시 결함이 남아 있었음 (마스터 실측 스크린샷 첨부 확인). 진짜 원인은 `deriveSelectOptions.ts` 의 fallback 경로가 row 의 `cellValue` 를 split 없이 통째로 옵션 1개로 등록하던 부분 — multiSelect 셀의 cellValue 는 "A, B, C" 형태의 콤마 결합 문자열이므로 전체가 하나의 label 이 됨. **수정**: `deriveSelectOptions` 시그니처에 선택 파라미터 `options?: { splitByComma?: boolean }` 추가. fallback row-walk 단계에서 `splitByComma === true` 일 때 `cellValue` 를 `,` 로 split → trim → 빈 값 제거 → 기존 `seen` Set 로 dedup 한 뒤 개별 label 로 push. `rendererMap.tsx` 의 multiSelect extraProps 호출 사이트만 `{ splitByComma: true }` 전달하도록 변경 (singleSelect 는 default false 유지로 기존 동작 회귀 없음). 신규 테스트 2건 추가 — 단일 row 콤마 분리, 다중 row 교차 dedup. 변경: +40 / -5 across 3 files. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### hotfix-1 평가
+
+v001.69.0 Phase 1 의 진단은 "deriveSelectOptions 폴백 경로가 multiSelect cellValue 를 통째로 등록한다" 까지 도달했으나, affected_files 가 `MultiSelectRenderer.tsx` 측에 묶여 있어 `deriveSelectOptions.ts` 본체 수정은 scope_expansion 으로 보류된 상태에서 toggleOption 방어만 적용했다. 그 결과 클릭 회로는 sanitize 되었으나 옵션 list 의 표시 오염은 그대로 남았고, 마스터 실측에서 즉시 노출됨. hotfix-1 은 root cause 인 deriveSelectOptions 의 분기 처리를 직접 정합화하여 다중선택 드롭다운 list 의 콤마 결합 옵션 노출을 제거. Phase 1 의 toggleOption 방어 로직은 belt-and-suspenders 로 유지 (제거 시 scope creep — 별도 정리 권장).
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어 → 칸반/간트 detail drawer 의 다중선택 셀 드롭다운에 사용자가 선택한 값들의 콤마 결합 문자열이 새 항목처럼 추가되어 노출되는 결함. Phase 1 + hotfix-1 의 2단계 수정으로 (1) 클릭 시 저장 값 오염 차단 + (2) 표시 단계의 옵션 list 오염 자체 차단 모두 정합.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/lib/deriveSelectOptions.ts`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/lib/deriveSelectOptions.test.ts`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/rendererMap.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor 5-관점 (완료 시점): 5/5 PASS — diff 가 advisor #1 승인 shape 그대로, singleSelect default false 유지로 회귀 영역 없음, 신규 테스트가 수정 동작을 직접 검증.
+
+### 알려진 후속 부채
+
+- `MultiSelectRenderer.toggleOption` 의 콤마 split + dedup 방어 로직 (v001.69.0 Phase 1 잔재) 은 root cause 수정 후 dead code 화. 제거 시 별도 plan 권장 (scope creep 회피).
+- multiSelect 셀에서 `customDataList` (서버 enum 정상 케이스) 가 비어 있어 fallback 경로로 회귀되는 빈도가 정상인지 — server-side 별도 점검 필요할 수 있음.
+
 ## v001.71.0
 
 > 통합일: 2026-05-15
