@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.98.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#58
+
+### 페이즈 결과
+- **Phase 1 (docs)**: P0.1 monorepo.html spec 대비 `fs-shared-mobile` skeleton (`packages/fs-shared-mobile/`, `pnpm-workspace.yaml`, `apps/web/tsconfig.json`, `apps/web/vite.config.ts`) 줄 단위 audit 작성. `@dcm/` prefix (vs spec `@fs/`) carve-out 기록, `@shared/*` alias 미구현 spec gap 으로 기록.
+- **Phase 2 (docs)**: P0.2 + P0.4 spec 대비 AppShell + AppHeader + BottomTabs + OfflineBanner + IOSInstallHint + RouteGuard + useSession + sessionStore 8 파일 audit 작성. safe-area / 56px·64px 치수 정렬 확인. spec gap 4 건 (BottomTabs 검색 탭, AppHeader back 버튼, title 하드코딩, SessionExpired 모달) 기록.
+- **Phase 3 (docs)**: routing.html spec 대비 `route-paths.ts` 26 const + `router.tsx` 1:1 매핑 audit. 5 명명 차이 (`/page-tree` ↔ `/pages`, `/record` ↔ `/records`, `/user-form` ↔ `/forms`, `viewer/*` flat 등) 비차단 carve-out 명시.
+- **Phase 4 (feat)**: `tokens.css` `:root` 블록에 spec L82–105 누락분 9 변수 (`--sp-12`, `--radius-{sm,md,lg,xl,full}`, `--shadow-{sm,md,lg}`) 추가. `--safe-{top,bottom}` 은 `safe-area.css` 에 동일 값으로 이미 정의됨 → 중복 회피, spec 요구 11 변수 모두 코드 존재 확인.
+
+### 영향 파일
+- data-craft-mobile:
+  - `DataCraft-mobile-v2/handoff/phase0/audit/monorepo-audit.md` (신규, 145 라인)
+  - `DataCraft-mobile-v2/handoff/phase0/audit/appshell-audit.md` (신규, 179 라인)
+  - `DataCraft-mobile-v2/handoff/phase0/audit/route-paths-audit.md` (신규, 101 라인)
+  - `apps/web/src/mobile/styles/tokens.css` (편집, +15 / -0)
+
+### Cross-repo 처리 메모
+이슈 호스트 (leader) = `funshare-inc/data-craft`, work repo = `bj-kim-funshare/data-craft-mobile`. 모든 페이즈 변경은 work repo 의 `i-dev` 통합 (`merge[plan-enterprise #58]`). leader repo 는 이슈 호스트 역할만, 코드 변경 없음. 본 패치노트 자체는 Project-I2 main 에 통합.
+
+### 검증 결과
+- Lint gate (Phase 4, `pnpm typecheck` on data-craft-mobile): exit 0, 0 errors.
+- Phase 1~3 lint gate: SKIP (md-only commits).
+- advisor #1 (계획 시점) PASS · advisor #2 (완료 시점) PASS — 5 perspective 모두.
+
+### 후속 (본 플랜 범위 밖, audit 결과 기록)
+- `@shared/*` alias 미구현 (spec P0.1 요구).
+- BottomTabs 검색 탭 누락, AppHeader back/title 슬롯, SessionExpired 모달 미연결.
+- 별도 plan-enterprise 진입 여부 마스터 결정.
+
 ## v001.97.0
 
 > 통합일: 2026-05-15
