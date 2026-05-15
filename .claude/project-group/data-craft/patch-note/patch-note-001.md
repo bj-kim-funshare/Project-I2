@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.54.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#31 (Hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 4 / Hotfix 1** (`f5a78bc6`): 마스터가 plan-enterprise #31 (v001.53.0) 의 자동 로그아웃 e2e 검증 중 발견한 사전 존재 결함을 보정. 증상 — access token 을 devtools 로 수동 삭제한 후 라우트 클릭 시 "레이아웃을 불러오는 중" 무한 로딩, 네트워크 요청 미발사, 로그인 화면 미리다이렉트. 원인 — `packages/fs-api/src/core/client.fetch.ts:121-123` 및 `packages/fs-api/src/core/interceptor.ts:140, 189` 의 4개 사이트에서 `accessToken` 미존재 시 `ApiException(401)` 동기 throw 만 하여 `refreshHandler.handleTokenExpired` 경로를 우회 → `onAuthFailure` 콜백 미발화 → v001.53.0 Phase 3 에서 등록한 `applyPreAuthTheme` + `clearAuth` + `/signin` 리다이렉트 체인이 동작하지 못함 → React Query 의 rejected promise 가 영구 pending. 수정 — 4개 사이트 모두 즉시 throw 대신 `refreshHandler.handleTokenExpired(async (newToken) => { ...Bearer newToken 으로 재시도... })` 로 라우팅. refresh token 살아있으면 새 access token 으로 정상 재시도, refresh 도 실패 (또는 refresh token 부재) 면 `tokenRefresh.ts:124` 의 `onAuthFailure` 가 발화 → v001.53.0 의 cleanup + redirect 체인 동작. 재귀 안전성 확인 — `refreshAccessToken` 은 raw `fetch` 를 직접 사용 (`tokenRefresh.ts:63`) 하므로 패치된 4개 사이트로 되돌아 가지 않음. 변경 +32 / -4 (2 files). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0. advisor #2 (hotfix) 5-perspective PASS.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-api/src/core/client.fetch.ts` (interceptedFetch + interceptedFetchBinary)
+- `packages/fs-api/src/core/interceptor.ts` (interceptedFetch + interceptedFetchBinary)
+
+### 마스터 수동 검증 시나리오
+
+v001.53.0 의 5개 시나리오에 더해 다음을 확인:
+1. devtools 에서 localStorage 의 access token 값을 삭제 또는 쓰레기로 덮어쓰기.
+2. authenticated 라우트에서 다른 페이지 클릭 → 즉시 `/signin` 또는 `/login` 으로 리다이렉트되는지 확인 (무한 로딩 X).
+3. refresh token 도 함께 삭제 → 동일하게 `/signin` 리다이렉트 (refresh 실패 경로).
+4. refresh token 살아있고 access 만 손상 → `/refresh` 요청이 한 번 발사된 뒤 원 요청이 새 토큰으로 재시도되어 정상 응답 (즉, 단순 손상만으로는 로그아웃되지 않음).
+
 ## v001.53.0
 
 > 통합일: 2026-05-15
