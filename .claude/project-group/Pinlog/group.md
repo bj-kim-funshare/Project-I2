@@ -32,10 +32,10 @@
 
 ## 운영 메모
 
-- v1 시점 배포 인프라 미확정 — deploy.md 의 TBD 항목 채워질 때까지 `pre-deploy` 스킬 호출은 deploy-validator 단계에서 차단됨.
+- FE(`Pinlog`) 배포 = gh-pages 확정, `pre-deploy` 즉시 사용 가능. BE(`Pinlog-Server`) 는 tool=aws 확정이나 `target`/`deploy_command` 미정 — 채워지기 전까지 BE `pre-deploy` 는 deploy-validator 단계에서 차단됨.
 - `plan-enterprise` 다단계 phase 작업 시 i-dev 가 main 보호막.
 
 ## 미확정 항목
 
-- deploy 인프라 4종 결정 (FE host / BE host / build·deploy command / env 관리). `/group-policy Pinlog` 로 보강.
-- DB dev/prod 분리 구체 형태 (인스턴스 / DB 명).
+- BE AWS `target` + `deploy_command` 확정 (`/group-policy Pinlog` 재호출).
+- FE `vite.config.ts` `base` 경로 `/PinLog-Web/` 수정 (gh-pages project pages 호환 — 별도 코드 과제).
