@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.82.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#47 (핫픽스 1)
+
+### 페이즈 결과
+- **Phase 2 (핫픽스 1)**: 내장 서브그리드 신규 행 추가 시 캐시 동기화 콜백 `addRowToCache(parentRowField, newRow)` 신설. UI "+ 행 추가" 버튼 경로(`useSubGridHandlers.handleAddRow`)에서 `setSubGridModel` 직후 본 콜백을 호출해 `serverSubGridCacheRef` 및 (필요 시) `baseSubGridCacheRef` 양쪽에 새 행을 append. 콜백은 `useSubGrid` → `FsGridTableView` → `SubGridRow` → `FsSubGrid` → `useSubGridHandlers` 의 prop chain 으로 7 파일에 걸쳐 threading. Phase 1 의 닫기-시 viewerModel 스냅샷 8 라인은 revert — `viewerModel.subGridModel` 자체가 row-add 경로에서 갱신되지 않으므로 dead code.
+
+### 배경 (핫픽스 사유)
+v001.76.0 (Phase 1) 후에도 QA 재현 시 증상 그대로. 재조사 결과 root cause 가 다름: `BodyRowList.tsx:234` 의 조건부 렌더(`isExpanded && <SubGridRow/>`)로 서브그리드 접기 시 `FsSubGrid` 가 unmount → 로컬 `state.subGridModel` 소실. UI 행 추가는 `useSubGridHandlers.handleAddRow` (`line 192-198` 주석에 명시) 가 `onSaveSubGridModel` 을 의도적으로 호출하지 않으므로 데이터 뷰어 최상위 `viewerModel.subGridModel` 에도 신규 행이 도달하지 않음. 따라서 Phase 1 의 닫기-시 viewerModel 스냅샷은 항상 stale (신규 행 없음) → 캐시-복원에서 행 누락. 기존 `deleteRowsFromCache` / `updateCachedRowOrder` 와 대칭되는 mutation-시점 캐시 콜백 패턴이 정답.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/features/grid/hooks/useSubGrid.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+  - `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/types.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/SubGridRow.tsx`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_sub/types.ts`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_sub/FsSubGrid.tsx`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridHandlers.ts`
+
+### 집행 비고
+스킬 spec 의 "HOTFIX 시 patch-note 는 동일 hotfix WIP 위에 둔다" 규정은 단일-repo 가정. 본 플랜은 코드(data-craft) / 문서(Project-I2) 가 분리되어 있어 hotfix WIP 와 별개로 Project-I2 측 doc WIP (`plan-enterprise-47-valiant-shell-핫픽스1-문서`) 를 단발성으로 사용. spec 의 "no 작업/문서 split" 정신은 유지 — hotfix 측은 단일 WIP, 문서 측도 단일 WIP, repo 가 다르기 때문에 결과적으로 2 WIP.
+
 ## v001.81.0
 
 > 통합일: 2026-05-15
