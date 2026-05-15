@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.96.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#55 (hotfix 4 — FE root + BE robustness)
+
+### 페이즈 결과
+- **Phase 5 (hotfix 4)**: 더블 서밋 root-cause 차단 + BE 인프라 deadlock 회복 — 두 레이어 동시 적용으로 whack-a-mole 종결.
+  - **FE (data-craft)**: `src/widgets/property-drawer/ui/property-editors/viewer-editor/CreateDataDialog.tsx` — `useRef<boolean>` 동기 in-flight 가드. `createMutation.isPending` 은 React Query async store 갱신이라 같은 React tick 안의 Enter+Click 연속 입력에서 false 로 비춰져 두 번 `mutateAsync` 가 발사 가능했음. `inFlightRef.current` 체크 후 즉시 lock, try/finally 로 해제하여 단일 호출만 통과.
+  - **BE (data-craft-server)**: `src/services/viewer/viewer.group.ts` — `createGroup` 본체를 `for attempt loop + isDeadlockError + RETRY_DELAY_MS * attempt` 로 감쌈. 동일 파일 line 407 부근 `deleteGroup` 의 검증된 패턴 재사용. FE 가드 통과 후에도 인프라 레벨 (slow disk, 고동시성 lock wait) 에서 진짜 deadlock 이 발생하면 자동 재시도.
+
+### 배경
+hotfix 1-3 진행 중 같은 신호 (단일 사용자 동작 → 2 POST → 한쪽 201, 다른쪽 500/409/deadlock) 가 SP 에러 종류만 바꿔가며 반복 표면화. advisor 검증 결과 root cause 는 FE 더블 서밋이고, BE catch 추가는 노이즈 줄임에 불과하다는 결론. 따라서 두 레이어 동시 적용 — FE 에서 source 차단, BE 는 legit infra race 에 대한 robustness 보강. 한쪽만으로는 불완전: FE 만 하면 인프라 deadlock 미커버, BE 만 하면 race 패배자 응답 노이즈 잔존.
+
+### 영향 파일
+- data-craft:
+  - `src/widgets/property-drawer/ui/property-editors/viewer-editor/CreateDataDialog.tsx`
+- data-craft-server:
+  - `src/services/viewer/viewer.group.ts`
+
+### 운영 가이드
+
+- 양쪽 (FE, BE) 재기동 후 그룹 생성. 단일 클릭은 항상 단일 201. Enter+Click race 도 단일 201 (FE 가드).
+- 만일 인프라 deadlock 발생 시 BE 가 최대 3회 재시도 후 회복. 재시도 로그 (`MAX_RETRY_COUNT = 3`, `RETRY_DELAY_MS = 100ms × attempt`) 가 BE 로그에 보일 수 있으나 사용자 perspective 에선 정상 201.
+
+### 검증 시나리오
+- user=37 으로 그룹 생성 다이얼로그 → 이름 입력 → 만들기 클릭 → 201 1건, toast 에러 없음. 더블 클릭/Enter+Click 동시 입력에도 동일.
+- 회귀 검증: 일반 그룹 작업 (열 추가, 그룹 삭제, 행 작업) 정상 동작 (hotfix 2 의 viewerRoleCheck 제거 영향).
+
+### Treadmill 종결 신호
+- hotfix 1: 진단 로그 추가
+- hotfix 2: viewerRoleCheck 미들웨어 전체 제거 (잘못된 layer 정책 폐기)
+- hotfix 3: rename SP dup → 409 변환 (race 패배자 노이즈 격하)
+- hotfix 4: FE 더블 서밋 root cause 차단 + BE deadlock retry robustness
+
+각 hotfix 가 서로 다른 layer 의 진짜 문제를 해결. hotfix 1·2 는 원래 문제(권한 흐름), 3·4 는 그것을 풀었을 때 노출된 더블 서밋 패턴. 마스터 명령 "깔끔하고 확실하게" 에 대응한 advisor 검증 통과 종합.
+
 ## v001.95.0
 
 > 통합일: 2026-05-15
