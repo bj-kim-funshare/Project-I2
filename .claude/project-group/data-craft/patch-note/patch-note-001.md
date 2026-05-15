@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.69.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#36
+
+### 페이즈 결과
+
+- **Phase 1** (`8039b3dc`): 칸반/간트 detail drawer 의 다중선택 칩 클릭 시 "리스트에 신규 데이터처럼 추가 생성" 보고의 원인을 추적해 `deriveSelectOptions` 폴백 경로가 multiSelect cellValue (`"A, B"` 등 쉼표 결합 문자열) 를 쪼개지 않고 통째로 옵션 레이블로 등록하는 부분으로 좁힘. 사용자가 그 복합 레이블 옵션을 클릭하면 `MultiSelectRenderer.toggleOption('A, B')` 가 호출되고 `newValues.join(', ')` 결과가 저장 값에 통째로 append → split 후 추가 칩이 생성되는 회로. `toggleOption` 내부에서 label 을 comma 로 split → 각 파트 dedup 처리하는 방어 로직으로 증상 차단. 변경: +12 / -3 across 1 file. Lint gate exit 0.
+- **Phase 2** (`a1f6979d`): 단일 선택 상자 (`SingleSelectRenderer`) 와 세계 시간 (`WorldTimeRenderer`) 의 드롭다운 최상단에 "선택 안함" 버튼 추가. 클릭 시 `onChange('')` + `setIsOpen(false)`. i18n 키 `cellRenderer.unselect` 신설 + ko(선택 안함) / en(None) / ja(選択しない) / zh(取消选择) 4개 로케일 반영. `SingleSelectRenderer` 는 `useI18n()` 으로 직접 사용, `WorldTimeRenderer` 는 prop 패턴 따라 `unselectLabel?: string` 추가 + 한국어 폴백. value 가 빈 문자열일 때 selected 표시, `border-b border-gray-100` 구분선, placeholder 톤 적용. `TimeRenderer` (시계시간) 는 기존 `초기화` 버튼 유지로 손대지 않음. 변경: +32 / -0 across 7 files. Lint gate exit 0.
+- **Phase 3** (`a73be6e0`, lint-hotfix 후): 회귀 테스트 추가 — `MultiSelectRenderer.test.tsx` 신규 4 케이스 (복합 레이블 split, dedup, 전체 해제, 비편집 차단), `SingleSelectRenderer.test.tsx` 신규 5 케이스, `WorldTimeRenderer.test.tsx` 기존 4 + 신규 4 = 8 케이스. 총 17개 모두 통과. lint hotfix iter 1 — vitest 4.x 의 `vi.fn<(value: string) => void>()` 타입 명시로 TS2322 해소. 변경: +286 / -1 across 3 files. Lint gate exit 0.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어 → 칸반/간트 detail drawer 의 다중선택 칩 클릭 시 선택된 값이 마치 새 레코드처럼 리스트에 추가 생성되는 현상 + 단일 선택 상자 / 세계 시간 셀에서 항목 선택 후 "선택 안함" 으로 되돌릴 어포던스가 없던 문제. 두 결함 모두 공용 셀 렌더러 레이어에서 발생 → 칸반/간트/캘린더 (드로어 사용 뷰) 전체에 동시 반영.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/MultiSelectRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/SingleSelectRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/WorldTimeRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/__tests__/MultiSelectRenderer.test.tsx` (신규)
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/__tests__/SingleSelectRenderer.test.tsx` (신규)
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/__tests__/WorldTimeRenderer.test.tsx`
+
+### 잔여 위험 / 후속
+
+- **버그 A 의 실제 root cause** 는 `deriveSelectOptions.ts` 의 multiSelect cellValue 폴백 등록 로직. 본 플랜에서는 `toggleOption` 의 방어로 증상만 차단했고, 드롭다운에 복합 레이블이 그대로 보이는 표시 결함은 남아 있음. 후속 핫픽스 또는 별도 플랜 권장.
+- **`WorldTimeRenderer.unselectLabel`** prop 이 본 플랜에서 caller 측 (data-viewer header 등) 으로 주입되지 않음 — 현재 동작상 항상 한국어 폴백 표출. en/ja/zh 로케일 전파가 필요하면 후속 작업으로 caller 측 prop 주입 필요.
+- **칸반 통합 회귀 테스트** (`KanbanDetailDrawerBody.test.tsx` 의 chip-click → row-create 미발생) 는 setup 복잡도로 단위 레벨 커버 불가 — 렌더러 단위 테스트 (`MultiSelectRenderer.test.tsx` 의 toggleOption 회귀) 로 소스 레벨 커버.
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 3개 페이즈 모두 exit 0 (phase 3 은 lint-hotfix iter 1 후 통과).
+- advisor 5-관점 (완료 시점): 위 3개 잔여 사항 transparent 보고, BLOCK 없이 통과.
+
 ## v001.68.0
 
 > 통합일: 2026-05-15
