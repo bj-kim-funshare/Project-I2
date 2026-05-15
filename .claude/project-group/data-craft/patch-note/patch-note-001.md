@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.59.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#32 (hotfix-2)
+
+### 페이즈 결과
+
+- **Phase 3 (hotfix-2)** (`2ed59630`): hotfix-1 의 폴백 게이트가 빈 문자열만 처리하던 한계를 확장. 마스터 dev 서버 Network 캡처에서 직원/장소/테스트/프로젝트 관리 버튼 클릭 시 0 requests 확인 → setOverride 가 ghost widget id 에 쓰이고 있음을 추론 (저장된 `loadDataConfig.targetWidgetId` 가 페이지 위젯 재생성 후 stale 상태). `useButtonWidget.ts` 의 폴백 분기를 `!!targetWidgetId && !pageContains(targetWidgetId)` 케이스 (stale-id) 도 포함하도록 게이트 확장 — `targetExists` 검사 후 1개 매칭 시 자동 복구 (console.info 로 가시성 확보), 0/N 개 시 기존 warn + 차단. 명시 ID 가 유효한 경로(`targetExists=true`)는 기존 동작 유지로 회귀 없음. 변경 +13 / -5 (1 file). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/button-widget/ui/useButtonWidget.ts`
+
+### 마스터 수동 검증 시나리오
+
+1. 직원관리 / 테스트관리 / 프로젝트관리 버튼 클릭 → Network 탭에 `getHistory` 요청 발생 확인 (이전 0 requests → 정상 발생).
+2. 직원관리 클릭 → 빈 위젯에 직원 목록이 정상 셀 값으로 채워지는지 확인. **여전히 "-" 만 보이면 별도 hotfix-3 진입 필요** (이슈 #4 가 별개 원인이라는 신호).
+3. 폴백 발동 시 console 에 `[ButtonWidget] load-data: targetWidgetId='...' 가 페이지에 존재하지 않음 — ... 자동 폴백` info 로그 확인 (자동 복구 가시성).
+4. 생산관리 (이전 hotfix-1 폴백 경로) 회귀 없음 — 여전히 정상 동작 확인.
+5. 페이지 매칭 빈 위젯 0개 / 2개+ 일 때 클릭 → 기존 warn 메시지 (`미지정/무효 + ... 자동 선택 모호`) 동일하게 동작.
+
+### 알려진 잔존 (조건부)
+
+- 본 hotfix-2 적용 후에도 직원관리 셀이 "-" 로 표시되면 → 이슈 #4 가 stale-id 와 무관한 별도 메커니즘 (예: `convertHistoryToFormRecords` field-key 미스매치 / `useFormWidgetSync` 채널 캐시 잔존). 마스터 e2e 결과로 hotfix-3 진입 여부 결정.
+
 ## v001.58.0
 
 > 통합일: 2026-05-15
