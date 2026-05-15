@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.59.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#34
+
+### 페이즈 결과
+
+- **Phase 1** (`bb61626`): `FormRenderer` 의 `handleReset` 가 로컬 `formData` 만 비우고 부모 zustand store (`useFormWidgetStore.cache[cacheKey].formFields`) 는 그대로 두던 이중 상태 문제 해결. 저장 경로(`useFormWidgetIndividual.executeSave`)가 부모 store 의 값을 직렬화해 API 로 보내기 때문에, 화면은 비어 보이나 페이로드에는 기존값이 그대로 실려 서버가 미입력 필드의 기존값을 유지하던 증상이 재현됨. 수정: `FormRenderer` 에 `onReset?` prop 추가, `handleReset` 이 `setFormData(emptyFormData)` 후 `onReset?.(emptyFormData)` 호출. `SettingsFormTabContent` 의 3개 FormRenderer 사용처(인라인 뷰, `SettingsFormDataDialog`, `SettingsFormListFirstDialog`) 모두에 inline `onReset` 핸들러를 연결해 `handleFormFieldsChange` 로 부모 store 를 **빈값으로 bulk-set** (delete 가 아님 — 서버 머지 시에도 빈값이 페이로드로 명시 전달되도록). 변경 +16 / -3 (4 files). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+- **Phase 2** (`bcad4ca`): 회귀 테스트 T17c 를 `tests/normal-068/normal-068-p03-settings-form-modal-5bugs.test.tsx` 에 추가. `useFormWidgetSync` (individual 모드) 를 실제로 사용하는 인라인 Fixture 로 dialog 경로를 관통하여 — 기존 record 적재 (`updateFormFields`) → 초기화 클릭 (`onReset` 람다 → `handleFormFieldsChange` bulk-clear) → 필수만 입력 → 저장 — `inputStoreApi.save` 가 받은 `fields` 페이로드에서 비필수 필드(`field-opt`) 가 (a) 존재하고 (b) `value === ''` 이며 (c) 기존값('기존메모')이 아님을 단언. **negative-run 1회 실증**: Phase 1 파일 4개를 fix 이전 상태로 되돌린 뒤 T17c 만 실행 → 정확히 `expected '기존메모' to be ''` 로 실패함을 확인. 기존 T17/T17b 는 `FormRenderer` 단독 렌더 기반이라 부모 store 경로를 통과하지 않아 본 버그를 감지하지 못했음을 테스트 코멘트로 명시. 변경 +199 / -2 (1 file). lint gate exit 0.
+
+### 마스터 명령 의도 (재기)
+
+QA 보고 — 사용자 설정 > 직원관리(폼) 테스트 화면에서, 데이터 뷰어의 버튼 타입 셀(관리컬럼 행 "수정") 로 진입한 폼 다이얼로그에서 "초기화" 클릭 시 화면은 비어 보이지만 일부 필드만 채워 저장하면 미입력 필드들이 빈값이 아닌 기존값으로 저장되어 다시 노출되는 현상. 화면(로컬 state)과 저장 페이로드(부모 zustand store) 간 이중 상태가 원인이라는 가설을 코드로 확정하고, 초기화 경로를 양쪽 동기화하여 미입력 필드가 명시적 빈값으로 서버에 저장되도록 수정.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/form-widgets/ui/FormRenderer.tsx`
+- `src/widgets/settings-dialog/ui/SettingsFormDataDialog.tsx`
+- `src/widgets/settings-dialog/ui/SettingsFormListFirstDialog.tsx`
+- `src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx`
+- `tests/normal-068/normal-068-p03-settings-form-modal-5bugs.test.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. 사용자 설정 → 직원관리(폼) 진입 → 기존 record 의 "수정" 버튼(데이터 뷰어 버튼 타입 셀) 클릭.
+2. 다이얼로그 내 "초기화" 버튼 클릭 → 화면의 모든 필드가 비워짐.
+3. 필수 입력 항목만 다시 채워서 저장 클릭.
+4. 같은 record 의 "수정" 을 다시 열어 → **비필수 항목들이 공란**(기존값 재노출 없음) 이어야 통과.
+5. 회귀 확인 (회복): record 처음 열고 일부 필드만 수정한 뒤 저장 → 수정한 필드는 새 값으로, 수정하지 않은 필드는 **기존값 유지** (초기화를 거치지 않은 경우의 기존 동작은 변함없어야 함).
+
+### 알려진 범위 밖 (follow-up 후보)
+
+본 fix 는 `SettingsFormTabContent` 경로의 FormRenderer 3개 사용처에만 `onReset` 을 배선함. `widgets/tabs-widget/*` 와 `widgets/form-widgets/ui/{FormInputDialog,UserFormContent,FormDialogContent,DataListDialogBody}` 등 다른 FormRenderer 소비처는 동일한 초기화 버그 가능성을 갖지만 마스터 보고 경로(사용자 설정 > 직원관리 폼) 외부라 범위 외. `onReset` 은 optional prop 이므로 미배선 callsite 도 컴파일 영향 없음. 동일 증상이 다른 화면에서 보고되면 같은 패턴으로 배선 확장.
+
 ## v001.58.0
 
 > 통합일: 2026-05-15
