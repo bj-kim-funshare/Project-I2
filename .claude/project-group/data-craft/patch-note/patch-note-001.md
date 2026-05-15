@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.120.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#56 (핫픽스 3)
+
+### 페이즈 결과
+
+- **Phase 10** (`d1ef5c75`, data-craft): 가로 스크롤 시 헤더 sticky frozen 컬럼이 본문보다 일찍 release 되어 "뒤로 밀리는" 시각 정정.
+
+### 핫픽스 사유 + root cause
+
+핫픽스2 (v001.116.0) 후 마스터 보고: "열 제목 부분이 따라는 가는데 조금만 더 가면 분리되서 본문만 고정되고 제목은 뒤로 밀려".
+
+**확정 원인**: GridBody 의 스크롤 컨테이너 내부에 `RowMenuColumn` (40px) 이 flex sibling 으로 존재해 `body.scrollWidth = 컬럼 합 + 40px`. 반면 GridHeader 의 `ColumnAddButton` 은 스크롤 컨테이너 *외부* sibling 이라 `header.scrollWidth = 컬럼 합`. useScrollSync 가 body.scrollLeft → header.scrollLeft 를 assign 할 때, body 가 끝까지 스크롤된 시점에 header 는 max 에 clamp → header 의 sticky 컬럼이 더 이상 진행하지 못해 "뒤로 밀리는" 인상.
+
+### 처리 내용
+
+ColumnAddButton 의 외부 sibling 시각 구조는 그대로 유지하면서, **GridHeader 와 GroupHeaderRow 의 스크롤 컨테이너 inner flex 끝에 `FIXED_COLUMN_WIDTH.addMenu(40px)` 크기의 투명 spacer div 를 추가**하여 세 스크롤 컨테이너(header/groupHeader/body)의 scrollWidth 를 정확히 일치시킴. → useScrollSync 의 scrollLeft 동기화가 끝까지 1:1 유효 → 헤더 sticky 와 본문 sticky 가 동일한 release 지점을 공유.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/GroupHeaderRow.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0, 3 사전 무관 warning.
+- 가설 1 (scrollWidth 불일치) 확정 — body 의 RowMenuColumn(40px) 가 sticky containing block 폭 차이의 직접 원인.
+
+### 알려진 후속 / Carve-out
+
+- ColumnAddButton 을 스크롤 내부로 이동시키지 않은 이유: 외부 sibling 으로 고정되어야 하는 시각 요구(우측 항상 가시) 가 있을 가능성 + 옮길 경우 ColumnAddButton 의 sizing 의존성 회귀 위험. 투명 spacer 방식이 시각/구조 모두 안전.
+- 동일 패턴이 서브 그리드(`widgets/fs_grid_sub/`)에서 재현되는지 — 현 시점 마스터 보고 없음. 필요 시 후속 핫픽스로 분리.
+
 ## v001.119.0
 
 > 통합일: 2026-05-15
