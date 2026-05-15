@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.74.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#37 (hotfix 1)
+
+### 페이즈 결과 — Hotfix 1 (Phase 3 / multi-repo)
+
+플랜 #37 종결 직전 DB 읽기 전용 조사를 거쳐 발견된 잔여 결함의 핫픽스. **근본 원인**: Phase 1 의 saveChange 순서 재배치는 visible row 의 cell cascade 자체는 살렸으나, 칸반 뷰가 헤더 date-range 필터(`requestKanbanData(startDate, endDate)`, 기본 ±40일) 의 결과만 `viewerModel.rowModelList` 로 로딩하므로 필터 외부의 행은 cascade loop 가 닿지 못함. 결과로 `customDataList` 는 newName 으로 갱신되었으나 외부 행의 셀은 oldName 잔존 → DB 정합성 깨짐. FE 단독으로는 (a) 기존 변경 카탈로그에 column-wide cell rename 이 없고 (b) 기본 ±40일 필터가 상시 활성이라 rename 차단도 비현실적이므로 BE 신규 변경 타입 도입이 불가피.
+
+- **Phase 3a — BE** (`data-craft-server` `523dadb6`): 신규 변경 타입 `kanbanColumnRename` 추가. wire-format `{ targetType: 'kanbanColumnRename', changeType: 'put', targetField: <columnField>, changeInfo: { oldName, newName } }`. 동작: `data_column.group_id` ownership 검증 → `UPDATE data_values SET value_data=newName WHERE column_id=? AND value_data=oldName AND is_deleted=0` 를 date-range 무관하게 일괄 실행. `saveChanges` 의 `beginTransaction`/`commit` 안에 `processKanbanColumnRename` 디스패치를 추가하여 `processColumnSettings` (customDataList PUT) 와 단일 트랜잭션으로 묶임 → **atomic 보장 (둘 중 하나라도 실패 시 전체 롤백)**. 단위 테스트 4건(ownership 쿼리 순서·파라미터·실패·필수 필드 누락). 변경 +148/-2 across 5 files. lint (`pnpm lint`) PASS.
+- **Phase 3b — FE** (`data-craft` `5c9d8f59`): `DataViewerChangeTargetType` 에 `kanbanColumnRename` 추가 + 유니온/허용목록 갱신. `createKanbanColumnRenameChange(columnField, oldName, newName)` 헬퍼 추가. `handleColumnRenamed` 의 per-row `saveChange(createCellChange)` 루프 **완전 제거** → column-wide `saveChange(createKanbanColumnRenameChange)` 1건으로 교체. in-memory `cellValue` 갱신과 `rowModelList`/`columnModelList` ref 교체(Hotfix-001/002 잔존 로직)는 유지하여 visible 카드 UI 즉시 반영. 호출 순서 유지: customDataList → kanbanColumnOrder → columnColor → kanbanColumnRename = saveChange 4건 enqueue. 테스트 갱신: `PHASE-04-column-rename-behavioral.test.tsx` count/positional 단언 갱신, `PHASE-04-column-rename-grid-sync.test.tsx` 2번째 케이스 갱신 + partial-rowModelList(5행 중 2행만 로드) 신규 케이스 추가, `PHASE-04-column-rename.test.ts` source-regex 의 `createCellChange` → `createKanbanColumnRenameChange` 교체. **36/36 vitest PASS**. 변경 +137/-32 across 6 files. lint (`pnpm typecheck:all && pnpm lint`) PASS.
+
+### 운영 노트 (regression 아님, latency only)
+
+`FsKanbanBoard.tsx` 의 `stableColumnRenamed` callback scope 외부에 `reloadKanbanData` 가 있어 본 핫픽스 범위 내에서 즉시 강제 reload 트리거를 추가하지 못함. **date-range 외부 행은 BE가 정확히 column-wide UPDATE 하여 DB에 newName 으로 영속되지만**, FE의 메모리상 rowModelList 에 없으므로 시각적 반영은 사용자의 다음 자연 reload 시점 — 기간 슬라이더 조정 / 칸반 재진입 / 새로고침 — 에 일어남. 데이터 정합성은 즉시 보장되며, UI 표시 지연만 latency-only 잔여. 즉시 refresh 가 필요하다면 후속 핫픽스에서 `FsKanbanBoard.tsx` scope 확장 후 callback 노출 처리.
+
+### 마스터 명령 의도 (재기)
+
+플랜 #37 Phase 1 의 수정이 visible row 한정으로 동작함을 마스터가 발견 → "현재 기간에 카드가 1개인 상태에서 칸반열 명을 변경하면 지금 미표기 상태인 카드들까지 고려 안하고 변경되는것 같아". 정합성 보전을 위해 BE 가 column-wide cascade 를 책임지는 구조로 전환 요구.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/types/dataViewer.types.ts`
+- `src/services/dataViewerChange/change.utils.ts`
+- `src/services/dataViewerChange/index.ts`
+- `src/services/dataViewerChange/change.kanbanColumnRename.ts` (신규)
+- `src/services/dataViewerChange/__tests__/kanbanColumnRename.test.ts` (신규)
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/kanban/handlers/kanban-reorder-handlers.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/lib/changeHelpers.ts`
+- `packages/fs-data-viewer/src/entities/data-viewer-change.types.ts`
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename-grid-sync.test.tsx`
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename-behavioral.test.tsx`
+- `packages/fs-data-viewer/src/__tests__/enterprise-436/PHASE-04-column-rename.test.ts`
+
+### 마스터 수동 검증 시나리오
+
+1. 칸반 뷰에서 헤더 date-range 필터를 좁혀 1~2장 카드만 보이게 한 뒤, 그 가시 카드의 그룹 제목을 인라인 편집으로 변경 (예: "진행중" → "진행중2"). 가시 카드는 즉시 새 그룹 아래로 이동.
+2. date-range 를 넓혀 외부 행을 다시 로드 → **이전엔 oldName 으로 잔존하던 외부 행들이 모두 newName 으로 표시**됨 확인. (이전 버그에서는 일부만 변경되어 칸반/그리드 모두에서 데이터 분기 발생.)
+3. 그리드 뷰로 전환 → 컬럼 셀 전체가 newName 일관 표시. customDataList 도 newName 포함.
+4. 변경 도중 네트워크 오류 등으로 실패 시 customDataList / cell 변경 모두 롤백되어 일관성 유지 (BE 단일 트랜잭션).
+5. 동일 그룹 내 다른 customDataList 옵션(변경되지 않은 그룹) 은 이름/위치 유지.
+
 ## v001.73.0
 
 > 통합일: 2026-05-15
