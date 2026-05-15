@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.113.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#65 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 2 / Hotfix 1** (`8ebcda1`, data-craft): 위젯 선택 드롭다운 베타 뱃지의 시각 표현 교체. amber/노랑 톤(`bg-amber-100 text-amber-700 border-amber-200`) 을 slate 톤(`bg-slate-100 text-slate-700 border-slate-300`) 으로 변경. 베타 아이콘은 `lucide-react` `FlaskConical` 픽토그램 대신 베타 표준 심볼 문자 `β` 를 `font-serif italic` 으로 inline 렌더 (로마자/글자 형태). `widgetTypeConfig.ts` 데이터 모델(`beta?: boolean`) 은 변경 없음.
+
+### advisor 검증
+
+- 완료 시점 (#2 / hotfix 1): no BLOCK. lint 게이트 (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx`
+
 ## v001.112.0
 
 > 통합일: 2026-05-15
