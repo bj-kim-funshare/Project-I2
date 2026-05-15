@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.97.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 3)
+
+### 페이즈 결과
+- **Phase 5 (핫픽스 3)**: `packages/fs-api/src/api/file.ts` 의 `downloadFile` 함수 anchor 처리 결함 2건 수정 — (1) `document.createElement('a')` 가 DOM 에 append 되지 않은 detached 상태로 `.click()` 호출, Firefox/Safari 가 이를 무시 + Chrome 도 비보장. (2) `anchor.click()` 직후 동기 `URL.revokeObjectURL(blobUrl)` — click 은 다운로드를 큐잉하는 비동기 작업이라 blob URL 이 너무 빨리 revoke 되어 다운로드가 취소됨. Fix: anchor 를 `document.body.appendChild` → `click()` → `removeChild` 로 attached 상태에서 발화, `URL.revokeObjectURL` 을 `setTimeout(() => ..., 0)` 으로 다음 tick 까지 지연. catch 블록의 silent 패턴 (`catch {}`) 을 `catch (err) { console.error('[downloadFile]', err); }` 로 보완 — 향후 다른 실패 모드를 즉시 진단 가능하게.
+
+### 배경 (핫픽스 사유)
+v001.95.0 (핫픽스 2) 가 BlockNote FormattingToolbar 의 download 버튼 동작을 `<a href={raw uri} download>` native navigation 에서 `fileApi.downloadFile()` 호출로 swap 하여 새 탭 열림 증상은 차단. 그러나 클릭 시 다운로드 자체가 트리거되지 않는 후속 증상 확인. 진단 경로: (a) BE endpoint `GET /api/file/download` 존재 확인 — `data-craft-server/src/routes/file.ts:218` 정상, (b) `apiClient.fetchBinary` 의 Authorization Bearer 헤더 동일 인터셉터 사용 (이미지 미리보기에서 작동 중) 인증 정상, (c) `downloadFile` 함수 자체의 DOM 처리 분석 — detached anchor + sync revoke 두 결함 동시 존재. 본 핫픽스가 그 정확한 두 줄을 수정.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-api/src/api/file.ts` (downloadFile 함수만, +6 / -4)
+
+### 사이드 이펙트 (긍정)
+이 fix 는 `fs-api` 의 공용 함수 수정이므로 다른 호출처에도 영향. 기존 호출처: `data-craft/src/widgets/file-uploader-widget/ui/useFilePreviewActions.ts:43,80` (FileUploaderWidget 의 다운로드 동작). 동일한 두 결함을 잠재적으로 가지고 있었을 가능성 — 본 핫픽스로 함께 견고해짐.
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings 모두 기존).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요 (파일/이미지 블록 → toolbar 다운로드 클릭 → 브라우저 다운로드 다이얼로그 표시).
+
+### 후속 빌드 단계
+`fs-api` 와 `fs_data_viewer` 모두 `./dist` export 패키지 — 본 머지 후 dev/배포 전 `pnpm --filter fs_api build && pnpm --filter fs_data_viewer build` 실행 필요. (fs_api 가 fs_data_viewer 의 transitive 의존성이므로 fs_api 만 변경했어도 둘 다 rebuild 권장.)
+
 ## v001.96.0
 
 > 통합일: 2026-05-15
