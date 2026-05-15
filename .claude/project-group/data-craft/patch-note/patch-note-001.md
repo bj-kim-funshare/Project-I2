@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.115.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#56 (핫픽스 2)
+
+### 페이즈 결과
+
+- **Phase 9** (`f28e9bff`, data-craft): 핫픽스1 후속 — Bug 3 진짜 root cause 처리 + Bug 1+2 sticky 방향 정정.
+
+### 핫픽스 사유
+
+핫픽스1 (v001.107.0) 머지 후 마스터 재보고: (Bug 3) 여전히 새로고침 시 frozen 풀림, (Bug 1+2) drag/rowNumber/dualToggle/rowId 까지 sticky 됨 (정반대 방향).
+
+진단 결과:
+- **Bug 3 진짜 root cause**: 호스트 앱(`data-craft/src/features/viewer/lib/`)의 변환기 두 곳 (`serverToViewerMetaResult.ts`, `serverToColumnRow.ts`) 이 `setting.width / unit / enableSorting` 등은 추출하지만 **`setting.frozen` 만 누락**. 그 결과 ViewerMetaResult.columns[].frozen = undefined → fs-data-viewer 패키지의 `useViewerMetaLoader.ts` 의 `?? 'none'` 폴백이 항상 적용 → 새로고침 시 항상 'none'. 서버 hotfix1a (응답 자체에 frozen 포함) 는 정확했으나 호스트 앱 단계에서 버려진 것. **Phase 3 의 "FE 전 계층 통과" 보고는 fs-data-viewer 패키지 내부만 처리하고 호스트 앱 변환기 단계를 누락**했던 것.
+- **Bug 1+2 방향성**: 핫픽스1b 가 FixedHeaderCells / RowDragHandle / RowNumberCell / SubGridToggleCell / AggregationRow / GroupHeaderRow 의 fixed cells 를 sticky 화한 것이 마스터 의도와 정반대. master 명시: drag / rowNumber / dualToggle / rowId 모두 가로 스크롤 시 **자연 스크롤**. 사용자가 freeze 한 컬럼만 좌측 경계(offset 0) sticky.
+
+### 처리 내용
+
+1. **Bug 3 FE 변환기 frozen 매핑 추가**:
+   - `src/features/viewer/lib/serverToViewerMetaResult.ts`: columns.map 반환 객체에 `frozen: (setting?.frozen ...) ?? 'none'` 추가.
+   - `src/features/viewer/lib/serverToColumnRow.ts`: 동일 패턴 추가.
+2. **핫픽스1b 의 sticky 변경 되돌리기**:
+   - FixedHeaderCells.tsx / RowDragHandle.tsx / RowNumberCell.tsx / SubGridToggleCell.tsx / DataRow.tsx / AggregationRow.tsx / GroupHeaderRow.tsx 에서 sticky / zIndex / 불투명 배경 / stickyLeft prop 전달 등 핫픽스1b 가 추가한 부분만 정확히 제거.
+3. **leftBase = 0 으로 통일**:
+   - `GridHeader.tsx`, `GridBody.tsx`, `AggregationRow.tsx` 의 `leftBase` 누적값(`drag + rowNumber + dualToggle`) → `0` 으로 변경. 사용자-frozen 컬럼이 컨테이너 좌측 경계(0) 에 부착되도록.
+4. **customColumnGenerator rowId frozen 제거**:
+   - `customColumnGenerator.ts:95` 의 rowId 분기 `frozen: 'start'` → `'none'`. rowId 가 frozenLayout 의 sticky 집합에서 빠짐 → 가로 스크롤 시 자연 스크롤.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/features/viewer/lib/serverToViewerMetaResult.ts`
+- `src/features/viewer/lib/serverToColumnRow.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/{DataRow,RowDragHandle,RowNumberCell,SubGridToggleCell}.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/{FixedHeaderCells,GroupHeaderRow}.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_util/customColumnGenerator.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0, 3 사전 무관 warning.
+- advisor 사전 분석 PASS (Bug 3 FE-side mapping gap 정확 진단, Bug 1+2 정확 방향 정정 확인).
+
+### 알려진 후속 / Carve-out
+
+- 본 핫픽스는 **메인 그리드** 위주. 서브 그리드(`widgets/fs_grid_sub/`)는 Phase 5 의 systemRowIdFields 분리로 이미 처리됨. 마스터의 본 재보고에 서브 그리드 명시 없음 → 미수정.
+- Phase 7 의 frozenLayout 테스트는 prefix=0 케이스 포함 → leftBase=0 변경에 자연 부합. 다른 테스트는 영향 없음.
+
 ## v001.114.0
 
 > 통합일: 2026-05-15
