@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.109.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#65
+
+### 페이즈 결과
+
+- **Phase 1** (`8305f1b`, data-craft): 디자인 모드 → 레이아웃 빌더 → 위젯 설정 드로어의 위젯 선택 드롭다운에서 베타 단계 위젯 7종 우측에 "Beta" 태그(`FlaskConical` 아이콘 + amber 톤 inline 뱃지)를 표기. `WidgetTypeInfo` 타입에 `beta?: boolean` 필드를 추가하고 `sub-viewer` / `external-viewer` / `viewer-explorer` / `sub-viewer-explorer` / `external-viewer-explorer` / `empty-sub-viewer` / `empty-external-viewer` 에 `beta: true` 설정. `WidgetTypeSelector` 의 `mapWidgetType` 결과에 `beta` 매핑, `renderWidgetItem` 우측 텍스트 컬럼의 이름 줄에 조건부 뱃지 렌더.
+
+### advisor 검증
+
+- 계획 시점 (#1): Intent / Logic / Group Policy / Evidence / Command Fulfillment 5축 PASS (no BLOCK).
+- 완료 시점 (#2): no BLOCK. lint 게이트 (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/property-drawer/ui/widgetTypeConfig.ts`
+- `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx`
+
 ## v001.108.0
 
 > 통합일: 2026-05-15
