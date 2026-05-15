@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.81.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#52
+
+### 페이즈 결과
+- **Phase 1**: shadcn `Tooltip` 래퍼 (`src/shared/ui/shadcn/tooltip.tsx`) 의 `Tooltip` 함수에서 내부 `TooltipProvider` 중첩을 제거하고 `TooltipPrimitive.Root` 를 직접 반환하도록 변경. `TooltipProvider` 함수 자체와 export 는 보존되어 `src/app/providers/index.tsx:26` 의 글로벌 `<TooltipProvider delayDuration={300}>` 는 영향받지 않음. 결과적으로 글로벌 `delayDuration={300}` 이 모든 callsite 에 일관 적용되어 hover-in 직후 floating-ui 가 trigger 의 boundingRect 측정을 마칠 시간을 확보 — 디자인모드 좌측 사이드바의 페이지 노드 아이콘 버튼(자식 화면 추가·복사·편집·삭제) 위로 빠르게 마우스를 이동시킬 때 툴팁이 화면 좌상단(0,0) 에 1프레임 깜박이며 나타나는 버그가 제거됨. `skipDelayDuration` 은 dwell→인접 이동 경로에서 0,0 race 를 재현할 잠재 위험이 있어 도입하지 않음.
+
+### 배경
+QA 보고: 데이터크래프트 → 디자인 모드 → 좌측 사이드바의 페이지 노드 아이콘 버튼들 위로 클릭 없이 마우스를 빠르게 위아래로 이동시키면, 툴팁이 아이콘 위가 아닌 화면 좌상단에 순간적으로 나타났다 사라지는 깜박임 현상. 원인은 shadcn 래퍼가 각 `<Tooltip>` 호출마다 내부 `TooltipProvider(delayDuration=0)` 로 감싸 글로벌 Provider(`delayDuration=300`) 를 덮어쓰던 구조 — instant mount 후 floating-ui 의 boundingRect 측정 전에 Portal Content 가 (0,0) 에 렌더되며, 이후 위치 계산 완료 시 정확한 자리로 점프. 내부 Provider 제거로 글로벌 delay 가 적용되어 측정 경합이 사라짐.
+
+### 영향 파일
+- data-craft:
+  - `src/shared/ui/shadcn/tooltip.tsx`
+
 ## v001.80.0
 
 > 통합일: 2026-05-15
