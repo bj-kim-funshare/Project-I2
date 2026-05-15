@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.76.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#47
+
+### 페이즈 결과
+- **Phase 1**: 내장 서브그리드(`fs_grid_sub`) 닫기 시점에 working model `subGridModel.rowModelList` 의 해당 `parentRowField` 행들을 `serverSubGridCacheRef` 에 스냅샷 write-back. 캐시가 마지막 working state 를 반영하게 되어, `addRow` / 셀 편집 등 명시 캐시 동기화 utility 가 없는 로컬 변형도 접기 → 재펼치기 사이에 보존된다.
+
+### 배경
+QA 보고: 데이터 뷰어 그리드 뷰의 내장 서브그리드에서, 빈 서브그리드에 신규 행을 추가하고 값 입력 없이 접었다가 다시 펼치면 추가 행이 사라짐. 페이지 재진입 시에는 정상 표시 (서버에 저장된 행이 다시 로드되므로). 원인: `addRow` 가 working model 만 갱신하고 `serverSubGridCacheRef` 에 미반영 → 재펼치기 시 캐시 덮어쓰기로 신규 행 누락. close-time snapshot 패턴으로 수정하여 모든 로컬 변형을 일관되게 보존.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/features/grid/hooks/useSubGrid.ts`
+
+### 잔여 후속
+- `baseSubGridCacheRef` (검색/필터/정렬 초기화 시 사용) 도 동일한 신규 행 누락 가능성 — 본 변경 범위 밖, 후속 이슈 후보.
+
 ## v001.75.0
 
 > 통합일: 2026-05-15
