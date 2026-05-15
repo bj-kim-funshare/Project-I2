@@ -4,7 +4,7 @@
 
 ## 프롬프트
 
-🔴 /plan-enterprise Tteona 단계0 인프라 — sketch.css 토큰 (--secondary-soft / --accent-soft / --warn-soft / --overlay-dim) 의 globals.css 이관 + grep ≥ 2 검증, src/app 라우트 그룹 골격 ((auth) / (buyer) / (seller) / (system) / (social)), AppShell + BottomTabBar + TopBar, API 클라이언트 (fetch wrapper, env zod 검증, 세션 헤더, retry/timeout), Tteona-server origin CORS·쿠키 호환성 검증 phase 포함. BE 변경 0 가정으로 시작하되 CORS 미충족 시 같은 plan 안에 BE 설정 보강 phase 추가.
+🟢 /plan-enterprise Tteona 단계0 인프라 — sketch.css 토큰 (--secondary-soft / --accent-soft / --warn-soft / --overlay-dim) 의 globals.css 이관 + grep ≥ 2 검증, src/app 라우트 그룹 골격 ((auth) / (buyer) / (seller) / (system) / (social)), AppShell + BottomTabBar + TopBar, API 클라이언트 (fetch wrapper, env zod 검증, 세션 헤더, retry/timeout), Tteona-server origin CORS·쿠키 호환성 검증 phase 포함. BE 변경 0 가정으로 시작하되 CORS 미충족 시 같은 plan 안에 BE 설정 보강 phase 추가. (이슈 bj-kim-funshare/Tteona#1, patch-note v001.2.0, 2026-05-15 완료)
 
 🔴 /dev-inspection Tteona today
 
