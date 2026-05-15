@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.58.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#33 (hotfix-1)
+
+### 페이즈 결과
+
+- **Phase 3 (hotfix-1)** (`1ab9266`): plan #33 의 v001.56.0 (`getSettingsForms` `scope=manage` 분기 + FE 호출부) 으로도 마스터의 원 버그가 해결되지 않은 정황에 대한 핫픽스. 마스터 dev 환경 캡처로 확인된 실제 원인은 `auth.middleware.ts:72` 의 경량 인증 분기 — `req.query.includeAuth !== 'true'` 이고 `req.forceIncludeAuth !== true` 인 경로에서는 `req.user` 가 채워지지 않아 컨트롤러의 `req.user?.roleId` 가 영구히 undefined → 서비스의 `!isOwner && roleId === null → []` 분기로 비오너 사용자의 사이드바 "사용자 설정" 섹션이 빈 상태로 표시. 동일한 이유로 v001.56.0 에서 추가한 `scope=manage` 분기의 권한 검증 (`req.user?.isOwner || req.user?.permissions?.includes('permission_manage')`) 도 비오너 viewer 에서 무력화돼 권한 그룹 편집 화면에서도 self 강등이 일어났던 것으로 분석됨. 해결: `routes/builder.ts:67` 의 `GET /settings/forms` 라우트에 기존 `forceIncludeAuth` 미들웨어 (roles.ts:35 등 11개 라우트의 표준 패턴) 적용으로 풀 인증 경로 강제. 한 줄 변경으로 self/manage 두 경로 동시 복구. 변경 +3 / -2 (1 file). lint gate (`pnpm lint`) exit 0.
+
+### 마스터 명령 의도 (재기)
+
+설정 → 권한 관리 → 권한 그룹 수정 화면의 "설정 권한" 섹션 부여 풀이 비어 있는 표면 증상 외에, 더 근본적으로는 비오너 viewer (예: 김범준, 주임 그룹) 의 본인 설정 사이드바에서 그룹에 할당된 사용자 설정 항목 (장소 관리, 직원 관리 등 56개) 이 "앱 설정" 아래에 전혀 표시되지 않던 증상까지 함께 해결.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/routes/builder.ts`
+
+### 마스터 수동 검증 시나리오
+
+1. 김범준 계정 (비오너, 주임 그룹) 로그인 → 우상단 설정 아이콘 → 좌측 사이드바에 "기본 설정" 섹션 아래 separator + "사용자 설정" 섹션이 노출되고 주임 그룹에 할당된 설정 화면 항목들 (장소 관리, 직원 관리 등) 이 모두 표시되어야 함.
+2. 사용자 설정 항목 중 하나 클릭 → 해당 설정 폼 콘텐츠 정상 렌더링.
+3. 오너 계정 (이동화 등) 로그인 → 사이드바 동일 섹션에 회사 전체 설정 폼 노출 (회귀 없음).
+4. 권한 그룹 편집 다이얼로그 (오너 또는 permission_manage 권한 보유 비오너) → "설정 권한" 섹션에 회사 전체 settings form 풀 노출 (v001.56.0 fix 가 본 hotfix 로 비로소 실효).
+5. permission_manage 미보유 비오너 → 권한 관리 메뉴 자체 비노출 (기존 동작 유지).
+
 ## v001.57.0
 
 > 통합일: 2026-05-15
