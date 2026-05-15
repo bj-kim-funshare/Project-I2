@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.111.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#60 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 2 / hotfix 1** (`ddfddec4`, data-craft): v001.102.0 의 ref-bridge fix 가 `fs-sub-data-viewer/` 패키지에만 적용되어 마스터가 실제로 사용하는 `fs-data-viewer/` 패키지(병렬 구조)에는 동작하지 않던 누락 보완. 동일 패턴(`refreshAggregationForColumnRef` + router 의 `requestBatchInput` 래퍼)을 `fs-data-viewer/` 에 적용. flush 모델 차이 반영: `fs-data-viewer` 의 `refreshAggregationForColumn` 은 pending 큐만 누적하고 flush 시점에 fetch 하는 구조여서 일괄 입력 경로엔 부적합 → 신규 `refreshAggregationForColumnImmediate` 함수를 추가하여 큐 우회 즉시 fetch. wrap 콜백은 React Compiler 의 `react-hooks/preserve-manual-memoization` 규칙 호환을 위해 `useMemo` 가 아닌 `useCallback` 으로 구성. `pnpm typecheck:all && pnpm lint` 통과.
+- **Phase 2 / hotfix 1** (`34bcc6a`, data-craft-server): viewer.query.ts:127 / viewer.service.ts:304 두 매퍼 모두에서 `ViewerColumnSetting.frozen` 필수 필드가 누락되어 ts-node 부팅 시 TS2322 오류로 서버가 크래시되던 문제 수정. `setting.frozen ?? 'none'` 의 null-safe 패턴(model.ts:707 쓰기 측 컨벤션과 일치)으로 두 매퍼 모두 보완. `npx tsc --noEmit` clean.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx`
+- `packages/fs-data-viewer/src/features/grid/lib/gridViewTypes.ts`
+- `packages/fs-data-viewer/src/pages/GridViewPage.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/services/viewer/viewer.query.ts`
+- `src/services/viewer/viewer.service.ts`
+
 ## v001.110.0
 
 > 통합일: 2026-05-15
