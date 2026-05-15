@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.70.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#34 (Hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 3 (hotfix-1)** (`7ff9f76` + 후속 테스트 스코프 수정 `13e5254c`): plan #34 v001.59.0 fix 가 `SettingsFormTabContent` (사용자 설정 화면) 의 FormRenderer 사용처만 onReset 배선했고, 페이지에 배치되는 폼 위젯(`widgets/form-widgets/ui/UserFormDialogs → FormInputDialog` 및 `→ DataListDialog → DataListDialogBody`) 경로는 명시적 범위 외였음. 마스터 dev 검증에서 페이지 폼 위젯 경로의 동일 증상 — 초기화 후 저장 시 미입력 필드의 기존값이 잔존하여 "저장 자체가 안 되는 것처럼" 보임 — 이 확인됨. 해결: 동일 store-staleness 패턴을 form-widgets 페이지 런타임 경로에 확장 배선. `useFormData` 가 `useFormWidgetSync.handleFormFieldsChange` 를 destructure 하여 노출, `useUserFormWidget` 반환 타입에 추가, `UserFormWidget` 이 `UserFormDialogs` 에 prop 전달. `UserFormDialogs` 에서 Phase 1 `SettingsFormTabContent` 와 **byte-수준 동일** onReset 람다(`null → ''`, `{start,end} → 'start~end'`, `array → join(',')`, else `String(value)`) 를 정의해 listFirst 경로 (`FormInputDialog`) 와 비 listFirst 경로 (`DataListDialog → DataListDialogBody`) 양쪽에 전달. `FormInputDialog` / `DataListDialog` / `DataListDialogBody` 모두 `onReset?` prop 을 받아 FormRenderer 까지 통과. T17d 회귀 테스트 추가 — `UserFormDialogs` 직접 렌더 + `handleFormFieldsChange` mock 으로 초기화 클릭 시 wire-up 전달 경로가 호출됨을 단언. **negative-run 1회 실증**: 7개 소스 파일을 hotfix 이전으로 되돌리고 T17d 단독 실행 → 정확히 `expected vi.fn() to be called 1 times, but got 0 times` 로 실패함을 확인. 변경 +80 / -6 (8 files). lint gate (`pnpm typecheck:all && pnpm lint`) 두 commit 누적 상태에서 exit 0.
+
+> 버전 충돌 메모 (CLAUDE.md §5 step 4): 본 hotfix 문서 머지 시점에 plan #42 (v001.68.0) 와 plan #36 (v001.69.0) 이 동시 머지되어 본 entry 가 v001.70.0 으로 양보. 양측 entry 모두 보존.
+
+### 마스터 명령 의도 (재기)
+
+v001.59.0 fix 검증 중 마스터 보고 — "그냥 아예 저장 자체가 안 되는데? 폼 위젯을 테스트했는데 초기화 누르고 나와도 목록에 (목록을 우선순위로 옵션 사용하는 경우) 기존 데이터로 나오고 눌러봐도 기존 데이터고, 새로고침해도 기존 데이터." v001.59.0 의 "알려진 범위 밖" 으로 명시했던 form-widgets 페이지 런타임 경로가 마스터의 주 사용 경로였음. 동일 fix 패턴을 그 경로에 확장.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/form-widgets/lib/useFormData.ts`
+- `src/widgets/form-widgets/lib/useUserFormWidget.ts`
+- `src/widgets/form-widgets/ui/UserFormWidget.tsx`
+- `src/widgets/form-widgets/ui/UserFormDialogs.tsx`
+- `src/widgets/form-widgets/ui/FormInputDialog.tsx`
+- `src/widgets/form-widgets/ui/DataListDialog.tsx`
+- `src/widgets/form-widgets/ui/DataListDialogBody.tsx`
+- `tests/normal-068/normal-068-p03-settings-form-modal-5bugs.test.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. 페이지에 폼 위젯 배치 (목록을 우선순위로 / listFirst 옵션) → 기존 record 의 수정 진입.
+2. 다이얼로그에서 "초기화" 클릭 → 화면 모든 필드 비워짐.
+3. 필수 항목만 채워 저장 → 목록 / 재오픈 / 새로고침 모두에서 **비필수 항목들이 공란**(기존값 재노출 없음) 이어야 통과.
+4. listFirst 옵션을 끄고 (DataListDialog 경로) 동일 시나리오 반복 — 동일 결과.
+5. 사용자 설정 > 직원관리(폼) 경로 (v001.59.0 fix) 회귀 확인 — 변함없이 정상.
+
+### 알려진 범위 밖 (잔존 follow-up)
+
+본 hotfix 는 `widgets/form-widgets/*` 페이지 런타임 경로를 처리. **`widgets/tabs-widget/ui/*`** 의 registry-경유 FormRenderer 사용처(`TabFormContent`, `tabs-widget/FormInputDialog`, `tabs-widget/FormDataListDialog`) 는 registry signature 변경이 필요해 blast radius 가 크고 마스터 보고 경로 외라 여전히 후속. 동일 증상이 탭 위젯 경로에서 보고되면 별도 핫픽스로 처리. v001.59.0 의 follow-up 후보 중 `form-widgets` 부분은 본 v001.70.0 으로 해소됨.
+
 ## v001.69.0
 
 > 통합일: 2026-05-15
