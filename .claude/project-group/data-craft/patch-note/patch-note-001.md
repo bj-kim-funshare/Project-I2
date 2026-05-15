@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.84.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#53
+
+### 페이즈 결과
+- **Phase 1**: `src/entities/layout/model/useActiveEditingSectionId.ts` 신규. layoutStore 와 widgetStore 양쪽을 selector subscription 으로 구독하는 React 훅. 현재 편집 중인 섹션 id 를 우선순위 (1) `isSectionDrawerOpen && selectedSectionId`, (2) `isAreaDrawerOpen && selectedAreaId` → area/subArea 포함 section 역추적, (3) `selectedWidgetId && widgets[id].cellId` → 동일 역추적, 그 외 null 로 반환. cross-store 변경에도 리렌더되도록 `getState()` 단일 호출 패턴을 피하고 각 store 를 selector hook 으로 구독.
+- **Phase 2**: `src/widgets/layout-canvas/ui/Section.tsx` 가 위 훅을 호출하고, `isDesignMode && activeEditingSectionId && activeEditingSectionId !== id` 조건에서 `opacity-40 grayscale transition-[opacity,filter] duration-200` 클래스를 `cn(...)` 마지막 인자로 추가. 기존 className 토큰·인라인 style·`transition-colors`·pointer-events 모두 불변.
+
+### 배경
+QA 팀 제안 — 기본 테두리 제거(`areaBorderStyles.ts` "기본 테두리 제거로 더 이상 오버라이드 불필요") 후 깔끔해졌으나 영역 구분이 약해진다는 피드백. 위젯/영역/섹션 설정 드로어 중 어떤 것이든 열린 동안 비활성 섹션을 회색·반투명으로 디밍하여 편집 컨텍스트를 시각적으로 분리한다. View 모드와 드로어 닫힘 상태에서는 디밍이 발생하지 않으며 pointer-events 도 차단하지 않는다.
+
+### 영향 파일
+- data-craft:
+  - `src/entities/layout/model/useActiveEditingSectionId.ts` (신규)
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 검증 시나리오 (QA 수동 확인 필요)
+1. 디자인 모드에서 섹션 2개 이상 만든 뒤 각 케이스 확인:
+   - 섹션 설정 드로어 → 선택 섹션만 또렷, 나머지는 회색·반투명.
+   - 영역(Area) 편집 드로어 → 그 영역을 가진 섹션만 또렷.
+   - 위젯 설정(연필 아이콘) → 그 위젯을 가진 섹션만 또렷.
+2. 드로어 닫기 → 모든 섹션 원상 복귀, 트랜지션 부드럽게 동작 (`transition-[opacity,filter] duration-200` 가 실제 애니메이션 적용되는지 시각 확인. 미동작 시 `transition-all` 폴백 가능).
+3. View 모드 (디자인 모드 off) → 디밍 발생하지 않음.
+4. `opacity-40 grayscale` 의 시각적 강도 적정성 — 너무 강해 비활성 섹션 식별이 어려우면 핫픽스로 조정.
+
+### 알려진 제약
+- 위젯 드로어가 열린 상태에서 다른(디밍된) 섹션을 클릭해도 활성 섹션이 즉시 교대되지는 않음. `selectSection(id)` 가 `isSectionDrawerOpen: false` 만 세팅하기 때문 — 위젯 드로어가 우선순위 (3) 으로 살아있어 디밍 기준이 여전히 위젯 소속 섹션. 위젯 드로어를 명시적으로 닫은 뒤 다시 선택해야 한다. 이번 변경 범위에 포함하지 않음.
+
 ## v001.83.0
 
 > 통합일: 2026-05-15
