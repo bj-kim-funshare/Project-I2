@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.93.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 1)
+
+### 페이즈 결과
+- **Phase 3 (핫픽스 1)**: BlockNote default `image`/`file` block 의 raw storage URI 직접 사용으로 인한 미리보기 깨짐 + 다운로드 시 새 탭 navigate 문제를 fs-api 기반 custom block 으로 전환하여 해소. `BlockNoteSchema.create({ blockSpecs: { ...defaultBlockSpecs, image: dcImageBlockSpec, file: dcFileBlockSpec } })` 로 동일 type name override. 이미지 렌더 — `fileApi.loadImageBlob(uri)` 로 인증 binary 수신 → `URL.createObjectURL(blob)` 로 `<img src>` 세팅. 파일 다운로드 — 클릭 시 `fileApi.downloadFile(uri, name)`. 외부 URL (`http(s)://...`) 은 fallback 으로 직접 `<img src>` / `<a href>` 사용. uploadFile 콜백은 변경 없음 (raw storage uri 그대로 저장) — reload 시 동일 경로로 blob 재로드.
+
+### 배경 (핫픽스 사유)
+v001.88.0 의 1차 작업은 BlockNote 의 `uploadFile` 옵션 연결까지만 처리 — 업로드 자체는 성공하나 BlockNote 가 저장한 raw storage uri (`/storage/{companyId}/.../{uuid}.png`) 를 그대로 `<img src>` 와 `<a href download>` 에 사용. apiClient 가 Bearer 토큰을 Authorization 헤더에 실어 보내는 구조이므로 `<img>` 의 자동 요청은 401 → broken-img. 다운로드 링크 클릭은 브라우저가 raw 경로로 navigation → 새 데이터-크래프트 탭 열림. 1차 hotfix 접근 (`${API_BASE}/api/file/image?uri=<encoded>` 절대 URL 반환) 도 동일 인증 구조 한계로 작동 불가하여 폐기. 마스터 지시에 따라 기존 데이터-크래프트 파일 시스템 (`FileUploaderWidget` 패턴 — `fileApi.loadImageBlob` blob fetch + `fileApi.downloadFile`) 재사용으로 전환.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx` (schema override)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcImageBlockSpec.tsx` (신규)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcImagePreview.tsx` (신규)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcFileBlockSpec.tsx` (신규)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings). 3회 iter (초기 `FilePanelExtension` 서브패스 import, `any` 타입, react-refresh export 분리, set-state-in-effect 해소) 거쳐 통과.
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요 (3 증상 모두: 업로드 → 미리보기 → 다운로드).
+
+### 트레이드오프 (수용된 변경)
+- 기본 `image`/`file` block 의 toolbar (이미지 교체, resize handle) 제거 — `createResizableFileBlockWrapper` 가 BlockNote vanilla render path 에서만 제공되어 React custom block 재구현이 필요. 후속 phase 에서 복원 가능.
+- `dcSchema` 가 모듈 레벨 상수로 선언되어 모든 DocumentEditor 인스턴스가 schema 객체 공유 — BlockNote 0.45 가 schema 를 immutable 로 다루므로 현재 API 에서는 안전. 다수 동시 편집 모달 환경에서 점검 권장.
+- url 변경 (이미지 교체) 시 이전 blob URL revoke 후 재로드 — 짧은 깜빡임 가능.
+
+### 후속 빌드 단계
+`fs_data_viewer` 는 `./dist` export 패키지 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
 ## v001.92.0
 
 > 통합일: 2026-05-15
