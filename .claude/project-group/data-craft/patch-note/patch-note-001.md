@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.114.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#65 (hotfix 2)
+
+### 페이즈 결과
+
+- **Phase 3 / Hotfix 2** (`f1ba938`, data-craft): 베타 뱃지의 slate (회색) 톤이 너무 밋밋하다는 마스터 피드백에 따라 컨테이너 색조를 sky 계열 (`bg-sky-50` / `text-sky-700` / `border-sky-200`) 로 교체. "살짝 푸른" 느낌의 산뜻한 톤. `β` 문자 (`font-serif italic`) + "Beta" 텍스트 + flex/padding/radius 등 구조는 그대로 유지. 단일 라인 className 변경.
+
+### advisor 검증
+
+- 완료 시점 (#2 / hotfix 2): no BLOCK. lint 게이트 (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx`
+
 ## v001.113.0
 
 > 통합일: 2026-05-15
