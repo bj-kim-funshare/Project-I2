@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.117.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#68
+
+### 페이즈 결과
+
+- **Phase 1** (`332322d`, data-craft): 그리드 뷰 디자인 모드 열 메뉴의 열 너비 상한 인라인 하드코딩 값 500 → 1000 으로 일괄 교체 (3개 패키지 × 코드 12개 위치). `SubGridSettingsOverlay.tsx:158` 의 `max={500}` 은 행 높이 상한으로 확인되어 변경 제외 (열 너비 무관).
+- **Phase 2** (`5742504`, data-craft): 한·영 가이드 JSON 의 "최대: 500px" / "Maximum: 500px" 표기를 1000 으로 갱신 (3개 패키지 × 한영 = 6개 파일).
+
+### 처리 내용
+
+- 마스터 명령: 데이터 뷰어 그리드 뷰 디자인 모드 열 메뉴의 열 너비 제한을 최대 500 → 1000 으로 확장.
+- 도메인 검증 상수 `MAX_COLUMN_WIDTH = 1000` 이 이미 1000 으로 정의되어 있어 마이그레이션·스키마 변경 불필요. UI/handler 인라인 값만 일치시킴.
+- 공유 상수 추출 리팩터는 본 플랜 범위 외 (후속 후보).
+
+### 영향 파일
+
+**data-craft (12 파일):**
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/useColumnHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/components/SubGridColumnMenu.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridColumnMenu.ts`
+- `packages/fs-data-viewer/src/shared/config/guide/content/ko/docs/grid.json`
+- `packages/fs-data-viewer/src/shared/config/guide/content/en/docs/grid.json`
+- `packages/fs-sub-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/hooks/column-menu/useColumnHandlers.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/guide/content/ko/docs/grid.json`
+- `packages/fs-sub-data-viewer/src/shared/config/guide/content/en/docs/grid.json`
+- `packages/fs-external-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-external-data-viewer/src/features/grid/hooks/column-menu/useColumnHandlers.ts`
+
+(추가: `fs-external-data-viewer` 의 한·영 grid.json 2개 — 합계 14 파일)
+
+### advisor 결과
+
+- 계획 시점 (#1): PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment 모두 통과.
+- 완료 시점 (#2): PASS — 동일 5관점 통과. Group Policy 에서 Phase 2 lint gate 가 추가 실행되어 자동 회귀 차단 확인 (0 errors, 3 warnings).
+
 ## v001.116.0
 
 > 통합일: 2026-05-15
