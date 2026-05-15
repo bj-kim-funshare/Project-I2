@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.65.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#39
+
+### 페이즈 결과
+
+- **Phase 1** (data-craft `308b6622`): 셀 렌더러 3종(`TextRenderer` / `LongTextRenderer` / `NumberRenderer`) 에 `displayContext?: 'table' | 'drawer'` prop 도입. `displayContext === 'drawer'` 분기에서 컨테이너에 `border border-border rounded-md bg-background/60 hover:border-primary/60 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-colors px-2 py-1.5` 적용, 빈 값 + 비편집 모드에서 타입별 placeholder(`텍스트 입력` / `긴 글 입력` / `코드 입력` / `숫자 입력`) 노출. `types.ts` 의 `LongTextRendererProps` 에 `columnType` 추가하여 longText vs code placeholder 분기. `UniversalCellRenderer` + `rendererMap.tsx` 가 prop 스레딩. 기본값 `'table'` 유지로 테이블 뷰 외관 보존. 변경 +137 / -9 across 6 files. lint gate PASS.
+- **Phase 2** (data-craft `cde57d1f`): `KanbanDetailDrawerBody` / `GanttDetailDrawerBody` 의 `UniversalCellRenderer` 호출 지점(log 분기 + 일반 분기, 각 2곳, 총 4곳) 모두에 `displayContext="drawer"` prop 전달. Phase 1 의 스타일이 실제 렌더링에 반영됨. 변경 +4 / -0 across 2 files. lint gate PASS.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어의 칸반/간트 뷰 공용 상세 정보 드로어에서 6개 셀 타입(텍스트·긴텍스트·숫자·통화·백분율·코드)이 입력 가능 영역임을 직관적으로 인지하기 어렵다는 QA 보고에 대응. placeholder / background / border / focus UI 4축을 활용해 입력 UX 를 개선.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/UniversalCellRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/rendererMap.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/types.ts`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/TextRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/LongTextRenderer.tsx`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/NumberRenderer.tsx`
+- `packages/fs-data-viewer/src/widgets/kanban-board/KanbanDetailDrawerBody.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/GanttDetailDrawerBody.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. `pnpm dev` (port 5173) 기동 → 데이터 뷰어 진입.
+2. 칸반 뷰에서 카드 클릭 → 우측 상세 드로어 오픈. 텍스트·긴텍스트·숫자·통화·백분율·코드 6개 컬럼 셀이 표시 모드부터 옅은 테두리·배경으로 입력 박스처럼 보이는지 확인.
+3. 동일 셀에 마우스 호버 시 테두리가 primary 색으로 강조되는지 확인.
+4. 셀 클릭하여 편집 모드 진입 시 focus ring 이 노출되는지 확인.
+5. 빈 값 셀(아직 값 미입력) 의 표시 모드에서 타입별 placeholder ("텍스트 입력" / "긴 글 입력" / "숫자 입력" / "코드 입력") 가 muted 색으로 보이는지 확인.
+6. 간트 뷰에서 막대 클릭 → 동일 드로어 동일 6개 셀이 위 4개 항목을 모두 통과하는지 확인.
+7. 테이블/그리드 뷰로 전환 → 동일 6개 셀이 **기존과 동일하게** (테두리 없는 인라인 셀) 보이는지 회귀 확인.
+
+### 잠재 후속
+
+- 동일 transparent 패턴을 공유하는 5개 형제 렌더러(`EmailRenderer` / `LinkRenderer` / `TagRenderer` / `PhoneRenderer` / `NationRenderer`) 는 본 플랜 범위 밖이지만 동일 displayContext 패턴으로 저비용 확장 가능. QA 후속 요청 시 별도 플랜 권장.
+- 본 플랜은 표시 모드 placeholder 만 도입. HTML `placeholder=""` (편집 모드 인풋의 네이티브 placeholder) 는 미적용 — 향후 UX 검토 항목.
+
 ## v001.64.0
 
 > 통합일: 2026-05-15
