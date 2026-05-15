@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.85.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#55
+
+### 페이즈 결과
+- **Phase 1**: `src/middlewares/viewerRoleCheck.middleware.ts` 의 orphan 분기 (line 88, `pageIds.length === 0` 후 부모-서브그리드 fallback 도 실패) throw 직전에 `logger.warn('[VIEWER_ROLE_DENY_ORPHAN]', {...})` 라인 추가. 페이로드: `groupId`, `companyId`, `userId`, `userRoleId`, `isOwner`, `parentGroupIdLookup` (subgrid fallback 결과), `pageIdsAfterFallback`, `jwtUserCompanyId` (= `req.companyId`, 동일 출처지만 형식 가독성 유지), `debug` (env 가드 결과). 서브그리드 fallback 변수를 outer-scope `parentGroupIdLookup` 으로 끌어올려 로그에 포함. `src/models/viewer.model.ts` 에 `DEBUG_VIEWER_ROLE` env 가드 보조 함수 `debugDataViewerFieldDiagnostic(groupId)` 추가 — companyId/is_deleted 필터 제외 `JSON_EXTRACT(properties, '$.dataViewerField') = ?` COUNT(\*) + raw 샘플 1행 반환 (B1 companyId stale / D1 JSON 타입 불일치 가설 판별용). 보안: `ForbiddenError.data` 응답 노출 경로(`error.middleware.ts:89`)는 사용하지 않고 서버 로그 한정.
+
+### 배경
+데이터 뷰어 메인 그리드에서 비-오너(user=37) 가 첫 열 추가 시도 시 `POST /api/viewer/1660/post` → `403 GROUP_ACCESS_DENIED` (`viewerRoleCheck.middleware.ts:89`). 9초 간격 2회 실패 → 브라우저 새로고침 1회 → 동일 동작 성공. 새로고침-회복 패턴은 stale 인증 컨텍스트(JWT companyId / user payload) 시그니처를 가리키나, 현재 로그 한 줄 (`ForbiddenError: GROUP_ACCESS_DENIED` + 스택)만으로는 가설 분기 (B1 companyId stale / B2 user payload stale / D1 JSON 타입 / D2 is_deleted) 식별 불가. 본 패치는 진단 정보를 1줄로 수확해 다음 발생 시점에 가설 확정을 목표로 함 — 실제 픽스는 본 진단 결과 기반의 후속 hotfix 로 분리.
+
+### 영향 파일
+- data-craft-server:
+  - `src/middlewares/viewerRoleCheck.middleware.ts`
+  - `src/models/viewer.model.ts`
+
+### 운영 가이드
+
+- 재현 환경에 `DEBUG_VIEWER_ROLE=1` 환경 변수 설정 후 서버 재기동 필요. 미설정 시 `debug` 필드는 `null` 로 출력되며 base 필드만으로는 B1 / D1 분기 불가능.
+- 재현 후 서버 로그에서 `[VIEWER_ROLE_DENY_ORPHAN]` 라인 1건 추출 → master 에게 전달 → 후속 hotfix 플랜 형성.
+
+### 검증 시나리오
+- user=37 으로 데이터 뷰어 → 그룹 1660 진입 (새로고침 없이) → 열 추가 → 403 응답 확인 → 서버 로그 `[VIEWER_ROLE_DENY_ORPHAN]` 1줄 캡처.
+- 새로고침 후 동일 시도 → 200 성공 확인 (로그 라인 미출력).
+- 두 케이스 비교를 통해 companyId / pageIdsAfterFallback / debug.totalMatchAnyCompany 의 변화 패턴 식별.
+
 ## v001.84.0
 
 > 통합일: 2026-05-15
