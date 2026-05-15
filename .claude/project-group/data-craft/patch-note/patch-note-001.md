@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.108.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#64
+
+### 페이즈 결과
+
+- **Phase 1** (`0180c6e`, data-craft-mobile): BE 호환성 검증 문서 `AUTH_BE_COMPATIBILITY.md` 신규 작성. 4축 검증 (Origin allowlist / CSRF·Cookie / Client contract / VITE_API_BASE_URL) 결과 **종합 PASS-with-caveat**. Origin (`https://funshare-inc.github.io`) 는 BE CORS allowlist 리터럴 패턴에 등록되어 PASS, BE 가 JSON-body JWT 만 사용 (Set-Cookie 없음) 이므로 CSRF/쿠키 도메인 N/A → PASS. Caveat 2건: (a) `signin`/`refresh`/`autoSignin` 응답 형태가 BE 의 `{auth:{...}}` / `{callId, message, data:{...}}` 래퍼와 클라이언트 `types.ts` flat 구조 사이에 불일치 — 후속 hotfix 또는 별도 plan 처리 필요. (b) GitHub Pages 배포 workflow 미존재 + `VITE_API_BASE_URL` 주입 step 미구성 — 배포 파이프라인 신규 작성 시 액션 아이템.
+- **Phase 2** (`c2e8715`, data-craft-mobile): `ScreenLogin.tsx` linkRow 에 `·` 구분자 + `<Link to="/m/workspace-select">회사 선택</Link>` 추가. `ScreenLogin.module.css` 에 `linkSep` / `linkWorkspace` 클래스 + linkRow flex gap 적용. 기존 signin/forgot-password/SSO placeholder 동작은 미변경.
+- **Phase 3** (`c85f5c5`, data-craft-mobile): `screens/forgot-password/` 4단계 상태머신 (email → code → password → done) 신규 구현. `ScreenForgotPassword`, `StepEmail`, `StepCode`, `StepNewPassword`, `useResetFlow`, `index.ts`, CSS module 신규. `authClient.ts` 에 `sendVerificationCode` (data 래퍼 unwrap), `confirmPasswordReset` (flat 응답) 두 메서드 추가. `routes/forgot-password.tsx` placeholder 26줄 → 1줄 re-export 로 교체. 인라인 에러 표시, 카운트다운, 성공 시 `/m/login` 자동 이동.
+- **Phase 4** (`55d3966`, data-craft-mobile): `screens/workspace-select/` 화면 신규 구현. GitHub Pages 단일 도메인 환경에서 서브도메인 기반 테넌트 라우팅 대체. `mobileTenantStore` (Zustand, localStorage `dc_login_company` 영속), `useRecentCompanies` (최대 5개 최근 회사 ID), `WorkspaceCard` (로고/이니셜 + 회사명/ID), `ScreenWorkspaceSelect` (카드 + 신규 ID 입력 폼). `authClient.ts` 에 `checkCompanyId` (BE `available` → `exists` 반전), `getTenantInfo` 추가. `routes/workspace-select.tsx` stub → re-export 로 교체.
+
+### advisor 검증
+
+- 계획 시점 (#1): Intent / Logic / Group Policy / Evidence / Command Fulfillment 5축 PASS (no BLOCK).
+- 완료 시점 (#2): no BLOCK. Caveat 두 건 (axis-3 응답 래퍼 불일치, Pages 배포 workflow) 은 본 단계0-B 범위 외 후속 작업 대상 — 마스터 명령 ("BE 변경 0 전제로 인증 3화면 + 첫 phase 호환성 게이트") 자체는 충족.
+
+### 영향 파일
+
+**data-craft-mobile** (`bj-kim-funshare/data-craft-mobile`, branch `i-dev`):
+- `apps/web/src/mobile/auth/AUTH_BE_COMPATIBILITY.md` (신규)
+- `apps/web/src/mobile/auth/authClient.ts`
+- `apps/web/src/mobile/auth/mobileTenantStore.ts` (신규)
+- `apps/web/src/mobile/screens/login/ScreenLogin.tsx`
+- `apps/web/src/mobile/screens/login/ScreenLogin.module.css`
+- `apps/web/src/mobile/screens/forgot-password/ScreenForgotPassword.tsx` (신규)
+- `apps/web/src/mobile/screens/forgot-password/ScreenForgotPassword.module.css` (신규)
+- `apps/web/src/mobile/screens/forgot-password/StepEmail.tsx` (신규)
+- `apps/web/src/mobile/screens/forgot-password/StepCode.tsx` (신규)
+- `apps/web/src/mobile/screens/forgot-password/StepNewPassword.tsx` (신규)
+- `apps/web/src/mobile/screens/forgot-password/useResetFlow.ts` (신규)
+- `apps/web/src/mobile/screens/forgot-password/index.ts` (신규)
+- `apps/web/src/mobile/screens/workspace-select/ScreenWorkspaceSelect.tsx` (신규)
+- `apps/web/src/mobile/screens/workspace-select/ScreenWorkspaceSelect.module.css` (신규)
+- `apps/web/src/mobile/screens/workspace-select/WorkspaceCard.tsx` (신규)
+- `apps/web/src/mobile/screens/workspace-select/useRecentCompanies.ts` (신규)
+- `apps/web/src/mobile/screens/workspace-select/index.ts` (신규)
+- `apps/web/src/mobile/routes/forgot-password.tsx`
+- `apps/web/src/mobile/routes/workspace-select.tsx`
+
 ## v001.107.0
 
 > 통합일: 2026-05-15
