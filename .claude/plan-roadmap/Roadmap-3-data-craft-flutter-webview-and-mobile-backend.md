@@ -1,4 +1,4 @@
-# Roadmap 2: data-craft Flutter 웹뷰 통합 · BE/DB 신규 · 네이티브 브리지
+# Roadmap 3: data-craft Flutter 웹뷰 통합 · BE/DB 신규 · 네이티브 브리지
 
 > 작성일: 2026-05-15 | 대상: Roadmap-1 의 모바일 React 산출물을 Flutter Android APK 셸에 탑재하고, /v2/social/* BE 신규 네임스페이스·푸시·오프라인 동기화·네이티브 능력 (JS Bridge 경유) 전부 구현
 
