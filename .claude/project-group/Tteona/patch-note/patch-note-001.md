@@ -1,5 +1,50 @@
 # Tteona — Patch Note (001)
 
+## v001.6.0 — 단계3-A 바이어 홈/탐색/피드/검색/필터 (FE 5 화면 + 3 컴포넌트 패키지 + BFF + BE /feed /explore /search)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#6
+
+### 페이즈 결과
+- **Phase 1** (feat, Tteona-server): GET /feed 핸들러 + feed service.ts (keyset cursor, derivePersonaTags LATERAL jsonb_each 집계) + Zod 검증 + FeedCardDto/FeedResponse 타입. 커밋 `762c039`. (Informational blockers: reviews.categories 실제 shape 미확정 — `{tagName: count}` 객체 가정, 정식 persona 스키마는 후속 plan; itineraries.status='published' 안전 가드 추가.)
+- **Phase 2** (feat, Tteona-server): GET /explore (tier-aware 3 단 keyset 정렬) + GET /search (`%`, `_`, `\` 이스케이프 ILIKE title/description 매칭) 라우트 + service.ts FeedOptions 확장 (mode/q 옵션 — 기존 /feed 호출자 무영향) + app.ts 마운트. q 누락/공백 시 400 INVALID_INPUT. 커밋 `9391ea0`.
+- **Phase 3** (feat, Tteona): src/components/feed — FeedCard (variant A/B), FeedCardSkeleton + FeedCardDto 미러 타입. variant B 가 PersonaOverlay 합성. 커밋 `c524ac7`. (Informational blockers: FE↔BE type-mirror nullability drift 수용 — BE 타입이 overly pessimistic, FE 미러가 BE service 실제 응답 shape 와 정합; TrustCard 미합성 — detail 페이지용으로 카드 레이아웃 부적합.)
+- **Phase 4** (feat, Tteona): src/components/explore — TempMeterCard / CameraLockCard / TimeDecayCard 3 카드 (handoff explore-cards.jsx 포팅). 세 카드 모두 동일 FeedCardDto 소비, 썸네일 오버레이만 시각적으로 분기. 의미적 디스크리미네이터는 후속. 커밋 `a55b17f`.
+- **Phase 5** (feat, Tteona): src/components/filter — FilterSheet (바텀시트 컨테이너 children 슬롯) + FilterGroup + FilterChip + FilterState 타입. controlled 패턴 + onApply 콜백. 가격/기간/테마 3 그룹 (지역은 BE region 미지원으로 v1 제외). 커밋 `99dc0b8`.
+- **Phase 6** (feat, Tteona): BFF 라우트 3 (App Router `route.ts` — feed/explore/search — 쿼리 화이트리스트 + Authorization pass-through) + React Query v5 `useInfiniteQuery` 훅 3 (`useFeedQuery` URL searchParams 자동 반영, `useExploreQuery`, `useSearchQuery` q 빈문자열 enabled=false) + placeholder README 제거. 커밋 `e44bad0`.
+- **Phase 7** (feat, Tteona): (buyer)/layout.tsx AppShell + BottomTabBar 결선 (`'use client'` 선언) + /home (PhotoHero + QuickTile 4 + BigItineraryCard 3 정적 합성) + /feed (useFeedQuery 무한 스크롤 IntersectionObserver, FeedCard variant B, FilterSheet 토글 + router.replace 쿼리스트링 갱신, Suspense 경계). 커밋 `bfa2c09`.
+- **Phase 8** (feat, Tteona): /search (debounce 300ms + useSearchQuery + variant A 그리드) + /filter (FilterGroup/FilterChip 직접 합성 + router.push back 이력 보존) + /explore (i%3 라운드 로빈 explore 3 카드 + useExploreQuery 무한 스크롤). BottomTabBar 자기-충족 변환 — TabKey home/feed/search/profile 재정의, `usePathname()` 활성 탭 자동 판정, `useRouter().push` 라우팅. 커밋 `c5fd0d2`.
+- **Build-hotfix** (`30025b4`): Phase 7 layout.tsx 가 Phase 8 narrowed TabKey 와 type 충돌하여 `pnpm next build` type-check 단계 실패 — placeholder props 제거하여 `<BottomTabBar />` 단순화. 수정 후 type-check PASS.
+
+### 영향 파일
+
+**Tteona-server (BE)**:
+- `src/routes/feed/index.ts` · `src/routes/explore/index.ts` (신규) · `src/routes/search/index.ts` (신규)
+- `src/lib/feed/service.ts` (신규) · `src/lib/validation/feed.ts` (신규) · `src/types/feed.ts` (신규)
+- `src/app.ts`
+
+**Tteona (FE)**:
+- `src/app/(buyer)/layout.tsx`
+- `src/app/(buyer)/home/page.tsx` · `home/_components/{PhotoHero,QuickTile,BigItineraryCard}.tsx` (모두 신규)
+- `src/app/(buyer)/feed/page.tsx` · `search/page.tsx` · `filter/page.tsx` · `explore/page.tsx` (모두 신규)
+- `src/app/api/feed/route.ts` · `api/explore/route.ts` (신규) · `api/search/route.ts` (신규) · `api/feed/README.md` (제거)
+- `src/components/feed/{FeedCard,FeedCardSkeleton,index}.{tsx,ts}` (신규)
+- `src/components/explore/{TempMeterCard,CameraLockCard,TimeDecayCard,index}.{tsx,ts}` (신규)
+- `src/components/filter/{FilterSheet,FilterGroup,FilterChip,index}.{tsx,ts}` (신규)
+- `src/components/common/BottomTabBar.tsx`
+- `src/hooks/feed/{useFeedQuery,useExploreQuery,useSearchQuery,index}.{ts}` (신규)
+- `src/types/feed.ts` (신규) · `src/types/filter.ts` (신규)
+
+### v1 carve-outs (의도적, 후속 plan 으로 이연)
+- region 필터: `region` 컬럼이 trips 에만 존재하고 `itineraries.tripId` nullable → BE/FE 모두 미지원
+- persona 의미 매핑: reviews.categories jsonb 상위 2 키 임시 mirror, 정식 persona 필드 도입은 단계 3-D 또는 별도
+- explore 카드 의미적 디스크리미네이터 (temperatureBucket / lockState / freshnessTier): BE 스키마 확장 시점에 추가
+- FeedCard → /detail/[id] 라우팅: detail 라우트는 단계 3-B 에서 생성, 본 plan 은 `<Link href>` 만 두고 placeholder
+- BottomTabBar profile 탭 (`/buyer`): 단계 3-D 마이/알림 페이지로 재매핑 예정
+
+### 사전 발견 (본 plan 범위 외)
+- `(auth)/login/page.tsx` (plan #5 phase 8, `e5580fc`) 에 `useSearchParams()` Suspense 경계 누락으로 `pnpm next build` page-data 단계 prerender 실패. 본 plan 신규 페이지 (`/feed` `/search` 등) 는 모두 Suspense 적절 래핑. 별도 핫픽스 이슈 권장.
+
 ## v001.5.0 — 단계2 인증 통합 (FE (auth) 라우트 + BE /auth/* 풀스택)
 
 > 통합일: 2026-05-15
