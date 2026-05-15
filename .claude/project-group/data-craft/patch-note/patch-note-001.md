@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.87.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54
+
+### 페이즈 결과
+- **Phase 1**: `packages/fs-data-viewer` 의 문서 셀 모달 prop 체인 (`DocumentEditDialog` → `ContentArea` → `DocumentEditor`) 에 옵셔널 `uploadFile?: (file: File) => Promise<string>` 추가, `useCreateBlockNote({ uploadFile })` 에 직결. `FsGridDocumentCellRendererProps` 에도 동일 콜백 노출. (커밋 `11fe4b0b`)
+- **Phase 1 확장**: Phase 2 도중 식별된 패키지 내부 라우팅 누락을 해소 — `FsDataViewerProps` 부터 `cell-renderer-map` 의 document 브랜치까지 11계층에 `uploadDocumentFile?: (file, dataViewerField, columnField, rowField) => Promise<string>` 순수 pass-through 라우팅 추가. cell-renderer-map document 브랜치에서 셀 컨텍스트 바인딩으로 `FsGridDocumentCellRenderer.uploadFile` 에 연결. (커밋 `916348f8`)
+- **Phase 2**: 호스트 `src/features/data-viewer/lib/uploadDocumentAttachment.ts` 헬퍼 신규 — `category='document-attachment'`, `identifier='{dataViewerField}-{columnField}-{rowField}'` 합성 후 `fs_api.fileApi.uploadFile()` 호출, `response.data.uri` 반환. uri 부재 시 Error throw (BlockNote 자체 에러 UI 위임). `Viewer.widget.tsx` 의 단일 `<FsDataViewer>` 마운트에 `uploadDocumentFile` prop 주입. (커밋 `7a75111b`)
+
+### 배경
+QA팀 제안 — 데이터 뷰어 문서 타입 셀 모달 (BlockNote 0.45 에디터 기반) 의 이미지/파일 첨부 시 현재 URL 입력만 지원. URL 입력 방식을 유지한 채 드래그/선택 업로드를 BlockNote 의 image/file block 에 병행 추가. 백엔드 `POST /api/file` (multipart, category/identifier) 및 FE 헬퍼 `fs-api` `uploadFile()` 기존 인프라 재사용 — 백엔드/SDK 변경 없음. BlockNote `useCreateBlockNote({ uploadFile })` 옵션 주입으로 Upload 탭 자동 노출.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/dialogTypes.ts`
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx`
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/ContentArea.tsx`
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/documentCellTypes.ts`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/FsGridDocumentCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/entities/data-viewer-props.types.ts`
+  - `packages/fs-data-viewer/src/app/types.ts`
+  - `packages/fs-data-viewer/src/app/FsDataViewer.tsx`
+  - `packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx`
+  - `packages/fs-data-viewer/src/pages/GridViewPage.tsx`
+  - `packages/fs-data-viewer/src/features/grid/lib/gridViewTypes.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_renderer/FsGridRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_renderer/types.ts`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_renderer/generate-widget.tsx`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_renderer/cell-renderer-map.tsx`
+  - `src/features/data-viewer/lib/uploadDocumentAttachment.ts` (신규)
+  - `src/widgets/viewer-widget/ui/Viewer.widget.tsx`
+
+### 후속 빌드 단계
+`fs_data_viewer` 는 `./dist` export 패키지 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
+### 미해결 / 후속 플랜
+- BlockNote 업로드 실패 시 커스텀 토스트 UX — 본 플랜은 BlockNote 자체 에러 표시에 의존. 별도 UX 플랜 분리.
+- `data-craft-mobile` (`fs-data-viewer-mobile`) 동등 기능 — 별도 패키지이므로 본 플랜 미포함, 후속 플랜.
+- `identifier` triplet 의 행 정렬/이동 시 안정성은 기존 file 셀 가정을 inherit — 별도 검증 미수행.
+
 ## v001.86.0
 
 > 통합일: 2026-05-15
