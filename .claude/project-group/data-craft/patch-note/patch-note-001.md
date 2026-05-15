@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.128.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#75
+
+### 페이즈 결과
+
+- **Phase 1** (`dfd6dcca`, data-craft): 캘린더 상세 패널의 카드 ▲▼ 버튼이 무반응이던 결함을 해소. `calendarReorderHelper.ts` 신규 — `moveCardInDay()` 가 같은 일자 그룹 내 인접 카드의 `row.seq` 를 swap 하고 누락 seq 를 backfill 한 `seqUpdates` 를 반환. `FsCalendarChart.handleMoveCard` 가 `moveCardInDay` → `sortRowsBySeq` → `setServerRows` → `saveChange(createRowSeqChange(...))` → `onRefresh()` 까지 일관 처리. `FsCalendarChart → FsCalendar → FsCalendarDetailPanel` 로 `onMoveCard` + `mode` prop 스레딩. `FsCalendarDetailPanel` 의 핸들러 게이팅 = `mode === FsViewerMode.View && !isReadOnly && !!onMoveCard`. `useCalendarEvents.parseCalendarEvents` 의 `calendarEventOrder` 우선 분기 제거 (stale 맵이 seq 변경을 덮어쓰던 결함 차단).
+- **Phase 2** (`e4f7b02a`, data-craft): Phase 1 로 dead 가 된 `onCardOrderChange` prop 체인을 `CalendarViewPage → FsCalendarChart → FsCalendar → FsCalendarDetailPanel → FsCalendarEventCard → useEventCardHandlers` 전 구간 제거. 동일 체인을 검증하던 `dnd-callback-chain.test.tsx` (167라인) 및 `calendarEventOrder` 우선 분기를 검증하던 `calendar-event-order.test.tsx` (44라인) 삭제. `entities/grid/types.ts:71` 의 `calendarEventOrder` 타입 필드는 BE 스키마 잔존 가능성 고려 type-level 만 보존.
+- **Phase 3** (`63973e20`, data-craft): `moveCardInDay` 헬퍼 회귀 테스트 5건 신규 (`card-reorder-buttons.test.tsx`) — 중간 카드 UP swap, 첫 카드 UP / 마지막 카드 DOWN 경계 no-op, seq undefined 행 backfill 정수 반환, 다른 일자 단일 카드 비간섭.
+
+### 해결방식
+
+- 마스터 의도 = "그리드뷰의 행 순서 변경 BE 인프라 재활용, BE 작업 추가 없이, 드래그&드롭 대신 ▲▼ 아이콘 버튼". 그리드뷰 / 칸반이 이미 `createRowSeqChange` + `row.seq` 경로로 영속화 — 캘린더 카드는 본질적으로 1개 행이므로 동일 경로 재사용.
+- 결함 원인은 3중 단절: (1) `FsCalendarDetailPanel.handleMoveUp/Down` 가 `onCardOrderChange` prop 만 호출, (2) `CalendarViewPage.handleCardOrderChange` 가 no-op, (3) `calendarEventOrder` 영속화용 `DataViewerChangeModel` 자체 부재. Phase 1 은 새 `onMoveCard` 직통 콜백을 `FsCalendarChart.handleMoveCard` 에 연결하여 saveChange 까지 일관 흐름 확보.
+- 리렌더 보장 = `viewerModel` 이 context-held mutable 이라 참조 swap 만으론 부족 → `FsCalendarChart` 가 보유한 `serverRowsRef` + `setServerRows` + `monthCacheRef` 갱신 + `onRefresh()` 트리거 (칸반의 `triggerRerender` 동치). 페이지 레벨에 새 로직을 두지 않음으로써 prop drilling 최소화.
+- 뷰 모드 게이팅은 `FsViewerMode.View` enum 단일 분기 + `!isReadOnly` 합성. EventCardHeader 의 기존 가드 `(onMoveUp || onMoveDown)` 가 자연히 버튼을 숨기므로 헤더 컴포넌트 직접 수정 불요 — 단일 게이팅 지점 (DetailPanel 핸들러 생성) 유지.
+- `useCalendarEvents.parseCalendarEvents` 의 `calendarEventOrder` 분기 제거는 1차 advisor 가 지적한 stale 맵 결함 (seq swap 후에도 UI 가 옛 순서를 보이는 회귀) 의 직접 차단.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/calendarReorderHelper.ts` (신규)
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar/FsCalendar.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/FsCalendarDetailPanel.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/FsCalendarEventCard.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/useEventCardHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar-chart/useCalendarEvents.ts`
+- `packages/fs-data-viewer/src/pages/CalendarViewPage.tsx`
+- `packages/fs-data-viewer/src/__tests__/calendar/card-reorder-buttons.test.tsx` (신규)
+- `packages/fs-data-viewer/src/__tests__/calendar/dnd-callback-chain.test.tsx` (삭제)
+- `packages/fs-data-viewer/src/__tests__/field-types/calendar-event-order.test.tsx` (삭제)
+
 ## v001.127.0
 
 > 통합일: 2026-05-15
