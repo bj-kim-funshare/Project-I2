@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.115.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#67
+
+### 페이즈 결과
+
+- **Phase 1** (`6f71959`, data-craft): 공통 아이콘 피커에 `development` (개발) 카테고리를 14번째 탭으로 신설. `lucide-react` 0.562.0 실존 아이콘 중 기존 13개 카테고리와 disjoint 한 65개 아이콘 (Git/VCS, 터미널, 빌드, 디버그/테스트, 패키지/인프라, 클라우드, 네트워킹, 컴포넌트, 보안, AI/자동화, 파일/코드, 기타) 선별. `icons-development.ts` 신규 + `iconCategories.ts` 등록 + `iconKeywords.ts` 65개 한글 키워드 매핑 + i18n (`ko.ts` "개발", `en.ts` "Development") 추가.
+- **Phase 2** (`736b2aa`, data-craft-mobile): `packages/fs-form-builder-mobile/src/shared/config/page-icons/` 의 평행 아이콘 피커에 Phase 1과 **바이트 단위로 동일한** development 카테고리 추가. mobile 은 i18n 분리 없이 inline `label: '개발'` 사용. drift 0 — `diff` 로 icons-development.ts 와 iconKeywords.ts development 섹션 모두 동일성 검증.
+
+### advisor 검증
+
+- 계획 시점 (#1): no BLOCK (5관점 PASS).
+- 완료 시점 (#2): no BLOCK (5관점 PASS). drift 가 `diff` exit 0 으로 1차 증거 확인.
+
+### Lint 게이트
+
+- data-craft: `pnpm typecheck:all && pnpm lint` exit 0.
+- data-craft-mobile: `pnpm typecheck` exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/shared/config/page-icons/icons-development.ts` (신규)
+- `src/shared/config/page-icons/iconCategories.ts`
+- `src/shared/config/page-icons/iconKeywords.ts`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+**data-craft-mobile** (`bj-kim-funshare/data-craft-mobile`, branch `i-dev`):
+- `packages/fs-form-builder-mobile/src/shared/config/page-icons/icons-development.ts` (신규)
+- `packages/fs-form-builder-mobile/src/shared/config/page-icons/iconCategories.ts`
+- `packages/fs-form-builder-mobile/src/shared/config/page-icons/iconKeywords.ts`
+
 ## v001.114.0
 
 > 통합일: 2026-05-15
