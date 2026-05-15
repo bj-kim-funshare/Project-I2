@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.63.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#41
+
+### 페이즈 결과
+
+- **Phase 1** (data-craft `486c567`): 캘린더 뷰어의 우측 상세 패널에서 카드 선택 후 셀(텍스트/드롭다운/날짜 등)을 편집할 때마다 화면이 "마지막으로 추가된 카드" 위치로 점프하던 회귀를 제거. **근본 원인**: `FsCalendarChart.tsx` 의 `lastAddedRowField` state 가 카드 추가 시 set 된 뒤 클리어되지 않았고, `FsCalendarDetailPanel.tsx:103-109` 의 `useEffect([lastAddedRowField, events])` 가 셀 편집으로 `events` 새 참조가 생길 때마다 `scrollIntoView` 를 재발화. **해결**: `FsCalendarDetailPanel` 에 `onLastAddedConsumed` 콜백 prop 추가, `useEffect` 안에서 `scrollIntoView` 실제 실행 직후에만 호출. `FsCalendarChart` 가 `useCallback(() => setLastAddedRowField(null), [])` 안정 콜백을 `FsCalendar` → `FsCalendarDetailPanel` 로 pass-through. 동시에 부수 안정화로 카드 key 를 `${rowField}-${columnTitle}-${index}` 에서 `${rowField}-${dateColumnField}` 로 교체 (index/columnTitle 변동 시의 remount 위험 차단). 변경 +12 / -2 across 3 files. lint gate (`pnpm typecheck:all && pnpm lint`) PASS.
+
+### 마스터 명령 의도 (재기)
+
+캘린더 뷰어에서 카드를 선택해 우측 상세 패널을 펼친 뒤 컬럼 셀에 데이터를 입력하거나 옵션을 선택할 때, 입력 중인 위치에 화면이 유지되어야 함에도 화면이 하단으로 점프하던 문제를 잡아달라는 요구.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar/FsCalendar.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/FsCalendarDetailPanel.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. 캘린더 뷰어 진입 → 신규 카드 추가 → 추가된 카드로 1회 자동 스크롤 발생 확인 (기존 기능 회귀 방지).
+2. 카드 추가 후 다른 카드를 펼쳐 텍스트 셀 입력 → 입력 중인 셀이 화면 안에 유지되고 스크롤 점프가 없음.
+3. 드롭다운/날짜/관계 등 다양한 셀 타입에서 동일하게 포커스/스크롤이 유지됨.
+4. 카드 순서 변경(▲/▼) 직후 셀 편집 시 remount 으로 인한 포커스 손실 없음.
+
 ## v001.62.0
 
 > 통합일: 2026-05-15
