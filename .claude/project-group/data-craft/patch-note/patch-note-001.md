@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.52.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#32
+
+### 페이즈 결과
+
+- **Phase 1** (`e585a17c`): `EmptyInputWidget` 에서 `form.listFirst` 값으로 자식 위젯을 분기하던 enterprise-497 HF-007 로직을 제거하고, `groupId` 확정 + `formQuery` 로딩 종료 이후에는 항상 `UserFormWidget` 으로 단일 위임하도록 수정. 기존 listFirst=false 경로는 `InputWidget` 에 `inputDataGroupId: Number(groupId)` 로 form-id 를 잘못 매핑하고 있었고, `useInputDataGroups` 의 존재성 검증에서 `groupMissing=true` 로 떨어져 입력이 disabled 처리되며 "버튼을 눌러도 아무것도 로드 안 됨" 증상의 근본 원인이었다. `UserFormWidget` 은 listFirst true/false 두 경우 모두 내부에서 처리하므로 단일 경로 통합으로 충분. `InputWidget` / `InputWidgetProps` 임포트 정리 + 헤더 코멘트 갱신 포함. 변경 +10 / -30 (1 file). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/empty-data-widget/ui/EmptyInputWidget.tsx`
+
+### 마스터 수동 검증 시나리오
+
+advisor #2 caveat — 코드 정합성과 lint 는 검증 완료. 다음 e2e 는 PENDING 게이트에서 마스터가 수행:
+1. `pnpm dev` (port 5173) 기동 후 페이지 디자이너에서 버튼 위젯 + 빈 입력폼 위젯 배치.
+2. 폼 A=`listFirst=true`, B=`listFirst=false` 두 개 준비.
+3. 버튼 "데이터 불러오기" → 폼 A 선택 → 뷰 모드 → 버튼 클릭 → 정상 로드 (회귀 없음).
+4. 동일 버튼 설정을 폼 B 로 변경 → 버튼 클릭 → **정상 로드** (수정 전: 빈 화면).
+5. 타겟 폼 미선택 시 `EmptyDataPlaceholder` 유지.
+
 ## v001.51.0
 
 > 통합일: 2026-05-14
