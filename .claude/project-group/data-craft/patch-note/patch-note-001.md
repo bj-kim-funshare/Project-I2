@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.80.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#51
+
+### 페이즈 결과
+- **Phase 1**: TagRenderer (`packages/fs-data-viewer` + `packages/fs-sub-data-viewer` 두 패키지의 동일 컴포넌트) 의 `<input>` 바인딩 모델을 "전체 직렬화 문자열" 에서 "신규 태그 단일 draft" 로 전환. 기존 `localValue` / `prevValue` 동기화 로직 제거 → `draft` (초기값 `''`) 로 단일화. 기존 태그는 외부 `value` prop 을 매 렌더링마다 split 하여 도출. 쉼표·Enter 키는 `onKeyDown` 에서 `preventDefault` 후 `commitDraft` 호출, Blur 시 draft 비어있지 않으면 동일 커밋. 빈 draft·중복 태그는 silent no-op. 빈 draft 상태에서 Backspace 입력 시 마지막 칩 제거. 두 패키지의 의도적 분기 (fs-data-viewer 의 `/[,\s]+/` 분할 정책 + `CornerDownLeft` 아이콘 + `pr-6` 패딩 / fs-sub-data-viewer 의 `,` 단독 분할 정책) 는 그대로 보존. `BaseRendererProps` 시그니처 / 외부 직렬화 형식 (콤마+스페이스) / i18n placeholder 텍스트 모두 변경 없음.
+
+### 배경
+QA 보고: 칸반뷰어의 태그 입력은 `'태그1, 태그2, ...'` 형식으로 입력해야 하나 (1) placeholder 가 native HTML 속성이라 첫 태그 입력 직후 자동 숨김 → 형식 규칙 인지 불가, (2) 입력 필드가 직렬화된 전체 태그 문자열을 그대로 바인딩하여 사용자가 수동 편집 시 (커서 위치에서 Backspace 등) 다른 태그도 함께 손상될 가능성. 입력 필드를 신규 태그 1개의 draft 로 축소하면 commit 직후 `''` 로 비워지므로 placeholder 가 항상 노출되고, 기존 태그는 칩(chip) UI 만으로 표현·개별 삭제되어 문자열 편집을 통한 손상 경로가 차단됨. 칸반뷰어 + 그리드뷰어 양쪽이 같은 컴포넌트를 공유하므로 두 컨텍스트 모두 동일 개선 적용.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/TagRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/shared/ui/cell-renderers/renderers/TagRenderer.tsx`
+
 ## v001.79.0
 
 > 통합일: 2026-05-15
