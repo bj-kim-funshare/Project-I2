@@ -1,5 +1,68 @@
 # data-craft — Patch Note (001)
 
+## v001.99.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#56
+
+### 페이즈 결과
+
+- **Phase 0** (DDL, /task-db-structure 별도 완료): `data_viewer_column_setting.frozen ENUM('start','end','none') NOT NULL DEFAULT 'none'` 컬럼 추가.
+- **Phase 1** (`02e6a1f`, data-craft-server): `viewerRoleCheck.middleware.ts` 의 `userId: req.userId ?? req.user?.id` TS2322 정합 — `req.user?.id` 를 `String()` 변환.
+- **Phase 2** (`fdd240b`, data-craft-server): BE 전 계층 frozen 통과 (Sequelize model · DTO · 검증 · column-setting change handler · 화이트리스트).
+- **Phase 3** (`847b21a`, data-craft): FE 컬럼 모델 frozen 전파 + `createColumnFrozenChange(columnId, frozen)` change-creator 신설.
+- **Phase 4** (`c127366f`, data-craft): 메인 그리드 sticky 렌더 — `widgets/grid-table/lib/frozenLayout.ts` 순수 함수 신설 (start/end 양방향 누적 offset). 헤더(zIndex:3) / 바디(zIndex:2) / 푸터 / 그룹헤더 일관 적용. FrozenLayoutContext 로 DataCell 까지 offset 전파.
+- **Phase 5** (`647e18ac` + lint hotfix `b51b45c9`, data-craft): 서브 그리드 sticky 렌더 — Phase 4 의 frozenLayout 재사용. 시스템 frozen(rowId 컬럼)과 사용자 frozen 을 `FsGridColumnTypes.rowId.id` 비교로 분리, 기존 `frozen !== 'start'` 필터를 `systemRowIdFields` Set 으로 대체하여 사용자 frozen='start' 비-rowId 컬럼이 렌더 목록에서 누락되는 회귀를 사전 차단. Lint hotfix 는 `FrozenLayoutContext` 를 DataCell 에서 분리 (react-refresh).
+- **Phase 6** (`224b5f13` + lint hotfix `741e6920`, data-craft): 컬럼 메뉴 "왼쪽 고정 / 오른쪽 고정 / 고정 해제" 토글 — 메인 (`menuItems.ts`) 과 서브 (`useSubGridColumnMenu` + `SubGridColumnMenu`) 동시 추가. `createColumnFrozenChange` 호출로 기존 saveChange 파이프라인 연결. Lint hotfix 는 useSubGridColumnMenu hoisting 정정 (saveColumnProperty 선언 후 위치).
+- **Phase 7** (`2945c2d7`, data-craft): Vitest 테스트 13건 신규 — frozenLayout 6 케이스 (start/end/none/mixed/prefix=0 등), menuItems 4 케이스 (frozen 상태별 라벨 분기), createColumnFrozenChange round-trip 3 케이스. `tests/packages/fs-data-viewer/` 위치 (vitest.config.ts include 패턴 부합).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/middlewares/viewerRoleCheck.middleware.ts`
+- `src/models/viewer.model.ts`
+- `src/services/dataViewer/dataViewerChange/change.columnSettings.ts`
+- `src/services/dataViewerPost.service.ts`
+- `src/services/viewer/viewer.bulkSave.column.ts`
+- `src/services/viewer/viewer.bulkSave.column.test.ts`
+- `src/types/dataViewer.types.ts`
+- `src/utils/sqlFieldWhitelist.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+- `packages/fs-data-viewer/src/entities/column-model.types.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/lib/changeHelpers.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/lib/columnChangeHelpers.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/FsSubGrid.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/components/{SubGridAggregationCell,SubGridAggregationRow,SubGridBody,SubGridColumnMenu,SubGridDataRow,SubGridHeader}.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridColumnMenu.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_util/customColumnGenerator.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/{ColumnHeader,GridBody,GridHeader}.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/{DataCell,types}.{tsx,ts}`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/GroupHeaderRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/lib/{FrozenLayoutContext.tsx,frozenLayout.ts}` (신규)
+- `tests/packages/fs-data-viewer/{createColumnFrozenChange,frozenLayout,menuItems}.test.ts` (신규)
+
+### Cross-repo 처리 메모
+
+이슈 호스트 (leader) = `funshare-inc/data-craft`, work repos = `funshare-inc/data-craft-server` + `funshare-inc/data-craft`. data-craft-server WIP A 는 Phase 1 의 TS2322 nodemon 크래시로 다른 세션 진행이 차단되어 마스터 명시 요청 하에 plan 종료 전 i-dev 조기 머지 (Step 9.1 일괄 머지에서 분리). data-craft WIP A 는 Phase 7 직후 정상 일괄 머지. 본 패치노트는 Project-I2 `main` 통합.
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`, data-craft worktree): Phase 4 / 5 (after hotfix) / 6 (after hotfix) / 7 모두 exit 0.
+- Phase 7 신규 vitest 13/13 PASS (분리 실행).
+- advisor #1 (계획 시점) PASS · advisor #2 (완료 시점) PASS — 5 perspective.
+
+### 알려진 후속 부채 / Carve-out
+
+- **DataCell hover/stripe bleed**: sticky 셀의 배경이 `var(--background)` 고정 — DataRow hover (`bg-muted`) · stripe (`bg-muted/30`) 상태색이 frozen 셀에는 반영 안 됨. Phase 4 렌더링-전용 스코프 내 트레이드오프로 기록. 시각 polish 별도 후속.
+- **isSettingMode 렌더-레벨 가시성 테스트 미작성**: 게이트가 `ColumnHeader.tsx` / `SubGridHeader.tsx` 상위에 있어 `createColumnMenuItems` 단위 테스트로 직접 검증 불가. 별도 render 테스트는 본 플랜 범위 외.
+- **GroupHeaderRow 그룹 세그먼트 sticky 미적용**: 다중 컬럼 병합 셀은 Option A 정책에 따라 sticky 미적용. 모든 자식 컬럼이 frozen='start' 인 그룹 헤더 셀도 고정되지 않음.
+- **AggregationCell 자체 sticky 미적용**: 현재는 wrapper div 가 sticky. `grid-footer/AggregationCell.tsx` 자체에 sticky 직접 반영 시 영향 파일 확장 필요.
+- **전체 vitest 스위트 사전 손상 284 건**: 본 플랜과 무관 (entities/form/api 등 — frozen 영역 외). i-dev 분기 시점부터 존재. 별도 plan 격리.
+
 ## v001.98.0
 
 > 통합일: 2026-05-15
