@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.105.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#62
+
+### 페이즈 결과
+- **Phase 1** (`9ac93b82`, data-craft): `fs-data-viewer` 패키지의 문서 편집 다이얼로그에 BlockNote 레벨 `documentSaveShortcutFix` 확장(`'Shift-Enter'` → `onSave()` + `return true`) 추가 + dialog `useDocumentKeyboardHandlers` 의 Shift+Enter 핸들러에 `.bn-editor` / `.ProseMirror` 가드 추가. `onSave` 콜백을 `DocumentEditDialog(handleSave) → ContentArea → DocumentEditor` 로 prop drill (dialogTypes.ts 타입 정의 갱신).
+- **Phase 2** (`df8cd1d9`, data-craft): `fs-sub-data-viewer` 사본에 Phase 1 과 동일 패턴 적용. `uploadFile` 프롭 부재 외 동일 구조.
+- **Phase 3** (`8879cad0`, data-craft): `fs-external-data-viewer` 사본에 동일 패턴 적용. `BlockNoteSchema` / 커스텀 블록 / `uploadFile` 부재로 더 단순한 구조 — extensions 배열 위치만 동일.
+
+### 배경
+마스터 보고: "데이터 뷰어 → 문서 타입 셀에서 Shift+Enter 로 저장하면 엔터가 들어가고 저장된다." BlockNote(ProseMirror) 의 contentEditable 키맵이 React onKeyDown bubble 보다 먼저 fire 되어 `'Shift-Enter'` 디폴트 soft-break (`@blocknote/core/dist/blocknote.js` `"Shift-Enter": () => t(!0)`) 가 적용된 후, dialog 컨테이너의 `handleDialogKeyDown` 가 뒤늦게 `onSave` 를 호출 → 줄바꿈 포함 채로 저장되던 race. 두 계층 동시 차단으로 해결: PM 키맵 우선 가로채기(soft-break 무력화 + 즉시 저장) + dialog 핸들러의 BlockNote 출처 가드(double-fire 방지). `keyboardShortcuts` 콜백이 event 를 받지 못해 (`(ctx: { editor }) => boolean`) 콜백 내부 `stopPropagation` 이 불가하므로 가드가 필수.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx` (+14 / -1)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/ContentArea.tsx` (+2)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx` (+1)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/dialogTypes.ts` (+1)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/useDocumentKeyboardHandlers.ts` (+4)
+  - `packages/fs-sub-data-viewer/src/shared/ui/dialogs/document-edit/{DocumentEditor.tsx, ContentArea.tsx, DocumentEditDialog.tsx, dialogTypes.ts, useDocumentKeyboardHandlers.ts}` (Phase 1 과 동일 패턴)
+  - `packages/fs-external-data-viewer/src/shared/ui/dialogs/document-edit/{DocumentEditor.tsx, ContentArea.tsx, DocumentEditDialog.tsx, dialogTypes.ts, useDocumentKeyboardHandlers.ts}` (Phase 1 과 동일 패턴)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 3회 모두 exit 0 (0 errors, 3 warnings — 모두 기존).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 수동 검증 필요. 시나리오:
+  1. 데이터 뷰어 (3개 viewer 각각) 문서 타입 셀 더블클릭 → 다이얼로그 오픈.
+  2. 본문 BlockNote 영역에 "테스트" 입력 → **Shift+Enter** → 다이얼로그 닫힘 + 저장 + 본문 끝 줄바꿈 없음.
+  3. 본문 일반 **Enter** → 새 블록 정상 생성 (저장 X) — 회귀 방지.
+  4. 제목 input 에서 Shift+Enter → 저장 동작 정상 (회귀 방지).
+  5. 본문 Shift+Enter 1회로 저장 호출 1회만 (double-fire 차단) — 콘솔 / 네트워크 확인 권장.
+
+### 후속 빌드 단계
+3개 viewer 패키지 모두 변경 — 본 머지 후 `pnpm --filter fs_data_viewer --filter fs_sub_data_viewer --filter fs_external_data_viewer build` (또는 전체 `pnpm build`).
+
+### 미해결 / 후속 고려
+- BlockNote 키맵 우선순위: 현 `keyboardShortcuts['Shift-Enter']` 등록만으로 디폴트 soft-break 보다 먼저 fire 됨을 lint clean 으로 간접 확인. 마스터 수동 repro 에서 줄바꿈이 여전히 들어가면 `runsBefore` 명시 추가가 HOTFIX 후보.
+- `useCreateBlockNote` 의 extensions 배열은 최초 렌더 시점에 캐싱되어 `documentSaveShortcutFix(onSave)` 의 onSave 클로저가 stale 해질 수 있으나, 3개 패키지 모두 `handleSave` 가 `documentGetterRef.current?.()` 로 라이브 doc 을 읽으므로 실질 영향 없음 (코드로 확인). 장기 개선으로 `useRef` 안정화 고려 가능.
+
 ## v001.104.0
 
 > 통합일: 2026-05-15
