@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.100.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#59
+
+### 페이즈 결과
+
+- **Phase 1** (`04110a4d`, data-craft): `useViewerWidgetProps` 의 `externalStyle` `useMemo` 가 입력 `externalStyleProps` 가 `undefined` 일 때에도 디폴트 값(14/#333333/normal)을 채운 truthy 객체를 반환하여 위젯 설정 드로어 "외부 스타일" 토글 OFF 신호가 손실되던 결함 수정. `ViewerWidgetPropsResult.externalStyle` 타입을 `FsGridExternalStyleModel | undefined` 로 완화하고, `externalStyleProps === undefined` 분기 추가, deps 배열을 `[externalStyleProps]` 단일 참조로 단순화. 결과: 토글 OFF 시 "디자인 모드 → 열메뉴 → 열 본문 스타일 편집" 의 기본 항목(index 0) 활성화 복구. ON 케이스 동일 동작 유지.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/viewer-widget/ui/useViewerWidgetProps.ts`
+
 ## v001.99.0
 
 > 통합일: 2026-05-15
