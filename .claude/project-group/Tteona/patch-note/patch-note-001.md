@@ -1,5 +1,30 @@
 # Tteona — Patch Note (001)
 
+## v001.3.0 — Issue #2 결함 fix (block 1 + warn 1)
+
+> 통합일: 2026-05-15
+> 플랜 이슈: bj-kim-funshare/Tteona#3 (원 dev-inspection 이슈: bj-kim-funshare/Tteona#2)
+
+### 페이즈 결과
+- **Phase 1** (fix, Tteona): 5개 라우트 그룹 page (`(auth)/(buyer)/(seller)/(social)/(system)/page.tsx`) 가 모두 루트 `/` 로 resolve 되어 발생하던 Next.js parallel-page 충돌을, 각 그룹의 동명 세그먼트 (`(group)/{group}/page.tsx`) 로 git rename 이동하여 해소. URL 은 `/auth /buyer /seller /social /system` 로 분리, 루트 `/` 는 단계 0 미할당. 커밋 `40b1ce6` + lint-hotfix `d195e1d` (`(dev)/legal-showcase/__tests__/page.test.tsx` 사전 존재 미사용 `screen` import 제거 — strict next lint 통과 목적).
+- **Phase 2** (fix, Tteona): `src/lib/api/client.ts:53` 의 `RETRY_DELAYS_MS[attempt - 1]` lookup 에 nullish-coalescing 추가 (`?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]`) — 호출자가 `retries ≥ 3` 으로 지정해도 마지막 정의된 지연 (750ms) 으로 클램프되어 `setTimeout(..., undefined)` 백오프 폭주 방지. 커밋 `2fc0994`.
+
+### 영향 파일
+
+**Tteona (FE)**:
+- `src/app/(auth)/page.tsx` → `src/app/(auth)/auth/page.tsx` (rename)
+- `src/app/(buyer)/page.tsx` → `src/app/(buyer)/buyer/page.tsx` (rename)
+- `src/app/(seller)/page.tsx` → `src/app/(seller)/seller/page.tsx` (rename)
+- `src/app/(social)/page.tsx` → `src/app/(social)/social/page.tsx` (rename)
+- `src/app/(system)/page.tsx` → `src/app/(system)/system/page.tsx` (rename)
+- `src/app/(dev)/legal-showcase/__tests__/page.test.tsx` (lint-hotfix)
+- `src/lib/api/client.ts`
+
+### 검증
+- Phase 1·2 lint 게이트 (`pnpm lint`) 통과.
+- Phase 1 추가 검증: `pnpm build` (Next.js 16.2.4) 성공 — 8 개 라우트 (`/auth /buyer /legal-showcase /seller /social /system /_not-found /`) 정적 생성, parallel-page 오류 무발생.
+- advisor 5-관점 (Intent/Logic/Group Policy/Evidence/Command Fulfillment) 계획·완료 시점 양측 PASS.
+
 ## v001.2.0 — 단계0 인프라 동기 코드드롭
 
 > 통합일: 2026-05-15
