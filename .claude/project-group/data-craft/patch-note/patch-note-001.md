@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.62.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#40
+
+### 페이즈 결과
+
+- **Phase 1** (`209b1666`): 데이터 뷰어의 간트 / 칸반 / 캘린더 3 뷰어에서 사용하는 공용 `ViewColumnManagerDialog` (z-index `MODAL_CONTENT = 9900`) 위에서 [열 설정 편집] 버튼을 누를 때 수식(`formula`) 및 함수형(`simpleFormula`) 컬럼의 설정 다이얼로그가 `z-50` 으로 렌더되어 부모 모달에 가려지는 z-stacking 결함 수정. `FormulaEditDialog.tsx` / `SimpleFormulaEditDialog.tsx` 의 최상위 오버레이 div 에서 Tailwind `z-50` 클래스를 제거하고 `style={{ zIndex: Z_INDEX.NESTED_MODAL_CONTENT }}` (12000) 를 적용. 두 파일 모두 `import { Z_INDEX } from '../../../shared/config/z-index-constants'` 추가 (VoteSettingsWrapper 와 동일 패턴). 내부 다이얼로그 마크업, backdrop 디자인, 이벤트 핸들러는 일체 변경하지 않음 — z-index 단일 격상만 수행. 셀 렌더러 경로(`FsGridFormulaCellRenderer` / `FsGridSimpleFormulaCellRenderer`) 에서도 그대로 호출되지만 그 컨텍스트엔 부모 모달이 없으므로 z-index 12000 으로 올려도 시각/동작 회귀 없음. 변경: +6 / -2 across 2 files. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFormulaCellRenderer/FormulaEditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridSimpleFormulaCellRenderer/SimpleFormulaEditDialog.tsx`
+
+### advisor 검증
+
+- 계획 시점 (advisor #1): Intent / Logic / Group Policy / Evidence / Command Fulfillment 5/5 PASS.
+- 완료 시점 (advisor #2): 5/5 PASS — diff 가 플랜 그대로, 셀 렌더러 경로 회귀 없음, lint 통과.
+
 ## v001.61.0
 
 > 통합일: 2026-05-15
