@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.66.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#35
+
+### 페이즈 결과
+
+- **Phase 1** (data-craft `02ed474e` + `a0033792` + `5958bae1` + `906b5285`): 데이터 뷰어 (칸반/간트/캘린더) 에서 카드 생성 이후 새 컬럼 추가 시 기존 카드 드로어 상세 및 표면 (카드 본체 / 간트 막대 / 캘린더 이벤트) 에 신규 필드가 표시되지 않는 미동기 결함을 FE 클라이언트 정규화로 해소. 신규 유틸 `normalizeRowAgainstColumns(row, columns)` 추가 — 누락된 columnField 의 cell 을 `column.defaultValue` 로 합성 (idempotent, 정의된 defaultValue 만 합성). 드로어 fetch 경계 3종 (`KanbanDetailDrawerBody` / `FsGanttChart` `detailCache.getRowDetail` / `FsCalendarChart` `getOrFetchRowData`) 및 표면 소비자 (`useKanbanCard` / `useGanttRowData` / `FsCalendarChart` 의 `parseCalendarEvents` 호출 3지점 / `useCalendarEvents`) 에 적용. 캘린더 카드 캐시는 raw row 저장 후 hit/miss 양쪽에서 normalize 거치도록 재설계 (stale 정규화 캐시 방지). stale closure 회피를 위해 `columnModelListRef` + `useLayoutEffect` 패턴 사용. 사전 검증: cell 저장 흐름이 `(rowField, columnField)` 키 upsert 임을 확인 → FE 합성 cell 편집·저장 시 서버 영구화 보장. 변경 +87 / -14 across 7 files. lint gate PASS (`pnpm typecheck:all && pnpm lint`).
+
+### 마스터 명령 의도 (재기)
+
+QA 보고: data-craft 의 칸반/간트/캘린더 뷰어에서 카드 (또는 이벤트/막대) 생성 이후 새 열을 추가하면 기존 카드 드로어 상세 및 표면에 신규 필드가 표시되지 않고, 새로 생성한 카드만 정상 표시되는 결함. 서버 DB 마이그레이션 없이 FE 클라이언트 측 정규화 (수정 경계 마스터 확정) 로 해결.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/entities/row.utils.ts` (신규)
+- `packages/fs-data-viewer/src/widgets/kanban-board/KanbanDetailDrawerBody.tsx`
+- `packages/fs-data-viewer/src/widgets/kanban-board/kanban-card/useKanbanCard.ts`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/gantt-chart/FsGanttChart.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/gantt-chart/useGanttRowData.ts`
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar-chart/useCalendarEvents.ts`
+
 ## v001.65.0
 
 > 통합일: 2026-05-15
