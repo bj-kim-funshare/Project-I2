@@ -1,5 +1,69 @@
 # data-craft — Patch Note (001)
 
+## v001.127.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#66
+
+### 페이즈 결과
+
+- **Phase 1a** (`589c279d`, data-craft): `HeaderActions.tsx` L191-194 의 인쇄 버튼 노출 조건을 `viewMode === 'dashboard'` 단일 분기에서 5뷰 (`grid|calendar|kanban|gantt|dashboard`) 명시 화이트리스트로 확장. `isWriteMode(mode) && !isReadOnly` 가드 보존. 4뷰에서 부재하던 인쇄 트리거 확보.
+- **Phase 1b** (`f9f6e9a5`, `fdbd4a7c` lint-fix, data-craft): `PrintContext` useEffect 의존성에 `options` 추가 → 옵션 변경 시 미리보기 HTML 자동 재생성. `eslint-disable-next-line react-hooks/exhaustive-deps` 제거. 동기 `setHtmlContent(undefined)` 를 effect 본문에서 제거하고 `closePrintDialog` 콜백으로 이동하여 `react-hooks/set-state-in-effect` 위반 해소.
+- **Phase 2** (`7f4c11bd`, `acc922b8` test-fix, data-craft): `printStyleGenerator` 에 grid 페이지 분할 규칙 4종 추가 (`tbody tr page-break-inside: avoid`, `tfoot display: table-footer-group`, `table table-layout: auto + max-width: 100%`, `th/td overflow-wrap: anywhere`). `useGridPrint` 에 `selectedColumns` 전체 비활성 시 전체 컬럼 fallback. 신규 9건 단위 테스트.
+- **Phase 3** (`4958749b`, data-craft): `useCalendarPrint` 의 `targetMonth` 결정성화 (`new Date()` 제거, `options.calendar.monthView` → 최초 이벤트 날짜 월 fallback). `.today` 강조 제거 (인쇄 결정성). `calendarEventOrder` 기반 일자별 이벤트 정렬. `parseDateValue` JSON.date 미존재 시 plain date fallback. `@media print` 규칙 (`.calendar-grid` / `.event-details-section`). 11/11 green.
+- **Phase 4** (`151a8d24`, `6d447490` lint-fix, data-craft): `useKanbanPrint` 의 `prepareKanbanData` 가 `kanbanColumnField` 미매칭 시 throw 대신 null 반환. `columnsPerPage` 청킹 추가 — N 컬럼마다 `.page-break` 마커. `chunkArray` 순수 헬퍼. UNCLASSIFIED 안전 렌더. 10건 단위 테스트.
+- **Phase 5** (`d61e640e`, `71fee4a0` test-fix, data-craft): `useGanttPrint` 의 `ganttTimelineColumnField` / `ganttLabelColumnField` 명시 조회 + null/미매칭 안내. 타임라인 60일 (`DAYS_PER_PAGE`) 초과 시 UTC epoch days 정수 청킹 + 각 청크 라벨 컬럼 재렌더 (가로 페이지 분할). 순수성 보장. 10건 단위 테스트.
+- **Phase 6** (`a850b57a`, data-craft): `useDashboardPrint` 에 `perWidget` 옵션 (DashboardPrintOptionsExtended 인터섹션). `generatePerWidgetHtml` 이 `.dashboard-grid-container` 직접 자식을 순차 캡처 + 마지막 위젯 제외 `page-break-after: always` 인라인. 부분 회복 — 단일 실패 시 placeholder. 6건 단위 테스트 (`html2canvas` `vi.mock`).
+- **Phase 7** (`bb7e6754` audit empty, `acf2be0b` follow-up, data-craft): 5뷰 × 옵션 매트릭스 전수 점검 (i18n 키 누락 0). 감사에서 발견된 wiring 결함 2건 fix: (1) `showPageNumbers` — `printStyleGenerator` 의 `.print-footer::after { counter(page) }` 가 옵션 무시하던 결함, 옵션 truthy 시만 emit. (2) `showPrintDate` — `printHtmlBuilder.buildFooterContent` 에 `printDate` 파라미터 추가, 옵션 truthy 시 `<span class="print-date">YYYY-MM-DD</span>` 푸터 삽입.
+- **Phase 8** (`817c16ce`, data-craft): `integration.test.tsx` 보강 — 기존 9건 보존 + 옵션 wiring 회귀 6건 + 4뷰 순수성 4건. 총 19건. `bug-907-print-cache-key.test.ts` 회귀 보존.
+
+### 해결방식
+
+- 인쇄 인프라 (PrintDialog / PrintPreview / PrintContext / 엔진 / 뷰별 generate*PrintHtml / printStyleGenerator) 는 이미 존재했으나 미리보기 데이터 흐름 누락 + 트리거 노출 누락 + 일부 옵션 wiring 결함이 누적된 상태. 골격 재작성 대신 결함 지점을 페이즈별로 격리하여 단계적 수정.
+- 미리보기 ↔ 실제 인쇄 정합은 두 경로 (`PrintContext` → `PrintPreview` iframe / `BrowserPrintEngine` 자체 iframe) 가 동일한 `generate*PrintHtml(viewerModel, options)` 함수를 호출하는 구조에 의존 → 뷰별 generate 함수의 **순수성** 을 결정성 (no `new Date()`, no `Math.random()`, no live DOM read) 으로 강제. Calendar / Gantt 의 `new Date()` 의존을 명시 옵션 / 이벤트 데이터 fallback 으로 교체.
+- 페이지 분할은 뷰별 특성에 맞춰 정의: Grid (행 단위 break-inside avoid), Calendar (이벤트 상세 새 페이지), Kanban (`columnsPerPage` 가로 chunking), Gantt (`DAYS_PER_PAGE=60` 가로 chunking + 라벨 재렌더), Dashboard (`perWidget` 옵션 시 위젯 단위 page-break).
+- Dashboard 는 html2canvas DOM 의존이라 본질적 결정성 보장 불가 — 양 경로가 동일 DOM 시점을 캡처하는 한 미리보기 ≈ 실제 출력. 위젯 단일 실패 시 placeholder 부분 회복.
+- `PrintContext` 의 useEffect deps 누락은 옵션 변경에도 미리보기가 갱신되지 않던 직접 원인 — `[isOpen, viewMode, options]` 로 정합. `react-hooks/set-state-in-effect` 위반은 동기 setState 를 `closePrintDialog` 콜백으로 이동.
+- PDF 출력은 별도 `PdfPrintEngine` (jspdf) 직접 경로 대신 브라우저 인쇄 다이얼로그의 OS 레벨 "PDF 저장" 옵션을 사용 — 마스터 결정 ("브라우저 인쇄 가능하면 PDF는 브라우저가 저장할 수 있게 제공"). `PdfPrintEngine` 코드는 현행 보존, dead-code 여부 판정은 후속 `/project-verification` 으로 위임.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/HeaderActions.tsx`
+- `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+- `packages/fs-data-viewer/src/features/print/views/grid/useGridPrint.ts`
+- `packages/fs-data-viewer/src/features/print/views/grid/useGridPrint.test.ts` (신규)
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.ts`
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.parser.test.ts`
+- `packages/fs-data-viewer/src/features/print/views/kanban/useKanbanPrint.ts`
+- `packages/fs-data-viewer/src/features/print/views/kanban/useKanbanPrint.test.ts` (신규)
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.parser.test.ts`
+- `packages/fs-data-viewer/src/features/print/views/dashboard/useDashboardPrint.ts`
+- `packages/fs-data-viewer/src/features/print/views/dashboard/useDashboardPrint.test.ts` (신규)
+- `packages/fs-data-viewer/src/features/print/views/integration.test.tsx`
+- `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
+머지 커밋: data-craft i-dev 통합 (`-작업` WIP 머지).
+
+### 검증
+
+- 자동: 페이즈마다 lint gate (`pnpm typecheck:all && pnpm lint`) clean. print suite 10 파일 / 82 테스트 green. `bug-907-print-cache-key` 회귀 보존.
+- 수동 검증 시나리오 (`pnpm dev` 5173) — **단위 테스트는 `usePrintContext` 를 직접 mock 하므로 실제 React effect 경로 (Phase 1b deps 변경) 는 미검증, 마스터 수동 확인 필수**:
+  - 5뷰 각각에서 HeaderActions 인쇄 버튼 노출 확인.
+  - 각 뷰에서 인쇄 다이얼로그 → 미리보기 iframe 에 placeholder 가 아닌 실제 데이터 렌더 확인.
+  - 옵션 (용지 / 방향 / 여백 / 색상 / 헤더-푸터 / 페이지번호 / 인쇄 일자) 변경 시 미리보기 즉시 반영 (**Phase 1b 핵심 회귀 포인트**).
+  - "인쇄" 실행 시 브라우저 인쇄 다이얼로그 동일 콘텐츠로 노출 + "PDF 로 저장" 가능 확인.
+
+### 후속
+
+- DAYS_PER_PAGE / columnsPerPage / perWidget 등 페이즈 중 도입된 옵션 일부를 `PrintCommonOptions` / 각 뷰별 옵션 타입에 정식 승격 (현재 일부는 인터섹션 / 상수).
+- `PdfPrintEngine` dead-code 여부 정리 — `/project-verification` 에서 점검.
+- `useGridPrint` SubGrid 인쇄 TODO (L58) 별도 플랜.
+
+---
+
 ## v001.126.0
 
 > 통합일: 2026-05-15
