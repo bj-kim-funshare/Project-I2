@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.78.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#48
+
+### 페이즈 결과
+- **Phase 1**: 탭 위젯 설정 드로어의 두 탭명 입력 (기존 탭 인라인 편집 / 신규 탭 추가) 에 `maxLength={TAB_LABEL_MAX_LENGTH}` (=6) 적용. 공용 상수는 `src/shared/lib/tabLabelLimit.ts` 에 신규 정의하여 `shared/lib/index.ts` 에서 re-export (기존 `GROUP_NAME_MAX_LENGTH` 선례와 동형). TabsPropertiesEditor 의 안내 문구에 "탭명 최대 6자" 를 기존 10개 제한 문구와 함께 노출.
+
+### 배경
+QA 보고: 탭 위젯의 탭 명칭 입력 시 텍스트 길이 제한이 없어, 긴 이름이 입력되면 탭 헤더 영역이 밀리거나 레이아웃이 깨지는 현상. 탭 헤더는 vertical 모드 `w-[100px]` 고정 / horizontal 모드 `min-w-[100px] flex-none` 으로 정의되어 있어, vertical 100px 슬롯 기준 6자 (마스터 확정) 로 입력단에서 제한.
+
+### 영향 파일
+- data-craft:
+  - `src/shared/lib/tabLabelLimit.ts` (신규)
+  - `src/shared/lib/index.ts`
+  - `src/widgets/property-drawer/ui/property-editors/TabItemRow.tsx`
+  - `src/widgets/property-drawer/ui/property-editors/TabsPropertiesEditor.tsx`
+
+### 잔여 후속
+- 기존에 저장된 6자 초과 탭명은 강제 자르기 없음 (입력단 제한만) — 데이터 마이그레이션은 마스터 결정 후속.
+- `TabItemRow` 의 인라인 편집 영역에는 "최대 6자" 안내 미노출 (입력은 maxLength 로 강제됨). UX 일관성 측면 잔여로, 마스터 판단 후속.
+
 ## v001.77.0
 
 > 통합일: 2026-05-15
