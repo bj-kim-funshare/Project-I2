@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.83.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#52 (hotfix 1)
+
+### 페이즈 결과
+- **Phase 2 (hotfix 1)**: 디자인모드 좌측 사이드바의 페이지 row 두 곳 (`src/widgets/page-navigation/ui/SortableTreeItem.tsx`, `src/widgets/page-navigation/ui/DesignSidebarHiddenPages.tsx`) 에서 아이콘 버튼 그룹의 hover-gating 을 `hidden group-hover:flex` (display-based) → `flex invisible group-hover:visible` (visibility-based) 로 전환. 동시에 페이지 이름 span 의 `group-hover:max-w-[80px]` / `group-hover:max-w-[100px]` 를 `max-w-[80px]` / `max-w-[100px]` (상시 적용) 로 변경하여 버튼 그룹이 상시 레이아웃 공간을 차지하는 새 구조와 일관성을 유지.
+
+### 배경 (실제 원인)
+v001.81.0 의 shadcn Provider 정리는 정상화 효과는 있었으나, 보고된 깜박임의 직접 원인이 아니었음 — 마스터 재검증에서 깜박임이 그대로 재현됨. 정확한 원인은 다음과 같음:
+- 페이지 row 의 아이콘 버튼 그룹이 `<div className="hidden group-hover:flex ...">` 패턴 — row 가 hover 가 아니면 그룹이 `display: none`.
+- Radix Tooltip 의 trigger 가 `display: none` 이면 `getBoundingClientRect()` 가 `{0,0,0,0}` 을 반환.
+- 사용자가 row A → row B 로 마우스를 옮기는 순간: row A 가 hover 를 잃어 row A 의 버튼 그룹이 `display: none` 으로 전환됨. 그러나 row A 에 있던 툴팁은 Radix Presence 가 exit animation (~150ms, `data-[state=closed]:animate-out fade-out-0 zoom-out-95`) 을 마칠 때까지 DOM 에 잔존. 이 잔존 기간 중 floating-ui 의 `autoUpdate` (ResizeObserver) 가 trigger 의 변경된 rect (=zero) 을 감지하여 popper 위치를 (0,0) 에 재앵커 — 닫히는 툴팁이 화면 좌상단에서 페이드아웃되며 보임.
+- `visibility: hidden` 으로 전환하면 요소가 레이아웃에 그대로 머물러 `getBoundingClientRect()` 가 실제 위치를 유지 → 닫히는 툴팁이 (0,0) 으로 재앵커되지 않음.
+
+### 영향 파일
+- data-craft:
+  - `src/widgets/page-navigation/ui/SortableTreeItem.tsx`
+  - `src/widgets/page-navigation/ui/DesignSidebarHiddenPages.tsx`
+
 ## v001.82.0
 
 > 통합일: 2026-05-15
