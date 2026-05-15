@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.89.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#55 (hotfix 1)
+
+### 페이즈 결과
+- **Phase 2 (hotfix 1)**: v001.85.0 의 `logger.warn('[VIEWER_ROLE_DENY_ORPHAN]', {...})` 호출이 실제 운영 시 페이로드 객체가 통째로 누락되어 `[WARN] [VIEWER_ROLE_DENY_ORPHAN] (user=37)` 만 출력됐음. 원인: `src/utils/logger.ts:43-67` 의 `formatConsoleLog` (dev 포맷) 가 context 의 화이트리스트 키 (callId/method/path/statusCode/duration/userId) 만 추출해 출력하고 임의 키 (groupId, companyId, parentGroupIdLookup, pageIdsAfterFallback, debug, jwtUserCompanyId, userRoleId, isOwner) 는 무음 드롭. 수정: 호출부에서 페이로드를 `JSON.stringify(denyPayload)` 로 메시지 문자열에 직접 직렬화 → `logger.warn(\`[VIEWER_ROLE_DENY_ORPHAN] ${json}\`)`. logger 모듈 자체는 변경하지 않음 (다른 호출부 영향 차단).
+
+### 배경
+v001.85.0 진단 패치 후 재현 결과: 로그 라인 자체는 출력되어 코드 반영은 확인되었으나, 페이로드가 누락되어 가설 분기 식별이 여전히 불가능. 추가로 그룹 1661 의 DELETE `/api/viewer/group/1661` 도 동일 분기 → 1660/1661 두 그룹 모두 orphan 분기 트리거. logger dev 포맷 화이트리스트가 원인이라는 primary-source 증거 (`logger.ts:50-58`) 확보 후 호출부 1줄 수정.
+
+### 영향 파일
+- data-craft-server:
+  - `src/middlewares/viewerRoleCheck.middleware.ts`
+
+### 운영 가이드
+
+- **dev 서버 재기동 필수** — 핫픽스 머지 후에도 로그가 `(user=37)` 만 보이면 구 코드가 도는 것. `pnpm dev` 재실행으로 nodemon 리로드 확인.
+- 환경 변수 `DEBUG_VIEWER_ROLE=1` 도 함께 설정 (v001.85.0 가이드 그대로).
+- 재현 후 로그에서 `[VIEWER_ROLE_DENY_ORPHAN] { ... }` JSON 블록 1건을 master 에게 전달.
+
+### 검증 시나리오
+- `DEBUG_VIEWER_ROLE=1 pnpm dev` 재기동 후 user=37 으로 그룹 1660 또는 1661 진입.
+- 열 추가 (POST `/api/viewer/:groupId/post`) 또는 그룹 삭제 (DELETE `/api/viewer/group/:groupId`) 시도 → 403 재현 → 서버 로그에 `[VIEWER_ROLE_DENY_ORPHAN] {"groupId":..., "companyId":..., "userRoleId":..., "isOwner":..., "parentGroupIdLookup":..., "pageIdsAfterFallback":..., "jwtUserCompanyId":..., "debug":{...}}` JSON 블록 출력 확인.
+- JSON 페이로드를 master 에게 전달 → 가설 분기 확정.
+
 ## v001.88.0
 
 > 통합일: 2026-05-15
