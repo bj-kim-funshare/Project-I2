@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.110.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#64 (핫픽스 1)
+
+### 핫픽스 사유
+
+플랜 #64 (v001.108.0) Phase 1 BE 호환성 검증에서 발견된 axis-3 caveat — `authClient` 의 `signin` / `refresh` / `autoSignin` 응답 캐스팅이 BE 실제 래퍼 구조와 불일치해 런타임에 undefined 필드가 반환되는 결함. 본 hotfix 가 세 메서드의 unwrap 을 BE 실제 응답 형태에 정합시킨다.
+
+### 페이즈 결과
+
+- **Hotfix 1 / Phase 5** (`7e57afd`, data-craft-mobile): authClient 응답 unwrap + 필드 정규화 통일.
+  - **signin**: BE 가 `{ auth: { accessToken, refreshToken?, user: { id(number), roleName, ... }, account } }` 래퍼로 응답하나 클라이언트는 flat `SigninResponse` 로 직접 캐스팅 중. `body.auth` unwrap + `user.id` number → string 코어션 + `user.roleName` → `user.role` 매핑.
+  - **refresh**: BE 가 `{ callId, message, data: { accessToken, refreshToken } }` 래퍼 (서비스 컨트롤러가 직접 감쌈) 로 응답하나 클라이언트는 flat 캐스팅 중. `body.data` unwrap (signin 의 `auth` 래퍼와 다른 키 — 비균일).
+  - **autoSignin**: signin 서비스와 동일하게 `{ auth: {...} }` 래퍼 → signin 과 동일한 unwrap.
+  - **types.ts**: `SigninResponse.refreshToken` 을 선택적 (`?`) 으로 변경 (BE 가 rememberMe 시에만 반환).
+  - **sessionEngine.ts**: `signin()` 에서 `refreshToken ?? null` 코어션, `applyToken` 시그니처를 `string | null` 허용으로 확장.
+  - **테스트**: `authClient.test.ts` / `sessionEngine.test.ts` 의 MSW 핸들러를 BE 실제 래퍼 형태로 교정 (기존엔 broken flat 형태를 mock 해 가짜 PASS 였음).
+
+### advisor 검증
+
+- 완료 시점 advisor: no BLOCK. 필드 정규화 (`user.id`, `roleName→role`, `refreshToken nullable`) 가 phase description ("응답 unwrap 통일") 범위 안의 정합 작업이며, `apps/web/src/mobile/` 전 영역 grep 결과 `roleName` / `user.id` 외부 소비처 0 — 회귀 위험 없음.
+
+### 영향 파일
+
+**data-craft-mobile** (`bj-kim-funshare/data-craft-mobile`, branch `i-dev`):
+- `apps/web/src/mobile/auth/authClient.ts`
+- `apps/web/src/mobile/auth/sessionEngine.ts`
+- `apps/web/src/mobile/auth/types.ts`
+- `apps/web/src/mobile/auth/__tests__/authClient.test.ts`
+- `apps/web/src/mobile/auth/__tests__/sessionEngine.test.ts`
+
 ## v001.109.0
 
 > 통합일: 2026-05-15
