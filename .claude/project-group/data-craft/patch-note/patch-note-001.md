@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.78.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#45
+
+### 페이즈 결과
+- **Phase 1**: 그리드 행완료/행미완료 액션의 마감일 분기 정상화. `applyDeadlineCompletion('')` 이 빈 문자열을 그대로 반환하던 설계로 인해 빈 마감일 셀에서 `newValue === beforeValue` 가 성립, `no-canonical-write` 스킵 → "이미 모두 해당 상태입니다" 토스트가 발동하던 직접 버그 수정. 신 동작: 빈 입력에 `{"date":"","completed":true|false}` 반환 (완료 표식 부여 정책). `isCellAlreadyIncomplete` deadline 빈 값 케이스도 대칭 갱신. plain-date / JSON 케이스 동작은 유지.
+- **Phase 2**: 행 초기화 확인 팝업 (`FsGridAlertDialog`) 의 affectedFields `<ul>` 에 `max-h-[60vh] overflow-y-auto pr-1` 적용, 중첩 파일명 `<ul>` 에 `max-h-32 overflow-y-auto` 적용. 목록 영역 한정 스크롤로 초기화 대상이 많을 때 헤더/액션 버튼은 항상 가시 유지. `DialogContent` 자체는 변경 없음.
+- **Phase 3** (사후 발견, advisor #2 사전 권고): Phase 1 정책 변경에 따른 stale 단위 테스트 어서션 갱신 (`completeRowAction.test.ts` / `cellStateHelpers.test.ts` / `incompleteRowAction.test.ts`).
+
+### 배경
+QA 보고 2건 동시 처리:
+1. 그리드 뷰 → 버튼 타입 셀의 "행 완료" 액션이 "마감일" 타입 셀을 완료 처리하지 못함. row=446082 deadline=`""` 케이스에서 토스트 "이미 모두 해당 상태입니다 (행=446082 deadline='')" 발동.
+2. 행 초기화 확인 팝업의 초기화 대상 데이터 목록이 길 때 하단이 viewport 밖으로 잘려 사용자가 전체 목록을 확인할 수 없음.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/features/grid/lib/button-actions/completeRowAction.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/button-actions/cellStateHelpers.ts`
+  - `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/deadline/deadlineUtils.ts`
+  - `packages/fs-data-viewer/src/widgets/dialogs/FsGridAlertDialog.tsx`
+  - `packages/fs-data-viewer/src/features/grid/lib/button-actions/__tests__/completeRowAction.test.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/button-actions/__tests__/cellStateHelpers.test.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/button-actions/__tests__/incompleteRowAction.test.ts`
+
+### 잔여 후속
+- 빈 마감일 정책: 본 플랜은 "완료 표식 부여" (a) 채택. 마스터가 "eligibility 제외" (b) 정책을 선호하면 PENDING 게이트에서 핫픽스 가능.
+- 본 플랜과 무관하게 사전 존재하는 button-actions 외 통합 테스트 49개 실패 — 별도 이슈 후보.
+
 ## v001.77.0
 
 > 통합일: 2026-05-15
