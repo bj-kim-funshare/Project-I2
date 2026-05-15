@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.104.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#63
+
+### 페이즈 결과
+- **Phase 1** (`d519f97`, data-craft): 칸반 뷰 헤더 기간 조회 조작 시 기준열 옵션 일부가 사라지던 결함 보강. `getGroupOrder()` (`packages/fs-data-viewer/src/widgets/kanban-board/kanban-board/utils.ts`) 분기 확장 — singleSelect/multiSelect 는 `customDataList` 가 비어있으면 `optionList` label 배열로 fallback, 그 외 옵션-보유 타입(tag 등) 기준열은 `optionList` label 배열을 반환. 빈 컬럼 push 경로 (`useKanbanBoard.ts:110-117`) 는 이미 존재하므로 `groupOrder` 만 채워지면 기간 조회 결과와 무관하게 정의된 모든 옵션이 칸반 열로 항상 표시된다. utils.test.ts 신규 (5 케이스: singleSelect+customDataList, singleSelect 빈 customDataList→optionList fallback, tag+optionList, 양쪽 빈→[], kanbanColumnField null→[]).
+
+### 배경
+마스터 보고: "헤더에서 기간 조회를 조작하면 칸반열이 달라진다 — 기준열에 해당 기간에 속하는 셀이 없으면 컬럼이 사라짐. 칸반열은 기준열 정보에 따라 어떤 상태여도 항상 표기되어야 함." 서버 `getKanbanData` 는 기간 매칭 카드의 컬럼만 응답하므로, 클라이언트 측 `getGroupOrder()` 가 기준열 정의 기반의 완전한 옵션 목록을 항상 반환해야 빈 컬럼이 살아남는다. 기존 코드는 singleSelect/multiSelect + customDataList 보유 케이스만 커버했고 그 외 옵션-보유 타입은 [] 반환 → 빈 컬럼 소실. 본 패치로 옵션-정의 보유 모든 기준열이 보호됨.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/kanban-board/kanban-board/utils.ts` (+17 / -7)
+  - `packages/fs-data-viewer/src/widgets/kanban-board/kanban-board/utils.test.ts` (+71, 신규)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings — 모두 기존).
+- 단위 테스트 (vitest, utils.test.ts): 5/5 PASS.
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 수동 repro 필요. 검증 시나리오: 데이터 뷰어 → 칸반 뷰 → 기준열을 singleSelect / multiSelect / tag(또는 optionList 보유 타입) 로 각각 설정 → 헤더 기간 조회를 모든 카드가 빠지도록 좁혀서 정의된 모든 옵션 컬럼이 빈 상태로라도 살아 있는지 확인.
+
+### 후속 빌드 단계
+`fs_data_viewer` 만 변경 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
+### 미해결 / 후속 고려
+- 자유 텍스트 기준열 (옵션 정의 없음) 케이스는 옵션 기반 상시 표기 불가 — 본 패치 범위 밖.
+- 마스터 reproduction 이 singleSelect + 비어있지 않은 customDataList 였다면 기존 코드 경로가 이미 커버하던 케이스이므로 본 패치는 인접 개선이 된다. 그 경우 실제 결함은 `kanbanColumnOrder` savedOrder 합성 또는 columnModelList 갱신 경로에 있을 수 있어 HOTFIX 후보.
+
 ## v001.103.0
 
 > 통합일: 2026-05-15
