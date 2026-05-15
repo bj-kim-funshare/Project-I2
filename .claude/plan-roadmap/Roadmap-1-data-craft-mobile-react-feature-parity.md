@@ -4,7 +4,7 @@
 
 ## 프롬프트
 
-🔴 /plan-enterprise data-craft 단계0-A 모노레포 골격·디자인 토큰·라우팅 보강 (fs-shared-mobile, apps/web/src/mobile/styles, route-paths.ts, AppShell). data-craft-mobile/DataCraft/handoff/phase0 참고. BE/DB 변경 0.
+🟢 /plan-enterprise data-craft 단계0-A 모노레포 골격·디자인 토큰·라우팅 보강 (fs-shared-mobile, apps/web/src/mobile/styles, route-paths.ts, AppShell). data-craft-mobile/DataCraft/handoff/phase0 참고. BE/DB 변경 0. — 완료 (이슈 #58, v001.98.0)
 
 🔴 /plan-enterprise data-craft 단계0-B 인증 화면 (login / forgot-password / workspace-select). 첫 phase 에서 data-craft-server /auth/* CORS·CSRF·쿠키 도메인을 모바일 origin 에서 그대로 사용 가능한지 검증 후 진입. 불가 시 본 phase 만 BLOCK 하고 Roadmap-2 로 이관 보고. apps/web/src/mobile/auth/ 와 routes/login.tsx, routes/forgot-password.tsx, routes/workspace-select.tsx 구현.
 
