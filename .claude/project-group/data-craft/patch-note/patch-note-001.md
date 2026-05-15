@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.103.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 4)
+
+### 페이즈 결과
+- **Phase 7 (핫픽스 4)**: `DcFileDownloadButton` 의 button 클릭이 발화하지 않던 문제 해소. (1) `span` wrapper 에 `onMouseDown={(e) => e.preventDefault()}` 부여 — mousedown 시 BlockNote 에디터가 본문으로 포커스를 가로채면서 toolbar 가 unmount → click event 미발화 패턴 차단 (`Components.FormattingToolbar.Button` 의 `ToolbarButtonType` 에 onMouseDown prop 이 노출되지 않아 wrapper span 으로 우회). (2) `useEditorState` selector 를 BlockNote default `FileDownloadButton` 의 `blockHasType(block, editor, block.type, { url: 'string' })` 가드와 동일하게 미러 — `selectedBlocks[0]` 직접 반환이 유발하던 shallow eq 실패 (`editor.getSelection()?.blocks` 가 매 tick 새 배열) → rapid re-render thrash → 클릭 도중 컴포넌트 unmount/remount → click event 손실 패턴 제거. (3) onClick 최상단 진단 로그 (`console.log('[DcFileDownloadButton] click', { block, type, url })`) 추가 — 추후 사용자 보고 시 "클릭 미발화 / block undefined / downloadFile 실패" 세 경로 즉시 식별.
+
+### 배경 (핫픽스 사유)
+v001.97.0 (핫픽스 3) 이 `fileApi.downloadFile` 의 anchor DOM 처리를 안정화하여 silent failure 가능성을 제거했음에도, 마스터 보고: "버튼 자체가 안 눌리는 것 같음, 문서 본문 포커싱이랑 충돌되나 본데". 즉 onClick 핸들러 자체가 발화하지 않는 상태. advisor 진단으로 두 가설 동시 커버: (a) editor focus steal 으로 toolbar unmount, (c) selector reference thrash 로 컴포넌트 thrash. (b) silent failure 는 핫픽스 3 의 `console.error('[downloadFile]', err)` 가 이미 커버 → 향후 그 로그가 보이면 그쪽 분기.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/DcFileDownloadButton.tsx` (+14 / -13)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings — 모두 기존). 1회 lint iter (초기 onMouseDown 을 ToolbarButtonType 에 직접 부여 → TS2769 → span wrapper 로 전환).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요. 진단 로그가 추가됐으므로 클릭 후 console 의 `[DcFileDownloadButton] click` 출력 여부로 즉시 분기 가능.
+
+### 후속 빌드 단계
+`fs_data_viewer` 만 변경 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
 ## v001.102.0
 
 > 통합일: 2026-05-15
