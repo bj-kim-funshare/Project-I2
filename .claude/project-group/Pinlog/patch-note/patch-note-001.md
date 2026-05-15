@@ -83,3 +83,44 @@ PinLog-Web:
 - FirstPinPrompt 의 [둘러보기] 보조 CTA destination 미정 — 디자인 PM 협의 필요.
 - MainPage 의 `useInfinitePostList(1)` 가 별도 캐시 키 (pageSize 다름). 실질 중복 요청 없으나 캐시 공유 원하면 pageSize 통일 또는 공용 훅 추출 (범위 외).
 - 베이스라인 `react-hooks/exhaustive-deps` 경고 7건 잔존 (사전 baseline, 본 플랜 범위 외).
+
+## v001.4.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: [#42](https://github.com/Team-Pingus/PinLog-Web/issues/42)
+
+### 페이즈 결과
+
+- **Phase 1 — `widgets/home-list` 신설 + MainPage B 분기 전환 (feat)**: 새 위젯 `src/widgets/home-list/` (HomeListLayout + TimelineCard) 추가. `useInfinitePostList(10)` + 날짜별 sticky 그루핑 (`createdAt.slice(0,10)`, z-10) + IntersectionObserver 페이지네이션. 카드: 좌측 시간(HH:mm) 마커 + 우측 4:5 사진 / 메모 첫 줄 / 작성자 아바타 (ProfileAvatar 우선, Goose `calm` 폴백 — `Post` 타입에 `goose_mood` 필드 부재). MainPage 의 `layout === 'B'` 분기를 `PostList` → `HomeListLayout` 으로 교체하고 미사용 `useDeletePost/useDialog/useTranslation/handleDeletePost` 정리. 커밋 `d5f2cb4` (+211/-29).
+- **Phase 2 — A/C/D 위젯 디자인 시안 폴리시 (feat)**: 디자인 소스는 `PinLog_ 나만의 추억 SNS/prototype/screens-home.jsx` + `prototype/styles.css` (`final/` 미존재, `prototype/` 가 실 소스). A: `GridCard` radius var(--r-2) / shadow-1 / Pretendard 14·500 / hover:scale-[1.02], `HomeGridLayout` grid-cols-2 → sm:grid-cols-3. C: `CollageCard` 회전 4값(3°/-3°/2°/-2°) + shadow-2 + 절대위치 캡션 (place 우선), `HomeCollageLayout` pt-24/pb-48. D: `MapWithCarousel` 지도 rounded-r-4 + border + padding + 캐러셀 그립 핸들, `MapCarousel` 카드 280px 고정폭 + radius-3 + shadow-2 + ProfileAvatar. 커밋 `3216b70` (+43/-24).
+- **Phase 3 — `main-layout` 폴리시 (Header + BottomNav + 중앙 FAB) (feat)**: 디자인 소스 `prototype/widgets.jsx` + `prototype/styles.css`. Header: sticky top-0 z-40, 기존 `<Badge>` 제거 후 `var(--color-mood-blue)` 8×8 absolute 닷, padding/border 토큰 정합. BottomNav: 4탭 `var(--color-mood-happy)` 2px 상단 라인 인디케이터 + active strokeWidth 2.4 / 비활성 1.8, 비활성 색 `var(--color-ink-3)`. FAB: 흰 배경 + `var(--color-line)` border + `var(--color-primary)` 아이콘 + primary shadow. **5초 hover easter egg 게임 모드 (상태/ref/useEffect/충돌 감지/트리거 조건) 전체 보존**. 커밋 `d23f80a` (+53/-36).
+- **Phase 4 — Pull-to-refresh + 구스 sleepy→happy 전환 (feat)**: 신규 컴포넌트 `widgets/main-layout/ui/PullRefreshIndicator.tsx` — progress = pull/threshold, <0.8 sleepy / ≥0.8 happy (loading=true 도 happy + animate-bounce). opacity/scale/translateY transform 기반. MainPage 에 `usePullToRefresh({ threshold: 80, onRefresh })` 마운트, `onRefresh` 는 TanStack Query `['posts']` prefix 무효화 (실 queryKey 는 `['posts','infinite',size]`). D 의 PinPreviewSheet 활성 시 nullRef 차단. 커밋 `db49c37` (+56/-2).
+- **Phase 5 — Settings 진입점 + 4 분기 안정화 (feat)**: SettingsPage 에 "홈 레이아웃 변경" 행 추가 (i18n 키 `home.layout.sectionTitle` + `home.pickTitle` 재사용) → `/pick-layout` 라우팅. MainPage 에 `safeLayout = (['A','B','C','D'] as const).includes(layout) ? layout : 'A'` 폴백 가드, 4 분기 모두 `safeLayout` 사용. LayoutPickerPage 는 이미 `selected={layout === kind}` 처리되어 있어 변경 없음. 커밋 `d090962` (+29/-5).
+- **Phase 6 — pull-to-refresh 활성 ref 분기 (in-plan hotfix) (fix)**: Phase 4 가 보고한 blocker (MainPage `<main>` overflow-hidden → scrollTop=0 으로 PtR 트리거 부정확) 선제 해결. A/B/C 위젯에 optional `scrollRef?: RefObject<HTMLDivElement|null>` prop 추가 + 각자의 최상위 `h-full overflow-y-auto` 컨테이너에 마운트. MainPage 는 `mainScrollRef` 단일 ref 로 통합, `previewPostUuid !== null || safeLayout === 'D'` 일 때 nullRef 분기 (D 는 가로 캐러셀이라 세로 PtR 비대상). 커밋 `87fa277` (+19/-10).
+
+### 영향 파일
+
+PinLog-Web:
+- `src/widgets/home-list/ui/HomeListLayout.tsx` (신규)
+- `src/widgets/home-list/ui/TimelineCard.tsx` (신규)
+- `src/widgets/home-list/index.ts` (신규)
+- `src/widgets/home-grid/ui/GridCard.tsx`
+- `src/widgets/home-grid/ui/HomeGridLayout.tsx`
+- `src/widgets/home-collage/ui/CollageCard.tsx`
+- `src/widgets/home-collage/ui/HomeCollageLayout.tsx`
+- `src/widgets/map-post-feed/ui/MapWithCarousel.tsx`
+- `src/widgets/map-post-feed/ui/MapCarousel.tsx`
+- `src/widgets/main-layout/ui/Header.tsx`
+- `src/widgets/main-layout/ui/BottomNav.tsx`
+- `src/widgets/main-layout/ui/PullRefreshIndicator.tsx` (신규)
+- `src/widgets/main-layout/index.ts`
+- `src/widgets/index.ts`
+- `src/pages/MainPage.tsx`
+- `src/pages/SettingsPage.tsx`
+
+### 알려진 후속
+
+- B (home-list) 타임라인의 시각 정합은 디자인 소스 경로 (`prototype-v2/` 부재, `prototype/` 가 실 소스) 가 Phase 2 에서 확정 — Phase 1 은 텍스트 사양 기반 구현. 머지 후 마스터 수동 검수에서 `prototype/screens-home.jsx` B 섹션과의 정합 보강 권장.
+- 기존 `widgets/post-list/` 는 본 플랜에서 유지 — MainPage 의 B 분기만 home-list 로 교체. 타 페이지에서의 PostList 사용 여부 후속 점검 후 미사용이면 정리 가능.
+- 베이스라인 `react-hooks/exhaustive-deps` 경고 8건 (Phase 1 신규 1건 — home-list 의 `posts` useMemo 패턴이 PostList/MapPostFeed 와 동일) — 본 플랜 범위 외.
+- 신규 i18n 키 추가는 회피했음. "홈 레이아웃 변경" 행은 기존 키 재사용 — 차후 i18n 정리 시 전용 키 추가 권장.
