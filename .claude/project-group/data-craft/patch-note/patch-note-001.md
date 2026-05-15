@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.123.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#72 (핫픽스 1)
+
+### 페이즈 결과
+
+- **Phase 4 / 핫픽스 1** (`eba13b9`, data-craft-mobile): v001.121.0 의 알려진 제약 2건 처리.
+
+### 핫픽스 사유 + root cause
+
+마스터 후속 지시 — v001.121.0 발행 시 두 제약을 별도 cleanup 으로 명시:
+1. `packages/fs-api-mobile/vitest.config.ts` 가 `client.fetch.test.ts` 를 exclude 해 Phase 1·2·3 의 신규 시나리오 테스트 (타임아웃 / 네트워크 / 재시도 / 세션 헤더 합계 9개) 가 실제 vitest 게이트에서 미실행. exclude 가 본 플랜 이전부터 있던 fork 결함 (web fs-api 와 동일 4건 fail) 때문에 유지되어 왔다.
+2. `interceptedFetch` / `interceptedFetchBinary` 의 **리프레시-재시도 콜백 내 Bearer 주입** 이 Phase 3 의 `buildSessionHeaders` 와 통합되지 않음 (newToken 파라미터 의미가 storage read 와 달랐기 때문).
+
+Root cause (fork 결함 4건):
+- 타임아웃/abort 테스트 2건 — `fetchMock` 이 `new Promise(() => {})` 로 hang 만 하고 AbortSignal 을 무시 → 타임아웃/abort 시 reject 가 발생하지 않아 5초 vitest 하드타임아웃까지 대기 후 fail.
+- GET 중 caller-abort 테스트 — `.catch()` 핸들러를 abort 발화 이후 등록해 abort 가 동기적으로 던지는 rejection 이 unhandled 로 누설.
+- 타임아웃 describe 의 fakeTimers 누수 — `beforeEach`/`afterEach` 에서 fake/real 전환을 명시하지 않아 다른 describe 로 잔여 영향.
+
+### 해결방식
+
+1. `vitest.config.ts` 의 exclude 에서 `"src/api/__tests__/client.fetch.test.ts"` 제거.
+2. 4건 fork 결함 fix:
+   - **signal-aware fetchMock**: `new Promise((_, reject) => { signal?.addEventListener('abort', () => reject(signal.reason)); })` 패턴으로 변경.
+   - **선등록 catch**: `const errPromise = promise.catch(e => e);` 를 abort 호출 전에 등록 → unhandled rejection 누설 차단.
+   - **`advanceTimersByTimeAsync`**: 가짜 타이머 진행을 async 로 await.
+   - **describe 단위 fake/real 전환**: 타임아웃 describe 의 `beforeEach(useFakeTimers)` / `afterEach(useRealTimers)` 명시.
+3. `client.headers.ts` 의 `buildSessionHeaders` 에 `overrideAccessToken?: string` 옵션 추가. `interceptedFetch` / `interceptedFetchBinary` 의 리프레시-재시도 콜백에서 직접 Bearer 박는 코드를 `buildSessionHeaders(options, { overrideAccessToken: newToken })` 호출로 대체. 호출자 헤더 뒤에 Authorization 을 덮어써 기존 newToken 우선 동작 유지 (행동 동치).
+
+### 영향 파일
+
+data-craft-mobile:
+- packages/fs-api-mobile/vitest.config.ts
+- packages/fs-api-mobile/src/core/client.headers.ts
+- packages/fs-api-mobile/src/core/client.fetch.ts
+- packages/fs-api-mobile/src/api/__tests__/client.fetch.test.ts
+
+머지 커밋: (data-craft-mobile i-dev hotfix 1 merge).
+
+### 검증
+
+- `pnpm -F @dcm/fs-api-mobile test` — **135 테스트 전체 grøn** (이전엔 exclude 로 패키지 게이트에서 미실행이었던 client.fetch.test.ts 가 이번엔 실제 실행).
+- `pnpm typecheck` — PASS.
+
 ## v001.122.0
 
 > 통합일: 2026-05-15
