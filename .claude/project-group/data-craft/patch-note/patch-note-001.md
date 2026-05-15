@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.95.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 2)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스 2)**: BlockNote 의 `FormattingToolbar` 가 image/file block 선택 시 노출하는 default `FileDownloadButton` 이 native `<a href={url} download>` navigation 으로 동작하여 raw storage URI 로 새 탭이 열리는 문제 해소. `BlockNoteView` children 에 `<FormattingToolbarController formattingToolbar={CustomFormattingToolbar} />` 삽입, `CustomFormattingToolbar` 가 `getFormattingToolbarItems()` 의 기본 버튼 순서를 보존하되 `FileDownloadButton` 자리에 `DcFileDownloadButton` 을 끼워 넣음. `DcFileDownloadButton` 은 `useEditorState` 로 선택된 block 을 추적, type 이 `image`/`file` 이 아니면 null 반환 (default 와 동일 visibility), 클릭 시 raw storage URI 는 `fileApi.downloadFile(uri, name)` 호출, 외부 http URL 은 동적 `<a href={url} download>` 생성 + click + remove fallback.
+
+### 배경 (핫픽스 사유)
+v001.93.0 (핫픽스 1) 가 image/file block 의 render 만 fs-api 기반 custom block 으로 교체하고 미리보기 broken-img 는 해소했으나, BlockNote 의 FormattingToolbar 가 별도 경로로 노출하는 download 아이콘은 그대로 default 동작 — `<a href={raw uri} download>` native click. Bearer 인증을 거치지 않아 브라우저가 raw 경로로 navigate → 새 데이터-크래프트 탭이 열림. 핫픽스 1 은 custom block 내부 render 만 다뤘기 때문에 toolbar 경로를 커버하지 못했음. 본 핫픽스에서 toolbar 자체를 override 하여 download 버튼만 swap.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx` (FormattingToolbarController 삽입)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/CustomFormattingToolbar.tsx` (신규)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/DcFileDownloadButton.tsx` (신규)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings, 모두 기존).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요 (파일 블록 선택 → toolbar 다운로드 클릭 시 새 탭 없이 브라우저 다운로드 다이얼로그 표시).
+
+### 후속 빌드 단계
+`fs_data_viewer` 는 `./dist` export 패키지 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
 ## v001.94.0
 
 > 통합일: 2026-05-15
