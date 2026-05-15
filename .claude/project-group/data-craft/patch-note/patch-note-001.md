@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.125.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#74
+
+### 페이즈 결과
+
+- **Phase 1** (`92fbd779`, data-craft): `ViewColumnManagerDialog` 에 `newlyAddedColumnField` state 추가. `handleAddColumn` 성공 분기 (`bumpColumnsVersion()` 직후) 에서 `response.field` 로 set. 새 `useEffect` 가 state 가 설정되면 `listContainerRef` 안에서 `[data-column-field="..."]` 셀렉터로 행을 찾아 `scrollIntoView({ block: 'nearest' })` 후 state 를 null 로 리셋. effect deps = `[newlyAddedColumnField]` 만 (bumpColumnsVersion 동기 setState 라 같은 commit 에 batch 됨).
+- **Phase 1 보강** (`ead93d76`, data-craft): advisor #1 사후 점검에서 누락 식별 — connection 타입 열 추가 경로(`handleConnectionConfirm`) 도 동일 패턴(`viewerModel.columnModelList = [...]` + `bumpColumnsVersion()`) 만 수행하고 시그널 미발신. 동일하게 `setNewlyAddedColumnField(response.field)` 한 줄 보강. 두 경로 모두 자동 스크롤 발화.
+
+### 해결방식
+
+- 단일 공유 컴포넌트(`ViewColumnManagerDialog`)가 캘린더 / 칸반 / 간트뷰의 "열 정보 편집" 모달을 담당하므로 단일 지점 수정으로 세 뷰 모두 커버.
+- 기존 selection-scroll useEffect 패턴(`listContainerRef.current.querySelector('[data-column-field=...]')` + `scrollIntoView({ block: 'nearest' })`) 을 그대로 차용 — 신규 hook/util 무도입.
+- `selectedColumnField` 미변경 → 기존 키보드 네비게이션 / 선택 행 강조 UX 격리 보존.
+- 두 add 경로 (`handleAddColumn` 일반 타입 / `handleConnectionConfirm` connection 타입) 가 동일 시그널 함수 호출.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx`
+
+머지 커밋: (data-craft i-dev 작업 머지).
+
+### 검증
+
+수동 검증 시나리오 (`pnpm dev` 5173):
+- 데이터 뷰어 → 캘린더뷰 디자인 모드 → "열 정보 편집" 모달 오픈.
+- 기존 열이 모달 높이를 초과하도록 다수 존재하는 상태에서 새 열 추가 (텍스트/숫자 등).
+- 모달 열 리스트가 하단까지 자동 스크롤되어 새 행이 보이는지 시각 확인.
+- 칸반뷰 / 간트뷰에서도 동일 확인 (공유 컴포넌트).
+- connection 타입 열 추가 시에도 동일 확인 (connection 설정 다이얼로그 확인 후).
+- 키보드 네비게이션(↑/↓) 선택 시 자동 스크롤 (기존 동작) 회귀 없는지 확인.
+
+자동 검증:
+- phase 1 / 보강 모두 `pnpm typecheck:all && pnpm lint` PASS (0 errors, 기존 4개 warning 무관).
+
+### 알려진 제약 / 후속
+
+- 렌더 타이밍이 batch 보장에 의존. React 18 automatic batching 환경에서 `setNewlyAddedColumnField` + `bumpColumnsVersion` 이 같은 commit 으로 묶이므로 effect 발화 시 새 행 DOM 이 마운트됨. 만약 향후 외부 store 도입 등으로 비동기 분리 발생 시 `requestAnimationFrame` fallback 또는 deps 에 `columnsVersion` 재추가 검토 필요.
+- 드래그 reorder / 삭제 경로는 스크롤 자동화 대상 아님 (마스터 요청 범위 외).
+
 ## v001.124.0
 
 > 통합일: 2026-05-15
