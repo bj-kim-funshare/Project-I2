@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.75.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#46
+
+### 페이즈 결과 — Phase 1 (정적 분석, no-op 종결)
+
+QA 보고: "시스템 언어를 영어(EN)로 설정할 경우 자동로그인 기능이 정상 동작하지 않으며, 한국어 환경에서는 정상 동작" — 마스터 명확화 결과 실제 양태는 **EN 환경에서 자동로그인 옵션을 켜고 로그인했음에도 access token 만료 주기(약 15분)마다 로그아웃**되는 현상. 동적 재현 자료(브라우저 콘솔, HAR, localStorage 스냅샷)는 없음 — 정적 분석만으로 진행.
+
+- **Phase 1 — 정적 추적 (no-op)**: 5개 affected_files 와 서버 측 인증 경로까지 정밀 추적했으나 EN-only 실패 경로를 식별하지 못함. 4단계 추적 결론은 모두 "언어 의존 분기 없음":
+  1. `packages/fs-api/src/core/token.ts` — `createLocalStorageTokenStorage` 가 하드코딩 키 `'accessToken'` / `'refreshToken'` 사용. i18n / navigator.language 참조 없음.
+  2. `src/entities/auth/model/authStore.ts` — Zustand persist 미사용(devtools 만 적용). `autoLogin` 은 순수 메모리 상태로 페이지 리로드 시 초기화. persist `name` 언어 의존 없음.
+  3. `packages/fs-api/src/core/tokenSync.ts` — 고정 키 `'accessToken'` 감시, `StorageEvent.key` 비교만. 언어 분기 없음.
+  4. `packages/fs-api/src/core/client.fetch.ts` / `interceptor.ts` — base headers 에 `Content-Type` + `Authorization` 만 부착. `Accept-Language` 등 언어 헤더 자동 부착 경로 없음.
+  - 범위 외 read 결과: 서버 `auth.service.ts` L348 의 `refreshToken` 발급은 `rememberMe=true` 조건만 보고, `init.service.ts` L79 `shouldIssueRefreshToken = decoded.rememberMe !== false` (undefined → true). FE `useSigninPage.ts` / `SubdomainLoginForm.tsx` 의 `rememberMe` 초기값은 모두 `true`. **EN 환경 자체가 `rememberMe` 를 `false` 로 변환하는 정적 경로 없음.**
+  - 변경 0 commit. lint 게이트 trivially 통과.
+
+### 잔여 가설 (정적 분석 불가, 동적 재현 필요)
+
+1. **Radix Checkbox indeterminate 반환 가설** — EN 환경에서 `Checkbox` 컴포넌트가 `checked === true` 조건을 거짓으로 만들어 `rememberMe` 가 `false` 로 전송될 가능성. UI 런타임 확인 필요.
+2. **i18next LanguageDetector 부작용 가설** — EN 감지 시 페이지 리로드 또는 상태 초기화 부작용 여부. 런타임 확인 필요.
+3. **외인성 요인 가설** — 브라우저 확장 / 자동완성 / 잔존 localStorage 등 OS·브라우저 설정과 우연히 상관된 외인성 원인. EN 환경과 직접 인과 아님.
+
+### 후속 절차
+
+- PENDING 게이트 유지. 마스터가 `핫픽스 <재현 자료>` 입력으로 동적 정보(브라우저 콘솔 로그, 네트워크 HAR, localStorage Application 탭 스냅샷) 제공 시 추가 추적 라운드 진입.
+- 정적 분석만으로 확정 불가한 가설이므로 본 시점에 코드 수정은 보류한다.
+
+### 영향 파일
+
+없음 (0 commit).
+
 ## v001.74.0
 
 > 통합일: 2026-05-15
