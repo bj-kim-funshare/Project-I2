@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.124.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#73
+
+### 페이즈 결과
+
+- **Phase 1** (`3553ac3c`, data-craft): fabStore (Zustand + persist) 신설. `hiddenDate` 영속(`dc_fab` 키) + `isModalOpen` 휘발 + `openModal/closeModal/hideForToday/restore` 액션 + `isFabVisible/isHeaderIconVisible` 셀렉터. sidebarStore 컨벤션 재사용.
+- **Phase 2** (`0a5e1fbb`, data-craft): AIAssistantModal 컴포넌트. shadcn Dialog 베이스, 우측 하단 origin 말풍선 (`bottom-24 right-6`, `transform-origin: bottom right`, 꼬리 div), 빈 대화 영역 + 비활성 입력(`준비중입니다`) + 닫기/오늘 하루 가리기 푸터. useFabStore 구독.
+- **Phase 3** (`bbd5715b`, data-craft): FloatingAIButton 위젯 (버튼 전용). `fixed bottom-6 right-6 z-30` 원형 FAB, PropertyDrawer open 조건과 동일 셀렉터로 drawerOpen 산출, `md:-translate-x-96` 좌측 푸시 + `transition-transform`. `isFabVisible=false` 시 unmount. 모달은 미마운트.
+- **Phase 4** (`052578b0`, data-craft): HeaderAIIconButton + DesignModeToolbar/ViewModeToolbar 양쪽 삽입. `isHeaderIconVisible` 일 때만 노출, 클릭 시 `restore()` → rAF → `openModal()` 시퀀스로 FAB 마운트 선행 보장.
+- **Phase 5** (`f7da16a6`, data-craft): BuilderPage 마운트. 비-embed 분기에 `<FloatingAIButton />` 와 `<AIAssistantModal />` 을 PropertyDrawer 다음 sibling 으로 각각 마운트. embed 분기는 둘 다 제외.
+- **Phase 2 후속 수정** (`f24cdd7b`, data-craft): advisor #2 직전 검토에서 발견 — AIAssistantModal 이 드로어 오픈 시에도 FAB 와 함께 좌측으로 푸시되도록 동일 drawer-open 산출을 인라인 추가, `md:-translate-x-96` 조건부 합성. 스펙 1+4 결합 의도(말풍선 origin = FAB 위치) 충족.
+
+### 해결방식
+
+- 가시성 상태는 단일 zustand 스토어(`fabStore`) 가 `hiddenDate === today` 판정으로 일관 산출 → FAB 와 헤더 아이콘이 같은 셀렉터 한 쌍(`isFabVisible` / `isHeaderIconVisible`)으로 상호 배타 (스펙 7).
+- 드로어 회피는 PropertyDrawer 의 실제 open 조건을 그대로 두 컴포넌트(FAB + 모달)에 인라인 동일 적용 → 단일 드로어 너비 상수(384px = `md:-translate-x-96`)로 푸시. 모바일(`max-md`) 은 push 없음.
+- 모달 마운트를 BuilderPage 레벨에 배치 → FAB unmount 상태에서도 헤더 아이콘 경로의 모달이 정상 렌더.
+- 헤더 아이콘 클릭은 `restore()` 후 `requestAnimationFrame` 으로 다음 프레임에 `openModal()` → FAB 마운트 선행 → 말풍선 origin(우측 하단) transition 자연스럽게.
+
+### 영향 파일
+
+data-craft:
+- `src/entities/fab/model/fabStore.ts` (신규)
+- `src/widgets/floating-ai-button/index.ts` (신규)
+- `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx` (신규)
+- `src/widgets/floating-ai-button/ui/FloatingAIButton.tsx` (신규)
+- `src/widgets/header/ui/HeaderAIIconButton.tsx` (신규)
+- `src/widgets/header/ui/DesignModeToolbar.tsx`
+- `src/widgets/header/ui/ViewModeToolbar.tsx`
+- `src/pages/builder/BuilderPage.tsx`
+
+머지 커밋: (data-craft i-dev 작업 머지).
+
+### 검증
+
+수동 검증 시나리오 (`pnpm dev` 5173 빌더 페이지):
+- 우측 하단 FAB 노출 확인.
+- 위젯/섹션/영역 선택 → PropertyDrawer 오픈 → FAB 가 좌측으로 부드럽게 푸시. (md 이상 브레이크포인트)
+- FAB 클릭 → 우측 하단 origin 말풍선 모달 (zoom-in transition + transform-origin: bottom right). 드로어 오픈 상태에서 클릭해도 모달 origin 이 FAB 위치(좌측 푸시된 자리) 와 일치하는지 확인.
+- 모달 입력 영역 disabled + `준비중입니다` 라벨 표시.
+- "오늘 하루 버튼 가리기" 클릭 → 모달 닫힘 + FAB 사라짐 + 두 toolbar (디자인/뷰) 의 mode 토글 옆에 Sparkles AI 아이콘 노출.
+- 헤더 AI 아이콘 클릭 → 모달 재오픈 + FAB 복귀 (다음 프레임). 헤더 아이콘 사라짐 (상호 배타).
+- localStorage `dc_fab` 삭제 또는 다음 날 → FAB 복귀, 헤더 아이콘 사라짐.
+- embed 분기 (URL `?embed=true`) → FAB·모달 둘 다 미노출, 기존 동작 유지.
+
+자동 검증:
+- 각 phase 별 `pnpm typecheck:all && pnpm lint` PASS (0 errors).
+
+### 알려진 제약 / 후속
+
+- 드로어 너비 `384px` 하드코딩 (PropertyDrawer `max-w-md` 가정). 향후 다른 너비의 우측 드로어 추가 시 두 파일(`FloatingAIButton.tsx`, `AIAssistantModal.tsx`) 의 `md:-translate-x-96` 갱신 필요. 동일 산출 로직이 두 곳에 인라인이므로 hook 추출 리팩토링이 후속 정리 대상.
+- 실제 AI API 미구현 — 입력 영역은 현재 100% 비활성. 후속 플랜에서 채팅 송수신 + 응답 렌더링 + 히스토리 영속화 필요.
+
 ## v001.123.0
 
 > 통합일: 2026-05-15
