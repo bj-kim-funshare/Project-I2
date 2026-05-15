@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.53.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#31
+
+### 페이즈 결과
+
+- **Phase 1** (`d15b666b`): `themeStore` 에 PreAuthTheme 전용 슬롯(`preAuthTheme`, 기본 `'system'`)과 `dc_preauth_theme` localStorage 키 도입. 기업 테마 클래스/CSS 변수를 모두 제거하고 기본 테마(light/dark/system)만 DOM 에 적용하는 `applyPreAuthTheme(mode)`, 스토어의 현재 `theme` 값을 다시 DOM 에 반영하는 `restoreActiveTheme()`, 그리고 `setPreAuthTheme(mode)` 액션을 모듈 레벨 export 로 추가. `GuestGuard` 는 `useEffect` 로 mount 시 `applyPreAuthTheme(preAuthTheme)`, unmount 시 `restoreActiveTheme()` 을 호출하는 단일 초크포인트가 되어 8 개 게스트 라우트 전부를 커버. `ThemeSwitcher` 는 `useLocation` 으로 게스트 라우트를 자동 감지해 pre-auth 스코프에서는 `setPreAuthTheme` 만 호출하도록 분기. `initThemeListener` 초기 DOM 적용 경로에도 게스트 라우트 분기를 추가해 인증 페이지 직접 리로드 시 콜드 부트 깜빡임을 차단. 변경 +102 / -8 (3 files). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+- **Phase 2** (`be806bb4`): `SettingsFooter.handleLogout` 내에서 라우트 전환 직전 호출되던 `useThemeStore.getState().setThemeFromServer('light')` 한 줄을 제거. 해당 호출은 기업 테마를 라우트 전환 전에 초기화하려는 임시 우회책이었으나 사용자가 명백히 인지하는 깜빡임을 유발하던 원인. Phase 1 의 `GuestGuard` pre-auth 스코프가 도착 라우트에서 DOM 전환을 처리하므로 사전 초기화 불필요. 사용처가 사라진 `useThemeStore` import 도 동시 제거. 변경 +0 / -2 (1 file). lint gate exit 0.
+- **Phase 3** (`ca3a1c00`): `AuthProvider` 의 `setPreAuthFailureCleanup` 콜백에서 `USER_THEMES.includes(theme)` 분기로 기업 테마 스토어 값을 `'light'` 로 강제 덮어쓰던 파괴적 뮤테이션(setThemeFromServer 호출)을 제거하고, `applyPreAuthTheme(useThemeStore.getState().preAuthTheme)` 호출로 대체. 자동 로그아웃(토큰 갱신 실패) 직전 DOM 클래스/변수만 사전 인증 선호값으로 정규화되고, 스토어에 저장된 기업 테마 값은 보존되어 다음 로그인 성공 시 즉시 복원. 변경 +2 / -4 (1 file). lint gate exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/entities/theme/model/themeStore.ts`
+- `src/app/router/AuthGuard.tsx`
+- `src/features/theme-switcher/ui/ThemeSwitcher.tsx`
+- `src/widgets/settings-dialog/ui/SettingsFooter.tsx`
+- `src/app/providers/AuthProvider.tsx`
+
+### 마스터 수동 검증 시나리오
+
+advisor #1 / #2 모두 5-관점 PASS. 다음 e2e 는 PENDING 게이트에서 마스터가 수행:
+1. `pnpm dev` (port 5173) 기동 → 로그인 → 설정 → 앱설정 → 기업 테마 에서 색상 테마(예: ocean) 선택.
+2. **수동 로그아웃 무깜빡임**: 설정 → 로그아웃 클릭 → 로그인 화면이 *깜빡임 없이* 시스템/라이트/다크 기본 테마로 전환되는지 확인 (기업 테마 → 라이트 → 로그인 화면 의 중간 프레임이 없어야 함).
+3. **재로그인 round-trip**: 동일 계정 재로그인 → 대시보드 마운트 직후 ocean 즉시 재적용. `document.documentElement` 의 클래스/변수에 pre-auth 잔여 없는지 devtools 로 확인.
+4. **자동 로그아웃 (토큰 만료)**: devtools Application 패널에서 access token 손상 → 화면 인터랙션 → 자동 리다이렉트된 `/signin` 또는 `/login` 의 인풋·버튼·배경이 *기본 테마 색상* 으로 렌더링되는지 확인.
+5. **로그인 화면 ThemeSwitcher**: 로그인 페이지에서 다크/라이트/시스템 토글 → localStorage `dc_preauth_theme` 만 갱신되고 `dc_theme_*` 회사 키는 그대로인지 inspect.
+6. **콜드 부트**: 기업 테마 적용 후 브라우저 직접 `/login` URL 입력 (또는 새로고침) → 첫 페인트부터 pre-auth 테마로 렌더 (콜드 부트 깜빡임 없음).
+
+### 후속
+
+- `src/entities/theme/index.ts` 배럴에 `applyPreAuthTheme` / `restoreActiveTheme` / `GUEST_ROUTES` 미노출 (Phase 1 sub-agent 보고). 직접 모듈 임포트로 우회 동작 중이며 lint/typecheck 통과. 차후 정리 후속 권장.
+
 ## v001.52.0
 
 > 통합일: 2026-05-15
