@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.67.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#40 (hotfix-1)
+
+### 페이즈 결과
+
+- **Phase 2 (hotfix-1)** (`4f0b0113`): v001.62.0 (Phase 1) 의 회귀 수정. Phase 1 에서 `FormulaEditDialog` / `SimpleFormulaEditDialog` 컨테이너를 `NESTED_MODAL_CONTENT=12000` 으로 격상했으나, 두 다이얼로그 내부의 Radix `Select` 드롭다운이 default `Z_INDEX.selectDropdown=10600` (다른 zIndex 객체 — `shared/constants/zIndex.ts`) 으로 렌더되어 이번엔 부모(12000) 아래에 깔리는 회귀가 발생. 마스터 실측으로 즉시 확인됨 ("이제 모달은 나타나는데 해당 모달에서 '컬럼 선택' 드롭다운을 띄우면 해당 드롭다운이 모달 뒤에 나타나는 문제"). **수정**: `shared/config/z-index-constants.ts` 에 `NESTED_MODAL_DROPDOWN=12100` 신설 (NESTED_MODAL_CONTENT 12000 위), `FormulaEditDialog` 의 컬럼 선택 `<SelectContent>` 와 `SimpleFormulaEditDialog` 의 operation 선택 `<SelectContent>` 두 호출 사이트 모두에 `style={{ zIndex: Z_INDEX.NESTED_MODAL_DROPDOWN }}` 추가. `SelectContent` 가 enterprise-439 PHASE-04 부터 caller-side `style.zIndex` override 를 명시적으로 허용 (`shared/ui/Select/Select.tsx:78-80`) 하므로 default 10600 동작은 27+ 다른 호출처에서 그대로 유지됨 — 회귀 영역 없음. 변경: +4 / -2 across 3 files. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### hotfix-1 평가
+
+Phase 1 v001.62.0 의 진단·수정 (다이얼로그 컨테이너 z-index 격상) 은 올바른 방향이었으나, 다이얼로그 *내부* 의 portal-render 자식 (Radix Select 드롭다운) 이 별도 z-index 객체의 default 값으로 렌더된다는 점을 누락했다. 즉 z-stacking layer 재배치가 컨테이너 한 단계에만 적용되고 그 아래 한 단계 (드롭다운) 가 따라오지 않은 부분 수정이었다. hotfix-1 은 동일 root cause 의 다음 stacking layer 를 정합화. 두 z-index 상수 객체가 별도 파일에 분리되어 있는 구조(`shared/config/z-index-constants.ts` 와 `shared/constants/zIndex.ts`) 가 이런 layer-by-layer 검수 누락의 배경 — 통합 또는 cross-reference 명시는 후속 부채.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어 → 간트/칸반/캘린더 뷰어 → "열 정보 편집" 모달에서 수식/함수 컬럼 [열 설정 편집] 클릭 시 다이얼로그가 부모 모달에 가려져 무반응으로 보이고, 그 다이얼로그 내부에서 다시 컬럼 선택 드롭다운을 열면 이 드롭다운도 부모에 가려져 무반응이 되는 cascade 결함. Phase 1 + hotfix-1 로 두 단계 모두 정합.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/config/z-index-constants.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFormulaCellRenderer/FormulaEditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridSimpleFormulaCellRenderer/SimpleFormulaEditDialog.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor 5-관점 (완료 시점): 5/5 PASS — diff 가 명세 그대로, default selectDropdown 동작 27+ 호출처에서 보존, 회귀 영역 없음.
+
+### 알려진 후속 부채 (별도 plan 권장)
+
+- `shared/config/z-index-constants.ts` 와 `shared/constants/zIndex.ts` 두 z-index 상수 객체의 통합 또는 cross-reference 명시. 본 hotfix 가 노출한 layer-by-layer 검수 누락의 구조적 배경.
+
 ## v001.66.0
 
 > 통합일: 2026-05-15
