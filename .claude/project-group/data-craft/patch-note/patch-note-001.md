@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.77.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#49
+
+### 페이즈 결과
+- **Phase 1**: `data-craft-server/src/config/database.ts` 의 mysql2 `createPool()` config 객체에 `timezone: '+09:00'` 한 줄을 `charset` 다음 위치에 추가. MySQL 세션(KST) 과 driver 의 DATETIME 해석을 정렬하여, 인증 모듈의 시간 비교 4-5 곳(`sendVerificationCode` rate limit, `verifyEmail` `blocked_until`/`expires_at` 비교, `isEmailBlocked`, `daysSinceDeleted`)을 동시에 정상화.
+
+### 배경
+QA 보고: 신규 사용자 등록 시 `"32242초 후에 다시 시도해주세요."` 안내메시지로 등록 진행 불가. 부호(방향) 분석으로 운영 환경 TZ 조합을 (DB 세션=KST, Node=UTC) 으로 특정 — mysql2 기본 `timezone: 'local'` 이 KST wall-clock 문자열을 UTC 로 오해석하여 JS Date 가 실제보다 +9h 미래로 변환됨. `Date.now() − sentAt.getTime()` 이 음수가 되어 `rateLimitMs − timeSinceLastSent ≈ +32,400,000 ms` → 32242초(= 9h − 발송 후 158초 경과)와 정확히 일치. config 한 줄 추가로 일괄 정상화.
+
+### 영향 파일
+- data-craft-server:
+  - `src/config/database.ts`
+
+### 잔여 후속
+- **운영 DB 세션 TZ 실측**: deploy 전 staging/운영에서 `SELECT @@session.time_zone, NOW(), UTC_TIMESTAMP();` 실행 필수. `+09:00` 또는 `SYSTEM`(호스트 KST) 이면 가설 확정. `UTC` 등 다른 값이면 본 fix 를 즉시 revert 후 부호 분석 재검토.
+- **회귀 sweep**: ① JS Date 로 INSERT 되는 DATETIME 컬럼 식별 후 표본 추출하여 9h 시프트 여부 점검 — 시프트 발견 시 별도 데이터 보정 플랜. ② FE 의 `toISOString()` 표시 로직이 9h 시프트에 적응해 있던 경우 fix 후 표시 오차 — 회원가입 / 사용자 정보 페이지 등 manual 점검.
+- **시나리오 verification**: 회원가입 end-to-end (60초 rate limit 정상), 5분 만료, 5회 실패 → 30분 차단 / 자동 해제 시나리오 master manual 검증.
+
 ## v001.76.0
 
 > 통합일: 2026-05-15
