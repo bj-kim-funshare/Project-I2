@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.102.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#60
+
+### 페이즈 결과
+
+- **Phase 1** (`e12e92a3`, data-craft): 그리드 뷰 footer 의 서버 집계값이 **열 일괄 입력 성공 후 자동 갱신되지 않던** 결함 수정. 기존 ref-bridge 컨벤션(`notifyRowAddedRef`, `invalidateServerCacheRef`)을 그대로 따라 `refreshAggregationForColumnRef` 를 `ServerPagingRefBridge` / `useServerPagingRefBridge` / `FsGridTableViewProps` / `GridViewPageProps` 에 추가. `FsDataViewerRouter` 가 ref 를 소유하고 외부 `requestBatchInput` 콜백을 `useMemo` 로 래핑하여 `result.success === true` 시 `refreshAggregationForColumnRef.current?.(params.columnField)` 호출, `DataViewerProvider`/`GridViewPage` 양쪽에 동일 래핑 전달. 결과: 단일 셀 편집과 동일한 1초 디바운스 후 서버 집계 재요청 경로가 일괄 입력에도 적용되어 footer 가 정확한 값으로 갱신. lint(`pnpm typecheck:all && pnpm lint`) 통과.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-sub-data-viewer/src/app/FsDataViewerRouter.tsx`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/gridViewTypes.ts`
+- `packages/fs-sub-data-viewer/src/pages/GridViewPage.tsx`
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/hooks/useTableViewServerPaging.ts`
+
 ## v001.101.0
 
 > 통합일: 2026-05-15
