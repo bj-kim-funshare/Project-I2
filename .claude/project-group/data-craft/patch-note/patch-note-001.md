@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.106.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 5)
+
+### 페이즈 결과
+- **Phase 8 (핫픽스 5)**: hotfix 2 (v001.95.0) 가 도입한 `CustomFormattingToolbar` 가 BlockNote toolbar 의 focus/event 메커니즘을 깨뜨리고 toolbar 의 **모든** 버튼이 작동하지 않는 regression 을 유발한 것을 확인 (download 외 정렬/스타일/삭제 등 default 버튼 일체 미반응 + 본문 포커싱 해제). hotfix 2/4 surfaces 전체 폐기 후, 다운로드를 framework UI (toolbar) 가 아닌 **block 자체 render** 의 인-블록 버튼으로 처리하는 보수적 접근으로 전환. 변경: (1) `CustomFormattingToolbar.tsx`, `DcFileDownloadButton.tsx` 두 파일 삭제. (2) `DocumentEditor.tsx` 에서 `FormattingToolbarController` 래핑 제거 — `<BlockNoteView editor={editor} ... />` 가 children 없는 단일 element 로 복귀, BlockNote default toolbar 자동 mount. (3) `dcImagePreview.tsx` 에 absolute positioned 다운로드 버튼 오버레이 추가 (`<button>` + lucide `Download` 아이콘, 반투명 검정 배경 + 흰색 아이콘, 클릭 시 `fileApi.downloadFile(uri, name || caption || 'image')`, 외부 URL 은 동적 anchor fallback, `onMouseDown preventDefault` 로 본문 focus-steal 방지). `dcFileBlockSpec.tsx` 는 이미 인-블록 다운로드 핸들러 (파일명 행 클릭 → handleDownload) 보유 — 변경 없음.
+
+### 배경 (핫픽스 사유)
+hotfix 2/3/4 의 누적 패턴: BlockNote framework UI (FormattingToolbar) 를 우리 wrapper 로 교체하여 download 동작을 swap 하려 했으나, custom toolbar 가 BlockNote 의 focus 처리 / button visibility / event flow 와 미묘하게 충돌. hotfix 4 까지의 focus-steal preventDefault + selector mirror 도 단일 버튼 click 미발화를 해소하지 못함. 더 큰 그림에서 master 보고: 정렬/스타일/삭제 등 우리가 swap 하지 않은 default 버튼들까지 작동 안 함 → root cause = "framework UI 자체를 교체한 결정". advisor 결론: **toolbar 가 아닌 block content 를 override** 하는 방향이 lower-risk seam. 우리 custom block render 들은 이미 잘 동작 중 — 다운로드도 그 안에 배치.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx` (FormattingToolbarController 제거)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcImagePreview.tsx` (다운로드 오버레이 추가)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/CustomFormattingToolbar.tsx` (삭제)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/DcFileDownloadButton.tsx` (삭제)
+- 합계: +51 / -120
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 3 warnings 모두 기존).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요.
+
+### 알려진 잔존 동작 (수용)
+BlockNote default toolbar 가 복원되었으므로 toolbar 의 default `FileDownloadButton` (block 선택 시 위에 뜨는 다운로드 아이콘) 은 hotfix 2 이전과 동일하게 raw URI 로 `window.open()` → 새 탭이 열림 (인증 미주입). 사용자에게 안내: **이미지 자체 위의 다운로드 버튼** 또는 **파일 블록의 파일명 영역** 을 클릭. toolbar 다운로드 아이콘은 미사용. 후속 불만 발생 시 그 단일 버튼만 visibility 차단 (전체 toolbar 재교체 금지).
+
+### 후속 빌드 단계
+`fs_data_viewer` 만 변경 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
 ## v001.105.0
 
 > 통합일: 2026-05-15
