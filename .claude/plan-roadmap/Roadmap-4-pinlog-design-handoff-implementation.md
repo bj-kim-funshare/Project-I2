@@ -10,7 +10,7 @@
 
 🟢 /plan-enterprise Pinlog 단계1-A 진입 플로우 — Splash 라우트 (`/`, 2.5s 타임아웃 + 인증/온보딩 분기), Onboarding 3 step (구스 인사 → 닉네임 핸들 검증 debounce 400ms → 위치 권한), LayoutPickerPage 폴리시 (4 카드 미니 프리뷰), FirstPinPrompt EmptyState. AuthPage 진입 전 게이팅 추가. `widgets/onboarding/` 신설.
 
-🔴 /plan-enterprise Pinlog 단계1-C 홈 4 레이아웃 폴리시 — MainPage 의 feedModeStore 토글 확장, home-grid · home-collage · home-list (B 타임라인 신설) · map-post-feed (D 지도우선) 4 위젯 디자인 시안 적용, main-layout 의 AppHeader (로고 + 알림 배지) + BottomNav + 중앙 FAB, Pull-to-refresh 구스 sleepy→happy 전환. `homeLayout` 사용자 설정 적용.
+🟢 /plan-enterprise Pinlog 단계1-C 홈 4 레이아웃 폴리시 — MainPage 의 feedModeStore 토글 확장, home-grid · home-collage · home-list (B 타임라인 신설) · map-post-feed (D 지도우선) 4 위젯 디자인 시안 적용, main-layout 의 AppHeader (로고 + 알림 배지) + BottomNav + 중앙 FAB, Pull-to-refresh 구스 sleepy→happy 전환. `homeLayout` 사용자 설정 적용.
 
 1️⃣ 🔴 /plan-enterprise Pinlog 단계1-B 핀 작성 4단계 — WritePage 분해 (Photo Pick → Details → Success 애니), PostPhotoStep (카메라/앨범/권한 폴백), PostDetailsStep (장소 자동 제안 500m POI · 메모 textarea · 태그 칩 시드 · ScopeToggle 시드 · 캡슐 토글 시드 — 본 단계는 UI 만, 실제 scope/tags/capsule 동작은 Phase 2/3 에서 활성), location-picker 정비, PostSuccess 풀스크린 애니 (300ms drop) → tab:home 1.5s.
 
