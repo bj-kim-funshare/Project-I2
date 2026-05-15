@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.70.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#44
+
+### 페이즈 결과
+
+- **Phase 1** (`d5a4de51`): 사용자 설정 편집 모달 (`EditSettingsFormDialog`) 의 `DialogContent` 에 `max-h-[80vh] overflow-y-auto` 추가. 기존 `max-w-md` 만 있어 폼 항목 수가 많을 때 높이 상한 없이 viewport 를 초과해 하단 항목·버튼이 잘리던 QA 지적 사항 해소. 부모 `SettingsDialog` 의 `h-[80vh]` 와 동일한 상한 + 내부 세로 스크롤. 동일 레포 `PasswordChangeDialog` 의 검증된 패턴과 동형. shared `DialogContent` 가 `grid gap-4` 베이스이므로 wrapper 분할 없이 DialogContent 자체를 스크롤 컨테이너로 사용 (pinned footer 없음 — 헤더 동반 스크롤도 UX 동등). 변경: +1 / -1 across 1 file. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 마스터 명령 의도 (재기)
+
+우측 상단 프로필 → 정보편집 → 사용자 설정 → 설정편집 화면에서 입력된 폼 항목이 많을 경우 팝업 높이가 화면을 초과해 하단 항목 및 버튼이 잘리는 현상 (QA팀 지적). 부모 설정 모달과 동일하거나 더 작은 높이로 제한하고 스크롤되는 방식으로 개선.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/settings-dialog/ui/EditSettingsFormDialog.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor 5-관점 (계획 시점 + 완료 시점): 두 시점 모두 PASS — 단일 줄 CSS 변경, 동일 레포 검증된 패턴 (`PasswordChangeDialog`) 과 동형, 로직·데이터 흐름·타입 변화 없음.
+
+### 머지 충돌 비고
+
+- 본 엔트리는 초안 작성 시 v001.68.0 으로 부여했으나, 병행 실행 중이던 plan-enterprise #42 (v001.68.0) 및 #36 (v001.69.0) 가 main 에 먼저 머지되어 두 번 재번호되었다. 최종적으로 v001.70.0 으로 부여. CLAUDE.md §5 step 4 (양측 보존) 정책 준수 — 기존 #36 / #42 엔트리는 그대로 보존.
+
 ## v001.69.0
 
 > 통합일: 2026-05-15
