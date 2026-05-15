@@ -1,5 +1,39 @@
 # Tteona — Patch Note (001)
 
+## v001.4.0 — 단계1 v3 공유 디자인 프리미티브 라이브러리
+
+> 통합일: 2026-05-15
+> 플랜 이슈: bj-kim-funshare/Tteona#4
+
+### 페이즈 결과
+- **Phase 1** (feat, Tteona): v3 핸드오프 두 파일 (`떠나(Tteona)/components/v3-trust.jsx` 203L, `v3-detail-patches.jsx` 289L) 의 공유 프리미티브 10종을 React 19 + TypeScript strict 컴포넌트로 포팅. `src/components/trust/` 신설 (TierBadge 3-tier, TapTarget 44 wrapper, TrustCard variant A/B, PersonaChipRow, PersonaOverlay, ReportFlagBtn 이전본 + index 배럴) + `src/components/itinerary/` 채움 (DaySummaryRow, StructuredDay, BlurredPreview, TimelineAutoDraft + index 배럴). 핸드오프의 `window.*` 글로벌 주입 / `_v3I.*` 아이콘 문자열 lookup 패턴은 모두 lucide-react named import 로 대체. 기존 `src/components/legal/ReportFlagBtn` 을 `trust/` 산하로 이전 (파일 + 테스트 git rename), `legal/slots/ReportFlagBtnSlot.tsx` import 경로를 `@/components/trust/ReportFlagBtn` 절대 경로로 갱신. `SCOPE_SLOT_MATRIX` 레지스트리 키와 legal-showcase 테스트 헤더 매칭 문자열은 의도적으로 보존. 커밋 `c208f19` + 후속 fix `1989d6e` (TrustCard.signals / TimelineAutoDraft.days 의 인라인 mock 기본값 제거 — 프리미티브는 caller 가 데이터를 주입하는 순수 컴포넌트로 유지).
+
+### 영향 파일
+
+**Tteona (FE)**:
+- `src/components/trust/TierBadge.tsx` (신규)
+- `src/components/trust/TapTarget.tsx` (신규)
+- `src/components/trust/TrustCard.tsx` (신규, TrustSignal 내부 helper 포함)
+- `src/components/trust/PersonaChipRow.tsx` (신규)
+- `src/components/trust/PersonaOverlay.tsx` (신규)
+- `src/components/trust/ReportFlagBtn.tsx` (이전 — legal/ 에서 git rename)
+- `src/components/trust/index.ts` (배럴, 신규)
+- `src/components/trust/__tests__/ReportFlagBtn.test.tsx` (이전)
+- `src/components/itinerary/DaySummaryRow.tsx` (신규)
+- `src/components/itinerary/StructuredDay.tsx` (신규)
+- `src/components/itinerary/BlurredPreview.tsx` (신규)
+- `src/components/itinerary/TimelineAutoDraft.tsx` (신규)
+- `src/components/itinerary/index.ts` (배럴, 신규)
+- `src/components/legal/slots/ReportFlagBtnSlot.tsx` (갱신: import 경로)
+- `src/components/legal/ReportFlagBtn.tsx` (삭제 — trust/ 로 이전)
+- `src/components/legal/__tests__/ReportFlagBtn.test.tsx` (삭제 — trust/__tests__/ 로 이전)
+- `src/components/itinerary/.gitkeep` (삭제)
+
+### 검증
+- Phase 1 lint 게이트 (`pnpm lint`) 통과 (초기 통과 후 fix 커밋 1989d6e 재실행 시에도 통과).
+- 5-perspective advisor (Intent / Logic / Group Policy / Evidence / Command Fulfillment) 계획·완료 시점 양측 PASS — advisor #1 (계획) 무차단, advisor #2 (완료) 무차단 (mock data 위반은 advisor #2 직전 검토에서 발견되어 fix 커밋으로 선제 해소).
+- 후속 단계 인지용 (informational, 차단 아님): TrustCard 의 `TrustSignalItem.icon` 은 `LucideIcon` 타입 — 호출처가 signals prop 을 구성할 때 lucide-react named import 사용. TimelineAutoDraft → TierBadge/TapTarget cross-import 는 의도된 단방향 의존 (단일 phase 묶음 사유 = 토큰·아이콘 공유, 마스터 명시).
+
 ## v001.3.0 — Issue #2 결함 fix (block 1 + warn 1)
 
 > 통합일: 2026-05-15
