@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.122.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: #70 (hotfix 1)
+
+### 페이즈 결과
+- **Hotfix 1 (cumulative Phase 3)**: Phase 2 가 `GroupHeader` 좌측 묶음을 sticky-left 로 만들어 가로 스크롤 시 그룹 제목+체크박스가 고정되도록 한 결과, 데이터 행의 `RowNumberCell` (행 체크박스) 과 컬럼 헤더의 `FixedHeaderCells` (전체 선택 체크박스) 는 sticky 가 아니어서 가로 스크롤 시 화면 밖으로 밀려나 사라지는 회귀가 발생했다. 본 핫픽스에서 `DataRow.tsx` 의 행 좌측 고정 셀 묶음(드래그/행번호/서브그리드)을 `position:sticky; left:0; zIndex:1` 래퍼로 감싸고, `FixedHeaderCells.tsx` 의 헤더 좌측 고정 셀 묶음을 `position:sticky; left:0; zIndex:2; bg-muted` 래퍼로 감싸 가로 스크롤 시 헤더(z:2) / 데이터 행(z:1) / 그룹 헤더(z:1) 세 레이어가 모두 좌측에 고정되어 세 종류 체크박스가 공존하도록 정정.
+
+### 영향 파일
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/FixedHeaderCells.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/DataRow.tsx`
+
 ## v001.121.0
 
 > 통합일: 2026-05-15
