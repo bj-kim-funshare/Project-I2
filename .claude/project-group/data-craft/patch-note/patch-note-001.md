@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.92.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#55 (hotfix 2)
+
+### 페이즈 결과
+- **Phase 3 (hotfix 2)**: `src/middlewares/viewerRoleCheck.middleware.ts` 와 그 테스트 (`viewerRoleCheck.middleware.test.ts`) 를 통째 삭제. `src/routes/viewer.ts` 의 21개 라우트에서 `viewerRoleCheckMiddleware(...)` 인자 일괄 제거 및 import 제거. `src/models/viewer.model.ts` 에서 supporting 함수 3개 (`findPageIdsByGroupId`, `findParentGroupIdForSubGrid`, `debugDataViewerFieldDiagnostic`) 삭제 — 미들웨어 외 호출자 0건 grep 확인. 총 4 파일 변경, +40/-670 라인.
+
+### 배경
+v001.85.0 진단 로그 + v001.89.0 페이로드 직렬화 후 수확한 페이로드 `{groupId:1661, companyId:"funshare", jwtUserCompanyId:"funshare", userRoleId:27, isOwner:false, parentGroupIdLookup:null, pageIdsAfterFallback:0}` 분석으로 가설 B1 (companyId stale) / B2 (user payload stale) 가 모두 REFUTE 됐고, **미들웨어 로직 자체가 잘못된 layer 에서 권한을 강제하는 코드**라는 결론. 마스터 정책 명시: "위젯 단위 오너/비-오너 구분 없음, 권한은 페이지 단위, 페이지와 그룹은 별개, 페이지 권한 없어도 탐색기 페이지를 통해 그룹 작업 가능." → 그룹 ID 만 받아 페이지 binding 경유로 권한을 추론하는 미들웨어 자체가 정책 위반. 부분 제거 (라우트 단위) 는 잔여 라우트가 동일 버그를 재현 → 시간 차 두고 다시 막힘 → 점진적 치료 트레드밀이라 R (전체 제거) 채택.
+
+### 영향 파일
+- data-craft-server:
+  - `src/routes/viewer.ts` (21 라우트에서 미들웨어 호출 제거)
+  - `src/middlewares/viewerRoleCheck.middleware.ts` (삭제)
+  - `src/middlewares/viewerRoleCheck.middleware.test.ts` (삭제)
+  - `src/models/viewer.model.ts` (3 함수 삭제)
+
+### 안전성 검증
+
+- 세 model 함수 (`findPageIdsByGroupId`, `findParentGroupIdForSubGrid`, `debugDataViewerFieldDiagnostic`) 호출자 grep 결과 0건 (미들웨어 외 참조 없음).
+- Tenant isolation 은 `auth.middleware` (JWT payload 기반 `req.companyId` 설정) + `tenant.middleware` + 각 controller 내부 `companyId` scoping 으로 유지됨 — 미들웨어 제거가 cross-tenant 노출로 이어지지 않음.
+- `pnpm lint` PASS (사용되지 않는 import / 변수 0건).
+
+### 운영 가이드
+
+- dev 서버 재기동 (`/dev-start data-craft` 또는 동등) 후 user=37 으로 그룹 1660 / 1661 의 열 추가 + 그룹 삭제 정상 동작 확인 필요.
+- 정상 동작 시: 본 플랜 종결.
+- 여전히 실패 시: tenant isolation 이 어딘가 깨졌거나 다른 미들웨어가 영향 — 추가 진단 필요.
+
+### 회귀 위험
+
+- enterprise-098/121/normal-159 PHASE-22 의 원 시큐리티 의도가 페이지-기반 권한 게이팅이었다면 그 정책은 본 제거로 폐지됨. 마스터 정책 ("그룹 단위 권한 없음") 이 정식이라는 명시적 결정에 따른 의도된 변경.
+- 페이지 단위 권한이 필요한 다른 layer (페이지 라우트 자체) 는 본 변경의 영향권 밖.
+
 ## v001.91.0
 
 > 통합일: 2026-05-15
