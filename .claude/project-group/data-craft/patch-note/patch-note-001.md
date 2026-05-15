@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.56.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#33
+
+### 페이즈 결과
+
+- **Phase 1** (`ff7c453` + `0a8231e`): `data-craft-server` BE — `getSettingsForms` 서비스에 4번째 파라미터 `scope?: 'self' | 'manage'` 추가. `scope='manage'` 시 viewer 의 `isOwner`/`roleId` 필터링을 우회하여 `findSettingsForms(companyId)` 로 회사 전체 settings form 풀을 `accessLevel='write'` 매핑으로 반환. 컨트롤러 `getSettingsFormsController` 는 `req.query.scope === 'manage'` 일 때 `req.user?.isOwner` 또는 `req.user?.permissions?.includes('permission_manage')` 으로 권한 검증, 미충족 시 `scope='self'` 로 안전 강등 (`/api` 글로벌 `authMiddleware` 가 인증 호출에 한해 `req.user` 채움 — 비인증 대비 옵셔널 체이닝). `scope` 미지정 호출은 기존 동작 유지로 회귀 없음. 보완 커밋(`0a8231e`)으로 컨트롤러 주석을 글로벌 미들웨어 적용 사실에 맞게 정정. 변경 +26 / -8 (2 files). lint gate (`pnpm lint`) exit 0.
+- **Phase 2** (`f4429e2`): `data-craft` FE — `settingsFormApi.getSettingsForms` 에 `GetSettingsFormsOptions({ scope?: 'self' | 'manage' })` 추가, `scope='manage'` 시 `apiClient.get('/api/builder/settings/forms?scope=manage')` 직접 호출 (미지정 시 기존 `builderApi.getSettingsForms()` 경로 유지로 mock 호환). `useSettingsForms` 훅 시그니처를 `GetSettingsFormsOptions & Omit<UseQueryOptions, 'queryKey'|'queryFn'>` 단일 병합 객체로 변경하고 `scope` 를 React Query 키에 포함 (self/manage 캐시 분리). 권한 그룹 편집 다이얼로그 호출부 (`SettingsPermissionSection`, `RoleFormDialogContent`) 를 `{ scope: 'manage' }` 로 변경; `SettingsSidebar`, `EditSettingsFormDialog`, `SettingsFormTabContent` 는 미변경 (옵션 미전달 → self 유지). 변경 +24 / -12 (4 files). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 마스터 명령 의도
+
+설정 → 권한 관리 → 권한 그룹 수정 화면에서 비오너 계정 (단, `permission_manage` 권한 보유) 이 "설정 권한" 섹션의 settings form 풀을 빈 목록 또는 자기 역할 분량으로만 보던 증상 수정. 근본 원인은 `getSettingsForms` 서비스가 두 호출 컨텍스트 — (a) viewer 본인 설정 사이드바, (b) 권한 그룹 편집 다이얼로그의 부여 풀 — 를 단일 분기로 묶고 viewer 의 `isOwner`/`roleId` 로 필터링했기 때문. 컨텍스트 파라미터 `scope` 도입으로 manage 컨텍스트는 권한 검증 후 전체 풀 반환.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/services/builder/builder.settingsForm.ts`
+- `src/controllers/builder.controller.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/entities/form/api/settingsFormApi.ts`
+- `src/entities/form/api/settingsFormQueries.ts`
+- `src/widgets/settings-dialog/ui/SettingsPermissionSection.tsx`
+- `src/widgets/settings-dialog/ui/RoleFormDialogContent.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. 오너 계정 로그인 → 설정 → 권한 관리 → 임의 역할 수정 → "설정 권한" 섹션에 모든 settings form 표시 (회귀 없음).
+2. 비오너 계정 (`permission_manage` 권한 보유, `settings_edit` 미보유) 로 로그인 → 동일 경로 → "설정 권한" 섹션에 회사 전체 settings form 노출되어 임의 form 토글 가능.
+3. 비오너 계정 (`permission_manage` 미보유) → 권한 관리 메뉴 자체 비노출 (기존 동작 유지).
+4. 비오너 계정 일반 "설정" 화면 (권한 그룹 편집이 아닌 본인 설정) → settings form 목록은 본인 역할 기반으로만 표시 (self 컨텍스트 회귀 없음).
+5. `EditSettingsFormDialog`, `SettingsFormTabContent` (설정폼 정의 관리 화면) 호출부 회귀 없음 확인 (본 패치에서 미변경).
+
 ## v001.55.0
 
 > 통합일: 2026-05-15
