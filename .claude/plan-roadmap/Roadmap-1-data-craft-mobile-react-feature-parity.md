@@ -12,7 +12,7 @@
 
 🔴 /dev-security-inspection data-craft today
 
-🔴 /plan-enterprise data-craft 단계1-A fs-api-mobile 어댑터 정비 — 기존 data-craft-server REST 엔드포인트 그대로 호출, 모바일 보조 헬퍼 (재시도·타임아웃·세션 헤더) 만 추가. 신규 BE 엔드포인트 추가 금지.
+🟢 /plan-enterprise data-craft 단계1-A fs-api-mobile 어댑터 정비 — 기존 data-craft-server REST 엔드포인트 그대로 호출, 모바일 보조 헬퍼 (재시도·타임아웃·세션 헤더) 만 추가. 신규 BE 엔드포인트 추가 금지. — 완료 (이슈 #72, v001.121.0 + 핫픽스1 v001.123.0)
 
 1️⃣ 🔴 /plan-enterprise data-craft 단계1-B 페이지 트리 / 페이지 뷰어 (apps/web/src/mobile/screens/page-tree, screens/page-viewer, routes/page-tree.tsx, routes/page-viewer/). 기존 page 관련 GET API 재사용.
 
