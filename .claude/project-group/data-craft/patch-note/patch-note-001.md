@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.112.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#54 (핫픽스 6)
+
+### 페이즈 결과
+- **Phase 9 (핫픽스 6)**: hotfix 5 가 BlockNote default toolbar 를 복원하면서 그 default `FileDownloadButton` 이 raw URI 로 `window.open()` → 새 탭을 여는 동작도 함께 노출되어 사용자 혼선 가능. 본 핫픽스는 그 단일 버튼을 CSS selector (`button[aria-label*="다운로드"]`, `button[aria-label*="Download"]`) 로 `display: none !important` 처리하여 시각적으로만 hide. framework 동작 / focus 처리 / 다른 toolbar 버튼 모두 무영향. 이미지/파일 다운로드는 hotfix 5 에서 도입한 인-블록 버튼 (dcImagePreview 오버레이, dcFileBlockSpec 파일명 행 클릭) 으로 일원화.
+
+### 배경
+hotfix 2 의 `CustomFormattingToolbar` 전체 교체 접근이 toolbar regression 을 유발한 점 (hotfix 5 의 배경) 을 학습. 본 핫픽스는 framework UI 를 교체하지 않고 단일 버튼만 CSS hide 하는 lower-risk seam 사용. advisor 권고: "If master complains again, suppress that one toolbar item, don't replace the whole toolbar" 정확히 그 패턴.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.css` (신규, 7 라인)
+  - `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx` (+1 라인 import)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (3 warnings, 0 errors — 모두 기존).
+- 브라우저 실증 미수행 — 마스터 PENDING 게이트에서 manual repro 필요.
+
+### 후속 빌드 단계
+`fs_data_viewer` 만 변경 — 본 머지 후 dev/배포 전 `pnpm --filter fs_data_viewer build` 실행 필요.
+
 ## v001.111.0
 
 > 통합일: 2026-05-15
