@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.87.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#57
+
+### 페이즈 결과
+- **Phase 1** (`0424832`): 데이터 뷰어 그리드 뷰의 "긴 텍스트" 셀이 행 높이 증가에도 한 줄 말줄임표(`…`)로만 표시되던 문제 해결. `FsGridLongTextCellRenderer.tsx:99` span 의 Tailwind `truncate` 클래스 (`overflow:hidden; text-overflow:ellipsis; white-space:nowrap`) 를 제거하여, 일반 텍스트 셀 (`FsGridTextCellRenderer.tsx:84`) 과 동일하게 default `white-space: normal` wrap 동작을 갖게 함. 행 높이가 늘어나면 그만큼 가능한 부분까지 자동 개행 표시. 툴팁 / 편집 다이얼로그 / focus 스타일 등 다른 동작 무영향.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx`
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (3 warnings, 0 errors).
+
 ## v001.86.0
 
 > 통합일: 2026-05-15
