@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.55.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#32 (hotfix-1)
+
+### 페이즈 결과
+
+- **Phase 2 (hotfix-1)** (`050e98a5`): plan #32 의 v001.52.0 (`EmptyInputWidget` listFirst 분기 제거) 으로도 원 버그가 해소되지 않은 정황에 대한 핫픽스. 마스터 dev 서버 콘솔 캡처로 실제 원인이 EmptyInputWidget 이 아닌 버튼 위젯 측 `loadDataConfig.targetWidgetId: ''` 누락임을 확인 (`useButtonWidget.ts:62-64` 의 가드가 조용히 early-return). `useButtonWidget.ts` 의 load-data 분기를 재구성하여 `targetWidgetId` 가 빈 문자열일 때 `GROUP_TO_EMPTY_TYPE` 매핑을 기반으로 현재 페이지의 매칭 빈 위젯을 조회 — 정확히 1개이면 자동 폴백, 0개/2개+ 이면 구체 경고 메시지와 함께 조기 반환. `LoadDataActionSection.tsx` 에는 `step3Missing` 플래그 추가로 Step 3 미선택 시 레이블 별표(*) + 후보 수 (0/1/N) 별 인라인 도움말 텍스트 표시 (재발 방지 UX). 변경 +31 / -4 (2 files). lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/button-widget/ui/useButtonWidget.ts`
+- `src/widgets/property-drawer/ui/property-editors/button-editor/LoadDataActionSection.tsx`
+
+### 알려진 잔존 (별도 핫픽스 필요)
+
+마스터가 본 핫픽스 라운드에서 함께 보고한 다음 증상은 본 라운드 스코프 밖으로 이월:
+
+- **listFirst=true 폼 A → 폼 B → 폼 A 전환 시 셀이 모두 "-" 표시**: `convertHistoryToFormRecords` 의 `validFieldIds` 필터로 미해당 fieldKey 가 전부 제거되는 패턴이 의심되며, `useFormWidgetSync` 의 채널-스코프 historyItems 가 폼 메타 교체 race 와 만나 발생할 가능성. 다음 핫픽스 라운드에서 마스터의 재현 콘솔 로그로 분리 진단 후 수정.
+
+### 마스터 수동 검증 시나리오
+
+1. 생산관리 버튼 (listFirst=false 폼 + 페이지에 빈 입력폼 위젯 1개 배치) 클릭 → 입력 폼이 정상 렌더링되어야 함 (자동 폴백).
+2. 생산관리 버튼 편집기 진입 → Step 3 "연결 대상 빈 위젯" 미선택 상태에서 레이블에 빨간 별표(*) + 도움말 텍스트 노출 확인.
+3. 페이지에 매칭 빈 위젯이 0개일 때: 버튼 클릭 시 `[ButtonWidget] load-data: 페이지에 매칭 빈 위젯 없음` 콘솔 경고 + 동작 차단.
+4. 매칭 빈 위젯이 2개+ 일 때: 버튼 클릭 시 `자동 선택 모호` 콘솔 경고 + 동작 차단 (편집기에서 명시 지정 필요).
+5. 기존 정상 설정 (targetWidgetId 명시된 직원관리/장소관리 등) 회귀 없음 확인.
+
 ## v001.54.0
 
 > 통합일: 2026-05-15
