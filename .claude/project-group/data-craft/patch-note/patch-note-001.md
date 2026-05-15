@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.73.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#34 (Hotfix 2)
+
+### 페이즈 결과
+
+- **Phase 4 (hotfix-2)** (`0f7e398` 코드 + 회귀 테스트 어설션 강화 `1f185c3a`): plan #34 v001.59.0 + v001.70.0 fix 이후 마스터 보고 — 일반 필드는 정상 초기화되나 폼의 파일/이미지 업로더 필드는 여전히 잔존. 마스터 힌트("파일 처리 부분은 별도의 특수한 범용 파일 시스템") 를 단서로 advisor 검증 + grep discriminator 적용. 후보 좁힘: (A) 단순 `FileUploaderField` / `ImageUploaderField` 의 native `<input type="file">` 잔존값, (B) `widgets/file-uploader-widget/` (FileUploaderWidget + useFileUpload + fileApi) 가 폼 내부에서 사용. **discriminator**: `grep useFileUpload\|FileUploaderWidget` 를 `src/widgets/form-widgets/` + `src/features/form-builder/` 디렉토리에서 0 hits → B 사망, A 채택. 폼 내 widgetType `'file-uploader'` / `'image-uploader'` 는 `FormFieldRenderer.tsx:60-61` 에서 단순 uploader 로 분기. 즉 마스터가 언급한 "별도 시스템" = **브라우저 native file input 의 selected-file 표시**(browser-internal 상태로 React state 와 분리). 사용자가 한 번 파일을 픽한 뒤 초기화하면 picker 옆에 파일명이 잔존하는 visual residue.
+
+  해결: `@/shared/ui/Input` (shadcn) 은 forwardRef 미적용이라 ref 기반 reset 불가. **key-bump 전략** 채택 — `FileUploaderField` / `ImageUploaderField` 두 곳에:
+  - `inputKey: number` state 추가.
+  - 기존 `useEffect([value])` 에서 normalized `next.length === 0` 일 때 `setInputKey((k) => k + 1)` 호출.
+  - JSX 의 `<Input>` 에 `key={inputKey}` 부여 → value 가 빈값으로 바뀌는 순간 React 가 native input 을 unmount/remount → selected-file display 도 초기화.
+
+  T17e 회귀 가드 (`tests/normal-068/normal-068-p03-settings-form-modal-5bugs.test.tsx`) 추가. Wrapper 컴포넌트로 value 변경 → 빈값 복원 흐름 재현. **핵심 어설션**: `expect(inputAfter).not.toBe(inputBefore)` — fix 적용 시 DOM 노드 객체가 다름 (remount), 미적용 시 같음. 처음 작성된 어설션 (`input.value === ''`, badge 사라짐) 은 React-controlled 효과만 검증해 negative-run 통과 → 회귀 가드 부적합 → DOM 노드 객체 비교로 강화 (후속 commit `1f185c3a`). **negative-run 1회 실증**: 두 uploader 소스만 hotfix 이전으로 되돌리고 T17e 단독 실행 → 정확히 `expected <input> not to be <input>` 으로 실패함을 확인. 변경 +79 / -2 (3 files). lint exit 0 (3 unused-disable warnings 만, 비차단).
+
+### 마스터 명령 의도 (재기)
+
+v001.70.0 검증 중 마스터 보고 — "폼에서 파일 또는 이미지를 올리는 부분은 여전히 초기화가 안돼, 파일 처리 부분은 별도의 특수한 범용 파일 시스템을 가지고 있으니까 어드바이저와 함께 검토해". advisor 와 함께 후보 B (file-uploader-widget) 를 grep 으로 사망 → A (native input residue) 로 정착 → key-bump 패치.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/features/form-builder/ui/FileUploaderField.tsx`
+- `src/features/form-builder/ui/ImageUploaderField.tsx`
+- `tests/normal-068/normal-068-p03-settings-form-modal-5bugs.test.tsx`
+
+### 마스터 수동 검증 시나리오
+
+1. 페이지 폼 위젯에 파일/이미지 필드 포함된 폼 배치.
+2. 신규 entry 진입 → 파일 업로드 → 초기화 클릭 → picker 옆 파일명 사라짐 + badge 사라짐 + placeholder "파일을 선택하세요" 복원.
+3. 신규 entry → 이미지 업로드 → 초기화 → 동일 결과 (이미지 미리보기 / 파일명 모두 사라지고 placeholder 복원).
+4. 기존 record 편집 진입 → 초기화 → 모든 표시 비워짐 → 저장 후 재오픈 시 공란 유지.
+5. 기존 record 편집 → 새 파일 업로드(덮어쓰기) → 초기화 → native input 도 새 파일명 잔존 없이 초기화.
+
+### 알려진 범위 밖 (잔존 follow-up)
+
+- **`widgets/file-uploader-widget/`** (FileUploaderWidget + useFileUpload + fileApi 의 standalone "범용 파일 시스템") 의 reset 동작 — 폼 내부에서 사용되지 않으므로 본 hotfix 범위 외. 동일 증상이 page 의 standalone 파일 업로더 위젯에서 보고되면 별도 핫픽스로 처리. 
+- **`widgets/tabs-widget/ui/*`** registry 경유 FormRenderer (`TabFormContent`, `tabs-widget/FormInputDialog`, `tabs-widget/FormDataListDialog`) — v001.59.0 / v001.70.0 부터 이월. registry signature 변경 필요해 blast radius 큼.
+
 ## v001.72.0
 
 > 통합일: 2026-05-15
