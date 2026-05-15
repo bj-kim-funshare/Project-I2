@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.61.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#33 (hotfix-2)
+
+### 페이즈 결과
+
+- **Phase 4 (hotfix-2)** (data-craft `ee4e572a` + data-craft-server `a02c0be`): hotfix-1 (v001.58.0) 의 오진 정정. 실제로는 라우터-레벨 `forceIncludeAuth` setter 는 본 서버 아키텍처에서 dead code — Express 미들웨어 실행 순서상 `app.ts:128` 의 글로벌 `app.use('/api', authMiddleware, permissionMiddleware, routes)` 가 먼저 실행돼 `req.user` 채움 분기가 이미 종료된 뒤에야 라우터-레벨 `forceIncludeAuth` 가 플래그를 set 한다. 즉 hotfix-1 의 한 줄 변경은 동작에 아무 영향이 없었음. `routes/roles.ts` 등에서 같은 패턴을 쓰는 라우트가 정상 동작하는 이유는 그쪽 FE 호출 (`fs-api/src/api/role.ts`, `getRoleSettingsForms` 등 line 2380-2400) 이 모두 `apiClient.get(..., { includeAuth: true })` 로 `?includeAuth=true` 쿼리스트링을 보내기 때문 (line 72 의 다른 분기). **GET `/api/builder/settings/forms`** 는 `fs-api/src/api/builder.settings.ts:22` 에서 `apiClient.get(API_ENDPOINTS.BUILDER.SETTINGS_FORMS)` 로 옵션 없이 호출하는 유일한 누락 케이스였음. **해결**: data-craft `src/entities/form/api/settingsFormApi.ts` 에서 `builderApi.getSettingsForms()` 의존을 제거하고 `apiClient.get(endpoint, { includeAuth: true })` 직접 호출로 우회 (self/manage 두 경로 모두). 동시에 data-craft-server `routes/builder.ts:67` 의 dead `forceIncludeAuth` 롤백. 변경: data-craft +9 / -5 (1 file), data-craft-server +2 / -2 (1 file). lint gate 양쪽 exit 0.
+
+### hotfix-1 평가
+
+v001.58.0 (hotfix-1, `1ab9266`) 은 진단 부분 ("req.user 가 비어 있다") 은 옳았으나 **수정 위치가 잘못됐다**. 라우터-레벨 setter 가 실행 순서 문제로 무력함을 검증하지 않은 채 동일 패턴 라우트가 작동한다는 표면 증거만으로 fix 라고 단언했고, 마스터의 dev 환경 실측으로 즉시 무효 처리됐다. hotfix-2 는 라우터-레벨 setter 가 dead 임을 확인 (글로벌 authMiddleware 가 라우터 진입 전에 실행 완료) 한 뒤 FE 측 fix 로 전환했고, 같은 변경에서 dead 코드도 함께 제거했다.
+
+### 마스터 명령 의도 (재기)
+
+비오너 viewer (예: 김범준, 주임 그룹) 의 본인 설정 사이드바에 그룹에 할당된 사용자 설정 항목들이 표시되지 않는 증상. 근본 원인은 `auth.middleware.ts:72` 의 `includeAuth` 분기 — FE 가 `?includeAuth=true` 를 보내지 않으면 경량 인증 경로가 돌고 `req.user` 자체가 미채움 → 컨트롤러의 `req.user?.roleId` 가 undefined → 서비스의 `!isOwner && roleId === null → []` 분기로 빈 목록 반환. fs-api 가 다른 privileged GET 들에는 일관되게 `{ includeAuth: true }` 를 보내지만 `getSettingsForms()` 만 누락된 단일 작성 오류였음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/entities/form/api/settingsFormApi.ts`
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/routes/builder.ts`
+
+### 마스터 수동 검증 시나리오
+
+1. 브라우저 dev tools Network 패널 → 김범준 계정 로그인 → 설정 다이얼로그 진입 → `GET /api/builder/settings/forms?includeAuth=true` 요청이 발생하고 응답 body 에 `settingsForms` 배열이 채워져 있음을 확인.
+2. 김범준 (비오너, 주임 그룹) → 좌측 사이드바에 "사용자 설정" 섹션 + 주임 그룹 할당 56개 항목 노출.
+3. 사용자 설정 항목 클릭 → 정상 렌더링.
+4. 오너 계정 → 사이드바 회사 전체 폼 노출 (회귀 없음).
+5. 권한 그룹 편집 다이얼로그 (오너 또는 permission_manage 비오너) → "설정 권한" 섹션 회사 전체 풀 노출 (v001.56.0 + hotfix-2 조합으로 비로소 실효).
+
 ## v001.60.0
 
 > 통합일: 2026-05-15
