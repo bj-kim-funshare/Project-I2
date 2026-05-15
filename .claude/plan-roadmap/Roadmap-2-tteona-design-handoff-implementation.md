@@ -8,7 +8,7 @@
 
 🔴 /dev-inspection Tteona today
 
-🔴 /plan-enterprise Tteona 단계1 v3 공유 디자인 프리미티브 라이브러리 — src/components/trust 신설 (TrustCard A/B, TierBadge 3-tier, TapTarget 44 wrapper, PersonaChipRow, PersonaOverlay, ReportFlagBtn) + src/components/itinerary 의 StructuredDay, DaySummaryRow, BlurredPreview, TimelineAutoDraft 까지. 핸드오프 components/v3-trust.jsx + v3-detail-patches.jsx 를 React 19 + TypeScript 로 포팅. 단일 plan phase 직렬 (components/trust + components/itinerary 가 같은 디렉터리 트리에서 토큰·아이콘 공유).
+🟢 /plan-enterprise Tteona 단계1 v3 공유 디자인 프리미티브 라이브러리 — src/components/trust 신설 (TrustCard A/B, TierBadge 3-tier, TapTarget 44 wrapper, PersonaChipRow, PersonaOverlay, ReportFlagBtn) + src/components/itinerary 의 StructuredDay, DaySummaryRow, BlurredPreview, TimelineAutoDraft 까지. 핸드오프 components/v3-trust.jsx + v3-detail-patches.jsx 를 React 19 + TypeScript 로 포팅. 단일 plan phase 직렬 (components/trust + components/itinerary 가 같은 디렉터리 트리에서 토큰·아이콘 공유). (이슈 bj-kim-funshare/Tteona#4, patch-note v001.4.0, 2026-05-15 완료)
 
 🔴 /dev-inspection Tteona today
 
