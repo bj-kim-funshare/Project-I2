@@ -4,7 +4,7 @@
 
 ## 프롬프트
 
-🔴 /plan-enterprise Pinlog 단계0 디자인 시스템 정착 — `shared/styles/index.css` 에 디자인 토큰 (color/mood/spacing/radius/shadow) CSS 변수 이식, Pretendard + Gowun Batang + Caveat 폰트 임포트, Tailwind v4 `@theme inline` 매핑 (`docs/HANDOFF.md` §7), 구스 마스코트 9 표정 SVG 자산 `shared/assets/goose/` 정리, 공통 UI 프리미티브 `shared.ui` 보강 (Toast / Dialog / StickerRow / EmptyState / PinMini / ScopeToggle 시드). FE only, BE 변경 0.
+🟢 /plan-enterprise Pinlog 단계0 디자인 시스템 정착 — `shared/styles/index.css` 에 디자인 토큰 (color/mood/spacing/radius/shadow) CSS 변수 이식, Pretendard + Gowun Batang + Caveat 폰트 임포트, Tailwind v4 `@theme inline` 매핑 (`docs/HANDOFF.md` §7), 구스 마스코트 9 표정 SVG 자산 `shared/assets/goose/` 정리, 공통 UI 프리미티브 `shared.ui` 보강 (Toast / Dialog / StickerRow / EmptyState / PinMini / ScopeToggle 시드). FE only, BE 변경 0.
 
 🔴 /dev-inspection Pinlog today
 
