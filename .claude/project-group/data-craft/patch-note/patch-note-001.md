@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.68.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#43
+
+### 페이즈 결과
+
+- **Phase 1** (`65f24678`): 데이터 뷰어 → 문서 타입 셀 → 문서 모달 본문의 블록 추가 드롭다운(BlockNote `.bn-suggestion-menu`)을 끝단까지 스크롤할 때 모달 본문(`ContentArea` `overflow-y-auto`)이 함께 스크롤되는 체이닝 결함 차단. 원인: `.bn-suggestion-menu` 가 `document.body` 로 portal 되어 ContentArea 의 capture-phase JS wheel 핸들러와 분리되어 있으므로 체이닝 경로는 브라우저 기본 scroll-chaining. `DocumentEditor.tsx` 의 `attach(el)` 함수 — BlockNote 가 동적 마운트하는 `.bn-suggestion-menu` 마다 MutationObserver 가 호출하는 자리 — 에서 `target.style.overscrollBehavior = 'contain'` 한 줄과 의도 주석 한 줄 추가. 기존 wheel 핸들러 본체 (deltaMode 보정, 끝단 가드 `if (target.scrollTop !== before)`, preventDefault/stopPropagation) 는 그대로 둠 — BlockNote 0.45 의 휠 입력 보정 의도를 유지. 변경: +2 / -0 across 1 files. Lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 마스터 명령 의도 (재기)
+
+데이터 뷰어 → 문서 타입 셀의 문서 모달 본문에서, 본문에 스크롤이 발생할 정도의 긴 블록이 있을 때 블록 왼쪽 `+` 아이콘으로 블록 추가 드롭다운을 열고 드롭다운을 스크롤하면 뒤의 본문이 함께 스크롤되는 문제 차단.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor 5-관점 (완료 시점): Intent / Logic / Group Policy / Evidence PASS. Command Fulfillment PARTIAL — 변경 위치·기제는 정확하나 브라우저 수동 repro 미수행. 마스터 PENDING 게이트에서 실측 검증 필요. BLOCK 토큰 없음.
+
+### 마스터 수동 검증 시나리오
+
+1. `pnpm dev` (포트 5173) 으로 data-craft 기동.
+2. 데이터 뷰어에서 document 타입 셀 클릭 → 문서 모달 오픈.
+3. 본문에 스크롤이 발생할 만큼 텍스트 블록 길게 작성.
+4. 임의 블록 왼쪽 `+` 아이콘 클릭 → 블록 추가/슬래시 드롭다운 오픈.
+5. 드롭다운 내부를 휠/트랙패드로 스크롤 — 드롭다운 자체 스크롤 정상, 상/하단 끝단 도달 후에도 본문이 함께 스크롤되지 않아야 함 (핵심 회귀 케이스).
+6. 드롭다운 외부 본문 휠 스크롤 — 본문 정상 스크롤 (regression 확인).
+
 ## v001.67.0
 
 > 통합일: 2026-05-15
