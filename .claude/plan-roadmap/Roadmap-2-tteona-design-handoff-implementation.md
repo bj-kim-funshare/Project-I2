@@ -12,7 +12,7 @@
 
 🔴 /dev-inspection Tteona today
 
-🔴 /plan-enterprise Tteona 단계2 인증 통합 — src/app/(auth)/{login, signup, social-callback, forgot-password} 라우트 + 기존 legal 레이어 (SocialLoginV2 / LegalProvider) 연결 + Tteona-server /auth/* (social login + consent S2.1/S1.5) 결합. 첫 phase 에서 BE 라우트 구현 충실도 점검 후 미흡 시 같은 plan 내부 BE 보강 phase 추가.
+🟢 /plan-enterprise Tteona 단계2 인증 통합 — src/app/(auth)/{login, signup, social-callback, forgot-password} 라우트 + 기존 legal 레이어 (SocialLoginV2 / LegalProvider) 연결 + Tteona-server /auth/* (social login + consent S2.1/S1.5) 결합. 첫 phase 에서 BE 라우트 구현 충실도 점검 후 미흡 시 같은 plan 내부 BE 보강 phase 추가. (이슈 bj-kim-funshare/Tteona#5, patch-note v001.5.0, 2026-05-15 완료)
 
 🔴 /dev-security-inspection Tteona today
 
