@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.86.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#47 (핫픽스 2)
+
+### 페이즈 결과
+- **Phase 3 (핫픽스 2)**: 핫픽스 1 이 행 추가 경로 5개 중 1개(`handleAddRow` 푸터)만 커버했던 누락 보강. 누락 4개 — `handleAddRowTop` (헤더 우측 `+`, QA 재현 screenshot 의 사용 경로), `handleInsertRowAt` (컨텍스트 메뉴 위/아래 삽입), `handlePasteRow`, `handlePasteRowAt` — 각각 `setSubGridModel(...)` 호출 직후 `onAddRowToCache?.(parentRowField, newRowWithParent)` 한 줄 추가 + 각 `useCallback` 의존성 배열에 `onAddRowToCache` 포함.
+
+### 배경 (핫픽스 사유)
+v001.82.0 (핫픽스 1) 의 캐시-콜백 root cause 분석은 정확했으나 **커버리지 실패**. `useSubGridHandlers.ts` 의 행 추가 경로가 5개임을 식별하지 못해 사용자가 실제로 사용한 헤더 `+` 버튼 (`handleAddRowTop`) 이 누락. 추가로 `pnpm --filter fs_data_viewer build` 단계가 핫픽스 1 종료 시 누락되어 dev 서버가 stale `dist/` 를 읽고 있었던 점도 인지 — 본 핫픽스에서 빌드 단계 명시.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridHandlers.ts` (+12 라인, 4개 핸들러)
+
+### 후속 빌드 단계
+fs_data_viewer 는 `./dist` export 패키지. 본 머지 후 즉시 `pnpm --filter fs_data_viewer build` 실행 완료.
+
 ## v001.85.0
 
 > 통합일: 2026-05-15
