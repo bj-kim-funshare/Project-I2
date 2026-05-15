@@ -1,5 +1,63 @@
 # data-craft — Patch Note (001)
 
+## v001.126.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#69
+
+### 페이즈 결과
+
+- **Phase 1** (`c1f0adb`, data-craft): `fs-data-viewer` 패키지에 `useBackdropClickClose` 훅 신규 추가 + 29 파일 적용. 백드롭의 `onClick={onClose}` → `onMouseDown(Capture) + onClick` 조합으로 교체. mousedown 출처가 백드롭 자체일 때만 close 발화. `IntegrityCheckDialog` 의 이중 백드롭, `SingleSelect/MultiSelect/ConnectionEditOverlay` 의 `pointerEvents:none` 외부 + inner 절대위치 백드롭, `FileDialog/ImageDialog` 의 형제 노드 백드롭 모두 커버. `useViewColumnMenu.ts` 의 document `'click'` 리스너 → `'mousedown'` 으로 교체 (Pattern C). `ConnectionConfigDialog/ConnectionSettingsDialog` 는 Radix Dialog 사용으로 인라인 백드롭 부재 → skip.
+- **Phase 2** (`7351ee8`, data-craft): `fs-external-data-viewer` 패키지에 동일 훅 독립 복사 + 26 파일 적용. mirror 패키지 구조 차이 (forwardRef 직접 반환, 화살표 함수 직접 반환, `DualWidgetConfigDialog` 의 기존 `handleBackdropClick` callback) 모두 Phase 1 과 동일한 의미로 처리.
+- **Phase 3** (`9f4b444`, data-craft): `fs-sub-data-viewer` 패키지 (3 번째 mirror) 동일 훅 독립 복사 + 26 파일 적용.
+- **사후 보강 1** (`b9ece31a`, data-craft): 훅의 `onMouseDown` 을 `onMouseDownCapture` 로 교체. `DateTimeCalendarOverlay/TimeOverlay` 등 inner 컨텐츠가 `onMouseDown stopPropagation` 한 케이스에서 백드롭이 mousedown 출처를 못 보던 edge case (스테일 ref) 제거. capture 단계에서 가로채면 inner stopPropagation 과 무관하게 ref 가 항상 정확히 갱신됨. 3 mirror 패키지 hook 모두 패치.
+- **사후 보강 2** (`07161e47`, data-craft): `FileDialog/ImageDialog` (형제 노드 백드롭 + 기존 preventDefault 합성 케이스) 6 파일에서 `backdropProps.onMouseDown` 명시 호출을 `onMouseDownCapture` 로 일치 변경. 보강 1 의 hook 시그니처 변경에 맞춤.
+
+### 해결방식
+
+- **버그 원인**: `<div className="fixed inset-0..." onClick={onClose}>` 백드롭 + 내부 컨텐츠 `onClick={e => e.stopPropagation()}` 패턴은 click 이벤트가 내부에 도달했을 때만 막음. drag inside→outside 는 mousedown 이 내부 / mouseup 이 백드롭 위에서 일어나며 click 이벤트가 공통 조상 (=백드롭) 에서 발화 → 내부 stopPropagation 이 트리거되지 않고 백드롭의 onClick 이 실행되어 닫힘 발생.
+- **해결 패턴**: 백드롭에 mousedown 출처 추적 ref 추가 (capture 단계). mousedown 도 백드롭 자체 / mouseup-click 도 백드롭일 때만 close. 내부 stopPropagation 과 무관하게 정확히 동작.
+- **공유 헬퍼**: `useBackdropClickClose(onClose)` 훅이 `onMouseDownCapture` + `onClick` props 를 반환. 백드롭 div 에 `{...backdropProps}` 스프레드만 하면 적용 완료. 3 mirror 패키지 각각 독립 복사 (cross-package import 회피).
+- **Pattern C — useViewColumnMenu**: document-level `addEventListener('click')` 도 동일한 drag-out 문제. `'mousedown'` 으로 교체 + 기존 `closest('[data-column-menu="dropdown"]')` 가드 그대로 → drag-safe (mousedown 시점에 이미 출처 판정 가능).
+- **수정 제외 영역**: 인-컨텐츠 닫기 버튼의 `onClick={onClose}` (의도된 사용자 액션, 본 버그 무관). `useClickOutside` 커스텀 훅 6 개 (이미 mousedown 기반, 안전). Radix Dialog/Popover/DropdownMenu/AlertDialog (`onPointerDownOutside` 이미 drag-safe).
+
+### 동작 보존
+
+- 백드롭 직접 클릭 (mousedown+mouseup 둘 다 백드롭) → 정상 닫힘 ✓
+- ESC, 인-컨텐츠 닫기 버튼, programmatic close → 변경 없음 ✓
+- 내부 컨텐츠 클릭 → 변경 없음 ✓
+- 내부 → 외부 텍스트 드래그 후 mouseup → 더 이상 닫히지 않음 (버그 수정) ✓
+
+### 영향 파일
+
+data-craft (84 파일, +360 / -124):
+
+**fs-data-viewer (30)**:
+- packages/fs-data-viewer/src/shared/hooks/useBackdropClickClose.ts (신규)
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx
+- packages/fs-data-viewer/src/features/column-settings/useViewColumnMenu.ts
+- packages/fs-data-viewer/src/widgets/batch-input-dialog/batch-delete/DatePickerOverlay.tsx
+- packages/fs-data-viewer/src/widgets/calendar/calendar/MonthPickerOverlay.tsx
+- packages/fs-data-viewer/src/widgets/dialogs/IntegrityCheckDialog.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/components/AggregationDetailDialog.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationDialog.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/{color-picker-cell/ColorPickerDialog, connection/ConnectionEditOverlay, date-cell/DateOverlay, dual-widget/DualWidgetConfigDialog, FsGridDateTimeCellRenderer/DateTimeCalendarOverlay, FsGridDeadlineCellRenderer/DeadlineCalendarOverlay, FsGridFileCellRenderer/FileDialog, FsGridFormulaCellRenderer/FormulaEditDialog, FsGridImageCellRenderer/ImageDialog, FsGridLastUpdateCellRenderer/LastUpdateOverlay, FsGridLogCellRenderer/LogOverlay, FsGridMultiSelectCellRenderer/MultiSelectOverlay, FsGridNationCellRenderer/NationOverlay, FsGridProgressCellRenderer/ProgressOverlay, FsGridSimpleFormulaCellRenderer/SimpleFormulaEditDialog, FsGridSingleSelectCellRenderer/SingleSelectOverlay, FsGridTimelineCellRenderer/TimelineCalendarOverlay, FsGridVoteCellRenderer/VoteOverlay, rating-cell/RatingOverlay, time-cell/TimeOverlay, timer-cell/TimerOverlay, world-time-cell/WorldTimeOverlay}.tsx
+
+**fs-external-data-viewer (27)**: 동일 구조의 mirror — `shared/hooks/useBackdropClickClose.ts` (신규) + 26 modal/overlay tsx.
+
+**fs-sub-data-viewer (27)**: 동일 구조의 mirror — `shared/hooks/useBackdropClickClose.ts` (신규) + 26 modal/overlay tsx.
+
+### 검증
+
+- 각 페이즈 + 사후 보강 후 `pnpm typecheck:all && pnpm lint` exit 0 (gate-runner).
+- `data-craft-mobile` 마스터 명시 제외. `data-craft-server` BE 무관. `data-craft-ai-preview` outside-click 패턴 부재로 무관.
+
+### 후속 권장
+
+- 마스터가 `pnpm dev` 로 dev server 띄워 대표 모달 (DateOverlay, ColorPickerDialog, MultiSelectOverlay, IntegrityCheckDialog, view column menu) 에서 (1) 백드롭 클릭 닫힘, (2) 내부→외부 드래그 시 모달 유지, (3) ESC/닫기 버튼 닫힘 spot-check.
+
+---
+
 ## v001.125.0
 
 > 통합일: 2026-05-15
