@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.107.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#56 (핫픽스 1)
+
+### 페이즈 결과
+
+- **Phase 8a** (`e1fa1131`, data-craft-server): root cause 해결 — `COLUMN_SETTING_SELECT_COLUMNS` 에 `vcs.\`frozen\` AS frozen` 추가, `ViewerColumnSetting` / `SubGridSharedConfig.columnModelList` 타입에 frozen 필드 추가, `viewer.meta.ts` 의 `fetchViewerMeta` (메인) + `buildSubGridMeta` (서브) 양쪽 매핑에 frozen 전파. 이전엔 list path SELECT 에서 frozen 누락 → API 응답에서 frozen 미포함 → FE 의 `?? 'none'` 폴백이 항상 적용 → 새로고침 시 풀리는 증상이었음.
+- **Phase 8b** (`c40df025`, data-craft): FE fixed cells (drag handle / row number / sub-grid toggle) 를 `position: sticky` 로 만들어 가로 스크롤 시 컨테이너 좌측에 고정. 사용자 frozen 컬럼의 누적 offset (FIXED_COLUMN_WIDTH 합) 은 그대로 유지되어 frozen 컬럼이 fixed cells 옆에 자연 부착됨. z-index 위계: fixed(4) > frozen(3) > 일반(2). 헤더 / 본문 DataRow / 푸터 AggregationRow / GroupHeaderRow 일관 적용.
+
+### 핫픽스 사유
+
+플랜 #56 (v001.99.0) 머지 직후 마스터 결함 보고 3건:
+1. 행 ID 열이 사용자가 freeze 한 것처럼 시각적으로 표시됨.
+2. 사용자가 freeze 한 열이 좌측에 붙지 않고 ~112px 떨어진 위치에 표시됨.
+3. **결정적**: 새로고침 시 frozen 설정이 모두 풀림 (지속성 회귀).
+
+진단 결과 핵심 결함은 (3) — 서버 list-path SELECT 가 frozen 컬럼을 누락. (2) 는 FE fixed cells 가 sticky 아니라 스크롤 시 좌측 빈틈 생성. (1) 은 (2) 의 부수효과로 자연 해소 (rowId 가 fixed cells 옆에 자연 부착되어 사용자-frozen 과 구분되는 시각).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/models/viewer.model.ts`
+- `src/services/viewer/viewer.meta.ts`
+- `src/types/viewer.types.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/{DataRow,RowDragHandle,RowNumberCell,SubGridToggleCell}.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/{FixedHeaderCells,GroupHeaderRow}.tsx`
+
+### 검증 결과
+
+- 서버 lint (`pnpm lint`): exit 0.
+- FE lint (`pnpm typecheck:all && pnpm lint`): exit 0 (사전 무관 warning 3건 잔존).
+- advisor #2 PASS (BLOCK 토큰 미발생, 4회 호출 모두 코칭 응답).
+
+### 알려진 후속 / Carve-out
+
+- **viewer.cache.ts 인메모리 캐시**: 핫픽스 전에 frozen 미포함으로 적재된 캐시 엔트리가 있을 수 있음. 운영 배포 시 서버 rolling restart 또는 캐시 TTL 만료 후 정상 응답. 코드 변경 불요.
+- **Bug 1 해석 ambiguity (마스터 확인 권장)**: rowId 시각적 sticky 동작이 fixed cells 와 자연 부착으로 해소되었으나, "rowId 가 frozen 상태로 보이는 것 자체 제거" 의 강한 해석을 원하면 `customColumnGenerator.ts:95` 의 `frozen: 'start'` 제거 + 별도 sticky 메커니즘 필요. 본 핫픽스는 (a) 해석 채택.
+
 ## v001.106.0
 
 > 통합일: 2026-05-15
