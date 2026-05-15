@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.90.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#53 (hotfix 1)
+
+### 페이즈 결과
+- **Phase 3 (hotfix 1)**: 마스터 핫픽스 사유 — "섹션 단위로만 어두워지고 있어, 영역 단위로 어두워져야 해, 더 명확하게". 디밍 적용점을 Section → Area 로 이동하고, 활성 area 한 곳만 bright 로 유지하도록 의미를 재정의. 강도는 `opacity-40 grayscale` → `opacity-20 grayscale` 로 2배 강화.
+  - `src/entities/layout/model/useActiveEditingSectionId.ts` 삭제, `useActiveEditingTarget.ts` 신규 (rename 형태). 반환 `{ sectionId: string | null; areaId: string | null }`.
+  - 우선순위 (1) section drawer: `{ sectionId, areaId: null }` — 해당 섹션의 모든 area bright.
+  - 우선순위 (2)/(3) area/widget drawer: `{ sectionId: null, areaId }` — 선택 area 하나만 bright, 같은 섹션의 형제 area 들도 dim.
+  - subarea 가 활성 cell 인 경우 부모 area id 반환 → 부모 area 가 bright 로 남아 subarea 내용물도 보임 (CSS opacity 상속).
+  - `Section.tsx` 의 디밍 클래스 완전 제거.
+  - `Area.tsx` 에 디밍 클래스 추가: `opacity-20 grayscale transition-[opacity,filter] duration-200`. placeholder 분기는 기존 `opacity-50` 유지 (손대지 않음).
+
+### 영향 파일
+- data-craft:
+  - `src/entities/layout/model/useActiveEditingTarget.ts` (rename from useActiveEditingSectionId.ts)
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+
+### 검증 시나리오 (QA 수동 확인 필요)
+1. 위젯 설정(연필 아이콘) 열기 → 해당 위젯이 들어있는 area 만 또렷, 같은 섹션의 다른 area 들 + 다른 섹션의 모든 area 도 회색·반투명(20%).
+2. 영역(Area) 편집 드로어 열기 → 동일하게 그 area 만 또렷.
+3. 섹션 설정 드로어 열기 → 그 섹션의 모든 area 가 또렷, 다른 섹션의 area 들만 디밍.
+4. 디밍된 area 위에 마우스를 올렸을 때 hover 컨트롤(편집/추가 버튼)이 시각적으로 인지 가능한지 확인 (opacity-20 상태 + group-hover 노출). 발견성이 약하면 후속 핫픽스로 AreaControls 를 디밍 대상에서 제외하는 식의 보강 가능.
+5. View 모드(디자인 모드 off) → 디밍 발생하지 않음.
+
+### 알려진 제약 / 후속 검토
+- Area 의 `opacity-20` 이 자식 트리 전체에 상속되므로 디밍된 area 의 AreaControls hover 버튼도 평소엔 20% 로 보임. 디자인 모드 사용성에 부담이면 후속 핫픽스로 dim 을 sibling overlay 로 분리하거나 AreaControls 에 `opacity-100` 강제 부여 가능.
+- v001.84.0 의 "위젯 드로어 열린 상태에서 다른 섹션 클릭 시 활성 섹션이 즉시 교대되지 않음" 제약은 본 핫픽스에서도 동일.
+
 ## v001.89.0
 
 > 통합일: 2026-05-15
