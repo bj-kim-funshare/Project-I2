@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.91.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#57 (핫픽스 1)
+
+### 페이즈 결과
+- **Phase 2 (핫픽스 1)** (`686c418`): Phase 1 의 `truncate` 제거 이후 긴 텍스트 셀이 자유 wrap 되면서 행 높이를 초과하는 콘텐츠가 `DataCell` 의 `overflow: hidden` 에 의해 mid-line 으로 잘리는 회귀 보정. `FsGridLongTextCellRenderer.tsx` 에 `useLayoutEffect` + `ResizeObserver` 로 `cellRef` div 의 실측 clientHeight - 패딩 / computed line-height 비율로 `maxLines` 동적 산출, span 의 `WebkitLineClamp` 에 바인딩. CSS 4중주 (`display:-webkit-box` + `WebkitBoxOrient:'vertical'` + `overflow:'hidden'` + `WebkitLineClamp`) 로 행 높이만큼만 라인이 표시되고 초과분은 말줄임표로 처리. `wordBreak:'break-word'` 추가로 매우 긴 연속 토큰도 안전 wrap. 행 높이 변경 시 ResizeObserver 가 재측정해 자동 반영.
+
+### 배경 (핫픽스 사유)
+v001.87.0 (Phase 1) 에서 `truncate` 단순 제거로 wrap 동작을 일반 텍스트 셀과 정렬했으나, 행 높이 capacity 를 초과하는 콘텐츠가 셀 경계 밑으로 흘러나가 `DataCell` 의 `overflow: hidden` 에 의해 임의 위치에서 잘리는 시각적 회귀가 발생 (마스터 보고 화면 — 3줄 분량 행 높이에 4줄+ 렌더, 마지막 라인 mid-character 절단). 라인 경계 정렬 클리핑 + 말줄임표가 필요.
+
+### 영향 파일
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx` (+30 / -1)
+
+### 검증 결과
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (3 warnings, 0 errors).
+
+### 알려진 한계
+- `lineHeight === 'normal'` 폴백은 `fontSize × 1.5` 근사. 실제 브라우저 'normal' 은 폰트마다 다름 (시스템 폰트 흔히 1.2). 셀이 'normal' line-height 를 상속하는 경우 edge-case 에서 1라인 오차 가능 — 관측 시 폴백을 `× 1.2` 로 조정하거나 명시 line-height 지정 권장.
+
 ## v001.90.0
 
 > 통합일: 2026-05-15
