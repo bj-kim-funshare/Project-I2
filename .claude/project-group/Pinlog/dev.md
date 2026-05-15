@@ -16,7 +16,7 @@ targets:
     role: BE
     type: project
     dev_command: ./gradlew bootRun
-    port: 8080
+    port: 8443
     cache_paths:
       - build
       - .gradle
@@ -33,7 +33,7 @@ targets:
 ## 포트 정책
 
 - `Pinlog` = 5173 (Vite 기본).
-- `Pinlog-Server` = 8080 (Spring Boot 기본).
+- `Pinlog-Server` = 8443 (Spring Boot HTTPS — README / `bootRun` 기준).
 - 두 포트 충돌 없음.
 
 ## lint 정책
