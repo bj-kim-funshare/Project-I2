@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.121.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#72
+
+### 페이즈 결과
+
+- **Phase 1** (`fd25d79`, data-craft-mobile): fs-api-mobile 에 타임아웃 헬퍼 추가 (`FETCH_TIMEOUT_MS=15_000`, AbortController, 웹 fs-api 동일 패턴). `executeFetch` / `interceptedFetchBinary` 에 timer signal + 호출자 userSignal 합성, 타임아웃 → `ApiException(status=0, timeout=true)` / 네트워크 TypeError → `ApiException(status=0, timeout=false)` / 사용자 abort → 원본 AbortError 재발생. `ApiException` 에 `timeout?: boolean` 5번째 선택 인자 추가 (기존 호출 표면 보존).
+- **Phase 2** (`ef55cb9`, data-craft-mobile): 신규 `core/client.retry.ts` 로 transient 재시도 헬퍼 도입 (지수 backoff 100ms · 300ms · 900ms, 최대 3회). 분류 = `timeout=true` OFF / caller signal aborted OFF / `status=0 && !timeout` ON (네트워크 실패) / 5xx ON / 4xx OFF. **GET·HEAD 기본 재시도**, 비안전 메서드는 호출자 `retry: true` opt-in 시에만. 401 + token refresh 경로와는 합성 금지 (refresh queue 무변경). `parseOptions.ts` 에 `retry` 옵션 파싱 추가. `interceptedFetch` 의 executeFetch 호출 3곳 (skipAuth / 일반 / 토큰 갱신 재시도) 을 모두 `runWithRetry` 로 wrap.
+- **Phase 3** (`b62769c`, data-craft-mobile): 신규 `core/client.headers.ts` 의 `async buildSessionHeaders(options): Promise<HeadersInit>` 로 Bearer 주입 단일화. 토큰 존재 시 `Authorization: Bearer <token>`, 부재 / skipAuth → 키 생략, 호출자 헤더 우선 (override). 신규 커스텀 헤더 추가 0 (CORS preflight 회피 — BE 무수정 제약). 리프레시 콜백 내부 Bearer 주입은 newToken 파라미터 의미가 다르므로 보존 (부분 단일화 — primary path 만 헬퍼화).
+
+### 영향 파일
+
+data-craft-mobile:
+- packages/fs-api-mobile/src/core/client.fetch.ts
+- packages/fs-api-mobile/src/core/client.retry.ts (신규)
+- packages/fs-api-mobile/src/core/client.headers.ts (신규)
+- packages/fs-api-mobile/src/core/parseOptions.ts
+- packages/fs-api-mobile/src/constants/index.ts
+- packages/fs-api-mobile/src/types/api.types.ts (ApiException timeout 필드 추가)
+- packages/fs-api-mobile/src/api/__tests__/client.fetch.test.ts
+
+머지 커밋: `c6cbbc1` (i-dev).
+
+### 알려진 제약 / 후속
+
+- **vitest 게이트 미실행**: `packages/fs-api-mobile/vitest.config.ts` 의 `exclude` 목록에 `client.fetch.test.ts` 가 본 플랜 이전부터 등록돼 있어 본 플랜의 신규 시나리오 테스트 (타임아웃 / 네트워크 실패 / 재시도 / 세션 헤더 4개 카테고리) 가 패키지 테스트 게이트에서 미실행. 본 페이즈에서 exclude 제거는 plan-enterprise 스코프 밖 (마스터 별도 결정 사항) 이라 미해결. `pnpm typecheck` 는 통과 — 10+ 호출처 (apps/web/src/mobile/screens/**, fs-relation-builder-mobile, fs-data-link-mobile, fs-data-viewer-mobile) 와의 정적 통합은 확인됨.
+- **세션 헤더 부분 단일화**: 리프레시 콜백 내부 Bearer 주입은 newToken 파라미터 사용 구조로 의미가 달라 기존 방식을 보존했다. 향후 동일 헬퍼로 묶으려면 함수 시그니처 (인자 vs storage read) 조정 필요.
+- **Roadmap-1 단계1-A 완료** — 후속 1-B / 1-C 가 본 어댑터 위에서 페이지/레코드 화면 작업을 진행할 수 있다.
+
 ## v001.120.0
 
 > 통합일: 2026-05-15
