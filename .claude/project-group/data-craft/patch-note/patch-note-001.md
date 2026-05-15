@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.94.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#55 (hotfix 3)
+
+### 페이즈 결과
+- **Phase 4 (hotfix 3)**: `src/services/viewer/viewer.group.ts` 의 `createGroup` 내 rename SP 호출 (line 82-94, TEMP → 실제 이름 변환) 을 try/catch 로 감쌈. `Duplicate entry ... data_group_unique` 메시지를 감지하면 `ConflictError('GROUP_NAME_DUPLICATE')` (HTTP 409) 로 변환. TEMP 그룹은 외부 catch 의 `connection.rollback()` 으로 자동 정리. 다른 SP 에러는 그대로 re-throw.
+
+### 배경
+hotfix 2 (`viewerRoleCheck` 미들웨어 제거) 적용 후 그룹 생성 / 열 추가 / 그룹 삭제 정상 동작 확인. 그러나 그룹 생성 시 동시 발사된 두 요청 (FE 측 더블 서밋 패턴) 이 모두 `createGroup` 의 pre-check (`checkGroupNameDuplicate`, line 46) 를 통과 → 각자 TEMP 그룹을 만든 뒤 rename SP 호출 시점에 한 쪽은 commit 성공 (201) 하고 다른 쪽이 unique key (`data_group.data_group_unique`) 에 충돌 → SP wrapper 가 generic `Error('[EAV] SP 오류: Duplicate entry ...')` 를 던져 500 응답. 사용자 perspective 에선 "그룹은 생성됐는데 에러 메시지도 떠" 패턴. BE 측 한 줄로 race 케이스를 명확한 409 로 변환하여 UX 일관성 회복.
+
+### 영향 파일
+- data-craft-server:
+  - `src/services/viewer/viewer.group.ts`
+
+### 운영 가이드
+
+- dev 서버 재기동 후 그룹 생성 시도 → 정상 동작 시 201 (한 그룹 생성). race 발생 시 한 응답은 201, 다른 응답은 409 (`GROUP_NAME_DUPLICATE`, 500 아님).
+- FE 측 더블 서밋 자체 차단 (예: useRef in-flight lock) 은 별개 후속 — 본 핫픽스로 BE 응답 일관성은 확보.
+
+### 검증 시나리오
+- 새 그룹 이름 입력 → "만들기" 단일 클릭 → 201 1건만 떠야 정상.
+- 동시 발사 시뮬레이션 (curl 두 번 연속 또는 더블 클릭) → 한 쪽 201, 다른 쪽 409 (500 아니어야 함).
+- 트랜잭션 rollback 확인 — 실패한 요청의 TEMP 그룹이 DB 에 남지 않음.
+
 ## v001.93.0
 
 > 통합일: 2026-05-15
