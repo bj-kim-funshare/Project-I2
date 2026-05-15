@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.101.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: funshare-inc/data-craft#61
+
+### 페이즈 결과
+
+- **Phase 1** (`93a2c53a`, data-craft): 그리드 input 셀 4종(Text/Percent/Link/Email) ArrowLeft 핸들러의 셀-이동 발화 조건이 `selectionStart === 0` 단일 체크였던 결함 수정. `selectionEnd === 0` AND 가드 추가로 전체 선택 상태(`selectionStart=0, selectionEnd=value.length`)에서는 핸들러가 preventDefault 하지 않고 브라우저 기본 동작(캐럿을 position 0 으로 collapse)이 동작. 캐럿이 0 위치 + 빈 selection 인 경우의 좌측 셀 이동(저장 + 인접 이동) 은 그대로 유지. ArrowRight 대칭 분기는 전체 선택 시 발화 조건이 우연히 거짓이라 실사용 영향 없음 — 본 범위 외.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/lib/cell-keyboard/inputKeyboardHandler.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridPercentCellRenderer/usePercentCellHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLinkCellRenderer/useLinkCellHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridEmailCellRenderer/useEmailCellHandlers.ts`
+
 ## v001.100.0
 
 > 통합일: 2026-05-15
