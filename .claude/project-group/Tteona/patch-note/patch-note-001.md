@@ -1,5 +1,78 @@
 # Tteona — Patch Note (001)
 
+## v001.5.0 — 단계2 인증 통합 (FE (auth) 라우트 + BE /auth/* 풀스택)
+
+> 통합일: 2026-05-15
+> 플랜 이슈: bj-kim-funshare/Tteona#5
+
+### 페이즈 결과
+- **Phase 1** (feat, Tteona-server): users 스키마에 `passwordHash` (text, nullable) 컬럼 추가 + `password_reset_tokens` 테이블 신설 (id/userId/tokenHash/expiresAt/usedAt/createdAt). schema/index.ts 에 재익스포트 추가. 마이그레이션 SQL 미생성 — drizzle.config.ts 원본 주석 (외부 도구가 캐노니컬 스키마 소유) 보존. 커밋 `125b406d` (iter 2/3 — 1차 시도가 drizzle-kit generate 로 1080라인 마이그레이션 + config 수정한 것을 회수 후 재실행).
+- **Phase 2** (feat, Tteona-server): bcrypt 6.0.0 의존성 + 4개 유틸리티 신설. `src/lib/auth/password.ts` (cost 12 hash/verify), `src/lib/auth/jwt.ts` (jose 기반 HS256 sign/verify, 7d exp), `src/lib/validation/auth.ts` (zod 5종 — signup/login/forgotPassword/resetPassword/socialComplete), `src/lib/http/error.ts` (ApiError 타입 + jsonError helper + 표준 에러 코드 6). 커밋 `fde5f11f`.
+- **Phase 3** (feat, Tteona-server): `POST /auth/signup` 핸들러 — drizzle transaction 으로 users + user_consents 동시 INSERT, consent version=`{terms:"S2.1",privacy:"S1.5"}` JSON 직렬화, HS256 JWT 발급. 커밋 `3d2728b9` + lint-hotfix `a67933a` (drizzle `.returning()` undefined 가드).
+- **Phase 4** (feat, Tteona-server): `/auth/login` (verifyPassword + JWT 발급, enumeration 방지 401 통일), `/auth/session` (authMiddleware + c.get('userId')), `/auth/logout` (v1 stateless 200, blacklist v2 보류). 커밋 `11166fd5`.
+- **Phase 5** (feat, Tteona-server): kakao/google/apple OAuth 3-handler (initiate + callback + complete). fetch 기반, jose 만 사용 (Apple ES256 client_secret 동적 서명). state HMAC-SHA256 + base64url + 만료 10분. callback 응답 `{user, token, consent_required}` JSON 통일. complete 는 신규 사용자 consent 수집 (Phase 3 와 동일 형식). env 12종 (KAKAO_*, GOOGLE_*, APPLE_*, OAUTH_STATE_SECRET) optional 추가, config.ts zod 확장. 커밋 `3c0b326`. (Informational blockers: Apple form_post BE→FE redirect 재구성은 v2 보류.)
+- **Phase 6** (feat, Tteona-server): `/auth/forgot-password` (32바이트 랜덤 토큰 + SHA-256 hash 만 DB 저장, enumeration 방지 200 통일, stub console.info), `/auth/reset-password` (tokenHash + usedAt isNull + expiresAt 검증, drizzle transaction 으로 passwordHash 갱신 + usedAt 마킹). 커밋 `0efad342`.
+- **Phase 7** (feat, Tteona): Next.js 16 App Router Route Handler 9개 (`/api/auth/{signup,login,logout,session,forgot-password,reset-password,social/[provider],social/callback,social/complete}`) + 헬퍼 3 (`api.ts` beFetch, `session.ts` get/set/clear, social.ts stub 교체) + minimal middleware. JWT 는 `tteona_session` httpOnly Secure SameSite=Lax 쿠키 (maxAge 7d) 관리. social initiate 는 redirect:'manual' 로 BE 302 캐치 후 NextResponse.redirect. 커밋 `72a4828`.
+- **Phase 8** (feat, Tteona): `(auth)/login` (LegalProvider scope="login" + EmailPasswordForm + SocialLoginV2 dialog), `(auth)/signup` (2-step EmailPasswordForm → SignupConsentForm), EmailPasswordForm / SignupConsentForm 2 컴포넌트 신설. stub `(auth)/auth/page.tsx` 삭제, layout.tsx 최소 wrapper. 커밋 `e5580fc`.
+- **Phase 9** (feat, Tteona): `(auth)/social-callback/[provider]` (Next 15 `use(params)` + useEffect 마운트 fetch + consent_required 분기), SocialCompleteConsent 컴포넌트 (LegalProvider wrapper + `/api/auth/social/complete` POST), `(auth)/forgot-password` (enumeration 방지 동일 메시지), `(auth)/reset-password` (토큰 query 검증, 성공시 /login). 커밋 `062ad9f5`.
+
+### 영향 파일
+
+**Tteona-server (BE)**:
+- `src/lib/db/schema/users.ts` (passwordHash 1 컬럼 추가)
+- `src/lib/db/schema/password-reset-tokens.ts` (신규)
+- `src/lib/db/schema/index.ts` (재익스포트 추가)
+- `src/lib/auth/password.ts` (신규)
+- `src/lib/auth/jwt.ts` (신규)
+- `src/lib/auth/oauth/kakao.ts` (신규)
+- `src/lib/auth/oauth/google.ts` (신규)
+- `src/lib/auth/oauth/apple.ts` (신규)
+- `src/lib/validation/auth.ts` (신규)
+- `src/lib/http/error.ts` (신규)
+- `src/lib/config.ts` (env 확장)
+- `src/routes/auth/index.ts` (8 라우트 등록 추가)
+- `src/routes/auth/signup.ts` (신규)
+- `src/routes/auth/login.ts` (신규)
+- `src/routes/auth/session.ts` (신규)
+- `src/routes/auth/logout.ts` (신규)
+- `src/routes/auth/social.ts` (신규)
+- `src/routes/auth/password-reset.ts` (신규)
+- `.env.example` (12 env 추가)
+- `package.json`, `pnpm-lock.yaml` (bcrypt 추가)
+
+**Tteona (FE)**:
+- `src/app/(auth)/auth/page.tsx` (삭제 — stub)
+- `src/app/(auth)/layout.tsx` (max-w-md wrapper)
+- `src/app/(auth)/login/page.tsx` (신규)
+- `src/app/(auth)/signup/page.tsx` (신규)
+- `src/app/(auth)/social-callback/[provider]/page.tsx` (신규)
+- `src/app/(auth)/forgot-password/page.tsx` (신규)
+- `src/app/(auth)/reset-password/page.tsx` (신규)
+- `src/app/api/auth/signup/route.ts` (신규)
+- `src/app/api/auth/login/route.ts` (신규)
+- `src/app/api/auth/logout/route.ts` (신규)
+- `src/app/api/auth/session/route.ts` (신규)
+- `src/app/api/auth/forgot-password/route.ts` (신규)
+- `src/app/api/auth/reset-password/route.ts` (신규)
+- `src/app/api/auth/social/[provider]/route.ts` (신규)
+- `src/app/api/auth/social/callback/route.ts` (신규)
+- `src/app/api/auth/social/complete/route.ts` (신규)
+- `src/lib/auth/api.ts` (신규)
+- `src/lib/auth/session.ts` (신규)
+- `src/lib/auth/social.ts` (stub → 실 구현)
+- `src/middleware.ts` (신규 minimal)
+- `src/components/auth/EmailPasswordForm.tsx` (신규)
+- `src/components/auth/SignupConsentForm.tsx` (신규)
+- `src/components/auth/SocialCompleteConsent.tsx` (신규)
+
+### 비고 / v2 보류 항목
+- **consent 버전 표기**: `S2.1` (terms) / `S1.5` (privacy) — 약관/개인정보 문서 버전 식별자로 해석 (마스터 자율 진행 모드, 플랜에 명시). 다른 의미였다면 향후 plan 으로 재구성.
+- **메일 발송 인프라**: forgot-password 는 v1 stub console.info — SMTP/SendGrid 통합 별도 plan.
+- **OAuth provider 자격증명**: env 항목만 추가 — kakao/google/apple 의 실 client ID/secret 은 배포 시 마스터가 .env 에 채움.
+- **Apple form_post → BE→FE redirect 재구성**: v2 (현 v1 은 모든 provider callback 을 JSON 응답으로 통일, FE BFF fetch 가정).
+- **JWT blacklist (강제 로그아웃)**: v2 — 현 logout 은 클라이언트 토큰 폐기 + 쿠키 삭제만.
+- **FE 브라우저 smoke-test**: 본 플랜은 lint-only 검증 — 실제 OAuth flow / 폼 제출 / 쿠키 동작은 마스터 수동 점검 필요.
+
 ## v001.4.0 — 단계1 v3 공유 디자인 프리미티브 라이브러리
 
 > 통합일: 2026-05-15
