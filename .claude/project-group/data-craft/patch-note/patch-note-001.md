@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.119.0
+
+> 통합일: 2026-05-15
+> 플랜 이슈: #70
+
+### 페이즈 결과
+- **Phase 1**: `SelectionStateContext` + `useTableView` 에 그룹 단위 선택 헬퍼 두 함수 추가 — `onSelectGroup(rowFields)` (전부 선택 상태일 때만 해제, 그 외는 전부 선택) + `getGroupSelectionState(rowFields)` ('none' | 'partial' | 'all'). UI 무수정.
+- **Phase 2**: `GroupedRowItem` header 에 `rowFieldsInGroup` 적재 → BodyRowList 가 GroupHeader 로 전달. `GroupHeader` 에 chevron 즉시 왼쪽 native checkbox 추가 (indeterminate 는 `useRef`+`useEffect` 로 DOM 설정, onClick/onChange 둘 다 stopPropagation, `useSelectionState` 의 그룹 헬퍼 사용). 체크박스+chevron+제목 컨테이너에 `position: sticky; left: 0; zIndex: 1` + `bg-muted group-hover:bg-accent` 적용 — 가로 스크롤 시 좌측에 고정. i18n `gridTable.selectGroup` 4 언어(ko/en/ja/zh) 추가. `FsGridTableView` 가 `SelectionStateProvider` 에 `onSelectGroup` 전달.
+- **Phase 2 hotfix**: `useSubGridModel.ts:198` / `useTableView.ts:612` 의 GroupedRowItem header 리터럴 두 곳에 `rowFieldsInGroup` 수집 추가 — typecheck 통과.
+
+### 영향 파일
+- `packages/fs-data-viewer/src/features/data-viewer/context/SelectionStateContext.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/grid-calculations/rowGrouping.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/gridGroupTypes.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/BodyRowList.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/GroupHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridModel.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+
 ## v001.118.0
 
 > 통합일: 2026-05-15
