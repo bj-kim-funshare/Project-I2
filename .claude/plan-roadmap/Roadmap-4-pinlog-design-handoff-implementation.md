@@ -16,7 +16,12 @@
 
 1️⃣ 🟢 /plan-enterprise Pinlog 단계1-D 핀 상세 + 메모리 맵 — `widgets/post-detail` 시안 적용 (사진 4:5, 작성자 구스 아바타, 메모 Gaegu 17px, 태그 칩, Scope 배지, StickerRow 구스 5표정, 댓글 입력 하단 고정), `routes/post/:uuid` 신설, MemoryMapScreen 정비 (필터 칩 기간/태그/scope, 핀 탭 바텀시트 프리뷰, 빈 상태 EmptyState). post-detail 의 본인/타인 ⋯ 메뉴 (편집/삭제/신고/뮤트). 본 단계의 scope 배지 / 태그 칩 표시는 Phase 2 BE 확장 전까지 mock 데이터 fallback.
 
-1️⃣ 🔴 /plan-enterprise Pinlog 단계1-E 프로필 + 활동 + 설정 폴리시 — MyPage (프로필 카드 큰 구스 + 핸들 + 통계 핀/친구/캡슐 카운트, 탭 핀 그리드/추억지도/캡슐 보관함 — 캡슐 탭은 Phase 3 까지 비활성), ActivityPage / NotificationPage 6 kind 분기 UI, SettingsPage 6 섹션, ProfileEditPage / AccountManagePage 정비. 친구 카운트는 Phase 4 까지 0 고정.
+1️⃣ 🟢 /plan-enterprise Pinlog 단계1-E 프로필 + 활동 + 설정 폴리시 — MyPage (프로필 카드 큰 구스 + 핸들 + 통계 핀/친구/캡슐 카운트, 탭 핀 그리드/추억지도/캡슐 보관함 — 캡슐 탭은 Phase 3 까지 비활성), ActivityPage / NotificationPage 6 kind 분기 UI, SettingsPage 6 섹션, ProfileEditPage / AccountManagePage 정비. 친구 카운트는 Phase 4 까지 0 고정.
+   - 베이스 #45 (v001.7.0) — 시안 폴리시: ProfileStatsRow / 3-탭 / Notification 6-kind / Settings 6 섹션 / ProfileEdit / AccountManage 시안.
+   - 후속 ① #46 (v001.8.0) — 내 핀 endpoint `POST /api/post/my` + `/my-all` 신설, `useInfinitePostList` userId 파라미터 확장, `MapWithCarousel` userId prop, ProfileStatsRow.pinCount 실값 + 두 탭 실데이터.
+   - 후속 ② #47 (v001.9.0) — `PostDetailPage` `?focus=comments` 처리: 댓글 영역 스크롤 + 입력창 포커스.
+   - 후속 ③ #48 (v001.10.0) — `AccountManageView` 멀티 계정 실연동: `useSavedAccountsStore` 신설, `AccountCard` 인터랙션, 토큰 교체 / 라우트 리프레시, AuthPage add-mode.
+   - Hotfix1 (v001.11.0) — 후속 권장 5/8 일괄: silent button 정밀화, exhaustive-deps 10→0 (lint-clean), `postApi.all()` 인자 위치 fix, 모바일 키보드 폴백, `CommentInput` React 19 modernize. 미처리 3건 (#1 httpOnly cookie / #6 unbounded 페이징 / #8 gate-runner Haiku) 은 별도 plan 권장.
 
 🔴 /dev-inspection Pinlog today
 
