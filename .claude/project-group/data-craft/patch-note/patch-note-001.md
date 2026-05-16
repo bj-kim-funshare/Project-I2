@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.137.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#75 (hotfix 5)
+
+### 페이즈 결과
+
+- **Phase 8 (hotfix 5)** (`bf9c596b`, data-craft): `EventCardHeader.tsx` 의 ▲▼ 버튼 onClick 에서 `setIsCardHover(false)` 를 reorder 호출 직전에 추가. 본 카드가 swap 후 새 위치로 이동한 직후 1프레임 동안 stale-hover 가 잔존하던 시각 결함 차단.
+
+### 해결방식
+
+- 마스터 보고: "ABC가 있으면 A에 있는 내리기 버튼을 누르면 순간적으로 A가 내려가면서 커서 포커싱이 중간으로 내려가, 근데 마우스 위치는 그대로니까 다시 첫번째인 B로 돌아와서 깜박이는것처럼 보여".
+- React 가 key 안정성으로 컴포넌트 identity 를 보존하므로 hotfix 4 의 `isCardHover` state 가 swap 후에도 보존됨. A 의 DOM 만 중간으로 이동하면서 isCardHover=true 가 유지되어, 브라우저가 mouseleave (A) / mouseenter (B) 를 다음 프레임에 발사하기 전까지 중간 위치에서 dark 표시가 유지 → 마스터가 본 "깜박임".
+- 해결책 = swap 트리거 시점 (onClick) 에 본 카드 hover state 를 능동적으로 `false` 처리하여, React commit 시 본 카드는 이미 unhover 상태로 그려짐. 이후 자연스러운 mouseenter (B) 가 발사되어 새 hover 가 정상 적용됨. hover state 의 "이동" 이 능동적으로 즉시 발생.
+- hotfix 4 (hover state 화) 의 토대 위에서 동작 — state 가 없었다면 본 hotfix 도 의미 없었음.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/EventCardHeader.tsx`
+
 ## v001.136.0
 
 > 통합일: 2026-05-16
