@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.142.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #82
+
+### 페이즈 결과
+
+- **Phase 1** (`fed78d5`): `data-craft-server/.env` 를 양측(EC2 운영 + origin/main) 보존 통합본으로 갱신. `SERVER_URL` 을 `127.0.0.1` → `0.0.0.0` 으로 변경 (EC2 외부 바인딩 요구 충족 + 로컬 dev 도 동작 — 양립 검증됨), `FRONTEND_URL` 위에 로컬 dev / 운영 용도 구분 코멘트 2줄 추가. `BILLING_MASTER_KEY`, `FRONTEND_URL`, `JWT_*`, `NTS_API_KEY`, `DB_*`, `SMTP_*`, `TOSS_*` 등 나머지 모든 항목은 origin 값 유지. 본 페이즈는 EC2 의 `git pull` 충돌 해소가 목적이며, 실제 "열 고정" prod 오류 해결은 후속 EC2 수동 재배포 단계에서 완료된다.
+
+### 진단 요지
+
+- pm2 logs: `Error: 허용되지 않은 컬럼 속성: frozen at change.columnSettings.ts:255`
+- 원인은 DB 가 아니라 EC2 BE 가 frozen 화이트리스트 추가(`#56 phase 2` ~ `#60 hotfix 1`) 이전 stale 빌드로 동작 중. EC2 의 `git pull` 이 `.env` 충돌로 abort 되어 코드 갱신 차단된 상태였음.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #82` (본 entry) — Phase 1 → i-dev 머지 + patch-note
+2. `patch-confirmation data-craft` — origin push
+3. `dev-merge data-craft` (i-dev → main)
+4. `pre-deploy data-craft` (target: data-craft-server) — main 검증 + 빌드 + main → aws-deploy push
+5. (마스터 수동) EC2 재배포 — `git reset --hard origin/aws-deploy && pnpm install && pnpm build && pm2 restart data-craft --update-env`
+
+### 회귀 검증
+
+- `pnpm lint` (data-craft-server, worktree) PASS (exit 0, 0 errors).
+- advisor #1 / advisor #2 5-perspective PASS.
+
+### 영향 파일
+
+data-craft-server:
+- `.env` (+3 / -1)
+
+### 미해결 (별건)
+
+- R1: `FRONTEND_URL=http://localhost:5173` 이 prod 이메일 footer 에 그대로 노출되는 결함 — 별도 핫픽스/정책 결정 필요.
+- R2: `env_management: git-tracked` 정책 자체가 prod-secret 분기를 강제하는 구조적 한계 — 후속 `/group-policy` 로 `.env` → `.env.example` 만 git-tracked 전환 검토 권장.
+
 ## v001.141.0
 
 > 통합일: 2026-05-16
