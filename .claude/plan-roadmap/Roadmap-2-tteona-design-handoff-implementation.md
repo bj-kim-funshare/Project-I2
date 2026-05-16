@@ -16,7 +16,7 @@
 
 🔴 /dev-security-inspection Tteona today
 
-🔴 /plan-enterprise Tteona 단계3-A 바이어 홈/탐색/피드/검색/필터 — src/app/(buyer)/{home, feed, search, filter, explore} 5 화면 + src/components/feed (FeedCard A/B, PersonaOverlay 적용), src/components/explore (handoff explore-cards.jsx 포팅), src/components/filter. Tteona-server feed 라우트 결합 — 미구현 항목은 같은 plan phase 로 BE 보강.
+🟢 /plan-enterprise Tteona 단계3-A 바이어 홈/탐색/피드/검색/필터 — src/app/(buyer)/{home, feed, search, filter, explore} 5 화면 + src/components/feed (FeedCard A/B, PersonaOverlay 적용), src/components/explore (handoff explore-cards.jsx 포팅), src/components/filter. Tteona-server feed 라우트 결합 — 미구현 항목은 같은 plan phase 로 BE 보강. (이슈 bj-kim-funshare/Tteona#6, patch-note v001.6.0, 2026-05-15 완료)
 
 🔴 /plan-enterprise Tteona 단계3-B 바이어 상세/결제/구매완료/환불요청 — src/app/(buyer)/{detail/[id], pay/[id], purchase-done/[id], refund/request/[id]} 라우트 + src/components/trip (Detail_v3 A/B/C 변종 + Blur_B_v3 + TrustCard 통합), src/components/checkout (Pay_B_Legal 통합), src/components/refund (Aft_A_Legal 통합). Tteona-server transactions + refunds 결합. accent → warn 컬러 마이그레이션 (환불 액션) 포함.
 
