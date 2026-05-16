@@ -1,0 +1,26 @@
+{
+  "skill": "pre-deploy",
+  "leader": "data-craft",
+  "timestamp_utc": "2026-05-14T14:19:05Z",
+  "selected_targets": [
+    {
+      "name": "data-craft-server",
+      "role": "BE",
+      "tool": "other",
+      "target": "https://d3u7b7cxusjkuc.cloudfront.net",
+      "build_command": "pnpm build",
+      "deploy_command": "git checkout main && git push origin main:aws-deploy",
+      "env_management": "git-tracked",
+      "cwd": "/Users/starbox/Documents/GitHub/data-craft-server",
+      "current_branch": "main",
+      "head_sha": "9ec8cb62c3194ecdd0f517030b4fed87e11c559e",
+      "working_tree_dirty": false
+    }
+  ],
+  "all_member_repos_aligned_to_main": [
+    "/Users/starbox/Documents/GitHub/data-craft",
+    "/Users/starbox/Documents/GitHub/data-craft-mobile",
+    "/Users/starbox/Documents/GitHub/data-craft-ai-preview",
+    "/Users/starbox/Documents/GitHub/data-craft-server"
+  ]
+}
