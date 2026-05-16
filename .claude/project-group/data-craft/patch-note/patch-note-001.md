@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.130.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#74 (hotfix 1)
+
+### 페이즈 결과
+
+- **Hotfix 1** (`c8987c85`, data-craft): `ViewColumnManagerDialog` 의 `newlyAddedColumnField` 자동 스크롤 effect 에서 `scrollIntoView({ block: 'nearest' })` → `scrollIntoView({ block: 'nearest', behavior: 'smooth' })` 로 변경. 열 추가 시 스크롤 조정이 부드러운 애니메이션으로 동작.
+
+### 해결방식
+
+- 브라우저 네이티브 `scrollIntoView` 의 `behavior: 'smooth'` 옵션 사용. 신규 의존성 / 신규 코드 없음.
+- 기존 selection-scroll effect (키보드 네비게이션 시 자동 스크롤) 는 마스터 요청 범위 외이므로 손대지 않음 — 즉시 스크롤 그대로 유지.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx`
+
+머지 커밋: (data-craft i-dev 핫픽스1 머지).
+
+### 검증
+
+수동 검증 시나리오 (`pnpm dev` 5173):
+- 데이터 뷰어 → 캘린더/칸반/간트뷰 디자인 모드 → "열 정보 편집" 모달 → 열 추가 → 스크롤이 instant 점프가 아니라 부드러운 애니메이션으로 새 행까지 이동하는지 확인.
+- connection 타입 열 추가에서도 동일 확인.
+- 키보드 ↑/↓ 네비게이션 시 스크롤은 기존대로 instant (변경 없음) 확인.
+
+자동 검증:
+- `pnpm typecheck:all && pnpm lint` PASS (typecheck 58s, eslint 0 errors).
+
+### 알려진 제약 / 후속
+
+- `behavior: 'smooth'` 는 브라우저가 OS 의 "prefers-reduced-motion" 설정을 자동 존중하여 즉시 스크롤로 fallback 한다 — 별도 접근성 가드 코드 불필요.
+- 기존 selection-scroll effect 도 smooth 가 필요해지면 동일 옵션 추가로 통일 가능 (후속 결정 사항).
+
 ## v001.129.0
 
 > 통합일: 2026-05-16
