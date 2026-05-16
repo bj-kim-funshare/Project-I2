@@ -1,5 +1,54 @@
 # Tteona — Patch Note (001)
 
+## v001.10.0 — refunds approve/complete 흐름 + transactions.status 동기화 (admin-gated 2 엔드포인트 + env allowlist 권한 모델)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#10
+
+### 페이즈 결과
+
+- **Phase 1** (feat, Tteona-server): admin 게이트 + service 함수 도메인 로직. `src/lib/config.ts` 에 `ADMIN_USER_IDS` env (콤마구분 UUID list) + 파싱된 `adminUserIds` 배열 export. `src/middleware/admin-auth.ts` 신규 — `requireAdmin()` 미들웨어가 `c.get('userId')` 를 `adminUserIds` 와 비교하여 401(unauthenticated) / 403(non-admin) / next(admin) 분기. `src/lib/refunds/service.ts` 에 `approveRefund(tx, refundId)` (requested→approved 전이 + approvedAt 기록) + `completeRefund(tx, refundId, outcome, failedReason?)` (approved→completed|failed 전이; outcome='completed' 시 같은 tx 안에서 `transactions.status='refunded'` + `transactions.refundedAt` 원자 갱신; outcome='failed' 시 `refunds.failedReason` 기록 + transactions 미변경) 추가. 결과 enum 4종 (`ok` / `not_found` / `invalid_state` / `missing_failed_reason`). `src/lib/validation/refunds.ts` 에 `refundParamsSchema` + `completeRefundBodySchema` 추가. `.env.example` `ADMIN_USER_IDS=` 추가. DDL 변경 0건. 커밋 `81ca3ba`.
+- **Phase 2** (feat, Tteona-server): admin 라우트 모듈 + 마운트. `src/routes/admin/refunds.ts` 신규 — `adminRefundsRoute.use('*', requireAdmin())` + `POST /:id/approve` (params 검증 → `approveRefund` → enum→HTTP 매핑: ok=200, not_found=404, invalid_state=409+`current_status`) + `POST /:id/complete` (params + `completeRefundBodySchema` 검증 → `completeRefund` → 매핑: ok=200, not_found=404, invalid_state=409, missing_failed_reason=400). 핸들러는 `db.transaction((tx) => fn(tx, ...))` 패턴으로 service-role tx 를 service 에 전달. `src/app.ts` mount 순서: `/webhooks` → `/admin/*` authMiddleware 단독 → `/admin/refunds` 라우트 → 전역 authMiddleware + dbContext → 기존 routes. admin 엔드포인트가 JWT 인증은 받되 RLS dbContext 는 우회. 커밋 `62d6e51`.
+
+### 영향 파일
+
+Tteona-server:
+- src/lib/config.ts
+- src/middleware/admin-auth.ts (신규)
+- src/lib/refunds/service.ts
+- src/lib/validation/refunds.ts
+- .env.example
+- src/routes/admin/refunds.ts (신규)
+- src/app.ts
+
+### 그룹 정책 준수 기록
+
+- `db.md` "정규 스키마는 외부(Huya) 소유, 본 그룹은 DDL 미발행" 준수 — schema 변경 0, 마이그레이션 0. admin 식별은 `.env` `ADMIN_USER_IDS` allowlist (Huya `users` 테이블의 `role` CHECK 가 `('buyer','seller','both')` 만 허용해 `'admin'` 추가 불가, `is_admin` 컬럼 추가도 외부 의존). RLS 회피도 코드-level mount 우회로 — `refunds_admin_*` / `transactions_admin_update` RLS 정책 추가 같은 Huya 의존 0.
+- Lint 게이트: `pnpm typecheck` 두 페이즈 모두 PASS.
+- advisor #1 + #2 모두 5관점 PASS, BLOCK 없음.
+
+### 핵심 설계 결정
+
+- **Admin auth = env allowlist (DDL 회피)**: application-level admin allowlist 가 본 플랜의 단일 보안 경계. `ADMIN_USER_IDS` 누락(빈 env) 시 모든 admin endpoint 403 — fail-closed. 운영 배포 시 env 주입 누락이 라이브 환경에서 admin 작업 차단으로 이어질 수 있어 배포 체크리스트 항목 surface.
+- **RLS bypass = mount 순서로 코드 우회**: admin 라우트를 글로벌 `dbContext` **이전**에 mount + `db.transaction()` 직접 사용 (service-role). 기존 `refunds_buyer_*` RLS 정책이 buyer-scoped 이라 admin UUID 가 `app.user_id` 에 박히면 0 rows 로 조용한 실패하는 구조적 위험을 우회. 동일 패턴이 `/webhooks/stripe` (Stripe plan #9) 에서 이미 채택됨.
+- **complete(outcome='failed') 는 terminal**: 기존 `createRefund` 의 `already_refunded` 차단으로 buyer 재요청 경로 없음. v1 결정 — 재요청 필요 시 admin 수동 처리. v2 후속: `createRefund` 가 prior failed 행을 새 요청으로 대체 허용.
+
+### 외부 의존 / 후속
+
+- **Admin allowlist 운영성**: env 기반은 단순하나 admin 추가/제거가 배포 필요. v2 에서 admin role 정식화(Huya `users.role` enum 확장 + JWT `role` claim) 후속.
+- **Failed refund 재요청 경로 부재**: v2 에서 `createRefund` 로직에 `prior_failed` 분기 추가 검토.
+- **72h 자동 환불 batch job**: v2 별도 페이즈 (본 플랜 명시적 분리).
+- **mount 순서 회귀 감시**: 글로벌 미들웨어보다 admin scope 미들웨어를 먼저 등록하므로 mount 순서가 정확해야 한다. 잘못 배치 시 admin 라우트가 글로벌 dbContext 에 잡혀 RLS 차단 회귀 — 운영 검증 sequence 가 잡음.
+
+### 마스터 수동 검증 sequence
+
+1. (사전) buyer 가 `POST /refunds` → 201, `status='requested'` (기존 회귀 검증).
+2. admin JWT 로 `POST /admin/refunds/:id/approve` → 200, `status='approved'` + `approvedAt`.
+3. admin JWT 로 `POST /admin/refunds/:id/complete` body `{ outcome: 'completed' }` → 200, refund `completed`, transactions `refunded` + `refundedAt` 원자 동기.
+4. 다른 refund 에 `outcome: 'failed', failedReason: '...'` → 200, refund `failed` + `failedReason`, transactions 미변경.
+5. 다른 buyer JWT 로 admin endpoint → 403.
+6. requested 상태에서 바로 complete → 409 `INVALID_STATE_TRANSITION`.
+
 ## v001.9.0 — Stripe 결제 게이트웨이 통합 v1 (BE PaymentIntent + webhook 70/30 split + FE Stripe Elements 결선)
 
 > 통합일: 2026-05-16
