@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.134.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#75 (hotfix 2)
+
+### 페이즈 결과
+
+- **Phase 5 (hotfix 2)** (`26449f17`, data-craft): `FsCalendarDetailPanel.tsx:170` 의 카드 reorder 게이팅을 `mode === FsViewerMode.View` 에서 `mode === FsViewerMode.Write` 로 정정. 마스터의 "뷰 모드" 용어가 코드 enum 의 `FsViewerMode.View` 가 아니라 `FsViewerMode.Write` (셀/행 데이터 편집 = 데이터 상호작용 모드) 를 가리켰음이 확인됨 — 삭제 버튼의 `canEditCells = isWriteMode(mode)` 게이팅과 동일 모드. 동시에 hotfix 1 에서 도입한 색상 가시성도 본 모드에서 비로소 실효.
+
+### 해결방식
+
+- Phase 1 ~ hotfix 1 동안 마스터의 "뷰 모드" 를 `FsViewerMode.View` enum 으로 해석. 마스터 후속 입력 "삭제는 뷰 모드에서 노출하고 디자인 모드에서는 노출 안하고 있어, 이건 정상" 에서 의미 충돌이 노출 — 코드상 삭제 버튼은 `canEditCells = isWriteMode(mode)` 일 때만 표시되므로 마스터의 "뷰 모드" 는 `FsViewerMode.Write`. `FsViewerMode.View` 는 별도의 read-only 소비자 모드로 마스터 일상 용법 밖.
+- 따라서 카드 reorder 도 동일 의미의 "뷰 모드" = `FsViewerMode.Write` 에서 노출되어야 의도 일치. 1줄 게이팅 변경으로 정정.
+- hotfix 1 (색상 가시성) 의 변경은 본 hotfix 2 와 독립적으로 유효 — 두 hotfix 모두 누적 보존.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/FsCalendarDetailPanel.tsx`
+
 ## v001.133.0
 
 > 통합일: 2026-05-16
