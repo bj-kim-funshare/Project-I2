@@ -318,3 +318,36 @@ PinLog-Web:
 - **gate-runner (Haiku) 의 exit code 오분류**: Phase 3 lint 실행에서 실제 exit 0 인 결과를 `exit 1` 로 보고. 메인 세션이 직접 `pnpm lint` 재실행으로 검증 후 PASS 처리. gate-runner 신뢰성 보강 후속 권장 (harness 차원).
 - **`ApiResponse.error` 제네릭화 scope expansion**: Phase 1 affected_files 에 없던 `ApiResponse.java` 1건을 lint hotfix 중 master "no clarifying questions" 모드 하에서 메인 세션이 자체 승인. 사후 보고 — 변경 1줄, 하위 호환 유지.
 - **`MyMemoryMapTab` 의 filter chips / period / scope**: 본 페이즈는 "본인 핀만 지도 표시" 정상 경로까지. `MapFilterChips` 노출/숨김 정책은 후속.
+
+## v001.9.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#47](https://github.com/Team-Pingus/PinLog-Web/issues/47)
+
+### 페이즈 결과
+
+- **Phase 1 — `PostDetailPage` `?focus=comments` 처리 (feat)**: 댓글 알림 (NotificationItem comment kind) 이 라우팅하는 `/post/{uuid}?focus=comments` 쿼리를 상세 페이지가 수신해 댓글 영역 자동 스크롤 + 인증 사용자 입력창 포커스 제공. 구현:
+  - `PostDetailPage` 가 react-router-dom v7 의 `useSearchParams` 로 `focus` 파라미터를 추출해 `PostDetailView` 에 전달.
+  - `PostDetailView` 에 `focus?: string` prop + 3 ref (`commentsRef` 댓글 섹션 wrapper, `commentInputRef` 외부 노출용, `hasFocusedRef` 일회성 가드) + `useEffect` 추가. effect 가 `focus==='comments' && !isLoading && !hasFocused` 조건에서 1회만 발화 — `scrollIntoView({behavior:'smooth', block:'start'})` + `isAuthenticated` 시 `requestAnimationFrame(() => commentInputRef.current?.focus())`. `isLoading` deps 로 데이터 로딩 완료 직후 실행 (early-return 으로 댓글 DOM 미존재 race 회피), one-shot guard 로 `isAuthenticated` 비동기 hydrate 시 중복 발화 방지.
+  - `CommentInput` 을 named function export → `forwardRef<{focus: () => void}, CommentInputProps>` 로 마이그레이션 + `useImperativeHandle` 로 외부에 `focus()` 메서드만 노출 + `displayName='CommentInput'` 부여. 내부 `textareaRef` (height auto-adjust) / 모든 props / 렌더 / 이벤트 핸들러 무변경.
+  - 커밋 `33bdf75` (+34/-13 across 3 files).
+
+### 영향 파일
+
+PinLog-Web:
+- `src/pages/post-detail/PostDetailPage.tsx`
+- `src/widgets/post-detail/ui/PostDetailView.tsx`
+- `src/widgets/comment-list/ui/CommentInput.tsx`
+
+### 검증
+
+- FE lint gate: `pnpm lint` exit 0 / 0 errors / 9 warnings (전부 pre-existing — 본 패치노트 v001.7.0 부터 기재된 동일 9건).
+- 단일 호출자 검증: `CommentInput` 의 forwardRef 마이그레이션 영향 검증 — 실 호출 위치는 `PostDetailView.tsx` 1곳 (`src/widgets/index.ts` 의 re-export 는 passthrough). ref 미전달 호출자는 동작 동일.
+
+### 알려진 후속
+
+- **모바일 키보드 자동 노출**: 일부 모바일 브라우저는 user-gesture 없이 textarea focus 시 가상 키보드를 띄우지 않을 수 있음. 시각적 포커스 표시는 들어가지만 키보드 동시 노출은 OS 정책. 사용자 보고 시 "탭하면 포커스" 폴백 검토.
+- **React 19 `forwardRef` legacy 패턴**: 본 패치는 React 18 호환 보수 경로 (`forwardRef + useImperativeHandle`) 채택. React 19 부터는 함수 컴포넌트가 `ref` 를 일반 prop 으로 직접 받을 수 있으므로 향후 코드베이스가 React-19-only 로 표준화될 때 modernize 권장 (low priority).
+- (계속 유지) `/all` 및 `/my-all` unbounded 응답 → 페이징 도입 권장.
+- (계속 유지) `postApi.all()` pre-existing 인자 위치 버그 (`true` 가 body 위치) fix 권장.
+- (계속 유지) gate-runner (Haiku) exit code 오분류 — harness 신뢰성 보강 권장.
