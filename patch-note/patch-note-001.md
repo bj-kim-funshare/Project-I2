@@ -1,5 +1,31 @@
 # 아이OS — Patch Note (001)
 
+## v001.73.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #39
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1** (`4ec8424`, `4a113ed` 정정): 3개 로드맵 파일의 완료 항목을 🔴 → 🟢 로 갱신. Roadmap-1 line 11/13 (`/dev-inspection data-craft today`, `/dev-security-inspection data-craft today` — 2026-05-15 today-scope inspection-runs 매핑), Roadmap-2 line 19 (단계3-A 바이어 홈/탐색/피드/검색/필터 — 이슈 bj-kim-funshare/Tteona#6, patch-note v001.6.0, 2026-05-15 완료), Roadmap-4 line 15 (단계1-B 핀 작성 4단계 — patch-note v001.5.0). 각 로드맵의 기존 annotation 컨벤션 보존 (Roadmap-2 풀 annotation, Roadmap-4 bare 🟢, Roadmap-1 게이트는 `— 완료 (YYYY-MM-DD)`).
+- 정정 사유: 1차 커밋에서 2026-05-13 inspection-run 으로 매핑했으나 advisor #2 후 JSON 메타 재확인에서 해당 기록의 `scope_mode='custom-payment-domain'` 발견 — Roadmap-1 의 `today` 게이트와 매핑되지 않아 2026-05-15 today-scope 기록으로 정정.
+
+### 영향 파일
+
+- `.claude/plan-roadmap/Roadmap-1-data-craft-mobile-react-feature-parity.md`
+- `.claude/plan-roadmap/Roadmap-2-tteona-design-handoff-implementation.md`
+- `.claude/plan-roadmap/Roadmap-4-pinlog-design-handoff-implementation.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 문서 상태 메타데이터만 갱신.
+
+### 한계
+
+- Tteona/Pinlog 의 2026-05-15 today-scope dev-inspection 단일 기록은 각 로드맵의 어느 게이트 라인에 매핑되는지 모호하여 본 플랜에서 보류. 마스터가 차후 `/plan-roadmap` edit 모드로 직접 갱신 권장.
+- 2026-05-15 data-craft today inspection 의 BLOCK/clean 판정은 본 플랜에서 미확인 — 후속 게이트 follow-up 가능성 남음.
+
 ## v001.72.0
 
 > 통합일: 2026-05-14
