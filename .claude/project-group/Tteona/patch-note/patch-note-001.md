@@ -1,5 +1,56 @@
 # Tteona — Patch Note (001)
 
+## v001.7.0 — 단계3-B 바이어 상세/결제/구매완료/환불요청 (BE transactions+refunds 결합 + FE 4 라우트 + 7 컴포넌트 + 4 BFF, warn 토큰 신규)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#7
+
+### 페이즈 결과
+
+- **Phase 1** (feat, Tteona-server): `refunds` Drizzle 테이블 신규 선언 (FK→transactions ON DELETE RESTRICT, lifecycle status text + requestedAt/approvedAt/completedAt/failedReason) + transactions/refunds Zod DTO (params/response/body 분리, snake_case 바디). 커밋 `27738a1`.
+- **Phase 1.5** (chore, Tteona-server): **SKIPPED** — db.md 명시("drizzle-kit migrate 미사용, 정규 스키마는 외부 Huya owner") + `drizzle/` 디렉터리 부재 확인. 본 페이즈 contingency 발동.
+- **Phase 2** (feat, Tteona-server): `GET /transactions/:id` + `GET /transactions/:id/payment-info` 구현. service 레이어 분리(`src/lib/transactions/service.ts`), `c.get('tx') ?? db` RLS 컨벤션, camelCase→snake_case + Date→ISO 매핑. 커밋 `bcb65b4`.
+- **Phase 3** (feat, Tteona-server): `POST /refunds` (db.transaction check-then-insert 원자성 + buyer/이미환불/72h 4 에러 경로 discriminated-union) + `GET /refunds/:id` 구현. 커밋 `e81e0e8`. (Informational blockers: transactions.status ↔ refunds.status approve/complete 동기화는 buyer flow 범위 외, admin/automated 후속 페이즈; refunds 테이블 실 DB 미적용 — Phase 1.5 SKIP 영향.)
+- **Phase 4** (feat, Tteona): `src/components/trip/Detail_v3A.tsx` + `Blur_B_v3.tsx` + barrel `index.ts`. TrustCard 는 `@/components/trust` 에서 import (복제 없음), `actionSlot?: ReactNode` prop 으로 우상단 ⋯ 메뉴 외부 주입. Blur_B_v3 = 미인증/미결제 게이팅 primitive (중립 토큰). 커밋 `02f93f0`.
+- **Phase 5** (feat, Tteona): `Detail_v3B` (가격 영역 accent-soft 강조) + `Detail_v3C` (가격을 헤더 우측 인라인 배치) 변종. A 와 동일 props 시그니처 유지. 커밋 `32c6a50`.
+- **Phase 6** (feat, Tteona): `src/components/checkout/Pay_B_Legal.tsx` + barrel. 카드/카카오페이/토스/Apple Pay 4종 선택 UI + DisclosureBanner + VoluntaryCheck + onSubmit 콜백 구조 (BFF 호출 책임은 페이지로 위임). 커밋 `aff707d`.
+- **Phase 7** (feat, Tteona): `src/components/refund/Aft_A_Legal.tsx` + barrel. discriminated union `mode: 'purchase-done' | 'refund-done'` 양 모드 완전 구현 — purchase-done 은 secondary-soft + receiptSlot + 긍정 CTA, refund-done 은 **warn/warn-soft 토큰 신규 채택** + 4단계 RefundStatus 라벨 맵 + failedReason 표시 + 72h 정책 재고지. 커밋 `9a85443`.
+- **Phase 8** (feat, Tteona): BFF Route Handler 4개 — `POST /api/transactions` (BE Stripe webhook 미구현 → 503 NOT_IMPLEMENTED placeholder), `GET /api/transactions/[id]`, `POST /api/refunds`, `GET /api/refunds/[id]`. Authorization 헤더 BE 전달 + Next.js 16 동적 params Promise 처리. 커밋 `80b6c75`.
+- **Phase 9** (feat, Tteona): `/detail/[id]` page/loading/error. 클라이언트 컴포넌트 + apiFetch + useEffect 패턴, `?variant=A|B|C` 기본 A 분기, RefundActionSheet 트리거 actionSlot 주입, 미결제 시 Blur_B_v3 가 판매자 연락처/GPS 영역 가림. 커밋 `c2d5462`.
+- **Phase 10** (feat, Tteona): `/pay/[id]` (Pay_B_Legal 합성 + raw fetch 로 503 응답을 '결제 게이트웨이 준비 중' 안내로 변환 — apiFetch 재시도 폭풍 회피) + `/purchase-done/[id]` (Aft_A_Legal mode="purchase-done" 합성, receiptSlot 에 제목/거래번호, '내 여정으로 이동' CTA). 커밋 `2ec3e0c`. (Informational blockers: loading/error 페이지 미작성 — null fallback; raw fetch 결정 의도적 trade-off.)
+- **Phase 11** (feat, Tteona): `/refund/request/[id]` 단일 페이지 3단계 상태 머신 (거래 로딩 → 사유 입력 → Aft_A_Legal mode="refund-done"). apiFetch retries:0 으로 중복 환불 요청 방지. **warn 토큰이 사용자에게 최초 노출되는 지점.** 커밋 `dc15b32`. (Informational blockers: loading/error 페이지 미작성 — 인라인 메시지; retries:0 trade-off.)
+
+### 영향 파일
+
+Tteona-server:
+- src/lib/db/schema/refunds.ts (신규)
+- src/lib/db/schema/index.ts
+- src/lib/validation/transactions.ts (신규)
+- src/lib/validation/refunds.ts (신규)
+- src/lib/transactions/service.ts (신규)
+- src/lib/refunds/service.ts (신규)
+- src/routes/transactions/index.ts
+- src/routes/refunds/index.ts
+
+Tteona:
+- src/components/trip/{Detail_v3A,Detail_v3B,Detail_v3C,Blur_B_v3,index}.tsx|ts (신규 5)
+- src/components/checkout/{Pay_B_Legal,index}.tsx|ts (신규 2)
+- src/components/refund/{Aft_A_Legal,index}.tsx|ts (신규 2)
+- src/app/api/transactions/{route,[id]/route}.ts (신규 2)
+- src/app/api/refunds/{route,[id]/route}.ts (신규 2)
+- src/app/(buyer)/detail/[id]/{page,loading,error}.tsx (신규 3)
+- src/app/(buyer)/pay/[id]/page.tsx (신규)
+- src/app/(buyer)/purchase-done/[id]/page.tsx (신규)
+- src/app/(buyer)/refund/request/[id]/page.tsx (신규)
+
+### 알려진 한계 (후속 결정 필요)
+
+1. **refunds 테이블 실 DB 미적용** (Phase 1.5 SKIP 영향). BE 코드는 컴파일·typecheck 통과하나 환불 흐름 런타임 호출 시 테이블 부재 오류 발생. **외부 Huya 스키마 owner 가 `refunds` 테이블 적용 완료 후에야 환불 흐름 동작.** 마스터 외부 조율 결정 사항.
+2. **결제 게이트웨이(Stripe webhook) 미구현** — `POST /api/transactions` 503 placeholder 상태. 결제 flow 는 FE 형태 정합까지만 전달됨 (Pay_B_Legal 폼 → 503 인지 → 안내 메시지). 정상 동작은 후속 S2.5+ Stripe 통합 후. `/purchase-done/[id]` 는 정상 네비게이션으로 도달 불가 (수동 URL 진입은 가능).
+3. **buyer pay/purchase-done/refund-request 라우트의 loading/error 페이지 미작성** — 인라인 fallback 사용. UX 개선 별도 작업.
+4. **transactions.status ↔ refunds.status approve/complete 동기화 미구현** — buyer flow 범위 외, admin/automated 후속 페이즈.
+5. **Detail variant 분배 메커니즘** — query param `?variant=A|B|C` 기본 A 만 구현. 정식 A/B 테스트 분배 (segment/cohort) 는 후속.
+
 ## v001.6.0 — 단계3-A 바이어 홈/탐색/피드/검색/필터 (FE 5 화면 + 3 컴포넌트 패키지 + BFF + BE /feed /explore /search)
 
 > 통합일: 2026-05-16
