@@ -8,9 +8,9 @@
 
 🟢 /plan-enterprise data-craft 단계0-B 인증 화면 (login / forgot-password / workspace-select). 첫 phase 에서 data-craft-server /auth/* CORS·CSRF·쿠키 도메인을 모바일 origin 에서 그대로 사용 가능한지 검증 후 진입. 불가 시 본 phase 만 BLOCK 하고 Roadmap-2 로 이관 보고. apps/web/src/mobile/auth/ 와 routes/login.tsx, routes/forgot-password.tsx, routes/workspace-select.tsx 구현. — 완료 (이슈 #64, v001.108.0 + 핫픽스1 v001.110.0)
 
-🟢 /dev-inspection data-craft today — 완료 (2026-05-13)
+🟢 /dev-inspection data-craft today — 완료 (2026-05-15)
 
-🟢 /dev-security-inspection data-craft today — 완료 (2026-05-13)
+🟢 /dev-security-inspection data-craft today — 완료 (2026-05-15)
 
 🟢 /plan-enterprise data-craft 단계1-A fs-api-mobile 어댑터 정비 — 기존 data-craft-server REST 엔드포인트 그대로 호출, 모바일 보조 헬퍼 (재시도·타임아웃·세션 헤더) 만 추가. 신규 BE 엔드포인트 추가 금지. — 완료 (이슈 #72, v001.121.0 + 핫픽스1 v001.123.0)
 
