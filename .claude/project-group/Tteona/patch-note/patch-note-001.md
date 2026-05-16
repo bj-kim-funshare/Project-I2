@@ -1,5 +1,40 @@
 # Tteona — Patch Note (001)
 
+## v001.12.0 — Detail variant 핫픽스1: useSyncExternalStore 기반 쿠키 구독 (lint 우회 제거 + 'A' 전이 이중 발신 제거)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#11 (hotfix1)
+
+### 핫픽스 결과
+
+- **Phase 4 (hotfix1)** (refactor, Tteona): PENDING gate 의 두 ⚠️ 항목(react-hooks/set-state-in-effect lint 우회 + race-fix 의 "최대 2회 발신" 부수효과)이 같은 뿌리(쿠키를 useEffect 에서 비동기 set)를 가짐 → `useSyncExternalStore` 단일 호출로 동시 해소.
+  - `src/lib/variant/read-variant-cookie.ts`: 기존 `readDetailVariantCookie()` 유지 + 신규 export 3종 (`subscribeDetailVariantCookie`, `getDetailVariantCookieSnapshot`, `getDetailVariantCookieServerSnapshot`). subscribe 는 `window.focus` 기반 best-effort refresh(브라우저는 cookie 변경 표준 이벤트 없음). server snapshot 은 null(SSR 시 cookie 불명, 클라이언트 첫 렌더에서 hydrate).
+  - `src/app/(buyer)/detail/[id]/page.tsx`: 기존 `useState<Variant>` + cookie-read `useEffect` + `eslint-disable-next-line react-hooks/set-state-in-effect` 블록 일괄 제거. `useSyncExternalStore` 4-인자 형태로 cookieVariant 동기 결정 → `const variant: Variant = queryVariant ?? cookieVariant ?? 'A'`. `useTrackVariantView(id, variant)` 는 variant 가 첫 렌더부터 cookie 값으로 결정되어 cookie 사전-set 케이스(middleware 일반 경로)에서 single fire 보장.
+  - 커밋 `84f1cd9`.
+
+### 영향 파일
+
+Tteona:
+- src/lib/variant/read-variant-cookie.ts
+- src/app/(buyer)/detail/[id]/page.tsx
+
+### 그룹 정책 준수 기록
+
+- 신규 의존성 0건 (`useSyncExternalStore` 는 React 18+ 내장).
+- Lint 0 errors / 11 pre-existing warnings 유지 — eslint-disable 1줄 제거 + 해당 위반 자연 해소가 상쇄.
+- advisor #2 hotfix 시점 5관점 PASS, BLOCK 없음.
+
+### 해소된 PENDING 이슈
+
+1. ✅ **react-hooks/set-state-in-effect lint 우회**: `eslint-disable-next-line` 행 자체가 페이지에서 삭제됨. setVariant in useEffect 제거.
+2. ✅ **race-fix의 '최대 2회 발신' 부수효과** (cookie 사전-set 케이스): variant 가 첫 렌더부터 정확 → 'A' 전이 false fire 제거. cookie 부재 첫 방문 edge case 는 여전히 'A'→null→cookie-set→재발신 가능하나 이는 cookie absence 자체의 한계.
+
+### 미해소 (hotfix scope 초과)
+
+- **cross-device variant 불일치 (clientId 단일 시드)** — v2 BE assignment 후보, 별도 플랜.
+- **BE 가중치 제어 엔드포인트 신설** — 별도 플랜.
+- **NEXT_PUBLIC_DETAIL_VARIANT_WEIGHTS env 누락 운영 위험** — 코드 변경 불요(기본값 33,33,34 적용), 배포 체크리스트 항목.
+
 ## v001.11.0 — Detail variant 정식 분배 메커니즘 (middleware FNV-1a 해시 + clientId 1y/variant 30d 쿠키 + analytics hook)
 
 > 통합일: 2026-05-16
