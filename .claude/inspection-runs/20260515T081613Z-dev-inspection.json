@@ -1,0 +1,48 @@
+{
+  "skill": "dev-inspection",
+  "leader": "Tteona",
+  "scope_mode": "today",
+  "since_local_midnight": "2026-05-15T00:00:00",
+  "timezone_note": "system local timezone of host running the skill",
+  "scope": [
+    {
+      "repo_name": "Tteona",
+      "cwd": "/Users/starbox/Documents/GitHub/Tteona",
+      "boundary_commit": null,
+      "files": [
+        ".env.example",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/app/(auth)/layout.tsx",
+        "src/app/(auth)/page.tsx",
+        "src/app/(buyer)/layout.tsx",
+        "src/app/(buyer)/page.tsx",
+        "src/app/(seller)/layout.tsx",
+        "src/app/(seller)/page.tsx",
+        "src/app/(social)/layout.tsx",
+        "src/app/(social)/page.tsx",
+        "src/app/(system)/layout.tsx",
+        "src/app/(system)/page.tsx",
+        "src/components/common/AppShell.tsx",
+        "src/components/common/BottomTabBar.tsx",
+        "src/components/common/index.ts",
+        "src/components/common/TopBar.tsx",
+        "src/lib/api/client.ts",
+        "src/lib/api/errors.ts",
+        "src/lib/api/index.ts",
+        "src/lib/env.ts",
+        "tteona-claude-code-handoff/03-design/wireframes/styles/sketch.css"
+      ]
+    },
+    {
+      "repo_name": "Tteona-server",
+      "cwd": "/Users/starbox/Documents/GitHub/Tteona-server",
+      "boundary_commit": null,
+      "files": [
+        ".env.example",
+        "src/app.ts",
+        "src/lib/config.ts"
+      ]
+    }
+  ]
+}
