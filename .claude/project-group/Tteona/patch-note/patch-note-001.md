@@ -1,5 +1,70 @@
 # Tteona — Patch Note (001)
 
+## v001.11.0 — Detail variant 정식 분배 메커니즘 (middleware FNV-1a 해시 + clientId 1y/variant 30d 쿠키 + analytics hook)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#11
+
+### 페이즈 결과
+
+- **Phase 1** (feat, Tteona): variant 분배 인프라. `src/lib/env.ts` 에 `NEXT_PUBLIC_DETAIL_VARIANT_WEIGHTS` (기본 `'33,33,34'`) 추가. `src/lib/variant/` 4 모듈 신설 — `types.ts` (DetailVariant 타입 + DETAIL_VARIANTS), `cookie-names.ts` (`tteona_detail_variant` / `tteona_client_id` 단일 진실원천), `weights.ts` (`parseWeights` + env-driven `getDetailVariantWeights()` — v2 BE 교체 지점), `hash.ts` (FNV-1a 32-bit 결정적 해시 + 가중치 누적 비교 `assignVariant`). `src/middleware.ts` body 교체 — `/detail/*` path guard, QA override (`?variant=A|B|C`) 통과, clientId 1y / variant 30d 쿠키 발급. `.env.example` 추가. Edge runtime 호환 확인. 커밋 `cda1c8f`.
+- **Phase 2** (feat, Tteona): analytics hook + BFF 로깅. `src/lib/analytics/track.ts` (AnalyticsEvent 타입 + `track()` + `trackVariantView()` fire-and-forget keepalive). `src/lib/analytics/use-track-variant-view.ts` (`useRef` 키 가드 client hook). `src/app/api/analytics/events/route.ts` POST 핸들러 (body 검증 invalid_json/invalid_event 400, 정상 시 `console.info('[analytics] variant_view', {...})` + 200 ok). 커밋 `634901e`.
+- **Phase 3** (refactor, Tteona): `/detail/[id]` 결선. `src/lib/variant/read-variant-cookie.ts` 신설 (`document.cookie` SSR-safe read). `src/app/(buyer)/detail/[id]/page.tsx` 의 기존 `parseVariant` (폴백 'A') 를 `parseQueryVariant` (null 반환) 로 교체, `useState` 초기값 + `useEffect` cookie read 패턴으로 쿼리 → 쿠키 → 'A' 폴백 우선순위. `useTrackVariantView(id, variant)` 호출. `'use client'` page 라 wrapper 컴포넌트 불필요. 커밋 `2adafb1`.
+- **Phase 3 fix** (refactor, Tteona): `useTrackVariantView` race 해소. 기존 `useRef<boolean>` 단순 플래그가 variant 전이 시 재발신 차단 → `useRef<string|null>` 키 비교 (`${detailId}:${variant}`) 로 교체. 첫 렌더 'A' 후 쿠키 'B' 적용 시 'B' 도 정상 발신. Strict Mode 동일 키는 여전히 no-op. 커밋 `5768046`.
+
+### 영향 파일
+
+Tteona:
+- src/lib/env.ts
+- src/lib/variant/types.ts (신규)
+- src/lib/variant/weights.ts (신규)
+- src/lib/variant/hash.ts (신규)
+- src/lib/variant/cookie-names.ts (신규)
+- src/lib/variant/read-variant-cookie.ts (신규)
+- src/middleware.ts
+- .env.example
+- src/lib/analytics/track.ts (신규)
+- src/lib/analytics/use-track-variant-view.ts (신규)
+- src/app/api/analytics/events/route.ts (신규)
+- src/app/(buyer)/detail/[id]/page.tsx
+
+### 그룹 정책 준수 기록
+
+- `db.md` 외부 소유 정책 무관 (FE 전용 플랜, DDL/마이그레이션 0건).
+- 신규 의존성 0건 — `jose` JWT 디코드 회피, `crypto.randomUUID` Edge 내장, FNV-1a 순수 함수 직접 구현.
+- Lint 게이트 `pnpm lint` 모든 페이즈 PASS (0 errors, 11 pre-existing warnings 유지).
+- advisor #1 + #2 모두 5관점 PASS, BLOCK 없음.
+
+### 핵심 설계 결정
+
+- **해시 시드 = `tteona_client_id` (단일, 1y persistent)**: 마스터 "사용자 ID 또는 익명 ID" 직역과 차이. FE 단독 user-stable identifier 로 가장 적합 (JWT 디코드 회피 + 익명↔로그인 전이 불연속 회피). 단점: cross-device 분배 stable 아님 — v2 BE assignment 트랙으로 강화.
+- **분배 결정 위치 = Next.js middleware**: server component 단독 결정은 cookie 발급 불가 (RSC 제약). middleware 가 표준. Edge runtime 에서 `crypto.randomUUID()` + FNV-1a 모두 호환.
+- **QA override (`?variant=X`) = cookie 미갱신**: 쿼리 진입 시 일회성 override, persistent variant 분배에 영향 없음.
+- **Analytics = thin abstraction**: v1 은 console.info 서버 로깅만. 실 provider 연결은 follow-up.
+
+### Spec drift / 운영 주의
+
+- **page.tsx 의 `react-hooks/set-state-in-effect` lint 규칙 우회**: `eslint-disable-next-line` 으로 억제. 근본 해결은 `useSyncExternalStore` 기반 쿠키 구독 리팩터 — v2 후속.
+- **race-fix 의 "최대 2회 발신" 부수효과** (5768046): cookie-read 가 늦으면 'A' (초기 렌더) → 'B' (cookie 적용) 두 이벤트가 발신될 수 있음. v1 은 console.info 로깅뿐이라 실측 영향 없음. 진짜 analytics provider 연결 시 "마지막 노출 = 최종 variant" 집계 규칙 또는 cookie pre-resolve 패턴 (useSyncExternalStore) 으로 보강 필요.
+- **Phase 3 scope expansion (iter 2/3 사용)**: tracking race 발견 시 Phase 2 파일 (use-track-variant-view.ts) 을 Phase 3 affected_files 로 임시 확장하여 fix. analytics 정확성 보장이 plan 의도와 정합하다는 main session 판단.
+
+### 외부 의존 / 후속
+
+- **실 analytics provider (PostHog/Amplitude/GA) 연결** — Phase 2 가 인터페이스만, provider 결정 + SDK 통합은 별도 플랜.
+- **BE 측 가중치 제어 엔드포인트** — `getDetailVariantWeights()` 의 BE 교체 지점만 인터페이스로 마련, BE 신설은 별도.
+- **userId-stable seed (JWT sub claim)** — v2. BE 가 assignment 결정 후 cookie 발급하는 라우트 도입으로 cross-device stable 가능.
+- **익명→로그인 전이 시 variant 연속성 보강** — v2.
+- **useSyncExternalStore 기반 쿠키 구독 리팩터** — lint 우회 제거 + race-fix 의 "최대 2회 발신" 부수효과 제거. v2 후속.
+
+### 마스터 수동 검증 sequence
+
+1. `/detail/123` (쿠키 없음) 진입 → response `Set-Cookie` 에 `tteona_detail_variant=A|B|C` + `tteona_client_id=<uuid>` 발급 확인.
+2. 재방문 시 동일 variant 유지 (5회 reload 모두 동일).
+3. env `NEXT_PUBLIC_DETAIL_VARIANT_WEIGHTS=0,0,100` → 항상 `C` 발급 확인.
+4. `/detail/123?variant=B` 직접 진입 → variant=B 렌더 + 쿠키 미갱신 (QA override).
+5. `fetch('/api/analytics/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type:'variant_view', detailId:'x', variant:'A'})})` → 200 + 서버 로그 `[analytics] variant_view {...}`.
+6. race-fix 검증 (쿠키 미설정 → 진입): network 탭에 `POST /api/analytics/events` 최대 2회 (A→B), 마지막 'B'.
+
 ## v001.10.0 — refunds approve/complete 흐름 + transactions.status 동기화 (admin-gated 2 엔드포인트 + env allowlist 권한 모델)
 
 > 통합일: 2026-05-16
