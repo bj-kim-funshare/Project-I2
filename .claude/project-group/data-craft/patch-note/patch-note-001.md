@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.140.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #79
+
+### 페이즈 결과
+
+- **Phase 1** (`9077edce`): 시스템 4열(드래그 rowSeq, 체크 rowSelect, 서브그리드 토글, 행ID rowId) 을 frozen 경로에서 완전 분리. `fixedColumnGenerator.ts` 에서 rowSeq/rowSelect 의 `frozen: 'start'` 제거, `DataRow.tsx` 시스템 열 래퍼의 `position: sticky / left: 0 / zIndex: 1` 인라인 스타일 제거. rowId 는 `customColumnGenerator.ts` 에서 이미 `frozen: 'none'` 로 부여되어 추가 수정 불필요. `newColumn` 우측 추가 버튼은 페이즈 범위 외로 유지.
+- **Phase 2** (`d253ad70`): 사용자 고정 셀의 반투명 누수 해소. `DataCell.tsx` sticky 스타일에서 `backgroundColor: 'var(--background)'` 제거, isSticky 조건부로 Tailwind `bg-muted` 적용 — 헤더 (`FixedHeaderCells.tsx`) 와 토큰 통일. `FixedHeaderCells.tsx` 서브그리드 토글 자식 div 의 중복 `bg-muted` 정리.
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` 두 페이즈 모두 통과 (0 errors, 5 warnings).
+- 마스터 시각 검증 필요: 라이트/다크 양 테마에서 (a) 시스템 4열에 frozen sticky 효과가 사라졌는지, (b) 사용자 고정 셀이 완전 불투명한지.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/fs_grid_util/fixedColumnGenerator.ts` (-2 lines)
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/DataRow.tsx` (sticky 인라인 스타일 제거)
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/DataCell.tsx` (sticky 배경 토큰 통일)
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/FixedHeaderCells.tsx` (중복 bg-muted 정리)
+
+### 후속 (본 플랜 범위 외)
+
+`fs-sub-data-viewer`, `fs-external-data-viewer` 패키지에 동일 이름 `fixedColumnGenerator.ts` 가 존재하며 rowSeq/rowSelect 에 `frozen: 'start'` 가 그대로 남아 있음. 본 플랜은 마스터 명령 "데이터 뷰어-그리드 뷰" = `fs-data-viewer` 한정으로 해석됨. 서브/외부 뷰어 surface 에서 동일 결함 관찰 시 핫픽스 또는 후속 플랜으로 처리.
+
 ## v001.139.0
 
 > 통합일: 2026-05-16
