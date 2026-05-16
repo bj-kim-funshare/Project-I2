@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.138.0
+
+> 통합일: 2026-05-16
+
+### 변경 파일
+
+- (data-craft-mobile) (이동) `DataCraft-mobile-v2/` → `DataCraft/` (디자인 산출물 디렉토리 정리 — 약 70 파일)
+- (data-craft-mobile) (삭제) `기획-디자인팀-설계자료/` 전체 (구 디자인 자료 54 파일)
+- (data-craft-mobile) (추가) `DataCraft/handoff/FigmaLibrary.html`, `DataCraft/handoff/Microcopy.html`, `DataCraft/handoff/UserInterviewGuide.html`, `DataCraft/DataCraft Mobile Prototype.html`, `DataCraft/scraps/proto-*.jpg` (3), `DataCraft/uploads/스크린샷 2026-05-13 *.png` (4)
+
+> 흡수 커밋 SHA: `eb84933` (data-craft-mobile) — 전체 파일 목록은 머지 커밋 diff 참조. 카테고리 합계: 추가 81 / 삭제 124 (rename 미적용 기준).
+
 ## v001.137.0
 
 > 통합일: 2026-05-16
