@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.136.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#75 (hotfix 4)
+
+### 페이즈 결과
+
+- **Phase 7 (hotfix 4)** (`ab4e0311`, data-craft): `EventCardHeader.tsx:95-106` 의 카드 hover 배경 처리가 inline `style={{ backgroundColor: 'transparent' }}` + `onMouseEnter/Leave` 에서 직접 `e.currentTarget.style.backgroundColor` 를 mutate 하던 패턴 → React state (`isCardHover`) 기반으로 전환. reorder 시 events 재렌더 → JSX 의 inline `style` 가 매번 `transparent` 로 덮어쓰며 mouseenter/leave 와 동기 깨짐 → 깜박임. state 화로 React 가 re-render 후에도 hover 값을 일관 유지.
+
+### 해결방식
+
+- 마스터 보고: "일정 카드에 커서 올리고 있으면 어둡게 표시해주는 기능이 있엇는데 카드 순서 이동하면 이게 순간적으로 깜박여". 원인 = DOM mutation 기반 hover + React 재렌더의 stale-style overwrite 경합.
+- `useState<boolean>` (`isCardHover`) 추가 + JSX 의 `style.backgroundColor` 를 state 값에 따른 ternary 로 결정. setIsCardHover 는 `onMouseEnter/Leave` 에서 호출. React 가 reorder 시 컴포넌트 identity 를 보존 (key = `rowField-dateColumnField` 안정) 하므로 state 도 보존되어 hover 상태가 재렌더에 무관하게 일관.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/EventCardHeader.tsx`
+
 ## v001.135.0
 
 > 통합일: 2026-05-16
