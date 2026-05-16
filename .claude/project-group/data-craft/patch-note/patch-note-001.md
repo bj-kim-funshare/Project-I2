@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.133.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#75 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 4 (hotfix 1)** (`ad17bfa8`, data-craft): Phase 1 에서 도입한 캘린더 카드 ▲▼ 버튼이 뷰 모드에서 보이지 않던 결함을 해소. 원인은 `EventCardHeader.tsx:138,148` 의 버튼 `style` 속성이 활성/비활성 무관하게 `componentColors.state.disabled.foreground`(#4b5563 회색) 를 하드코딩하여, 카드 배경 위에서 사실상 비가시였던 색상 문제. 활성 상태(`onMoveUp`/`onMoveDown` 핸들러 정의) 일 때만 `componentColors.button.primary.bg`(#3b82f6 파란색) 로 교체하고, hover 효과(`state.info.background`) 추가. 비활성 상태는 기존 disabled-foreground + `disabled:opacity-30` 패턴 유지. 뷰 모드 게이팅 (`mode === FsViewerMode.View && !isReadOnly && !!onMoveCard`) 은 그대로 보존.
+
+### 해결방식
+
+- 마스터 보고 "화살표 자체가 안보이는데" 에 대한 가설 3종 — H1(색상 비가시) / H2(prop chain 단절) / H3(collapse guard) — 중 prop chain 4-hop 점검 결과 정상 (Phase 1-2 와 일치), collapse guard 부재 확인 → H1 색상 가설 확정. 활성 / 비활성 버튼 시각적 구분 + 삭제 버튼과 동치 hover 패턴 부여로 통합 정리.
+- 1차 advisor 가 "H1 단독 판정 후 머지 전 실제 가시성 마스터 확인 권고" 지적 → PENDING gate 마스터 브라우저 검증으로 대체.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/detail-panel/EventCardHeader.tsx`
+
 ## v001.132.0
 
 > 통합일: 2026-05-16
