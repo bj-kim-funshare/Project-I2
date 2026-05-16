@@ -24,6 +24,7 @@ connection_style: DB_* 환경변수
 
 - `data-craft-server` 가 `mysql2` 패키지로 직접 연결. 풀 설정 / 트랜잭션 패턴은 server 코드 참조.
 - FE 측 (data-craft / data-craft-mobile / data-craft-ai-preview) 은 직접 DB 접속하지 않고 `data-craft-server` REST API 경유.
+- 환경별 차등 시크릿 운영은 dev.md §"env 환경별 차등 변수 표준 — BE 페어 패턴" 참조.
 
 ## 미확정
 
