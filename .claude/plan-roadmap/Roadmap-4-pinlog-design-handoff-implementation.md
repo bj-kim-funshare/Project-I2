@@ -12,7 +12,7 @@
 
 🟢 /plan-enterprise Pinlog 단계1-C 홈 4 레이아웃 폴리시 — MainPage 의 feedModeStore 토글 확장, home-grid · home-collage · home-list (B 타임라인 신설) · map-post-feed (D 지도우선) 4 위젯 디자인 시안 적용, main-layout 의 AppHeader (로고 + 알림 배지) + BottomNav + 중앙 FAB, Pull-to-refresh 구스 sleepy→happy 전환. `homeLayout` 사용자 설정 적용.
 
-1️⃣ 🔴 /plan-enterprise Pinlog 단계1-B 핀 작성 4단계 — WritePage 분해 (Photo Pick → Details → Success 애니), PostPhotoStep (카메라/앨범/권한 폴백), PostDetailsStep (장소 자동 제안 500m POI · 메모 textarea · 태그 칩 시드 · ScopeToggle 시드 · 캡슐 토글 시드 — 본 단계는 UI 만, 실제 scope/tags/capsule 동작은 Phase 2/3 에서 활성), location-picker 정비, PostSuccess 풀스크린 애니 (300ms drop) → tab:home 1.5s.
+1️⃣ 🟢 /plan-enterprise Pinlog 단계1-B 핀 작성 4단계 — WritePage 분해 (Photo Pick → Details → Success 애니), PostPhotoStep (카메라/앨범/권한 폴백), PostDetailsStep (장소 자동 제안 500m POI · 메모 textarea · 태그 칩 시드 · ScopeToggle 시드 · 캡슐 토글 시드 — 본 단계는 UI 만, 실제 scope/tags/capsule 동작은 Phase 2/3 에서 활성), location-picker 정비, PostSuccess 풀스크린 애니 (300ms drop) → tab:home 1.5s.
 
 1️⃣ 🔴 /plan-enterprise Pinlog 단계1-D 핀 상세 + 메모리 맵 — `widgets/post-detail` 시안 적용 (사진 4:5, 작성자 구스 아바타, 메모 Gaegu 17px, 태그 칩, Scope 배지, StickerRow 구스 5표정, 댓글 입력 하단 고정), `routes/post/:uuid` 신설, MemoryMapScreen 정비 (필터 칩 기간/태그/scope, 핀 탭 바텀시트 프리뷰, 빈 상태 EmptyState). post-detail 의 본인/타인 ⋯ 메뉴 (편집/삭제/신고/뮤트). 본 단계의 scope 배지 / 태그 칩 표시는 Phase 2 BE 확장 전까지 mock 데이터 fallback.
 
