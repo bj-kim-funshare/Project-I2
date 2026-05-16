@@ -404,3 +404,59 @@ PinLog-Web:
 - (계속 유지) `/all` 및 `/my-all` unbounded 응답 → 페이징 도입 권장.
 - (계속 유지) `postApi.all()` pre-existing 인자 위치 버그 (`true` 가 body 위치) fix 권장.
 - (계속 유지) gate-runner (Haiku) exit code 오분류 — harness 신뢰성 보강 권장.
+
+## v001.11.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#48](https://github.com/Team-Pingus/PinLog-Web/issues/48) (hotfix1)
+
+### 페이즈 결과
+
+- **Hotfix1 — 후속 권장 일괄 처리 (FE/Pinlog 범위) (fix)**: v001.10.0 의 8건 후속 권장 중 FE/Pinlog 스코프 5건을 단일 hotfix WIP 에서 처리. 커밋 `a9a9dcf` (+42/-29 across 16 files) + `00c7231` (eslint-disable directive 재배치, +2/-2 across 2 files).
+
+  **A. AccountManageView silent button 해소**: 전환/삭제 global 버튼의 `disabled={length === 0}` → `disabled={length !== 1}`. 정확히 1개 non-current 일 때만 enabled. helper text 분기 단순화 (`length === 0` → `account.addHint`, `length > 0` → `switchHint`). ko/en/ja `account.addHint` 신규 키.
+
+  **B. exhaustive-deps 10건 → 0건**: AuthPage / Dialog / HomeListLayout / LocationPicker / BottomNav / MapWithCarousel / PostList 등 8 파일 useEffect/useMemo deps 정리. 2건 (ProfileEditPage:36, MapPostFeed:158) 은 무한 렌더 / SDK 재초기화 위험으로 `eslint-disable-next-line` directive (의도적 보존, 사유 주석 + deps 라인 직전 정확 배치). 결과: `pnpm lint` 0 errors / **0 warnings**.
+
+  **C. postApi.all() 인자 위치 버그**: `apiClient.post<...>(URL, true)` 의 `true` 가 body 위치로 잘못 전달되던 버그를 `(URL, undefined, true)` 로 수정해 `skipAuth` 의도 복원.
+
+  **D. PostDetailView 모바일 키보드 폴백**: 댓글 wrapper div 에 `onClick={() => commentInputRef.current?.focus()}` 추가 — user-gesture 로 OS 키보드 트리거. v001.9.0 의 `?focus=comments` 흐름 보강.
+
+  **E. CommentInput React 19 ref-as-prop 모던화**: `forwardRef` 래퍼 제거, 함수 컴포넌트가 `ref` 를 일반 prop 으로 수신. `useImperativeHandle(ref, ...)` 본문 유지.
+
+### 영향 파일
+
+PinLog-Web:
+- `src/widgets/account-manage/ui/AccountManageView.tsx` (A)
+- `src/pages/AuthPage.tsx` (B-1)
+- `src/pages/ProfileEditPage.tsx` (B-2, eslint-disable)
+- `src/shared/ui/Dialog.tsx` (B-3)
+- `src/widgets/home-list/ui/HomeListLayout.tsx` (B-4)
+- `src/widgets/location-picker/ui/LocationPicker.tsx` (B-5)
+- `src/widgets/main-layout/ui/BottomNav.tsx` (B-6)
+- `src/widgets/map-post-feed/ui/MapPostFeed.tsx` (B-7, eslint-disable)
+- `src/widgets/map-post-feed/ui/MapWithCarousel.tsx` (B-8)
+- `src/widgets/post-list/ui/PostList.tsx` (B-9)
+- `src/features/post/api/postApi.ts` (C)
+- `src/widgets/post-detail/ui/PostDetailView.tsx` (D)
+- `src/widgets/comment-list/ui/CommentInput.tsx` (E)
+- `src/shared/lib/i18n/locales/{ko,en,ja}.ts` (A 신규 키)
+
+### 검증
+
+- FE lint gate: `pnpm lint` exit 0 / **0 errors / 0 warnings** (직전 baseline = 10 → 0, 코드베이스 첫 lint-clean 도달).
+
+### 처리 / 미처리 매핑
+
+- **처리 완료 5/8** (FE/Pinlog scope): #2 silent buttons, #3 exhaustive-deps 일괄, #4 모바일 키보드 폴백, #5 React 19 modernize, #7 postApi.all() 버그.
+- **미처리 3/8 — 별도 plan-enterprise 필요**:
+  - **#1 httpOnly cookie 전환**: BE 토큰 응답 + axios interceptor + 세션 정책 동시 변경 — BE+FE plan.
+  - **#6 `/all` 및 `/my-all` unbounded 페이징**: BE endpoint 시그니처 변경 + FE 호출 사이트 마이그레이션 — BE+FE plan.
+  - **#8 gate-runner Haiku exit code 오분류**: Project-I2 harness `gate-runner` sub-agent 작업 — `plan-enterprise-os` 또는 별도 harness fix.
+
+### 알려진 후속 (carry-over)
+
+- (carry-over) #1 httpOnly cookie 전환 — 다중 refresh-token localStorage 표면적 해소 (medium priority).
+- (carry-over) #6 `/all` / `/my-all` unbounded 응답 → 페이징 (medium priority).
+- (carry-over) #8 gate-runner Haiku exit code 오분류 — harness 신뢰성 보강 (low priority).
+- v001.10.0 의 신규 후속 3건 (silent buttons / exhaustive-deps / AuthPage:21 추가 경고) + v001.9.0 의 2건 (모바일 키보드 / React 19 forwardRef) 모두 본 패치에서 해소.
