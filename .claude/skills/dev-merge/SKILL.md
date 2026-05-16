@@ -238,6 +238,8 @@ Relay the agent's response verbatim to master, then append the gate prompt:
   - (다른 입력) → 본 PR 미머지 상태 유지, 마스터 자유 진입
 ```
 
+Calling a follow-up skill (pre-deploy / patch-confirmation, etc.) does NOT auto-merge this PR. Type `머지 완료` to merge. To intentionally leave the PR open and move on, type `중단` or simply invoke another skill.
+
 Then halt.
 
 ### HOTFIX re-entry path (`핫픽스 <description>`)
