@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.141.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #79 (hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 3 (hotfix 1)** (`3cdb194c`): 시스템 열 헤더의 sticky 잔존 제거. `FixedHeaderCells.tsx:33` wrapper div 의 인라인 `style={{ position: 'sticky', left: 0, zIndex: 2 }}` + `bg-muted` 클래스 제거. v001.140.0 의 Phase 1 이 본문(DataRow.tsx) 측 sticky 만 제거하고 헤더 측 동일 패턴을 놓친 부분을 보강 — 마스터 핫픽스 명령 "열 헤더에도 동일하게 적용" 반영.
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` PASS (0 errors, 5 warnings).
+- 마스터 시각 검증: 시스템 4열의 헤더가 본문과 동일하게 가로 스크롤 시 함께 스크롤되어야 함 (회귀 아님 — 마스터 답변 C 의 의도된 결과).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/FixedHeaderCells.tsx` (+1 / -1)
+
 ## v001.140.0
 
 > 통합일: 2026-05-16
