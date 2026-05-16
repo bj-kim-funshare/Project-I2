@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.132.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#73 (핫픽스 2)
+
+### 페이즈 결과
+
+- **Phase 7 / 핫픽스 2** (`5811b7f8`, data-craft): AIAssistantModal UI 정돈 — 출시 예정 태그 + 입력 영역 단일 행화 + 전송 버튼 원형/아이콘.
+
+### 핫픽스 사유
+
+마스터 후속 지시 — 채팅 UI 가 "준비중" 라벨 + 두 줄 textarea + 사각 "전송" 텍스트 버튼이라 정돈되어 보이지 않는다. 실제 채팅 UI 의 단정한 느낌으로 가다듬는다.
+
+### 해결방식
+
+`AIAssistantModal.tsx` 한 파일 안에서만 처리:
+1. **헤더**: `DialogTitle` 을 `flex items-center gap-2` 로 만들고 "AI 비서" 옆에 `<span class="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-normal">출시 예정</span>` chip 배치.
+2. **입력 영역 라벨 제거**: 기존 `<span>준비중입니다</span>` 라벨과 `flex flex-col gap-1.5` 래퍼 제거.
+3. **단일 행 정렬**: 입력 영역 컨테이너를 `flex items-center gap-2` 로 변경. textarea 는 `rows={1}` + `min-h-9 h-9` 로 단일 행 높이 고정 → placeholder "메시지를 입력하세요" 가 시각적으로 세로 중앙에 위치.
+4. **전송 버튼 원형**: `flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground` + lucide `<Send className="size-4" />` (텍스트 제거).
+5. **세로 정렬**: 전송 버튼과 textarea 둘 다 `h-9` 동일 + `items-center` 컨테이너 → baseline 일치.
+
+모달 폭 `w-[420px]` / 대화 영역 높이 `min-h-[360px]` / 드로어 회피 / 꼬리 div / 푸터 (닫기·오늘 하루 가리기) 등 나머지 구조는 모두 그대로 유지. 두 버튼 모두 여전히 `disabled` (API 미구현).
+
+### 영향 파일
+
+data-craft:
+- `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx`
+
+머지 커밋: (data-craft i-dev 핫픽스 2 merge).
+
+### 검증
+
+- 수동: FAB 클릭 → 모달 헤더 우측에 "출시 예정" 회색 chip 노출, 입력 영역에 라벨 없이 단일 행 textarea + 원형 Send 아이콘 버튼이 같은 높이로 정렬된 것 확인. placeholder "메시지를 입력하세요" 가 세로 중앙처럼 보이는지 확인.
+- 자동: `pnpm typecheck:all && pnpm lint` PASS (0 errors).
+
 ## v001.131.0
 
 > 통합일: 2026-05-16
