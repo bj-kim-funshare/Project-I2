@@ -351,3 +351,56 @@ PinLog-Web:
 - (계속 유지) `/all` 및 `/my-all` unbounded 응답 → 페이징 도입 권장.
 - (계속 유지) `postApi.all()` pre-existing 인자 위치 버그 (`true` 가 body 위치) fix 권장.
 - (계속 유지) gate-runner (Haiku) exit code 오분류 — harness 신뢰성 보강 권장.
+
+## v001.10.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#48](https://github.com/Team-Pingus/PinLog-Web/issues/48)
+
+### 페이즈 결과
+
+- **Phase 1 — 기반 (feat)**: 디바이스 멀티 계정 보관소 신설 + 인증 흐름 자동 통합.
+  - **NEW `src/features/auth/lib/useSavedAccountsStore.ts`**: zustand `persist` (localStorage key `pinlog-saved-accounts`), `SavedAccount = {uuid, nick, profileImgUrl, accessToken, refreshToken, savedAt}`. 멱등 `saveAccount` (uuid upsert + savedAt 갱신), `removeAccount` (filter), `getAccount`.
+  - `src/features/auth/index.ts` + `src/features/auth/lib/index.ts` 양 레이어 re-export 추가 (FSD 패턴, scope expansion 1건 자체 승인).
+  - `AccountSelectStep.tsx`: 로그인 성공 분기에 `saveAccount` 멱등 upsert 추가 — 응답 `{accessToken, refreshToken}` flat + 로컬 `accounts.find(...)` 의 `selectedAccount.{uuid, nick, profileImgUrl}`.
+  - `AuthPage.tsx`: `useLocation().state.addMode` 도입 — addMode true 시 기존 토큰 리다이렉트 우회, reset 만 호출 (active 토큰 보존).
+  - `App.tsx`: 신규 `SavedAccountsBackfill` 컴포넌트 + `<AuthInitializer/><AccountInitializer/><SavedAccountsBackfill/>` 추가 — `useEffect([isAuthenticated, accountInfo])` 로 active 토큰을 saveAccount 멱등 backfill (기존 사용자 첫 진입 시 active 보존).
+  - 커밋 `8735dea` (+79/-7 across 6 files).
+
+- **Phase 2 — UI 배선 (feat)**: AccountCard 인터랙션 + AccountManageView 핸들러 + i18n.
+  - `AccountCard.tsx`: `onSelect?` / `onRemove?` props 추가. onSelect && !highlighted → 카드 cursor-pointer + onClick + role="button" + tabIndex={0} + Enter/Space 키 핸들. onRemove && !highlighted → 우측상단 ×아이콘 (stopPropagation, aria-label). 기존 display 동작 무변경 (역호환).
+  - `AccountManageView.tsx`: `useAuthFlowStore` 의존 완전 제거 → `useSavedAccountsStore.savedAccounts` 기반 재작성. 핸들러 3종 실연동 — 전환 (`tokenStorage.setTokens` + `setAuth` + `setAccountInfo` + `queryClient.clear()` + `navigate('/', {replace:true})`), 추가 (`navigate('/auth', {state:{addMode:true}})`, clearAuth 호출 제거), 삭제 (`showConfirm` → `removeAccount`). 3 global 버튼: 비현재 saved 0개일 때만 disabled, 1개면 즉시 실행, helper text 가 상태에 따라 switchHint/removeHint 전환.
+  - i18n ko/en/ja: `account.{switchHint, removeHint, removeConfirmTitle, removeConfirmMessage}` 4 키 신규 + 미사용 `account.preparing` 제거.
+  - 커밋 `999b98e` (+82/-42 across 5 files).
+
+### 영향 파일
+
+PinLog-Web:
+- `src/features/auth/lib/useSavedAccountsStore.ts` (NEW)
+- `src/features/auth/index.ts`
+- `src/features/auth/lib/index.ts`
+- `src/widgets/auth-flow/ui/AccountSelectStep.tsx`
+- `src/pages/AuthPage.tsx`
+- `src/app/App.tsx`
+- `src/widgets/account-manage/ui/AccountCard.tsx`
+- `src/widgets/account-manage/ui/AccountManageView.tsx`
+- `src/shared/lib/i18n/locales/ko.ts`
+- `src/shared/lib/i18n/locales/en.ts`
+- `src/shared/lib/i18n/locales/ja.ts`
+
+### 검증
+
+- FE lint gate: `pnpm lint` exit 0 / 0 errors / **10 warnings** (Phase 1 에서 +1, AuthPage.tsx:21 exhaustive-deps — 코드베이스 기존 9건과 동일 패턴, tech-debt 일괄 정리는 후속).
+- `@shared` re-export 확인: `queryClient` (line 53), `getTokenStorage` (line 56) 모두 정상 export — Phase 2 import 안전.
+- 토큰 swap 호출 순서 검증: storage → store (`setAuth` + `setAccountInfo`, 동기 setState 묶음) → cache clear → navigate. `accountInfo === null` 일시 윈도우는 동기 핸들러 내에서 0 frame.
+
+### 알려진 후속
+
+- **다중 refresh-token localStorage 표면적**: 단일 토큰 대비 N 배 표면적 (위협 모델은 동일 — XSS 시 모두 노출). httpOnly cookie 전환 검토 권장 (medium priority).
+- **전환 / 삭제 global 버튼의 silent no-op (>1 non-current)**: helper text 로 mitigation 되지만 진짜 picker UI 또는 button truly disabled 가 더 명확. 후속 UX 보강 권장 (low priority).
+- **`AuthPage.tsx:21` exhaustive-deps 경고 1건 추가**: 코드베이스의 기존 9건과 동일 패턴 (`navigate`/`reset`/`tokenStorage` stable refs). tech-debt 일괄 정리 후속 권장.
+- (계속 유지) 모바일 키보드 자동 노출 OS 정책 폴백 (low priority).
+- (계속 유지) React 19 forwardRef legacy modernize (low priority).
+- (계속 유지) `/all` 및 `/my-all` unbounded 응답 → 페이징 도입 권장.
+- (계속 유지) `postApi.all()` pre-existing 인자 위치 버그 (`true` 가 body 위치) fix 권장.
+- (계속 유지) gate-runner (Haiku) exit code 오분류 — harness 신뢰성 보강 권장.
