@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.135.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#75 (hotfix 3)
+
+### 페이즈 결과
+
+- **Phase 6 (hotfix 3)** (`4ebf9dc6`, data-craft): `FsCalendarChart.handleMoveCard` 가 `setServerRows(updated)` → `onRefresh()` 를 직렬 호출하나 `serverRowsRef.current` 는 useEffect (FsCalendarChart.tsx:253) 에서 비동기 갱신되어, `onRefresh()` 가 stale ref 를 읽고 events 를 옛 순서로 재파싱하던 결함. 같은 파일의 `removeServerRow:389` / `appendServerRow:401` 가 이미 쓰던 "setter 콜백 내부에서 `serverRowsRef.current = updated;` 동기 갱신" 패턴을 적용해 정정. 이제 ▲▼ 클릭 시 즉시 카드 순서가 시각 반영됨 (새로고침 불필요).
+
+### 해결방식
+
+- 마스터 보고: "누르면 UI 즉시 반영 안되서 즉시 이동 안하고 새로고침해야 나와". serverRows state 갱신과 ref 동기화 타이밍 분석으로 stale-ref-on-refresh 결함 식별.
+- `setServerRows(updated)` 만으로는 `serverRowsRef` 가 다음 렌더 commit 후의 useEffect 시점에서야 갱신 — `onRefresh()` 의 ref 읽기는 그 이전 마이크로태스크에 실행됨. 동기 ref 갱신을 setter 콜백 안에서 같이 처리하면 React 비동기성을 우회하면서도 state ↔ ref 정합 유지.
+- 동일 파일 내 다른 server-rows 변형 핸들러 (`removeServerRow`, `appendServerRow`, `updateServerRow`) 가 모두 이미 채택하던 패턴 — 본 hotfix 는 누락된 정합을 회수하는 것에 해당.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+
 ## v001.134.0
 
 > 통합일: 2026-05-16
