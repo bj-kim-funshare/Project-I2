@@ -14,7 +14,7 @@
 
 1️⃣ 🟢 /plan-enterprise Pinlog 단계1-B 핀 작성 4단계 — WritePage 분해 (Photo Pick → Details → Success 애니), PostPhotoStep (카메라/앨범/권한 폴백), PostDetailsStep (장소 자동 제안 500m POI · 메모 textarea · 태그 칩 시드 · ScopeToggle 시드 · 캡슐 토글 시드 — 본 단계는 UI 만, 실제 scope/tags/capsule 동작은 Phase 2/3 에서 활성), location-picker 정비, PostSuccess 풀스크린 애니 (300ms drop) → tab:home 1.5s.
 
-1️⃣ 🔴 /plan-enterprise Pinlog 단계1-D 핀 상세 + 메모리 맵 — `widgets/post-detail` 시안 적용 (사진 4:5, 작성자 구스 아바타, 메모 Gaegu 17px, 태그 칩, Scope 배지, StickerRow 구스 5표정, 댓글 입력 하단 고정), `routes/post/:uuid` 신설, MemoryMapScreen 정비 (필터 칩 기간/태그/scope, 핀 탭 바텀시트 프리뷰, 빈 상태 EmptyState). post-detail 의 본인/타인 ⋯ 메뉴 (편집/삭제/신고/뮤트). 본 단계의 scope 배지 / 태그 칩 표시는 Phase 2 BE 확장 전까지 mock 데이터 fallback.
+1️⃣ 🟢 /plan-enterprise Pinlog 단계1-D 핀 상세 + 메모리 맵 — `widgets/post-detail` 시안 적용 (사진 4:5, 작성자 구스 아바타, 메모 Gaegu 17px, 태그 칩, Scope 배지, StickerRow 구스 5표정, 댓글 입력 하단 고정), `routes/post/:uuid` 신설, MemoryMapScreen 정비 (필터 칩 기간/태그/scope, 핀 탭 바텀시트 프리뷰, 빈 상태 EmptyState). post-detail 의 본인/타인 ⋯ 메뉴 (편집/삭제/신고/뮤트). 본 단계의 scope 배지 / 태그 칩 표시는 Phase 2 BE 확장 전까지 mock 데이터 fallback.
 
 1️⃣ 🔴 /plan-enterprise Pinlog 단계1-E 프로필 + 활동 + 설정 폴리시 — MyPage (프로필 카드 큰 구스 + 핸들 + 통계 핀/친구/캡슐 카운트, 탭 핀 그리드/추억지도/캡슐 보관함 — 캡슐 탭은 Phase 3 까지 비활성), ActivityPage / NotificationPage 6 kind 분기 UI, SettingsPage 6 섹션, ProfileEditPage / AccountManagePage 정비. 친구 카운트는 Phase 4 까지 0 고정.
 
