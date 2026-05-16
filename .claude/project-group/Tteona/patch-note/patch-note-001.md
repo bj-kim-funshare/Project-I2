@@ -1,5 +1,34 @@
 # Tteona — Patch Note (001)
 
+## v001.8.0 — refunds 테이블 운영 활성화 (Huya DDL/RLS 요청 명세 + Drizzle pgEnum/notNull lockstep + admin-gated 라이브 통합 테스트)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#8
+
+### 페이즈 결과
+
+- **Phase 1** (docs, Tteona-server): `docs/db/refunds-schema-request.md` 신규 작성. `refunds.ts` Drizzle 선언을 진실원천 삼아 Huya 스키마 소유자에게 전달할 DDL+RLS 요청 명세 — CREATE TABLE refunds (`transaction_id` NOT NULL + FK ON DELETE RESTRICT, `requested_at` DEFAULT now() NOT NULL), status ENUM 권장안 + CHECK 대안 병기, `idx_refunds_transaction_id`, RLS 3정책(buyer select/insert 허용 + 익명 RESTRICTIVE DENY), FK RESTRICT 검증 절차, 적용 확인 체크리스트, Huya 회신 형식 템플릿 포함. 커밋 `6ff7620`.
+- **Phase 2** (refactor, Tteona-server): refunds Drizzle 강화 — `pgEnum('refund_status', ['requested','approved','completed','failed'])` 도입, `transactionId.notNull()`, `requestedAt.defaultNow().notNull()` 추가. relations() 선언(refundsRelations / transactionsRelations)은 circular import 방지를 위해 `schema/index.ts` 에 집중. service/validation/라우트 미변경, typecheck 회귀 없음. 커밋 `0b3c88a`.
+- **Phase 3** (test, Tteona-server): `src/__tests__/refunds-integration.test.ts` 신규. `describeIfAdminDb` 블록 6 시나리오 — (s1) admin INSERT buyer-A 트랜잭션 픽스처, (s2) buyer-A POST /refunds → 201, (s3) buyer-A GET → 200, (s4) buyer-B GET → 404 (RLS), (s5) buyer-B POST → [403,404] 허용, (s6) admin DELETE transactions → FK RESTRICT 오류 확인. afterAll cleanup. admin DB 미보유 환경에서는 통째로 skip 되어 CI 안전. 커밋 `3dc1901`.
+
+### 영향 파일
+
+Tteona-server:
+- docs/db/refunds-schema-request.md (신규)
+- src/lib/db/schema/refunds.ts
+- src/lib/db/schema/index.ts
+- src/__tests__/refunds-integration.test.ts (신규)
+
+### 그룹 정책 충돌 해소 기록
+
+마스터 invocation 의 `/task-db-structure 와 연계 가능` 문구는 db.md 의 "Huya 외부 소유 / task-db-structure 미발행" 조항과 충돌. 본 plan 은 task-db-structure 디스패치를 의도적으로 제외하고 Huya 요청 명세 artifact 작성으로 우회. advisor #1 / #2 모두 PASS 판정.
+
+### 외부 의존 / 후속
+
+- "운영 활성화 완료" 선언은 (a) Huya 가 Phase 1 명세대로 DDL+RLS 를 admin DB 에 적용 + (b) 통합 테스트 라이브 PASS 두 조건 충족 시점. 본 patch-note 는 in-repo 작업 완료 시점의 기록.
+- **service.ts:createRefund 의 RLS 우회 발견** (Phase 3 작성 중): 전역 `db.transaction()` 직접 사용으로 `dbContext()` 의 `app.user_id` 가 INSERT 트랜잭션에 미적용. Huya 가 `refunds_buyer_insert` 정책 적용하는 순간 production INSERT 회귀 위험 → PENDING gate `핫픽스` 또는 별도 plan 후속 권고. (advisor #2 명시 권고.)
+- Phase 2 의 Drizzle `.notNull()` 선언과 Huya DDL 적용 사이 윈도우에서 타입-실DB 불일치 잠재 — service 가 신규 INSERT 만 수행하므로 실제 영향 미미.
+
 ## v001.7.0 — 단계3-B 바이어 상세/결제/구매완료/환불요청 (BE transactions+refunds 결합 + FE 4 라우트 + 7 컴포넌트 + 4 BFF, warn 토큰 신규)
 
 > 통합일: 2026-05-16
