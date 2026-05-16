@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.143.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #83
+
+### 페이즈 결과
+
+- **Phase 1** (`bddd872`): `data-craft-server/src/services/email.service.ts` 의 `getFrontendUrl()` 을 NODE_ENV 분기 방식으로 재작성. `NODE_ENV === 'production'` 일 때 `FRONTEND_URL_PROD` 사용 (미설정 시 `InternalServerError('FRONTEND_URL_PROD_NOT_CONFIGURED')` throw), 그 외 환경에서는 기존 `FRONTEND_URL` 폴백 경로 유지. 상단 주석 갱신. `.env` 에 `FRONTEND_URL_PROD=https://datacraft.ai.kr` 1줄 + 용도 코멘트 1줄 추가, 나머지 모든 항목 (`NODE_ENV=development`, `FRONTEND_URL=http://localhost:5173`, `SERVER_URL=0.0.0.0`, `BILLING_MASTER_KEY`, `JWT_*`, `DB_*`, `SMTP_*`, `TOSS_*`, `NTS_API_KEY` 등) 은 양측 보존 원칙으로 불변.
+- **Phase 2** (`3e813ea`): `data-craft-server/src/tests/e2e/reset-password.e2e.test.ts` 의 [E2E-07] 케이스에 정적 source 매칭 assert 2건 추가 — `FRONTEND_URL_PROD_NOT_CONFIGURED` 토큰 존재, `process.env.NODE_ENV === 'production'` 분기 토큰 존재. 기존 `FRONTEND_URL_NOT_CONFIGURED` / localhost 폴백 제거 검증은 그대로 유지.
+
+### 진단 요지
+
+- v001.142.0 의 .env 양측 보존 통합본은 EC2 `git pull` 충돌 해소 목적으로 단일 `FRONTEND_URL=http://localhost:5173` 을 양 환경에 동일 적용 — prod 에서 이메일 footer 의 "DataCraft 로 이동" 링크가 `http://localhost:5173` 으로 생성되는 R1 결함이 잔존했음.
+- 단일 .env 값 한 줄로 dev/prod 양립 불가 → 코드 레벨 NODE_ENV 분기 + 신규 prod-only env (`FRONTEND_URL_PROD`) 도입.
+- pm2 의 NODE_ENV=production 주입은 dotenv default mode 동작 (`src/config/constant.ts:3` `dotenv.config()`, override 옵션 미사용 — grep 으로 코드베이스 전체 0건 확정) 으로 .env 의 `NODE_ENV=development` 에 덮이지 않음. 기존 NODE_ENV 분기 다수 (`app.ts:106`, `database.ts:56`, `middlewares/error.middleware.ts:31,64`, `middlewares/logger.middleware.ts:45,57`) 의 운영 정상 동작 사실이 이 체인의 증거.
+- 운영 도메인 = `https://datacraft.ai.kr` (vite.config.ts:28 "커스텀 도메인(datacraft.ai.kr) + Firebase 모두 루트 배포" 주석 근거 — 정식 사용자 대면 루트 배포 도메인 채택).
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #83` (본 entry) — Phase 1·2 → i-dev 머지 + patch-note v001.143.0
+2. `patch-confirmation data-craft` — origin push
+3. `dev-merge data-craft` (i-dev → main)
+4. `pre-deploy data-craft` (target: data-craft-server) — main 검증 + 빌드 + main → aws-deploy push
+5. (마스터 수동) EC2 재배포 — `git reset --hard origin/aws-deploy && pnpm install && pnpm build && pm2 restart data-craft --update-env`
+
+### 회귀 검증
+
+- `pnpm lint` (data-craft-server, worktree) PASS Phase 1 (exit 0) / PASS Phase 2 (exit 0).
+- 정적 토큰 매칭 grep 검증 — `email.service.ts` 가 `process.env.NODE_ENV === 'production'` 와 `FRONTEND_URL_PROD_NOT_CONFIGURED` 모두 포함 (각 1건 확정).
+- advisor #1 (계획) / advisor #2 (완료) 5-perspective 모두 PASS, BLOCK 토큰 없음.
+
+### 차후 후속 (master B-route 결정 — 본 plan 범위 외)
+
+- 환경별 NODE_ENV 정렬 (i-dev=development, main/aws-deploy=production) + dev-merge 자동 fixup 도입 안건은 본 plan 종료 후 별개 plan 으로 분리 (master 결정).
+
+### 영향 파일
+
+data-craft-server:
+- `src/services/email.service.ts` (+7 / -1)
+- `.env` (+2 / -0)
+- `src/tests/e2e/reset-password.e2e.test.ts` (+2 / -0)
+
 ## v001.142.0
 
 > 통합일: 2026-05-16
