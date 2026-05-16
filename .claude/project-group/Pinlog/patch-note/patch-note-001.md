@@ -176,3 +176,52 @@ PinLog-Web:
 - iOS Safari `<input capture>` 미지원 변종에서 갤러리만 열림 — 표준 폴백 동작에 의존. UA sniff 의도적 회피.
 - `usePostCompose` 의 useState → Zustand 전환은 의도된 deviation — cross-step 상태 공유 요구를 충족하기 위함. Phase 6 의 thin orchestrator 패턴 성립의 전제.
 - PostDetailsStep 의 `data-testid` 미부여 (현재 mock 으로 통합 테스트 우회). 통합 테스트 작성 시 testid 추가 필요.
+
+## v001.6.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#44](https://github.com/Team-Pingus/PinLog-Web/issues/44)
+
+### 페이즈 결과
+
+- **Phase 1 — post-detail 시안 적용 (refactor)**: `PostDetailView` 를 시안 컨벤션에 맞춰 정돈. `PostPhoto` 신설 (FileVO[] 기반 4:5 비율 컨테이너 + 다중 사진 snap-x 가로 캐러셀), `PostScopeBadge` 신설 (`private`/`friends`/`public` 미니멀 배지), `PostTagChips` 신설 (`Chip` 반복 렌더, 빈 배열 미렌더). 프로필 이미지 null 시 `Goose` happy fallback, 본문 메모 `--font-brand` (Gaegu) 17px, `StickerRow` 5표정 (`happy/love/curious/think/surprised`), 댓글 입력 `sticky bottom-0` + safe-area-inset-bottom. `tokens.css` `--font-brand` Caveat → Gaegu 변경, `index.css` Google Fonts Gaegu @import 추가. 커밋 `d305f2f` (+128/-16).
+- **Phase 2 — ⋯ 메뉴 본인/타인 분기 (feat)**: 인라인 ⋯ 메뉴 (`showMenu` state + `menuRef` + 외부 클릭 감지 + 드롭다운 마크업) 를 `PostKebabMenu` 컴포넌트로 분리. `isAuthor(accountInfo?.uuid === post.account_uuid)` 분기 — 본인은 편집/삭제, 타인은 신고/뮤트 (stub: `console.warn` + 기존 `useToast(info)` 호출). 별도 hook 파일 미작성 (BE 도착 시 형태 일치 위해). 커밋 `18c96c4` (+128/-62).
+- **Phase 3 — `/post/:uuid` 라우트 신설 + `[자세히]` 와이어링 (feat)**: React Router DOM 에 `/post/:uuid` 동적 경로를 `PrivateRoute` 래퍼로 신설. `PostDetailPage` 신설 (`useParams<{uuid}>()` → `<PostDetailView postUuid={uuid} onBack={navigate(-1)} onEdit={navigate('/write')} />`, uuid 부재 시 `<Navigate to="/" replace />`). `PinPreviewSheet` 의 `[자세히]` 가 `onClose()` → optional `onDetail?.(uuid)` → `navigate(`/post/${uuid}`)` 순으로 동작하도록 변경 (기존 `onDetail` prop 옵셔널화로 backwards-compat 유지). 커밋 `454b654` (+39/-2).
+- **Phase 4 — MemoryMapScreen 정비 (refactor)**: `MapPostFeed` 를 제어 컴포넌트로 전환 (내부 `usePostList()` 제거, `posts` prop 수신). `MapWithCarousel` 에서 `useMapFilters` + `applyClientFilter` 로 필터링한 결과를 `MapPostFeed`/`MapCarousel` 양쪽에 주입. `availableTags` 는 원본 `postList` 기준 `useMemo` 계산 (선택 해제 후에도 칩 잔존). `MapFilterChips` 가 40% 지도 섹션 최상단에 항상 표출 (period/scope/tags). 인라인 빈 상태 오버레이 → 공용 `EmptyState`(goose=`wave`, CTA "첫 핀 남기기") 교체. `onEmptyCta` prop 으로 `MainPage` 에서 `navigate('/write')` 주입. 핀 탭 → `PinPreviewSheet` 우선 (PHASE 06 기존 와이어링 보존). 커밋 `4f66023` (+39/-17).
+
+### 영향 파일
+
+PinLog-Web:
+- `src/widgets/post-detail/ui/PostDetailView.tsx`
+- `src/widgets/post-detail/ui/PostPhoto.tsx` (신규)
+- `src/widgets/post-detail/ui/PostScopeBadge.tsx` (신규)
+- `src/widgets/post-detail/ui/PostTagChips.tsx` (신규)
+- `src/widgets/post-detail/ui/PostKebabMenu.tsx` (신규)
+- `src/widgets/post-detail/ui/index.ts`
+- `src/pages/post-detail/PostDetailPage.tsx` (신규)
+- `src/pages/post-detail/index.ts` (신규)
+- `src/app/router/Router.tsx`
+- `src/pages/MainPage.tsx`
+- `src/widgets/map-post-feed/ui/MapPostFeed.tsx`
+- `src/widgets/map-post-feed/ui/MapWithCarousel.tsx`
+- `src/widgets/map-post-feed/ui/PinPreviewSheet.tsx`
+- `src/shared/styles/index.css`
+- `src/shared/styles/tokens.css`
+
+### 검증
+
+- `pnpm lint` PASS 4회 (Phase 1~4 각각, 0 errors / 8~9 baseline warnings — 본 플랜 범위 외).
+- 페이즈별 메인 세션 verification 6-step (git show --stat / scope 확인 / diff 정독 / 의미 검증 / blockers 정리 / lint gate) 모두 PASS.
+
+### 알려진 후속 / 수동 검증 항목
+
+- `/post/<mock-uuid>` 직접 진입 시 핀 상세 시안 렌더 확인 (예: `/post/p001`). **마스터 수동 click-through 권장**.
+- 메인 페이지 Layout D → 필터 칩 (기간/태그/scope) 토글 시 지도 + 캐러셀 필터 동기 확인.
+- 지도 핀 탭 → 바텀시트 프리뷰 → `[자세히]` → `/post/:uuid` 라우팅 확인.
+- 빈 상태 (필터 결과 0건) → EmptyState (Goose wave + "첫 핀 남기기") 확인.
+- 본인 핀 ⋯ 메뉴 (편집/삭제) vs 타인 핀 ⋯ 메뉴 (신고/뮤트 stub) 분기 확인.
+- **신고/뮤트 stub**: `console.warn` + toast info 만. BE 확장 (단계 2-A/B) 시 실제 API 연결 — `useReportPost`/`useMuteUser` hook 형태는 BE 시그니처 도착 후 신설 권장 (현 단계 미작성).
+- **scope 배지 / 태그 칩 mock fallback**: MSW handlers 가 fixture posts.json 의 `scope`/`tag_list` 를 반환 중이므로 추가 작업 불필요. Phase 2 BE 확장 시 실 API 응답으로 자연 전환.
+- **MainPage `onEdit` 핸들러 미완성** (Phase 3 phase-executor 보고): `setEditingPostUuid` 만 세팅하고 `/write` 로 navigate 하지 않음. 별도 정리 플랜 권장.
+- `--font-brand` 토큰을 Caveat → Gaegu 로 전역 변경 — 다른 컴포넌트가 향후 `--font-brand` 사용 시 영향. 의도적.
+- Gaegu 폰트 자산은 Google Fonts CDN `@import` 로 등록 — 오프라인 환경 또는 CSP 강화 시 self-host 전환 필요.
