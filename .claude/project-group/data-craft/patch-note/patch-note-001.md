@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.129.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#73 (핫픽스 1)
+
+### 페이즈 결과
+
+- **Phase 6 / 핫픽스 1** (`a6ff3004`, data-craft): AIAssistantModal 채팅창 크기 확장.
+
+### 핫픽스 사유
+
+마스터 후속 지시 — v001.124.0 에서 발행한 채팅창의 너비 `w-80` (320px) 와 대화 영역 최소 높이 `min-h-40` (160px) 이 실제 대화 UX 로는 좁고 짧다. 시각적 비례 부족.
+
+### 해결방식
+
+`AIAssistantModal.tsx` 의 `DialogContent` className 두 군데만 조정:
+- 모달 너비: `w-80` → `w-[420px]` (420px, PropertyDrawer 의 `max-w-md` 384px 보다 살짝 큰 폭으로 시각적 분리 유지)
+- 대화 영역 div 최소 높이: `min-h-40` → `min-h-[360px]` (2.25배 확장)
+
+모바일 안전 폭 `max-w-[calc(100vw-3rem)]`, 우측 하단 origin, 꼬리 div, 드로어 회피 (`md:-translate-x-96`), 입력 영역 disabled 등 나머지 구조는 그대로 유지.
+
+### 영향 파일
+
+data-craft:
+- `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx`
+
+머지 커밋: (data-craft i-dev 핫픽스 1 merge).
+
+### 검증
+
+- 수동: `pnpm dev` (5173) → FAB 클릭 → 모달 폭이 420px, 대화 영역 높이 360px 이상으로 확장된 것 확인. 드로어 오픈 상태에서도 화면 우측 영역 안에서 origin 유지.
+- 자동: `pnpm typecheck:all && pnpm lint` PASS (0 errors).
+
 ## v001.128.0
 
 > 통합일: 2026-05-15
