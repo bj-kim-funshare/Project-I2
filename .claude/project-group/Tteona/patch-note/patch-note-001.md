@@ -1,5 +1,57 @@
 # Tteona — Patch Note (001)
 
+## v001.9.0 — Stripe 결제 게이트웨이 통합 v1 (BE PaymentIntent + webhook 70/30 split + FE Stripe Elements 결선)
+
+> 통합일: 2026-05-16
+> 플랜 이슈: bj-kim-funshare/Tteona#9
+
+### 페이즈 결과
+
+- **Phase 1** (feat, Tteona-server): `stripe` v22.1.1 의존성 추가 + `src/lib/stripe/client.ts` 신설(SDK 싱글턴 + `constructStripeEvent` 헬퍼). `src/lib/config.ts` 에서 `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` 을 optional → required 로 전환. `src/lib/transactions/service.ts` 에 `createPendingTransactionWithIntent(tx, payload)` 추가 — RLS-aware `c.get('tx')` 위에서 `transactions` 행 INSERT(`status='pending'`, 기존 컬럼만), 직후 `metadata.transactionId` 포함 Stripe PaymentIntent 생성(`idempotencyKey` 적용). `POST /api/transactions` 핸들러 신설 — zod 검증, 비카드 메서드는 400 `PAYMENT_METHOD_UNSUPPORTED`, 응답 `{ transactionId, clientSecret }`. 커밋 `35380e2`.
+- **Phase 2** (feat, Tteona-server): `src/routes/webhooks/stripe.ts` 신설 — `c.req.raw.text()` 로 raw body 보존 + `stripe-signature` 헤더 + `constructStripeEvent` 로 서명 검증. 이벤트 분기: `payment_intent.succeeded` → `finalizePaidTransaction` 호출(70/30 split: `platformFeeKrw = floor(gross * 0.30)`, `sellerPayoutKrw = gross - platformFeeKrw - stripeFeeKrw`, `stripeFeeKrw` 는 `stripe.charges.retrieve(latest_charge, {expand:['balance_transaction']}).balance_transaction.fee` 에서 도출), `stripeChargeId` 멱등 가드. `payment_intent.payment_failed` → `markTransactionFailed` 호출(status 전환 + 실패 사유는 pino warn 로그). `src/app.ts` 에서 `/webhooks` 라우트를 `authMiddleware` / `dbContext` 이전에 마운트(서비스-role 통과). 커밋 `dd3e05d`.
+- **Phase 3** (feat, Tteona): `@stripe/react-stripe-js` 설치. `src/lib/stripe/client.ts` 신설(`loadStripe` 싱글턴, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` 환경변수 검증). `Pay_B_Legal.tsx` 2단계 플로우로 재설계 — 1단계: 카드 수단 선택 + VoluntaryCheck 동의 후 `onPrepare` 콜백 → 부모가 `POST /api/transactions` 실행 → 2단계: `clientSecret` 수신 시 `<Elements>` + `<PaymentElement />` 마운트, 내부 `CardPaymentForm` 에서 `stripe.confirmPayment` 로 최종 결제. 비카드 수단(KakaoPay/TossPay/Apple Pay) 은 `disabled` + "준비 중" 캡션. `/pay/[id]/page.tsx` `handleSubmit` 재작성 — `idempotencyKey = useMemo(() => crypto.randomUUID(), [])` 1회 생성, `submitPending` 으로 이중 제출 방지, `confirmPayment` 의 `return_url` = `/purchase-done/{transactionId}`, 폴백 `router.push`. 503 분기 제거. 커밋 `cbc85a2`.
+
+### 영향 파일
+
+Tteona-server:
+- package.json
+- pnpm-lock.yaml
+- src/lib/stripe/client.ts (신규)
+- src/lib/config.ts
+- src/routes/transactions/index.ts
+- src/lib/transactions/service.ts
+- src/routes/webhooks/stripe.ts (신규)
+- src/app.ts
+
+Tteona:
+- package.json
+- pnpm-lock.yaml
+- src/lib/stripe/client.ts (신규)
+- src/components/checkout/Pay_B_Legal.tsx
+- src/app/(buyer)/pay/[id]/page.tsx
+
+### 그룹 정책 준수 기록
+
+- `db.md` "정규 스키마는 외부(Huya) 소유, 본 그룹은 DDL 미발행" 준수 — 본 플랜은 `transactions` 테이블 신규 컬럼 추가 0건, 마이그레이션 0건. POST dedupe 는 Stripe Idempotency-Key 헤더로 처리(DB unique 제약 대체), payment_failed 사유는 pino 로그로만 기록(`failure_reason` 컬럼 추가 회피).
+- Lint 게이트: Tteona-server `pnpm typecheck` PASS / Tteona `pnpm lint` PASS (0 errors).
+- advisor #1 + #2 모두 5관점 PASS, BLOCK 없음.
+
+### Spec drift 기록
+
+- 플랜 명세 `status='paid'` → 실 스키마 CHECK 제약(`('pending','success','failed','refunded')`)에 맞춰 코드는 `'success'` 로 구현. 단어 통일 follow-up: Huya 스키마 소유자 통보 또는 플랜 어휘 정정.
+- FE `.env.example` 의 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` 는 이전 작업으로 이미 존재 — 본 플랜이 추가하지 않음(Phase 3 affected_files 에 명시되었으나 실 변경 없음).
+
+### 외부 의존 / 후속
+
+- **Stripe Connected Accounts 미사용 가정**: v1 = 플랫폼 계정 단일 수금 + 내부 회계 split (`platformFeeKrw` / `sellerPayoutKrw` / `stripeFeeKrw` 행 기록). 실제 셀러 송금(`transfer_data.destination` + `application_fee_amount` + 셀러 온보딩) 은 v2 별도 플랜.
+- **Webhook RLS bypass 미검증** (Phase 2 blocker): webhook 의 service-role connection 이 `transactions` UPDATE 의 RLS 정책을 통과하는지 정적 검증 불가 — `stripe trigger payment_intent.succeeded` 로 마스터 라이브 검증 필요. 미통과 시 0 rows updated 로 조용한 실패 가능 → 후속 hotfix 후보.
+- **고아 pending 행**: 같은 `idempotencyKey` 로 우리 쪽 INSERT 가 중복 발생할 수 있고 webhook 매핑 후 짝 잃은 pending 행이 남을 수 있음. cleanup 잡 v1 미구현(follow-up plan).
+- **FE `itineraryId` 출처 미보장** (Phase 3 blocker): `TransactionSummary.itineraryId` 가 optional — undefined 시 BE 가 400 반환. fallback 없음, 마스터 수동 테스트 우선 필요.
+- **CardPaymentForm 결제 버튼 금액 표시 0** (Phase 3 blocker): amount prop 미전달로 표시값 0 KRW. 실 결제는 `PaymentElement` 가 `clientSecret` 에서 읽으므로 결제 동작 영향 없음 — UX 후속.
+- **Huya 스키마 확장 후보**: `stripe_payment_intent_id` 컬럼(POST dedupe 강화) + `failure_reason` 컬럼(payment_failed 사유 DB 저장) 추가 요청 — 별도 외부 트랙.
+- **createRefund RLS 우회 핫픽스** (마스터 명시 권고): 본 플랜 완료 후 PENDING gate 에서 `핫픽스 c.get('tx') 전환` 으로 별도 처리 예정.
+- **refunds 플랜 Phase 3 s5 assertion 강화 권고** (마스터 명시): 본 Stripe 플랜의 PENDING gate 핫픽스 범위 밖 — 별도 plan-enterprise 호출 필요.
+
 ## v001.8.0 — refunds 테이블 운영 활성화 (Huya DDL/RLS 요청 명세 + Drizzle pgEnum/notNull lockstep + admin-gated 라이브 통합 테스트)
 
 > 통합일: 2026-05-16
