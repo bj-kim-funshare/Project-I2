@@ -273,3 +273,48 @@ PinLog-Web:
 - **AccountManageView 계정 전환/추가/삭제**: 본 페이즈는 시각 폴리시만. 실연동은 후속 (스토어 호출부는 disabled 상태로 유지).
 - **`ja.ts` i18n drift**: ko/en 대비 누락 키 잔존 — 별도 정리 권장 (본 플랜 범위 외).
 - **Lint warnings 9건**: 전부 pre-existing (이전 패치노트 기재) — 별도 정리 플랜 권장.
+
+## v001.8.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#46](https://github.com/Team-Pingus/PinLog-Web/issues/46)
+
+### 페이즈 결과
+
+- **Phase 1 — BE 신규 endpoint 2종 (feat)**: Pingus-Server 에 인증된 사용자의 글만 반환하는 `POST /api/post/my` (페이징, `PageResponseDTO<PostVO>` + `totalCount` 자동 포함) 와 `POST /api/post/my-all` (전체, `List<PostVO>`) 신설. Mapper `selectPostsByAccountUuid` / `countPostsByAccountUuid` / `selectAllPostsByAccountUuid` 3종, Service `findMyPosts` / `findAllMyPosts` 2종, Controller 2 핸들러. JWT `auth.getName()` 으로 accountUuid 추출 (기존 create/update/delete 패턴 미러). 기존 `/list`, `/all` 시그니처/응답 미변경. 커밋 `ff37025` (+124/-0) + lint hotfix `c01788a` (+2/-2) — `ApiResponse.error(String)` 의 반환 타입을 `ApiResponse<Void>` → `<T> ApiResponse<T>` 로 제네릭화 (하위 호환 — `Void` 가 유효한 `T`). compileJava 통과.
+- **Phase 2 — FE API + hook userId 확장 (feat)**: PinLog-Web `endpoints.ts` 에 `POST.MY_LIST` / `POST.MY_ALL` 추가, `postApi.myList({page,size})` / `postApi.myAll()` 메서드 추가 (인증 필수, `skipAuth` 플래그 생략). `usePostList.ts` 의 두 hook 모두 optional userId 파라미터 확장 — `usePostList(userId?)`, `useInfinitePostList(size, userId?)`. userId truthy 시 my-* queryKey + queryFn 으로 분기, falsy 시 기존. hook 호출 자체는 항상 1회 (queryKey/queryFn 을 호출 전 변수로 사전 계산) → Rules-of-Hooks 안전. 커밋 `9126869` (+31/-7).
+- **Phase 3 — MapWithCarousel userId prop (feat)**: `MapWithCarouselProps` 에 `userId?: string` 필드 + JSDoc 추가. `usePostList()` → `usePostList(userId)` 1줄 교체. `MapPostFeed` 미변경 (순수 프레젠테이션 유지). 기존 호출부는 userId 미전달이므로 동작 동일. 커밋 `4d2f970` (+4/-2).
+- **Phase 4 — 마이페이지 실데이터 배선 (feat)**: `MyPageView` 가 `useInfinitePostList(12, accountInfo?.uuid)` 호출 후 `data?.pages?.[0]?.totalCount ?? 0` 을 `ProfileStatsRow.pinCount` 에 주입 (`pinCount={0}` 하드코딩 제거). `MyPinsGridTab` 은 `useAuthStore` 에서 uuid 자체 조회 → `useInfinitePostList(12, accountInfo?.uuid)` 로 본인 글만 조회 (동일 query key 캐시 공유 — 중복 fetch 없음). 기존 `posts.length === 0` 분기는 이미 올바르게 구현돼 변경 불필요. `MyMemoryMapTab` 의 EmptyState stub 해제 → `MapWithCarousel userId={accountInfo?.uuid}` 로 본인 핀 지도 연동. 커밋 `0b26c2d` (+19/-7) + 라우트 post-fix `5c76510` (+1/-1) — `onEmptyCta` 의 `/post/create` 가 router 에 부재해 실제 글 작성 경로 `/write` (Router.tsx:67) 로 교체.
+
+### 영향 파일
+
+Pingus-Server:
+- `src/main/java/com/pingus/mainserver/controller/PostController.java`
+- `src/main/java/com/pingus/mainserver/service/PostService.java`
+- `src/main/java/com/pingus/mainserver/mapper/PostMapper.java`
+- `src/main/resources/mapper/user/PostMapper.xml`
+- `src/main/java/com/pingus/mainserver/dto/ApiResponse.java` (lint hotfix scope expansion)
+
+PinLog-Web:
+- `src/shared/api/constants/endpoints.ts`
+- `src/features/post/api/postApi.ts`
+- `src/features/post/lib/usePostList.ts`
+- `src/widgets/map-post-feed/ui/MapWithCarousel.tsx`
+- `src/widgets/my-page/ui/MyPageView.tsx`
+- `src/widgets/my-page/ui/MyPinsGridTab.tsx`
+- `src/widgets/my-page/ui/MyMemoryMapTab.tsx`
+
+### 검증
+
+- BE compile gate: `./gradlew compileJava` exit 0 (Phase 1 hotfix 이후 통과).
+- FE lint gate: `pnpm lint` exit 0 / 0 errors / 9 warnings (전부 pre-existing).
+- 라우트 검증: `MyMemoryMapTab.onEmptyCta` 경로 `/write` 가 `Router.tsx:67` 의 실제 정의와 일치.
+- ApiResponse 제네릭화 안전성: 전 repo 의 `ApiResponse.error` 호출부가 모두 `ResponseEntity<ApiResponse<X>>` body 컨텍스트에서 사용 — 컴파일러 추론으로 `T` 자동 해결, 기존 `Void` 시그니처 호출자(Comment/File/Auth 등) 무영향.
+
+### 알려진 후속
+
+- **`/api/post/all` 및 신규 `/api/post/my-all` 의 unbounded list 응답 패턴**: 핀 수천 보유 사용자에서 잠재 stall. 기존 `/all` 을 그대로 미러링한 결정이므로 본 플랜 범위 밖 — 커서 기반 페이징 또는 viewport-bound 쿼리 도입 후속 권장.
+- **`postApi.all()` 호출의 pre-existing 버그**: `apiClient.post<...>(URL, true)` 에서 `true` 가 body 위치로 잘못 전달되는 (skipAuth 플래그 아님) 버그를 Phase 2 sub-agent 가 관찰. 본 페이즈 범위 외 — 후속 fix 권장. 신규 `postApi.myAll()` 호출은 `(URL)` 단일 인자로 호출해 동일 버그 회피.
+- **gate-runner (Haiku) 의 exit code 오분류**: Phase 3 lint 실행에서 실제 exit 0 인 결과를 `exit 1` 로 보고. 메인 세션이 직접 `pnpm lint` 재실행으로 검증 후 PASS 처리. gate-runner 신뢰성 보강 후속 권장 (harness 차원).
+- **`ApiResponse.error` 제네릭화 scope expansion**: Phase 1 affected_files 에 없던 `ApiResponse.java` 1건을 lint hotfix 중 master "no clarifying questions" 모드 하에서 메인 세션이 자체 승인. 사후 보고 — 변경 1줄, 하위 호환 유지.
+- **`MyMemoryMapTab` 의 filter chips / period / scope**: 본 페이즈는 "본인 핀만 지도 표시" 정상 경로까지. `MapFilterChips` 노출/숨김 정책은 후속.
