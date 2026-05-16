@@ -225,3 +225,51 @@ PinLog-Web:
 - **MainPage `onEdit` 핸들러 미완성** (Phase 3 phase-executor 보고): `setEditingPostUuid` 만 세팅하고 `/write` 로 navigate 하지 않음. 별도 정리 플랜 권장.
 - `--font-brand` 토큰을 Caveat → Gaegu 로 전역 변경 — 다른 컴포넌트가 향후 `--font-brand` 사용 시 영향. 의도적.
 - Gaegu 폰트 자산은 Google Fonts CDN `@import` 로 등록 — 오프라인 환경 또는 CSP 강화 시 self-host 전환 필요.
+
+## v001.7.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: [#45](https://github.com/Team-Pingus/PinLog-Web/issues/45)
+
+### 페이즈 결과
+
+- **Phase 1 — MyPage 헤더 정비 (feat)**: `MyPageView` 의 프로필 카드를 `ProfileAvatar` 제거 → `Goose(mood=happy, size=96)` + 닉네임 + `@handle` (닉네임 소문자/공백제거 fallback) 레이아웃으로 재구성. 신규 `ProfileStatsRow` 가 핀/친구/캡슐 3-카운트 행을 카드 하단에 배치 (친구·캡슐 0 고정, 핀도 my-pins endpoint 부재로 0 placeholder). i18n ko/en/ja `myPage.handle`, `myPage.stats.{pins,friends,capsules}` 추가. 커밋 `e63a3e9` (+64/-16).
+- **Phase 2 — MyPage 탭 인프라 3탭 (feat)**: `MyPageView` 본문에 `ProfileTabs` 추가 + URL `?tab=pins|map|capsule` 동기화. 핀 그리드 탭(`MyPinsGridTab`)은 `useInfinitePostList` + `GridCard` 재사용 3열 그리드. 추억지도 탭(`MyMemoryMapTab`)은 `MapPostFeed` 사용자 필터 prop 부재로 빈 상태 fallback. 캡슐 보관함 탭(`MyCapsuleVaultTab`)은 disabled 시안 (Goose think + lock 배지 + "준비 중") + 클릭 시 `capsuleLocked` 토스트. ko/en/ja 8개 i18n 키 추가. 커밋 `cea4fac` (+234/-4).
+- **Phase 3 — Notification 6-kind 분기 UI + Activity 헤더 (feat)**: `NotificationItem` 의 `isPhase1Navigable` 불리언을 `routeActionByKind` switch 로 교체 — `comment→/post/:uuid?focus=comments`, `like→/post/:uuid`, `friend→/my` (fallback), `capsule·memory·dm→토스트+LockBadge`. 카드 시안 6 kind 동일. `ActivityPage` 헤더에 `Goose(mood=love, size=52)` + `activity.header.{title,subtitle}` 영역. 탭 본문 무변경. 커밋 `9d5f2cf` (+89/-24).
+- **Phase 4 — Settings 6 섹션 + 로그아웃 footer 분리 (refactor)**: `SettingsView` 에서 로그아웃 섹션 + 관련 훅 (`clearAuth`, `showConfirm`) 제거. 신규 `SettingsFooter` 가 로그아웃 버튼 + 확인 다이얼로그 (`auth.logout`/`auth.logoutConfirm` 재사용) 담당. `SettingsPage` 가 `SettingsView` 아래에 `SettingsFooter` 배치 → 본문 6 섹션 + 페이지 끝 단독 로그아웃 행. 커밋 `181ce46` (+39/-29).
+- **Phase 5 — ProfileEdit / AccountManage 시안 폴리시 (feat)**: `ProfileEditPage` 헤더에 `Goose(happy, 28)` + 프로필 이미지 미설정 시 `Goose(happy, 80)` placeholder. 닉네임 섹션 하단 `@handle` 미리보기 라벨 (`profile.edit.handlePreview`). `AccountManagePage` 헤더에 `Goose(wave, 28)` + `account.manage.title`. `AccountManageView` 가 신규 `AccountCard` 공통 컴포넌트로 카드 추출 + 계정 전환/추가/삭제 버튼 disabled + 준비 중 안내. i18n `profile.edit` 객체화 + `account.*` 신규 키. 커밋 `bfcfbdb` (+137/-57).
+
+### 영향 파일
+
+PinLog-Web:
+- `src/widgets/my-page/ui/MyPageView.tsx`
+- `src/widgets/my-page/ui/ProfileStatsRow.tsx` (신규)
+- `src/widgets/my-page/ui/ProfileTabs.tsx` (신규)
+- `src/widgets/my-page/ui/MyPinsGridTab.tsx` (신규)
+- `src/widgets/my-page/ui/MyMemoryMapTab.tsx` (신규)
+- `src/widgets/my-page/ui/MyCapsuleVaultTab.tsx` (신규)
+- `src/widgets/my-page/index.ts`
+- `src/widgets/notification/ui/NotificationItem.tsx`
+- `src/widgets/notification/lib/moodByKind.ts`
+- `src/pages/ActivityPage.tsx`
+- `src/widgets/settings/ui/SettingsView.tsx`
+- `src/widgets/settings/ui/SettingsFooter.tsx` (신규)
+- `src/widgets/settings/index.ts`
+- `src/pages/SettingsPage.tsx`
+- `src/pages/ProfileEditPage.tsx`
+- `src/pages/AccountManagePage.tsx`
+- `src/widgets/account-manage/ui/AccountManageView.tsx`
+- `src/widgets/account-manage/ui/AccountCard.tsx` (신규)
+- `src/shared/lib/i18n/locales/ko.ts`
+- `src/shared/lib/i18n/locales/en.ts`
+- `src/shared/lib/i18n/locales/ja.ts`
+
+### 알려진 후속
+
+- **MyPage 핀/친구/캡슐 카운트 = 0 placeholder**: my-pins endpoint 부재 + 친구·캡슐 카운트는 로드맵 후속 단계까지 의도적 0 고정. 후속 BE 보강 시 `ProfileStatsRow` props 전환만 필요.
+- **MyMemoryMapTab 빈 상태 fallback**: `MapPostFeed` 에 사용자 범위 필터 prop 부재 → 후속 BE my-pins endpoint + `MapPostFeed` `userId` prop 도입 시 재연동.
+- **Notification friend kind → `/my` fallback**: 친구 프로필 페이지 (`/profile/:uuid` 등) 도입 시 `actorUuid` 기반 라우팅으로 교체.
+- **Notification comment kind `?focus=comments`**: `PostDetailPage` 가 이 쿼리를 실제로 처리하는지 미확인 — 후속 라우트 보강 권장.
+- **AccountManageView 계정 전환/추가/삭제**: 본 페이즈는 시각 폴리시만. 실연동은 후속 (스토어 호출부는 disabled 상태로 유지).
+- **`ja.ts` i18n drift**: ko/en 대비 누락 키 잔존 — 별도 정리 권장 (본 플랜 범위 외).
+- **Lint warnings 9건**: 전부 pre-existing (이전 패치노트 기재) — 별도 정리 플랜 권장.
