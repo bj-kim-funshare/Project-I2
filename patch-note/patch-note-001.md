@@ -1,5 +1,36 @@
 # 아이OS — Patch Note (001)
 
+## v001.74.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #40
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1** (`cfbfd17`): `.claude/skills/dev-merge/SKILL.md` 의 PENDING 게이트 메시지 블록 직후 (L243 `Then halt.` 직전) 에 후속 스킬 사전 통보 1줄 추가 — "Calling a follow-up skill (pre-deploy / patch-confirmation, etc.) does NOT auto-merge this PR. Type `머지 완료` to merge. To intentionally leave the PR open and move on, type `중단` or simply invoke another skill." 키워드 리스트 흐름 유지, 영문 작성 (§1 언어 분리), 다른 md (worktree-lifecycle / completion-gate-procedure) 손대지 않음.
+
+### 진단 요지
+
+- 2026-05-16 data-craft 사이클에서 관측: 마스터가 dev-merge PENDING 입력 (`머지 완료`) 을 생략하고 곧바로 pre-deploy 호출 → PR 미머지 상태에서 stale main 위에서 후속 스킬 실행 → 본 사이클은 main session 의 AskUserQuestion 회복으로 막았지만 spec 차원 정리 요청.
+- 마스터 enum 3안 (A: 묵시적 머지 분기 / B: 후속 스킬의 미머지 감지 / C: 자동 머지 default invert) 모두 net-positive 3 질문 (`feedback_no_prevention_treadmill.md`) 으로 평가 → 셋 다 net-negative 판정 (Q1 1회성 / Q2 의도된 left-open 차단 또는 의도된 미머지 use case false positive / Q3 일반 contract 일관성 파괴 또는 순수 누적).
+- Q1 evidence-backed: root patch-note + I2 memory 전수 `grep -rn "미머지|PR open|stale main|머지 완료.*건너"` → PENDING gate 입력 생략 + stale main 후속 패턴 0건.
+- 채택안 D — 마스터의 enum 외 영(零) 케이스. spec 본체 변경 없음, dev-merge PENDING 메시지에 1줄 사전 통보만 추가. 새 자동화 / 의사결정 카드 / cross-session 의존 0개, Q3 폐기 0개 → Treadmill Audit NOT APPLICABLE.
+
+### 회귀 검증
+
+- main session per-phase verification 5단계 (git show --stat, affected_files 교집합, git diff 내용, blockers, Treadmill-aware 체크) 모두 PASS.
+- `Then halt.` grep → 1건만 L243, 올바른 PENDING 블록 (post-clean-review, HOTFIX gate 와 무관) 에 삽입 확인.
+- advisor #1 (계획) / advisor #2 (완료) 6-perspective 모두 PASS, BLOCK 토큰 없음.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 추가 0개. 메시지 한 줄 강화만 (Q3 폐기 대상 0개).
+
+### 영향 파일
+
+- `.claude/skills/dev-merge/SKILL.md` (+2 / -0)
+
 ## v001.73.0
 
 > 통합일: 2026-05-16
