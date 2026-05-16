@@ -2074,3 +2074,16 @@ Project-I (구 아이OS) 가 자기 보수에 자원 소진되어 실패한 뒤,
 ### 변경 파일
 
 - (수정) monitoring/data/hourly.json
+
+## v001.74.0
+
+> 통합일: 2026-05-16
+
+### 변경 파일
+
+- (수정) monitoring/data/hourly.json
+- (추가) .claude/inspection-runs/20260514T141905Z-pre-deploy.json
+- (추가) .claude/inspection-runs/20260515T081443Z-dev-inspection.json
+- (추가) .claude/inspection-runs/20260515T081613Z-dev-inspection.json
+- (추가) .claude/inspection-runs/20260515T090626Z-dev-inspection.json
+- (추가) .claude/inspection-runs/20260515T091032Z-dev-security-inspection.json
