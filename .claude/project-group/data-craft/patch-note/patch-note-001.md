@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.139.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: #77
+
+### 페이즈 결과
+
+- **Phase 1** (`aa7ee9a7`): `packages/fs-api/src/types/dataViewer/response.ts` 의 `ServerColumnData.setting` 에 `frozen?: 'start' | 'end' | 'none'` 추가. TS2339 (serverToColumnRow.ts:53, serverToViewerMetaResult.ts:73) 2건 해소.
+- **Phase 2 v1→v2** (`35ffb28f` → `2cc8b3f2`): `SettingsFormTabContent.tsx:103` destructure 에 `handleFormFieldsChange` 추가 (v1 의 잘못된 rename 정정). TS2552 3건 해소.
+- **Phase 3 v1→v2** (`8886e27d` → `f1bbeba8`): `SavePageLayoutResponse` 에 `widgets?: WidgetConfig[]` 추가 + `layoutPersistence.ts:215` 에 `as unknown as WidgetConfig[]` 격리 cast (fs-api WidgetConfig ↔ app WidgetConfig 구조 불일치). TS2345 1건 해소.
+
+### 회귀 검증
+
+- `pnpm exec tsc -b` exit 0 (오류 0건)
+- `pnpm build` (tsc + vite) exit 0, 16.11s
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-api/src/types/dataViewer/response.ts` (+1 line)
+- `packages/fs-api/src/types/builder/requests.ts` (+1 line)
+- `src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx` (+1 line, destructure)
+- `src/entities/layout/model/layoutPersistence.ts` (+1 line, cast)
+
+### 후속 필수 (본 플랜 범위 외)
+
+`/group-policy data-craft` 호출로 `dev.md` 의 `data-craft.lint_command` 갱신 (`pnpm typecheck:all` 가 root `src/` 미커버 — 본 결함의 진입로). 이후 `/pre-deploy data-craft` 재호출하여 FE 배포 마무리.
+
 ## v001.138.0
 
 > 통합일: 2026-05-16
