@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.131.0
+
+> 통합일: 2026-05-16
+> 플랜 이슈: funshare-inc/data-craft#66 (Hotfix 1)
+
+### 페이즈 결과
+
+- **Phase 9 (Hotfix 1)** (`8d7aa05b`, data-craft): 마스터 dev 검증에서 비-dashboard 4뷰 (grid/calendar/kanban/gantt) 에 인쇄 버튼 2개 노출 회귀 보고. 원인: `HeaderSearch.tsx` L230-241 이 이미 `!isReadOnly` 만으로 4뷰에서 인쇄 버튼 렌더 중 (HeaderActions L171 의 `viewMode !== 'dashboard'` 조건으로 HeaderSearch 자체가 dashboard 에서 숨김). Phase 1a 가 HeaderActions L191-208 의 dashboard 한정 별도 버튼 조건을 5뷰 전체로 확장하여 비-dashboard 에서 HeaderSearch + HeaderActions = 2개 노출. 수정: HeaderActions 조건을 `viewerModel.viewMode === 'dashboard'` 단일로 복원 + 주석 정합. Phase 1a 의 5뷰 트리거 노출 목표는 이미 Phase 1a 이전부터 HeaderSearch + HeaderActions 조합으로 만족되고 있었음 (Phase 1a 자체가 불필요한 변경이었음을 사후 확인).
+
+### 해결방식
+
+- `<HeaderActions>` 는 `FsGridHeader.tsx` L161 에서 5뷰 모두 무조건 렌더. 내부에서 `HeaderSearch` 가 `viewMode !== 'dashboard'` 분기로 4뷰에만 렌더 → HeaderSearch 의 인쇄 버튼이 비-dashboard 4뷰 커버. HeaderActions 의 dashboard 한정 별도 버튼이 dashboard 1뷰 커버. 5뷰 모두 인쇄 트리거 1개 확보, 중복 0개.
+- Phase 1a 의 사전 점검 누락: HeaderSearch 가 이미 4뷰에서 인쇄 버튼을 제공하고 있음을 grep 하지 않고 "4뷰에 트리거 없음" 으로 가정. 본 hotfix 가 그 가정을 정정.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/HeaderActions.tsx`
+
+머지 커밋: data-craft i-dev 통합 (`-핫픽스1` WIP 머지).
+
+### 검증
+
+- 자동: lint gate (`pnpm typecheck:all && pnpm lint`) exit 0.
+- 수동: 마스터 `pnpm dev` (5173) → 5뷰 각각에서 인쇄 버튼 정확히 1개 노출 확인.
+
+---
+
 ## v001.130.0
 
 > 통합일: 2026-05-16
