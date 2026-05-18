@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.149.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #89
+
+### 페이즈 결과
+
+- **Phase 1** (`68ea71b`): `TabContentSelector` 의 `useFormStore.getAllForms()` zustand 직접 구독을 제거하고 `useForms({ includeFields: false })` React Query 로 서버 폼 메타데이터를 fetch. `useEffect` 로 `formsMetadata` 변경 시마다 `syncFormsFromServer(formsMetadata)` 호출하여 zustand 스토어도 hydrate — 같은 세션 내 `TabContentRenderer.getFormById(content)` 가 새 폼을 즉시 찾음. 드롭다운 `forms` 목록은 query 결과(`formsMetadata ?? []`)에서 직접 derive. `enterprise-497 HF-006` (EmptyDataWidgetPropertiesEditor) 와 동일 패턴. 디자인 모드 탭 위젯 드로어에서 사전 생성 폼이 1개만 노출되던 버그 해소.
+- **Phase 2** (`4db591b`): `TabFormContent.tsx` 의 89줄 zustand-only CRUD 구현 (`useFormDialogHandlers` + `FormDataListDialog` + `FormInputDialog` + `getFormRenderer`/`getFormDataListRenderer` 직접 호출) 을 30줄의 위임 구현으로 교체. 합성 `WidgetConfig` (`id`=`tab:{tabsWidgetId}:{tabValue}:{form.id}`, `type`=`user-form`, `properties.formId`=`form.id`, `properties.managementCycle`=`page-cycle`) 로 `<UserFormWidget>` 위임 렌더. UserFormWidget 의 기존 `useFormWidgetSync`/`useResolvedCycle`/`listFirst`·`useDataList` 4분기 분기를 그대로 활용 — 서버 read+write, 페이지 managementCycle 자동 반영, listFirst 동작 보장. `Tabs.widget.tsx` → `TabContentRenderer` → `TabFormContent` 의 prop 체인으로 `tabsWidgetId`(=widget `config.id`), `tabValue` 전달. 합성 id `tab:` prefix 로 일반 UserForm 위젯과 충돌 없음. `useFormDialogHandlers.ts`, `FormDataListDialog.tsx`, `FormInputDialog.tsx`, `types.ts` (tabs-widget/ui/) 는 본 페이즈에서 미참조 상태가 되나 제거하지 않음 — 후속 `project-verification` cycle 대상.
+- **Phase 3** (`d75f69d`): advisor #2 사전 검토에서 발견된 view-mode 폼 hydration 갭 보강. `TabContentRenderer` 에 Phase 1 과 동일한 `useForms({ includeFields: false })` + `useEffect` 로 `syncFormsFromServer(formsMetadata)` 패턴 적용. view 모드에서 store hydration 진입점이 없어 `getFormById(content)` 가 undefined → "폼을 찾을 수 없습니다" 로 떨어지던 누락 해소. 페이지 진입 시 모든 폼이 store 에 올라가므로 같은 페이지의 다른 위젯/탭도 혜택.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/property-drawer/ui/property-editors/TabContentSelector.tsx`
+  - `src/widgets/tabs-widget/ui/TabContentRenderer.tsx`
+  - `src/widgets/tabs-widget/ui/TabFormContent.tsx`
+  - `src/widgets/tabs-widget/ui/Tabs.widget.tsx`
+
+### 잔여 정리 (deadcode 후속)
+
+- `src/widgets/tabs-widget/ui/useFormDialogHandlers.ts`
+- `src/widgets/tabs-widget/ui/FormDataListDialog.tsx`
+- `src/widgets/tabs-widget/ui/FormInputDialog.tsx`
+- `src/widgets/tabs-widget/ui/types.ts`
+
+Phase 2 위임 전환 결과 위 4개 파일이 TabFormContent 에서 참조되지 않음. 본 플랜 scope 외 — 후속 `project-verification` 또는 `dev-inspection` cycle 로 검증 후 제거.
+
 ## v001.148.0
 
 > 통합일: 2026-05-18
