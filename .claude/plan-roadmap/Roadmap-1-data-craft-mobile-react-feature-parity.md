@@ -28,7 +28,7 @@
 
 2️⃣ 🟢 /plan-enterprise data-craft 단계3-A 유저폼 / 컴포저 (fs-form-builder-mobile, apps/web/src/mobile/routes/user-form, routes/compose.tsx). 기존 form / record write API 재사용. — 완료 (이슈 #103, v001.189.0; ScreenUserForm 신규 구현 + fs-form-builder-mobile export 활성, 저장은 inputStoreApi.save 사용; compose 는 Roadmap-005 SNS 후속 이관; widget→user-form 네비 시 widgetId/pageId location.state 누락 후속 필수)
 
-2️⃣ 🔴 /plan-enterprise data-craft 단계3-B 데이터 링크 (fs-data-link-mobile). 기존 data-link API 재사용.
+2️⃣ 🟢 /plan-enterprise data-craft 단계3-B 데이터 링크 (fs-data-link-mobile). 기존 data-link API 재사용. — 완료 (이슈 #106, v001.196.0; AppHeader 우측 Bot 아이콘 trigger + DataLinkDialog 마운트; 후속 권장: 권한 게이트 / flat-path 죽은 테스트 / 모바일 dialog 시각 보강)
 
 2️⃣ 🔴 /plan-enterprise data-craft 단계3-C 관계 빌더 (fs-relation-builder-mobile). 기존 relation API 재사용.
 
