@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.171.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 6)
+
+### 개요
+
+마스터 보고: "페이지네이션이 존재는 하지만 여전히 한 페이지에 용지를 반드시 초과하는 분량이 할당되어 나타남, 미리보기에서 1개 페이지의 높이가 엄청나게 길게 나타남, 용지 비율 규격에 전혀 맞지 않음" + "하단바 영역 디자인이 이상함, 여백을 같이 써서 하단바가 붕떠있음". advisor 사전 검증으로 진단된 근본 원인 (transform: scale 의 box-model 미축소 + flex 계층 min-h-0 누락) 을 정확히 fix.
+
+### 페이즈 결과
+
+- **Phase 14 (HOTFIX 6)** (`c4bfe64`): 3 패키지 PrintPreview + PrintDialog 동일 패턴.
+
+#### A. PrintPreview — outer-wrapper-scaled / inner-mm-card-transform 분리
+
+  - **문제 (HOTFIX 5 이전 잔존)**: paper card 가 `width: Xmm; height: Ymm; transform: scale(fitScale)` 단일 박스. transform 은 *rendered output* 만 축소, *box model* (flex layout 이 보는 크기) 은 unscaled (예: 1123×794px) 그대로 → flex 가 큰 unscaled 박스로 인식해 컨테이너 overflow + 시각적 비율 어긋남.
+  - **변경**: outer wrapper 를 *scaled pixel* 크기로 신설 (`width: paperWidthPx × effectiveScale`, height 동일, `position: relative; flexShrink: 0`). 그 안에 inner paper card 를 mm 기반 unscaled + `transform: scale(effectiveScale); transformOrigin: top left; position: absolute; top:0; left:0`. iframe content 의 mm 레이아웃 보존, flex layout 은 visible 픽셀 크기 정확 인식.
+  - **container 에 `min-h-0` 추가**: flex 부모로부터 받는 가용 높이를 정확히 인식. fitScale 계산 입력 (containerSize.height) 신뢰성 회복.
+  - **페이지네이션 (HOTFIX 5) 보존**: iframe.contentWindow.scrollTo 의 좌표 `(currentPage - 1) * paperHeightPx` 는 *unscaled mm 픽셀* 그대로 — iframe viewport 는 inner paper card 의 unscaled 공간. 변경 없음.
+
+#### B. PrintDialog — flex 계층 min-h-0 보강 + 하단바 flush
+
+  - **진단 (advisor 가이드)**: preview 분기 2-pane 레이아웃의 flex 계층에 `min-h-0` 누락 시 flex item 의 `min-height: auto` 기본값이 콘텐츠 크기로 expand → 우측 미리보기 영역이 paper card 의 unscaled 픽셀만큼 비대해짐 → paper card 가 늘어나 보이는 1차 원인.
+  - **변경**: children wrapper + 우측 미리보기 패널에 `min-h-0` 추가. flex 부모-자식 chain 의 모든 level 이 가용 높이를 정확히 전파.
+  - **하단바 flush**: HOTFIX 4 의 customFooter 가 `DialogContent` 의 `p-5` padding 안에 들어가 dialog 가장자리에서 떨어진 상태. previewFooter 의 outermost div 에 `-mx-5 -mb-5` (margin negative) 추가로 DialogContent padding 을 *escape* — 가장자리 flush.
+
+### 영향 파일
+
+- data-craft (3 패키지):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintDialog.tsx`
+
+6개 파일 / +90 / -54 / 단일 커밋.
+
+### 잔여 한계 (HOTFIX 5 의 알려진 한계 그대로 유지)
+
+- 스크롤 분할 vs 인쇄 page-break 경계 정확 일치는 별 핫픽스 필요.
+- WebKit iframe 내부 스크롤바 (srcDoc CSS 주입 scope).
+- printHtmlBuilder body overflow: hidden 시 totalPages=1 묶임 가능성.
+
+신규: zoom 슬라이더 드래그 시 outer wrapper 의 width/height 가 매 프레임 변하여 transition (`width 200ms, height 200ms`) 이 lag 유발 가능 — UX 보고 후 transition 제거 검토 (마스터 결정).
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 3개 핵심 보완 (outer-wrapper-scaled, flex min-h-0 누락 검사, 하단바 flush 경로) 명시 후 진행 권고.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.170.0
 
 > 통합일: 2026-05-18
