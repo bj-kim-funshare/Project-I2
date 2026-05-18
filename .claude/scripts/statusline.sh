@@ -195,7 +195,7 @@ esac
 
 EXT_BADGES=""
 [ -n "$VIM_MODE" ] && EXT_BADGES="${EXT_BADGES} ${DIM}[vim:${VIM_MODE}]${RESET}"
-[ -n "$AGENT_NAME" ] && EXT_BADGES="${EXT_BADGES} ${YELLOW}[agent:${AGENT_NAME}]${RESET}"
+[ -n "$AGENT_NAME" ] && [ "$AGENT_NAME" != "claude" ] && EXT_BADGES="${EXT_BADGES} ${YELLOW}[agent:${AGENT_NAME}]${RESET}"
 
 # ── Rate-limit displays ────────────────────────────────────────────────────
 SES_RESET_FMT=$(fmt_reset_hm "$RESET_5H")
