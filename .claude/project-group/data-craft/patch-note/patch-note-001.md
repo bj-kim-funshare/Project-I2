@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.177.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #99 (hotfix 1)
+> 버전 양보 메모 (CLAUDE.md §5 step 4): 본 entry 작성 중 병렬 세션이 v175/v176 선점하여 v001.177.0 으로 양보.
+
+### 페이즈 결과
+- **Phase 2** (`9c782a9`): 플랜 업그레이드 모달에서 FREE / ENTERPRISE 요금제의 **시각적 비활성화 처리** 와 FREE 마우스오버 **툴팁** 을 모두 제거. 실제 클릭 차단 로직 (`isUpgradable` 의 `isFree || isEnterprise ? false` 분기, button `disabled` 속성) 은 그대로 유지 — 마우스 커서로는 클릭이 안 되지만 시각적으로는 일반 카드와 동일하게 보임.
+  - `PlanComparisonCard.tsx`: `cn(...)` 에서 `'opacity-40 cursor-not-allowed'` 클래스 라인 제거.
+  - `UpgradeStepSelect.tsx`: FREE `Tooltip` 분기 / ENTERPRISE `Badge "준비중"` 분기 제거 + 미사용 import (Badge, Tooltip, TooltipTrigger, TooltipContent) 정리.
+
+**검증**: advisor #2 5-perspective PASS. lint gate PASS (`pnpm typecheck:all && pnpm lint` exit 0).
+
+### 영향 파일
+- data-craft: `src/features/subscription/ui/PlanComparisonCard.tsx`, `src/features/subscription/ui/UpgradeStepSelect.tsx`
+
 ## v001.176.0
 
 > 통합일: 2026-05-18
