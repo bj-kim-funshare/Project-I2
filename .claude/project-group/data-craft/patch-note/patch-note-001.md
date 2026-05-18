@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.152.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #88 (HOTFIX 2)
+
+### 핫픽스 페이즈 결과
+
+- **Phase 6 / HOTFIX 2** (`1a16f39`): 포함된 기능 접힌 상태에서 행당 2개씩 (2×2) 보장. `PlanFeatureList.tsx` 에 `showMaxFileCard` boolean + `featureCap = COLLAPSED_COUNT - (1 if showMaxFileCard else 0)` 동적 슬라이스 도입. 접힌 상태 총 카드 = 합성 카드(0|1) + featureCap = 항상 `COLLAPSED_COUNT (4)` → `grid-cols-2` 에서 정확히 2×2. 추가로 합성 카드 className 다중 라인을 한 줄로 정리해 Tailwind content scanner 누락 위험 제거.
+
+### 진단 요지
+
+v001.146.0 Phase 1 의 합성 카드가 접힌 상태에서 `features.slice(0, COLLAPSED_COUNT=4)` 와 합쳐져 총 5장이 되어 `grid-cols-2` 의 2/2/1 레이아웃 (마지막 행 1장) 으로 표시되던 문제. featureCap 동적화로 합성 카드 표시 시 features 슬라이스를 1 감소시켜 항상 깔끔한 2×2 보장.
+
+### 검증 한계 (caveat)
+
+- 수정은 카드 개수를 수학적으로 4 이하로 보장. 단 마스터의 "1열" 보고가 grid-cols-2 CSS 자체 미적용을 의미할 경우 본 핫픽스는 5→4 정리 효과만 있고 1-column 잔존 가능. 머지 후 마스터 시각 재확인 필요 — 잔존 시 별도 hotfix (Tailwind purge / dialog 폭 / CSS 충돌 등 별도 원인 조사) 필요.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/settings-dialog/ui/plan/PlanFeatureList.tsx`
+
 ## v001.151.0
 
 > 통합일: 2026-05-18
