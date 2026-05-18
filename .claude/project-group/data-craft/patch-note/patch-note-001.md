@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.165.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 4)
+
+### 개요
+
+마스터 보고: "기존 취소, 인쇄는 3단계에서만 나와야하고, 3단계에서도 이전 단계로 이동 가능해야해" + "하단 표기는 취소, 인쇄 라인에 넣으라니까 왜 미리보기 바로 하단에 넣었어? 제대로 이동시켜" (HOTFIX 3a 의 통합 액션바 미완 blocker 해소 포함). advisor 사전 검증으로 페이지네이션은 HOTFIX 5 로 분리.
+
+### 페이즈 결과
+
+- **Phase 12 (HOTFIX 4)** (`5ca069d`): Strategy B1 — `FsGridCustomDialog` 에 `customFooter?: ReactNode` + `hideFooter?: boolean` 신규 props 추가, 3 패키지 `CustomDialogProps` 타입 동일 반영.
+  - **위저드 단계 풋터 숨김**: column-select / row-select / period-select 진입 시 PrintDialog 가 `hideFooter={true}` 전달. StepShell 의 자체 Prev/Next 풋터와 더블 푸터 회피.
+  - **preview 단계 customFooter 주입**: 3-존 레이아웃 — 좌측 `[← 이전 단계] [취소]`, 중앙 paper info pill (`{paperSize} · {orientation} · {width}×{height}mm`), 우측 prominent primary `[인쇄]` 버튼 (`shadow-sm shadow-primary/20`). 이전 단계는 `PrintContext.goBack` 호출.
+  - **paper-info pill 위치 정정**: HOTFIX 3a 에서 미리보기 패널 하단에 둔 pill div 를 제거하고 customFooter 중앙 존으로 정확 이동. 마스터 요구 "취소·인쇄 라인 중앙" 충족.
+  - **다른 dialog 영향 없음**: 신규 props 기본값 (`undefined` / `false`) 으로 기존 cancel/confirm 기본 풋터 동작 그대로 보존. 다른 FsGridCustomDialog 호출처 무관.
+
+### 영향 파일
+
+- data-craft (3 패키지, 9 파일):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-data-viewer/src/widgets/dialogs/FsGridCustomDialog.tsx`
+  - `packages/fs-data-viewer/src/widgets/dialogs/types.ts`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/dialogs/FsGridCustomDialog.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/dialogs/types.ts`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/dialogs/FsGridCustomDialog.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/dialogs/types.ts`
+
+9개 파일 / +237 / -108 / 단일 커밋.
+
+> Scope 확장: 초기 6 파일 (PrintDialog ×3 + PrintPreview ×3) → 9 파일. FsGridCustomDialog API 가 footer 커스터마이즈 prop 부재하여 Strategy B1 채택 (마스터 자율 지시 + advisor 권고 명시 범위). PrintPreview 는 변경 없음 — pill 이 실제로는 PrintPreview 내부가 아닌 PrintDialog 의 우측 패널 하단 div 였음.
+
+### 후속 (HOTFIX 5 예정)
+
+미리보기 페이지네이션: 현재 iframe 콘텐츠가 세로로 길게 한 번에 표시. advisor 권고에 따라 printHtmlBuilder 의 page-break emit 여부 조사 후 정확 접근 (A/B/C 중) 결정 예정.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: BLOCK → HOTFIX 4 (풋터+이전) / HOTFIX 5 (페이지네이션) 분할 권고. 분할 채택.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.164.0
 
 > 통합일: 2026-05-18
