@@ -1,9 +1,10 @@
 # data-craft — Patch Note (001)
 
-## v001.186.0
+## v001.187.0
 
 > 통합일: 2026-05-18
 > 플랜 이슈: #84 (hotfix 11)
+> 비고: v001.186.0 는 동시 진행이 선점, 본 entry 는 v001.187.0 으로 bump.
 
 ### 핫픽스 결과 — Phase 15 (`d6f47e9`)
 
@@ -51,6 +52,42 @@ hotfix 9 → 10 → 11 의 layered diagnosis:
 
 1. `plan-enterprise #84 hotfix 11` (본 entry) — Phase 15 → data-craft i-dev 머지 + patch-note v001.186.0
 2. 마스터 manual test 결과에 따라 PENDING gate.
+
+---
+
+## v001.186.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #91 (hotfix 2)
+> 버전 양보 메모 (CLAUDE.md §5 step 4): 머지 시점에 #102 가 v185 선점하여 v001.186.0 으로 양보.
+
+### 핫픽스 결과 — 2 항목
+
+마스터 보고:
+1. 인원 관리 버튼이 과하게 두드러짐 — 테두리 제거 + 연한 배경 + 작은 사이즈로 톤 다운.
+2. 런타임 크래시 — `TypeError: Cannot read properties of undefined (reading 'applyAtDate')` at `SeatManageDialog.tsx:357`. quote 응답 구조 불완전 (delta=0 / 로딩 / 에러) 시 `quote.nextCycle.applyAtDate` 접근으로 throw.
+
+### Phase 17 (FE, `2f14948`)
+
+**A. BillingInfoSection 인원 관리 버튼 톤 다운**
+- variant=outline → `variant=ghost` + `bg-gray-100` (다크: `bg-muted/50`).
+- size 축소 — `h-7 px-2 text-xs`. n/m명 라벨과 비례 일치.
+- hover 시 `bg-gray-200` (다크: `bg-muted`).
+
+**B. SeatManageDialog quote 가드 강화**
+- 기존 `!quote` 단일 가드 → `!quote?.nextCycle` / `!quote?.immediate` 옵셔널 체이닝 분기.
+- 각 필드 접근에 `??` 폴백 — applyAtDate/applyAtAmount/applyAtSeats, nextBillingDate/nextBillingAmount/nextBillingSeats, immediate.amount.
+- 결제 실행 버튼 disabled 조건 강화 — quote 구조 불완전 시 비활성.
+
+### 영향 파일
+
+**data-craft**:
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+- `src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx`
+
+### 검증
+
+- Lint gate PASS (`pnpm typecheck:all && pnpm lint`, 0 errors).
 
 ---
 
