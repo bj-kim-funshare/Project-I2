@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.196.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #106
+> Roadmap-1 단계3-B 데이터 링크 진입점 wiring 완료.
+
+### 페이즈 결과 — Phase 1 (`f0678df`)
+
+advisor 사전·완료 검증 PASS. 단일 phase 4 step 모두 충족.
+
+- **`apps/web/src/mobile/components/AppHeader.tsx`** 상단 우측에 Bot 아이콘 trigger 버튼 (44×44 hit target) 추가. `useState<boolean>(false)` 로 `dataLinkOpen` state 관리.
+- **`<DataLinkDialog open onOpenChange language={'ko'} />` 마운트** — `@dcm/fs-data-link-mobile` 의 self-contained 컴포넌트 (자체 Zustand store + dataLinkQueries 경유 내부 BE 호출). AppHeader 측은 open/onOpenChange 두 prop 만 연결.
+- **`__tests__/AppHeader.test.tsx` 신규** — trigger 클릭 → dialog 열림, 닫기 액션, 44×44 hit-target 회귀, menu/bell 버튼 회귀. `DataLinkDialog` 는 `vi.mock` 으로 stub 처리.
+- **데스크탑 패턴 미러** — `data-craft/src/widgets/header/ui/AppHeader.tsx:123` 의 `<DataLinkDialog />` + `ManagementButtonGroup` Bot 트리거 패턴을 모바일에 동치 적용.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/components/AppHeader.tsx`
+  - `apps/web/src/mobile/components/__tests__/AppHeader.test.tsx` (신규)
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile WIP A 워크트리) PASS (exit 0, 0 errors).
+- advisor #1 (계획) / advisor #2 (완료) 모두 5관점 PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계3-B `/plan-enterprise data-craft 단계3-B` 가 🟢 (모바일에서 데이터 링크 다이얼로그 진입 가능) 갱신 가능.
+- 병렬 그룹 2 의 동기 단계 (3-C 관계빌더 / 3-D 파일첨부) 진입 가능.
+
+### 후속 권장 작업 (선택 — 기능 동작은 정상)
+
+- **권한 게이트 v1 미적용**: 모바일 `SessionState` 에 `design_external_data` 권한 필드가 없어 인증 사용자 전원에게 trigger 노출. 권한 레이어 도입 후 AppHeader 에 게이트 추가 권장.
+- **flat-path `AppHeader.test.tsx` 죽은 테스트**: 기존 flat path 파일이 vitest include 패턴 밖이라 신규 `__tests__/AppHeader.test.tsx` 와 중복 + 죽은 상태. flat-path 파일 삭제 또는 include 패턴 추가는 별도 정리 hotfix 권장.
+- **모바일 dialog 시각 보강**: `DataLinkDialog` 가 데스크탑 `h-[90vh]`/`w-[80vw]` 스타일이므로 모바일에서 비좁게 보일 수 있음. `DataLinkSheet` wrapper 신규 추가 등으로 후속 보강 권장.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). fs-data-link-mobile 내부 호출은 기존 `/api/data-link/*` 엔드포인트.
+
+
 ## v001.195.0
 
 > 통합일: 2026-05-18
