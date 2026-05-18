@@ -1,5 +1,18 @@
 # data-craft — Patch Note (001)
 
+## v001.174.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #99
+
+### 페이즈 결과
+- **Phase 1** (`a964961`): `data-craft-server/src/config/constant.ts` 의 `PLAN[PLAN_TYPE.FREE].pages` 값을 `1` → `3` 으로 변경. BE 미들웨어 enforcement (`plan-limit.middleware.ts`) · `GET /api/subscription/plans` 응답 · FE 플랜 카드 표시가 모두 본 상수를 참조하므로 1줄 변경으로 전체 시스템에 자동 반영. DB 마이그레이션 / 추가 코드 변경 없음. 기존 무료 사용자(1페이지 보유 중)는 즉시 +2 추가 페이지 생성 가능 — 한도 상향의 정의상 동작.
+
+**검증**: advisor #1 / #2 5-perspective (Intent · Logic · Group Policy · Evidence · Command Fulfillment) PASS. lint gate PASS (`data-craft-server pnpm lint` exit 0).
+
+### 영향 파일
+- data-craft-server: `src/config/constant.ts`
+
 ## v001.173.0
 
 > 통합일: 2026-05-18
