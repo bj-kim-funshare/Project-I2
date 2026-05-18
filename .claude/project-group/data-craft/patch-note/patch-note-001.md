@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.165.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 6)
+
+### 핫픽스 결과 — Phase 10 (`5e8d07c`)
+
+advisor 사전 검증 PASS. 3건 회귀 + 신규 통합 수정.
+
+- **10-A (Item 1, Section ring fallback 제거)**: hotfix 5 의 9-B(a) `isOwningSelectedWidget` useMemo + `useWidgetStore` 임포트 모두 제거. `isSectionSelected = isDesignMode && selectedSectionId === id && !isSectionDrawerOpen && !isAreaDrawerOpen` (hotfix 3 시점 복원). 마스터 원 의도 (드로어 열림 = Area ring 만, Section ring 없음) 회복. overlay div (9-B(b)) 는 유지.
+- **10-B (Item 2, AreaControls 깜박임 차단)**: hotfix 5 의 `!isDimmed` 가드만으로는 hover trigger (group-hover/area) 가 잠깐 컨트롤을 보이게 함. 새로 `isAnyDrawerOpen = isSectionDrawerOpen || isAreaDrawerOpen || !!selectedWidgetId` 계산 추가, AreaControls / width-indicator 렌더 가드를 `!isDimmed` → `!isAnyDrawerOpen` 으로 교체. 드로어 열림 동안 모든 영역의 컨트롤 렌더 자체를 막아 hover 깜박임 원천 차단.
+- **10-C (Item 3, FloatingAIButton 시프트)**: 기존 shift `md:-translate-x-96` (24rem) 가 PropertyDrawer (28rem) 와 4rem 차이로 가시 가림 발생. `md:-translate-x-[27rem]` 으로 확대.
+
+### 진단 요지
+
+- 10-A: hotfix 5 의 fallback 이 hotfix 2~3 의 마스터 의도와 충돌 — 의도 정합 복원.
+- 10-B: `!isDimmed` 만으로는 hover trigger 가 dim 적용 전 1프레임 또는 hover 자체로 controls 표시. 드로어 상태 단일 가드로 통합 차단.
+- 10-C: 단순 px/rem 계산 오류.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/floating-ai-button/ui/FloatingAIButton.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 5관점 PASS.
+
+### 잠재 우려 / Latent (누적)
+
+- FloatingSectionBanner X 버튼이 widget 경로 banner 닫지 못함 (`selectSection(null)` 만 호출, `widgetStore.selectWidget(null)` 미호출).
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 6` (본 entry) — Phase 10 → data-craft i-dev 머지 + patch-note v001.165.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 7` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.164.0
 
 > 통합일: 2026-05-18
