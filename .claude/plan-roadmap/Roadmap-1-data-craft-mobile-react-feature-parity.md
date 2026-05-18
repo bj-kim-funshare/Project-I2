@@ -20,7 +20,7 @@
 
 🔴 /dev-inspection data-craft today
 
-🔴 /plan-enterprise data-craft 단계2 데이터 뷰어 5종 모바일 화면 — fs-data-viewer-mobile 단일 패키지 내부의 grid / kanban / calendar / gantt / dashboard 를 5 phase 로 순차 구현 (공유 features/column-settings, features/state-manager, widgets 충돌 회피). apps/web/src/mobile/screens/{grid,kanban,calendar,gantt,dashboard}-viewer 와 연결. BE 재사용.
+🟢 /plan-enterprise data-craft 단계2 데이터 뷰어 5종 모바일 화면 — fs-data-viewer-mobile 단일 패키지 내부의 grid / kanban / calendar / gantt / dashboard 를 5 phase 로 순차 구현 (공유 features/column-settings, features/state-manager, widgets 충돌 회피). apps/web/src/mobile/screens/{grid,kanban,calendar,gantt,dashboard}-viewer 와 연결. BE 재사용. — 완료 (이슈 #101, v001.182.0; Grid·Kanban·Calendar·Gantt 4종은 enterprise-454/457/459 선행 완료, Dashboard 차트 wiring 만 본 plan 단일 phase 로 마감; Scatter/UserList row-data 후속은 별도 처리 가능)
 
 🔴 /dev-inspection data-craft today
 
