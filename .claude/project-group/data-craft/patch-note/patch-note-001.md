@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.180.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 10)
+
+### 핫픽스 결과 — Phase 14 (`aab4811`)
+
+### Root cause
+
+좁은 Area (e.g. 너비 20%) 에서 AreaControls 의 `shouldOffset` 시프트 (`right-[28.5rem]`) 가 Area 의 왼쪽 경계 너머로 controls 를 밀어내면, 그 controls 가 inner wrapper (`absolute inset-0 ... overflow-auto`) 의 클리핑 박스 밖으로 나가 **overflow-auto 에 의해 잘려서 안 보임**. 너비 indicator (`left-2`) 는 area 내부에 머무르며 클리핑 안 됨 → 마스터 관찰 "너비 %만 보임" 과 일치.
+
+hotfix 9 의 calc 공백 명세 위반 fix 는 wide Area 에 대해서는 작동했으나, narrow Area 의 overflow 클리핑은 별도 layer 문제로 노출됨.
+
+### 처방
+
+`Area.tsx`: AreaControls + width-indicator 를 inner wrapper (`overflow-auto`) 내부 → outer Area (`overflow-visible` in design mode) 의 **직접 자식** 으로 이동. dim/focus overlay 와 sibling 순서. outer Area 는 이미 `relative` 라 absolute positioning 기준점 동일하게 유지.
+
+inner wrapper 는 `overflow-auto` 유지 (위젯 콘텐츠 클리핑 용도). outer Area 의 `overflow-visible` 덕분에 controls 가 area 경계 너머로 시프트되어도 클리핑 없음.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx` (+18 / -18 — 단순 위치 이동)
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+
+### 잠재 우려 / Latent (누적)
+
+- FloatingSectionBanner X 버튼이 widget 경로 banner 닫지 못함.
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 10` (본 entry) — Phase 14 → data-craft i-dev 머지 + patch-note v001.180.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `플랜 완료` 또는 추가 핫픽스.
+
+---
+
 ## v001.179.0
 
 > 통합일: 2026-05-18
