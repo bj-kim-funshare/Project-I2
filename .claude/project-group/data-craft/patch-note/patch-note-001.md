@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.159.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 3a)
+
+### 개요
+
+마스터 보고: (1) 고급 옵션 / 배치 인쇄 / 히스토리 3개 탭 제거 + 기본 설정도 탭 없이 한 화면 (2) 미리보기 용지가 영역 초과·잘림 → 비율 맞춰 절대 안 잘리게 (3) 미리보기 상단 옵션을 좌측으로 통합 + 단순 표기는 취소·인쇄 사이 중앙으로. advisor 사전 검증의 분할 권고에 따라 본 핫픽스 (3a) 는 PrintDialog 골격 + 미리보기 fit 만, 단계 컴포넌트 디자인 보강은 HOTFIX 3b 로 분리.
+
+### 페이즈 결과
+
+- **Phase 10 (HOTFIX 3a)** (`7702eef`): 3 패키지 PrintDialog + PrintPreview 동일 패턴.
+  - **탭 4종 완전 제거**: `activeTab` state + `setActiveTab` 호출 + 4개 탭 버튼 행 + `BatchPrintTab` / `PrintHistoryTab` / 고급 옵션 컨테이너 import 와 분기 블록 전부 삭제. `useEffect` 의존성에서 activeTab 제거.
+  - **2-pane 레이아웃** (preview 단계): 좌측 320px `border-r overflow-y-auto bg-card` 옵션 패널 (용지 / 여백 / 머리말·꼬리말 / 엔진 / 템플릿 5 섹션, 각 섹션 헤더 `text-xs font-semibold uppercase tracking-wide text-muted-foreground` + 구분선) + 우측 미리보기 영역. wizard 단계는 손대지 않음.
+  - **미리보기 fit-and-center**: 고정 600×800px 기준 스케일 → `ResizeObserver` 로 컨테이너 실측 후 `fitScale = min(가용폭/용지픽셀폭, 가용높이/용지픽셀높이, 1)`. 용지가 항상 비율 유지하며 절대 잘리지 않음. `transform: scale(fitScale * zoom/100)` + `transform-origin: center center` + `overflow: auto` 로 줌 확대 시 스크롤.
+  - **상단 컨트롤 제거**: PrintPreview 의 방향 토글 + 용지 select + 상단 paper-info pill 제거. 옵션은 좌측 패널, 단순 표기는 미리보기 패널 하단 중앙 pill 로 재배치.
+
+### 영향 파일
+
+- data-craft (3 패키지):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintDialog.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintPreview.tsx`
+
+6개 파일 / +586 / -889 / 단일 커밋.
+
+### 잔여 한계
+
+1. **취소·인쇄 통합 액션바 미완**: `FsGridCustomDialog` 풋터에 중앙 슬롯이 없어 본 핫픽스는 paper-info pill 만 미리보기 패널 하단 중앙에 배치. 취소/인쇄 버튼은 FsGridCustomDialog 기존 footer 에 그대로. 단일 액션바로 완전 통합하려면 `widgets/dialogs/FsGridCustomDialog.tsx` 수정 필요 — scope 외 (마스터 결정 시 별 핫픽스).
+2. v001.150.0 의 5개 알려진 한계는 변동 없음.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: BLOCK → 분할 권고 (3a/3b). 분할 채택 후 3a 진행.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.158.0
 
 > 통합일: 2026-05-18
