@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.158.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #92
+
+### 페이즈 결과
+
+- **Phase 1 (`decc0df`)** — `PromotionRow` 표기 단순화. 아코디언 토글 폐지, 구분선 아래 2-줄 평탄 구조로 전환. 협업 플랜 문구 "협업 플랜 (n인 이상 요금제)" 로 교체, `featuresList` 다열 `<ul>` → 단일 `<p>` 인라인 (` · ` 구분) 표기.
+
+### 마스터 의도
+
+플랜 업그레이드 모달 Step1 의 프로모션 행에서:
+1. 협업 플랜 안내를 "협업 플랜 (n인 이상 요금제)" 단순 표기로 교체.
+2. "자세히" 토글 버튼을 제거하고, 요약 아래 구분선 + (협업 줄) + 제공 서비스 한 줄 구조로 평탄화.
+
+### 영향 파일
+
+- data-craft:
+  - `src/features/subscription/ui/PromotionRow.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 사전-존재 경고, 0 errors).
+- advisor #1 (계획 시점) 5관점 PASS — 사전 BLOCK 1회 (마스터 §2 직역 정정) 후 통과.
+- advisor #2 (완료 시점) 5관점 PASS, BLOCK 없음.
+
 ## v001.157.0
 
 > 통합일: 2026-05-18
