@@ -1,5 +1,18 @@
 # data-craft — Patch Note (001)
 
+## v001.161.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #93
+
+### 페이즈 결과
+- **Phase 1** (`b387eb68`): `SortableTreeItem.tsx` 의 선택 상자 배지 `<span>` 과 숨김 화면 `<Badge>` 의 className 끝에 `group-hover:hidden` 추가. 컨테이너 div 의 기존 `group` 클래스가 트리거 역할을 하여 호버 시 두 배지가 자연스럽게 사라지고, 우측 액션 버튼 그룹 (`hidden group-hover:flex`) 과 시각적으로 충돌하지 않게 된다. 로직 변경 없이 클래스 추가만 수행.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/page-navigation/ui/SortableTreeItem.tsx`
+
 ## v001.160.0
 
 > 통합일: 2026-05-18
