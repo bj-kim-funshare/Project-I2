@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.180.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #91 (hotfix 1)
+> 버전 양보 메모 (CLAUDE.md §5 step 4): 본 hotfix 머지 시점에 병렬 세션이 v174~v179 선점하여 v001.180.0 으로 양보.
+
+### 핫픽스 결과 — 2 결함 동시 해소
+
+마스터 보고:
+1. 결제 비밀번호 설정 실패 — `[ERROR] PLAN_NOT_ALLOWED (POST /api/user/payment-password/set, status=403)`. permission middleware 의 plan 기반 화이트리스트에 신규 payment-password 엔드포인트 미등록 → FREE 외 모든 플랜에서 403.
+2. 결제 비밀번호 입력/설정 UI 가 텍스트필드 — 마스터 요구: 4행×3열 스크램블 숫자 패드 (10개 숫자 + 빈 2칸 모두 매번 랜덤 위치).
+3. 추가 마스터 보고 (심각 결함): 카드 등록 성공 + 비밀번호 설정 실패 시 카드는 등록된 상태로 남고 비밀번호 없음 → orphan 카드 발생.
+
+### Phase 15 (BE, `b8037f5`) — permission 화이트리스트
+
+- `src/middlewares/permission.middleware.ts` `PLAN_ENDPOINTS[FREE]` 에 payment-password 3 엔드포인트 추가 (POST /set, POST /verify, GET /exists). `PLAN_HIERARCHY` 가 사용자 plan 이하 모든 엔드포인트를 허용하므로 FREE 추가 = 전 plan 통과 보장 (FREE through ENTERPRISE 모두 200).
+- routes/user.ts 변경 불필요 (라우트는 Phase 1 에서 정상 등록).
+
+### Phase 16 (FE, `eb5269a` + req6 보강 `d96eb7a`)
+
+**A. 스크램블 PIN pad**
+
+- `src/shared/ui/pin-pad.tsx` 신규 공용 컴포넌트 — 4행×3열 그리드, Fisher–Yates 셔플로 `[0..9, null, null]` 12개를 매 shuffleKey 변경 시 재셔플. 6칸 진행 도트 표시기 + 별도 영역 백스페이스 버튼. 6자리 완성 시 자동 verify/proceed.
+- `PaymentPasswordInputDialog.tsx` / `PaymentPasswordSetupStep.tsx` 의 텍스트필드를 PinPad 로 교체. SetupStep 의 enter/confirm 두 단계는 각각 독립 shuffleKey 사용.
+
+**B. 카드 등록 흐름 역전 (orphan 카드 방지)**
+
+- `CardInfoSection.tsx` 의 카드 변경 클릭 핸들러 재설계: **항상** PaymentPasswordSetupStep 모달 우선 노출 (요구 6 명문 — "변경 시 기존 비밀번호 폐기" 충족). 모달 완료 후에만 토스 빌링 redirect 진행. 모달 취소 시 토스 redirect 일어나지 않음 → 카드 register 자체가 발생하지 않음 → orphan 카드 원천 차단.
+- `BillingSuccessPage.tsx` 의 카드 분기 후속 setShowPasswordSetup 호출 제거 (이제 카드 등록 전에 비밀번호 설정이 완료되어 있으므로 불필요). 신규구독/프로모션결제 분기는 그대로 유지.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/middlewares/permission.middleware.ts` (+4 lines)
+
+**data-craft**:
+- `src/shared/ui/pin-pad.tsx` (신규)
+- `src/features/subscription/ui/PaymentPasswordInputDialog.tsx`
+- `src/features/subscription/ui/PaymentPasswordSetupStep.tsx`
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 검증
+
+- 전 분기 lint gate PASS — data-craft-server `pnpm lint` exit 0, data-craft `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor (hotfix 시점 사전 검토): permission 화이트리스트의 PLAN_HIERARCHY 동작 직접 read 검증 — `userPlanIndex` 까지 누적 매칭 → FREE 추가 = 전 plan 허용 확정. 요구 6 명문과 흐름 역전 정합성 advisor 지적 후 보강 적용 (변경 시도 시에도 setup 강제).
+
+### PENDING 게이트 잔여 (변경 없음)
+
+본 hotfix 는 마스터 신규 보고 3건 해소에 한정. 직전 PENDING 게이트의 6 후속 항목 (요구 3 PlanLimitExceededDialog host, billingRenewal 흡수, types.ts 정식 선언, scheduleUpgrade 가드, 신규 카드 첫 결제 게이트, SeatManageDialog next-cycle 안내) 은 그대로 유지.
+
 ## v001.179.0
 
 > 통합일: 2026-05-18
