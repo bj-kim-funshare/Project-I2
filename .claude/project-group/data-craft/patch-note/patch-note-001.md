@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.178.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 9)
+
+### 핫픽스 결과 — Phase 13 (`b14b043`)
+
+### Root cause (정확 진단)
+
+**CSS calc 공백 명세 위반**. `right-[calc(28rem+0.5rem)]` 의 `+` 연산자 양쪽에 공백이 없어 브라우저가 calc 식 전체를 파싱 실패로 처리, `right` 선언 무효화. Tailwind JIT arbitrary value `[...]` 내부는 공백 불가 — `calc(28rem_+_0.5rem)` (underscore→space 변환) 표기 또는 정적 값 사용 필요.
+
+`useDrawerOverlap` 훅은 올바르게 동작. `shouldOffset=true` 로 전환되어도 right 클래스가 무효 CSS 라 시프트가 시각적으로 발생 안 함. AreaControls 가 default `right-2` 로 떨어져 드로어 뒤에 가려진 채 노출.
+
+### 처방
+
+- `AreaControls.tsx:116`: `right-[calc(28rem+0.5rem)]` → `right-[28.5rem]` (수치 동일, calc 제거).
+
+본 회귀는 사실 hotfix 8 이전부터 존재. hotfix 5/6/7 의 dim Area unmount 가드가 시각적으로 가렸기에 인지되지 않다가, hotfix 8 에서 dim Area 에도 controls 렌더 활성화 후 시각화됨.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/AreaControls.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- 사전 read 로 `useDrawerOverlap.ts` 정상 동작 확인 → root cause 는 시프트 클래스의 CSS 유효성.
+
+### 잠재 우려 / Latent (누적)
+
+- FloatingSectionBanner X 버튼이 widget 경로 banner 닫지 못함.
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 9` (본 entry) — Phase 13 → data-craft i-dev 머지 + patch-note v001.178.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `플랜 완료` 또는 추가 핫픽스.
+
+---
+
 ## v001.177.0
 
 > 통합일: 2026-05-18
