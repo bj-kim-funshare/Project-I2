@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.151.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #88 (HOTFIX 1)
+
+### 핫픽스 페이즈 결과
+
+- **Phase 5 / HOTFIX 1** (`27e282e`): subscription 배럴에 `MAX_FILE_UPLOAD_FEATURE_STYLE` export 추가. v001.146.0 (Phase 1) 에서 `planFeatures.ts` 에 정의된 상수를 `PlanFeatureList` 가 배럴 경유로 import 하나, `src/features/subscription/index.ts` 의 `export { ... } from './lib/planFeatures'` 명단에 누락된 상태로 머지되어 `pnpm dev` / `pnpm build` 시 `TS2305 has no exported member 'MAX_FILE_UPLOAD_FEATURE_STYLE'` 발생 → 모듈 평가 실패 → React 미마운트 흰 화면. 단일 파일 단일 라인 (export 명단에 심볼 추가) 으로 해소.
+
+### 진단 요지
+
+- 페이즈별 lint gate (`pnpm typecheck:all && pnpm lint`) 가 모노레포 `packages/*` 만 검사하고 root `src/` 는 검사하지 않아 본 누락 export 가 lint 단에서 잡히지 않음. 메인 repo `pnpm build` (vite production) 또는 `pnpm dev` (vite/esbuild dep-scan) 실행 시점에서야 표면화.
+- 잠재적 후속 작업: typecheck:all 의 검사 스코프 확장 (root src/ 포함) 또는 페이즈별 lint gate 에 빌드 검증 추가 검토 — 본 핫픽스 범위 외.
+
+### 검증
+
+- `pnpm build` grep: `MAX_FILE_UPLOAD|settings-dialog/ui/plan` 매치 0건 (수정 후).
+- `pnpm typecheck:all && pnpm lint` exit 0.
+- 메인 repo `/Users/starbox/Documents/GitHub/data-craft` 에서 `pnpm dev` 재기동 → vite 5173 ready, 에러 로그 없음, `PlanFeatureList.tsx` 변환 22 KB 성공 응답 (모듈 해석 OK). 시각 확인은 마스터 몫.
+
+### 영향 파일
+
+- data-craft:
+  - `src/features/subscription/index.ts`
+
 ## v001.150.0
 
 > 통합일: 2026-05-18
