@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.188.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 9)
+
+### 개요
+
+마스터 보고 (PDF 이미지 첨부): "상,하단에 모두 이상한 가로 구분선이 있고 노란색 선은 집계 같은데 이거 집계는 가장 마지막에 한번에 전부 합산 계산 해서 나오게 해". BrowserPrintEngine 의 브라우저 print-to-PDF 결과에서 `<tfoot>` 가 페이지마다 footer 로 반복 출력되던 동작 + `.print-header` / `.print-footer` 의 회색 border 가 마스터 의도와 어긋남.
+
+### 페이즈 결과
+
+- **Phase 17 (HOTFIX 9)** (`4bac29c`): `printStyleGenerator.ts` 단일 파일에서 3줄 변경.
+  - **tfoot 페이지 반복 차단**: `tfoot { display: table-footer-group }` (브라우저 기본 — 페이지마다 자동 반복) → `display: table-row-group` (tbody 와 같은 그룹, 마지막 페이지 tbody 끝에 한 번만). aggregation 의 합산 값 자체는 `buildAggregationRow` 가 *전체 행 기준* 으로 이미 계산하므로 마스터 명령 "마지막에 한 번에 전부 합산 계산" 충족.
+  - **상하단 회색 가로 구분선 제거**: `.print-header { border-bottom: 1px solid #ddd }` + `.print-footer { border-top: 1px solid #ddd }` 두 라인 삭제. 마스터의 "이상한 가로 구분선" 정확히 일치.
+  - **노란색 (orange) 집계 강조 보존**: `.aggregation-row { border-top: 2px solid #ff9800 }` 유지 — 마스터 명령은 "마지막에 한 번만" 이지 색 제거 아님. 집계 행 시각 구분 의도 보존.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1개 파일 / +1 / -3 / 단일 커밋.
+
+### Scope 한정 사유
+
+- PdfPrintEngine (jsPDF autoTable 직접 그리기) 경로는 집계 행 자체를 렌더링하지 않음 — 마스터가 본 PDF 는 BrowserPrintEngine (브라우저 print → PDF 저장) 결과로 확정. PdfPrintEngine 추가 대응 불필요.
+- fs-external/fs-sub 손대지 않음 (별 후속 권장 — 마스터 보고는 fs-data-viewer 한정).
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 2 corrections (PdfPrintEngine 경로 확인 + line 90/104 selector context 확인) 반영. executor 가 두 사항 진단 후 확정.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.187.0
 
 > 통합일: 2026-05-18
