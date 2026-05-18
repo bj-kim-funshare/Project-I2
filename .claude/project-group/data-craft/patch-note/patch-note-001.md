@@ -1,5 +1,62 @@
 # data-craft — Patch Note (001)
 
+## v001.170.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 7)
+
+### 핫픽스 결과 — Phase 11 (`723ab46`)
+
+**9회째 hotfix — yo-yo 종결책**. advisor 가 8회 history 분석 후 마스터 의도 표를 명문화 + AreaControls vs Section ring 조건 분리.
+
+### 마스터 의도 표 (advisor 정리)
+
+| 상태 | Area ring | Section ring | AreaControls (인라인) | FloatingSectionBanner | dim |
+|------|------|------|------|------|------|
+| 드로어 닫힘 + 섹션 선택 | 없음 | **있음** | 모든 Area | 있음 | 없음 |
+| 드로어 닫힘 + 무선택 | 없음 | 없음 | 모든 Area | 없음 | 없음 |
+| 드로어 열림 (widget/area/section drawer 중 하나) | 포커스 Area | **없음** | **포커스 Area 만** | 있음 | 비포커스 |
+
+**핵심**: AreaControls 가드 = per-Area dim 판정 (`!isDimmed`), Section ring 가드 = global drawer-open 판정 (`!isAnyDrawerOpen`). 두 조건은 의도적으로 다름 — 같은 가드 쓰면 안 됨 (hotfix 6 의 실수가 이 점).
+
+### 처방
+
+- **11-A (Item 1, Area controls focused 복원)**: `Area.tsx` AreaControls / width-indicator 가드를 hotfix 6 의 `!isAnyDrawerOpen` → `!isDimmed` 로 되돌림. 포커스 Area 는 `isDimmed=false` 이므로 드로어 열림 중에도 인라인 컨트롤 정상 노출.
+- **11-B (flicker 진단)**: AreaControls.tsx 의 hover 클래스 read — opacity transition 존재. 그러나 `Area.tsx` 의 conditional render (`!isDimmed && <AreaControls/>`) 가 dim 영역에서 unmount 시키므로 hover 무관. 진짜 원인 = Zustand `selectedWidgetId` 동기 set 과 `useActiveEditingTarget` 재계산 간 0~16ms state race. `!isDimmed` 가드가 race 구간을 차단.
+- **11-C (Item 2, Section ring drawer 가드 추가)**: `Section.tsx` 에 `useWidgetStore` 임포트 + `isAnyDrawerOpen = isSectionDrawerOpen || isAreaDrawerOpen || !!selectedWidgetId` 계산. `isSectionSelected = isDesignMode && selectedSectionId === id && !isAnyDrawerOpen`. widget drawer 열림 시 Section ring 숨김 — hotfix 6 누락 보완.
+
+### 9회 yo-yo history 요약
+
+| Hotfix | AreaControls 가드 | Section ring 가드 |
+|--------|------|------|
+| 1~4 | (per-Area 조건 없음) | drawer flag 조건 변화만 |
+| 5 | `!isDimmed` (∅ → 깜박임 보고) | `isOwningSelectedWidget` fallback |
+| 6 | `!isAnyDrawerOpen` (focused 도 차단 회귀) | fallback 제거 (widget drawer 노출) |
+| **7 (본 entry)** | **`!isDimmed`** (per-Area) | **`!isAnyDrawerOpen`** (global) |
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 5관점 PASS — 의도 표 명문화 + 조건 분리.
+
+### 잠재 우려 / Latent
+
+- AreaControls flicker 잔존 가능성: 본 처방은 state race 가설 기반. 재현 시 hotfix 8 에서 AreaControls mount reveal delay (opacity-0 + transition) 또는 추가 가드 검토.
+- 누적 latent: FloatingSectionBanner X 버튼 widget 경로 미닫힘 / `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 7` (본 entry) — Phase 11 → data-craft i-dev 머지 + patch-note v001.170.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 8` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.169.0
 
 > 통합일: 2026-05-18
