@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.160.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 4)
+
+### 핫픽스 결과 — Phase 8 (`fada8b5`)
+
+**advisor 사전 검증으로 4회 연속 실패의 진짜 root cause 식별**: `ring-inset` 이 inset box-shadow 라 element background 위에는 그려지지만 **자식 element 가 영역을 채우면 그 위에 자식 background 가 덮인다** — CSS paint phase 순서 문제. Phase 3 / hotfix 1/2/3 은 모두 조건/클래스만 만지고 paint layer 가설은 미검증. 본 hotfix 가 paint layer 변경으로 정답 도달.
+
+- **8-A (Section ring 진짜 해결, item 3)**: `Section.tsx` 의 `ring-2 ring-blue-500 ring-inset` → `outline outline-2 outline-blue-500 -outline-offset-2`. outline 은 별도 paint phase 라 자식이 가릴 수 없음. 조건 (`isSectionSelected = isDesignMode && selectedSectionId === id && !isSectionDrawerOpen && !isAreaDrawerOpen`, hotfix 3 결과) 그대로 유지.
+- **8-B (Area ring 1.5배, item 1)**: `Area.tsx` 의 `ring-2 ring-blue-500 ring-inset` → `outline outline-[3px] outline-blue-500 -outline-offset-[3px]`. 2px × 1.5 = 3px. Section 과 일관 outline 처방.
+- **8-C (영역 포커싱 시 섹션 컨트롤바 표시, item 2)**: `LayoutCanvas.tsx:247` 의 `selectedSection` 계산을 `useMemo` 로 확장 — `selectedSectionId` 없으면 `selectedWidgetId` 의 parent section (Area/SubArea widgetId 매칭) fallback. 위젯 클릭 → PropertyDrawer 열림 + FloatingSectionBanner (fixed z-50, dim overlay z-20 위) 자동 표시.
+
+### 진단 요지
+
+- 8-A/B: **outline vs ring 의 CSS paint layer 차이**. ring (= box-shadow) 은 element 의 paint stack 내, outline 은 별도. 자식이 영역 채우는 컴포넌트에서는 outline 이 가시성 보장. 이전 4회 hotfix 가 이 가설을 거치지 않은 것이 진단 부족.
+- 8-C: widget 선택 경로가 `selectedSectionId` 를 set 하지 않아 banner 표시 조건이 불성립 → 마스터에겐 "안 보임 / 어둡게 안 나옴" 으로 인지. parent section 역추적 fallback 으로 해결.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+  - `src/widgets/layout-canvas/ui/LayoutCanvas.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 (dispatch 전) 5관점 PASS — 4회 실패 history 분석 후 paint layer 가설 도출.
+
+### 잠재 우려 / Latent (non-blocking)
+
+- 8-C 부산물: FloatingSectionBanner X 버튼 `onClose` 가 `selectSection(null)` 만 호출하므로 widget 경로로 표시된 banner 는 selectedSectionId 가 이미 null 이라 닫히지 않음. 닫기 핸들러에 `widgetStore.selectWidget(null)` 추가 필요 (별도 처리).
+- 8-A/B outline: `overflow-hidden` 영향 없음 (CSS 명세). WebKit 렌더러 드문 예외만 manual test 시 확인.
+
+### 누적 latent
+
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false. 별도 처리 필요.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 4` (본 entry) — Phase 8 → data-craft i-dev 머지 + patch-note v001.160.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 5` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.159.0
 
 > 통합일: 2026-05-18
