@@ -1,5 +1,84 @@
 # data-craft — Patch Note (001)
 
+## v001.150.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86
+
+### 개요
+
+데이터 뷰어 인쇄 시스템에 **뷰별 단계형 선택 플로우** 도입. 인쇄 버튼 클릭 즉시 인쇄 모달이 뜨던 흐름을 → 열 선택 (또는 간트의 기간 선택) → 행 선택 → 미리보기의 3단계 위저드로 재설계. 칸반·대시보드 뷰는 인쇄 제거. 그리드 A4 가로 + 캘린더 A4 세로 + 간트 A4 가로 기본. 3개 데이터-뷰어 패키지 (`fs-data-viewer`, `fs-external-data-viewer`, `fs-sub-data-viewer`) 전부 적용.
+
+### 페이즈 결과
+
+- **Phase 1** (`6fbb8c8`): 칸반·대시보드 인쇄 버튼 헤더 가드. `HeaderSearch.tsx` 의 `onOpenPrintDialog` 를 optional 로 전환, `HeaderActions.tsx` 가 칸반에는 undefined 전달·대시보드 standalone 블록 삭제로 두 뷰 모두 인쇄 버튼 미노출.
+- **Phase 2** (`92aa3ef`): 단계형 흐름 인프라. `PrintContext` 에 `step: 'period-select' | 'column-select' | 'row-select' | 'preview'` + `goNext/goBack/resetSteps` 추가, `openPrintDialog` 본체에 kanban/dashboard no-op 가드 (우회 경로 차단). `DEFAULT_ORIENTATION_BY_VIEW` (grid=landscape, calendar=portrait, gantt=landscape). 신규 `StepShell`, `SharedColumnSelectStep` 본구현 + 4개 per-view step placeholder. 기존 6개 탭은 `step === 'preview'` 일 때만 노출. `PrintCache.generateKey` 가 viewMode + orientation + paperSize + selectedColumns hash + rowScope hash + gantt period hash 의 명시적 조합으로 재구성. `bug-907-print-cache-key.test.ts` 에 6개 신규 케이스.
+- **Phase 3** (`00dbb17`): 그리드 흐름 구현. `GridRowSelectStep` 의 3종 라디오 (전체 / 선택된 행 = `SelectionStateContext.selectedRows` 연동 / 범위 = `BatchInputScope { type: 'range', startRowId, endRowId }` 재사용). `PrintPreview` 에 그리드 전용 가로/세로 토글. `useGridPrint.resolveRows` 가 rowScope→in-memory 필터. `printHtmlBuilder.buildGridColumnWidths` 신규 — 선택 컬럼 원본 width 정규화 → 용지 콘텐츠 너비 비례 배분 `<colgroup>`.
+- **Phase 4** (`260e018`): 캘린더 흐름 구현. `CalendarRowSelectStep` 이 현재 월 행을 날짜별 그룹화 (날짜 헤더 `YYYY-MM-DD (요일)` + 행 체크박스, 빈 날짜 미표시), 선택 결과는 `options.calendar.rowScope = { type: 'selected', rowIds }`. `useCalendarPrint` 가 기존 월 그리드 본문 보존 + `buildCalendarAppendixTable` 호출. `printHtmlBuilder.buildCalendarAppendixTable` 신규 — 선택 행×선택 열 부록 표.
+- **Phase 5** (`01eadb1` + lint hotfix `3860b9d`): 간트 흐름 구현. `GanttPeriodSelectStep` (시작/종료 + 종료<시작·6개월 초과 인라인 검증, 기본 오늘~+30일). `GanttRowSelectStep` (dateRange 와 bar 겹치는 행만 다중 선택). `useGanttPrint` 의 auto-trim (선택 행 bar min/max ∩ dateRange 교집합) + `splitGanttRowsIntoPages` 연동. `printHtmlBuilder.buildGanttHorizontalHtml` (수평 시간 축 균등 분할, 행별 막대 left/width% 배치, 진행률 오버레이). `pagination/ganttRowPagination.ts` 신규 (A4 가로 기준 행-축 페이지 분할 헬퍼). lint hotfix 로 이전 테이블 방식 dead code (`generateGanttTableHtml`/`renderSingleGanttTable`/`dateStringToEpochDays`/`epochDaysToDateString`) 제거.
+- **Phase 6** (`af24799`): fs-external-data-viewer 에 wizard + 그리드 단계 흐름 이식. types.ts 에 PrintWizardStep + PrintRowScope + GridPrintOptions.rowScope, DEFAULT_ORIENTATION_BY_VIEW.grid=landscape. PrintContext step 상태 + 액션. PrintDialog step 라우팅. 신규 StepShell/SharedColumnSelectStep/GridRowSelectStep 은 fs-external 자체 `useSelectionStateOptional` 사용 (cross-package import 없음). PrintCache.generateKey 동일 재구성.
+- **Phase 7** (`83f3f61`): fs-sub-data-viewer 동일 포팅. fs-sub 고유의 `idColumn` (rowId 타입) 분리 구조 보존. PrintPreview 의 iframe useEffect 가 srcDoc 패턴으로 대체됨 + `usePrintOptions` 훅으로 방향 토글.
+
+### 영향 파일
+
+- data-craft (모노레포):
+  - **fs-data-viewer**:
+    - `src/widgets/data-viewer-header/HeaderActions.tsx`
+    - `src/widgets/data-viewer-header/header-search/HeaderSearch.tsx`
+    - `src/widgets/data-viewer-header/header-search/searchTypes.ts`
+    - `src/features/print/context/PrintContext.tsx`
+    - `src/features/print/types.ts`
+    - `src/features/print/ui/PrintDialog.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+    - `src/features/print/ui/steps/StepShell.tsx` (신규)
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/CalendarRowSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/GanttPeriodSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/GanttRowSelectStep.tsx` (신규)
+    - `src/features/print/views/grid/useGridPrint.ts`
+    - `src/features/print/views/calendar/useCalendarPrint.ts`
+    - `src/features/print/views/gantt/useGanttPrint.ts`
+    - `src/features/print/lib/printHtmlBuilder.ts`
+    - `src/features/print/cache/PrintCache.ts`
+    - `src/features/print/pagination/ganttRowPagination.ts` (신규)
+    - `src/__tests__/enterprise-091/bug-907-print-cache-key.test.ts`
+  - **fs-external-data-viewer**:
+    - `src/features/print/context/PrintContext.tsx`
+    - `src/features/print/types.ts`
+    - `src/features/print/ui/PrintDialog.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+    - `src/features/print/ui/steps/StepShell.tsx` (신규)
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx` (신규)
+    - `src/features/print/views/grid/useGridPrint.ts`
+    - `src/features/print/lib/printHtmlBuilder.ts`
+    - `src/features/print/cache/PrintCache.ts`
+  - **fs-sub-data-viewer**:
+    - `src/features/print/context/PrintContext.tsx`
+    - `src/features/print/types.ts`
+    - `src/features/print/ui/PrintDialog.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+    - `src/features/print/ui/steps/StepShell.tsx` (신규)
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx` (신규)
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx` (신규)
+    - `src/features/print/views/grid/useGridPrint.ts`
+    - `src/features/print/lib/printHtmlBuilder.ts`
+    - `src/features/print/cache/PrintCache.ts`
+
+### 알려진 한계 (PENDING 게이트 후속 권장)
+
+1. **그리드 전체 인쇄 (`rowScope='all'`) 의 DB fetch-all 경로 부재** — 현재 in-memory 행만 인쇄 + `console.warn` 발행. 마스터 명세 "DB 데이터 기준 전체" 의 *문자* 가 부분 충족. 뷰어 모델에 fetch-all API 추가 + `useGridPrint.resolveRows.all` 분기 wiring 필요. 3패키지 모두 영향. advisor #2 의 BLOCK 사유 1건 — 핫픽스 또는 별 plan-enterprise 권장.
+2. **캘린더 currentMonth 진실원** — `FsCalendarChart.tsx` 의 로컬 state. `CalendarRowSelectStep` 마운트 effect 가 현재 월로 fallback 초기화하나, 인쇄 다이얼로그 오픈 중 마스터가 뷰 월을 바꾸면 동기화되지 않음. CalendarChart→PrintContext 양방향 동기 후속 권장.
+3. **fs-external i18n `t.print.error.title` 키 부재** — 임시로 `t.print.printFailed` 대체. 후속 i18n 보강.
+4. **간트 `<style>` 인라인 중복** — `buildGanttHorizontalHtml` 의 `<style>` 블록이 페이지마다 삽입됨. `generateGanttStyles()` 분리 후속 리팩터링.
+5. **간트 dead code 잔존 가능성** — Phase 5 lint hotfix 가 명시된 4개 함수만 제거. notes_ko 가 "등" 으로 표현한 추가 헬퍼는 별도 정리 사이클 대상.
+
+### advisor 검증
+
+- **advisor #1 (계획)**: PASS (Phase 1 모순 정정 + Phase 3/4/5 footprint disjoint 분리 + Phase 2 placeholder UI 명시 후).
+- **advisor #2 (완료)**: BLOCK — 위 "알려진 한계 #1" (그리드 fetch-all 부재). 본 플랜은 단계형 흐름 인프라 + 5뷰 UX 재설계 + 패치노트 산출에 한해 완료, fetch-all 보강은 PENDING 게이트의 마스터 결정에 맡김.
+
 ## v001.149.0
 
 > 통합일: 2026-05-18
