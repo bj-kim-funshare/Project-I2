@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.163.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 5)
+
+### 핫픽스 결과 — Phase 9 (`58bd7e7`)
+
+**advisor 사전 검증으로 5회 실패의 진짜 root cause 식별**: hotfix 4 의 LayoutCanvas widget→parent section fallback 은 LayoutCanvas 의 **로컬 useMemo** 만 보강하여 FloatingSectionBanner 표시는 OK 였으나, **store 의 `selectedSectionId` 는 여전히 null** → Section.tsx 의 `selectedSectionId === id` 비교 false → ring 조건 매칭 안 됨. Image 1 (드로어 닫힘 + 컨트롤바 표시) 의 banner-without-ring 상태가 명확한 증거.
+
+### 2중 방어 처방
+
+- **9-A (Item 1, AreaControls dim 스킵)**: `Area.tsx` 의 AreaControls 렌더 가드에 `&& !isDimmed` 추가. 비선택 영역의 컨트롤 아이콘 자체를 렌더 안 함 → 막 뒤 비침 문제 원천 해소.
+- **9-B (Item 2, Section ring 5회째 진짜 해결 — 2중 방어)**:
+  - (a) `Section.tsx` 에 `useWidgetStore.selectedWidgetId` read + `isOwningSelectedWidget` useMemo fallback. 자식 widget (Area/SubArea) 이 selected 인 경우에도 ring 표시 → LayoutCanvas 의 selectedSection 계산과 동기.
+  - (b) outline 클래스 제거 → 절대 위치 overlay div (`absolute inset-0 pointer-events-none border-2 border-blue-500 z-30`) 로 ring 그리기. hotfix 3 의 dim overlay 패턴과 동일 (검증됨). paint layer 와 store state 양쪽 issue 동시 해결.
+- **9-C (Area focused ring 통일)**: Area focused 의 outline 도 같은 overlay div 패턴 (`border-[3px]`, z-30, `borderRadius` 동기) 으로 교체. Section 과 일관 + paint 안정성.
+
+### 진단 요지
+
+- 9-A: dim 가시성 보장 위해 컨트롤 자체를 안 그리는 게 정답 (overlay 더 진하게 = 콘텐츠도 안 보임, 마스터 거부 방향).
+- 9-B: store/component 양쪽 fallback + CSS paint layer 양쪽 issue 가 1줄 변경 패턴으로 5회 실패한 원인. 2중 방어가 정답.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 5관점 PASS — 5회 실패 history 분석 + Image 1 banner-without-ring 증거 기반.
+
+### 잠재 우려 / Latent
+
+- 누적 latent (#84): FloatingSectionBanner X 버튼 widget 경로 미닫힘 / `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false. 별도 처리 필요.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 5` (본 entry) — Phase 9 → data-craft i-dev 머지 + patch-note v001.163.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 6` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.162.0
 
 > 통합일: 2026-05-18
