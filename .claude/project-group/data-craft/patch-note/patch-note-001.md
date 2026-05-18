@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.157.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 3)
+
+### 핫픽스 결과 — Phase 7 (`59b904f`)
+
+마스터 의도 재정정 + 2건 회귀 통합 수정 (advisor 사전 검증 + 완료 검증 모두 PASS).
+
+- **7-A (dim 효과 정정)**: hotfix 2 의 `opacity-10 brightness-50 grayscale` 는 콘텐츠 자체를 거의 안 보이게만 만들어 마스터 의도 "진한 회색 + 어느정도 보임" 과 불일치. opacity 필터 클래스 제거 후 외곽 컨테이너 직접 자식으로 `<div absolute inset-0 bg-black/60 pointer-events-none z-20 transition-opacity duration-200 />` overlay 조건부 렌더. `borderRadius` 동기 (Phase 1 모서리 둥글기와 일관). z-20 > AreaControls z-10 으로 dim 영역의 컨트롤까지 덮음.
+- **7-B (Section ring 조건 단순화)**: hotfix 2 의 `!selectedWidgetId` 조건이 너무 보수적이어서 위젯 잔류 선택 상태에서 control bar 떠도 ring 누락. 조건 제거 + `useWidgetStore` 임포트 삭제. `FloatingSectionBanner` (`LayoutCanvas.tsx:335`) 와 정확히 동일한 조건 (`isDesignMode && selectedSectionId === id && !isSectionDrawerOpen && !isAreaDrawerOpen`) 으로 정렬 — control bar 와 ring 표시 시점이 동기.
+
+### 진단 요지
+
+- 7-A: opacity 기반 dim 은 콘텐츠를 사라지게 만들 뿐 "회색 막" 의미를 살리지 못함. overlay div 가 정확한 처방.
+- 7-B: ring 조건과 banner 조건의 비대칭 (`!selectedWidgetId` 만 ring 측 추가) 이 hotfix 2 의 root cause.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 (dispatch 전, fault site 진단) 5관점 PASS.
+- advisor #2 (완료 시점) 5관점 PASS, BLOCK/CONCERN 없음.
+
+### 잠재 우려 (block 안 함)
+
+- overlay 강도 `bg-black/60` 이 마스터 감각상 적절하지 않으면 50/70 조정 trivial (hotfix 4 1줄 변경).
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 3` (본 entry) — Phase 7 → data-craft i-dev 머지 + patch-note v001.157.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 4` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.156.0
 
 > 통합일: 2026-05-18
