@@ -16,7 +16,7 @@
 
 1️⃣ 🟢 /plan-enterprise data-craft 단계1-B 페이지 트리 / 페이지 뷰어 (apps/web/src/mobile/screens/page-tree, screens/page-viewer, routes/page-tree.tsx, routes/page-viewer/). 기존 page 관련 GET API 재사용. — 완료 (이슈 #95, v001.167.0)
 
-1️⃣ 🔴 /plan-enterprise data-craft 단계1-C 레코드 상세 / 검색 (apps/web/src/mobile/screens/record-detail, screens/search, routes/record/, routes/search.tsx). 기존 record / search API 재사용.
+1️⃣ 🟢 /plan-enterprise data-craft 단계1-C 레코드 상세 / 검색 (apps/web/src/mobile/screens/record-detail, screens/search, routes/record/, routes/search.tsx). 기존 record / search API 재사용. — 완료 (이슈 #97, v001.171.0, 작업 0; records-tab 실 데이터 연결은 Roadmap-3 또는 후속 Roadmap 으로 이관)
 
 🔴 /dev-inspection data-craft today
 
