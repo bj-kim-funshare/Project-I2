@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.191.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #104
+
+### 개요
+
+마스터 보고: "위젯 설정 드로어에서 폼 위젯을 배치했을 때, 해당 폼이 '목록을 우선 순위로' 옵션을 사용하는 경우에 목록으로 나오게 되는데, 이때 스크롤하면 폼 헤더가 투명해서 헤더 뒤로 스크롤이 지나가는게 보여". 근본 원인 = `FormDataListTable` 의 sticky `<thead>` 가 `bg-muted/50` (50% 불투명도) 사용 → 스크롤되는 본문 행이 sticky 헤더 뒤로 비쳐 보임. 동일 토큰이 hover 행(`hover:bg-muted/50`, 67줄)에 의도적으로 쓰이고 있어 sticky 헤더에 그대로 복사된 결과로 추정. `FormTitle` (정적 컨테이너 상단) 는 sticky 가 아니라 본 증상과 무관.
+
+### 페이즈 결과
+
+- **Phase 1** (`377db33`): `src/widgets/form-widgets/ui/FormDataListTable.tsx:53` 의 `<thead className="bg-muted/50 sticky top-0">` 을 `<thead className="bg-background sticky top-0">` 으로 교체. `--background` 토큰은 oklch alpha 미지정 = 모든 테마(20+종) 에서 100% 불투명 — light/dark 양쪽에서 스크롤 본문 비침 차단.
+
+### 영향 파일
+
+- `data-craft:src/widgets/form-widgets/ui/FormDataListTable.tsx`
+
+### advisor 검증
+
+- 계획 단계 advisor #1: 일시 과부하로 SKIP (마스터 ExitPlanMode 승인으로 진행, 단일 줄 CSS 토큰 교체 위험도 최소).
+- 완료 시점 advisor #2: PASS — 진단 정확성(sticky 요소 식별), 토큰 불투명 검증(oklch α=1) 확인.
+
+### 비고 — lint 게이트 정책 충돌 (사전존재)
+
+본 페이즈 lint 게이트(`pnpm typecheck:all && pnpm lint`) 결과 typecheck PASS · lint exit 1 (11 warnings, 0 errors). 11건 전수 변경 무관 파일(PrintContext.tsx / GridRowSelectStep.tsx / useTableView.ts / useGridPrint.ts / FileUploaderField.tsx / ImageUploaderField.tsx / ViewSidebar.tsx) 에서 사전 존재 — `HEAD^` 재실행으로 동일 11건 재현 확인. 본 페이즈가 도입한 회귀가 아니라 i-dev 베이스의 eslint `--max-warnings` 정책 충돌. 마스터 결정 = 본 페이즈 lint 게이트 스킵 후 진행. 후속 정리 플랜은 별도 진행 권장.
+
 ## v001.190.0
 
 > 통합일: 2026-05-18
