@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.194.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #107
+
+### 개요
+
+마스터 보고: 같은 사용자 입력 폼을 "설정 → 사용자 설정" 과 "화면 → 페이지 → 폼 위젯" 양쪽에 배치했을 때, 다중 선택 상자의 값이 **폼 위젯 경로에서만** `["a","b"]` 형태(JSON 배열 문자열)로 대괄호와 함께 표시되고, 설정 경로는 정상. 원인 = 두 경로의 view-mode 직렬화 규칙 불일치 — settings 경로(`useFormWidgetSync.ts:76-77`) 는 배열을 `value.join(',')` 로 저장(`'a,b'`)하는 반면, widget 경로(`useUserFormWidget.ts:62`) 는 `JSON.stringify(value)` 로 저장(`'["a","b"]'`)하여 `cellRenderers.tsx:103` 의 `Array.isArray` 분기를 둘 다 빗겨나간 뒤 `formatValue` fall-through 에서 raw 문자열이 그대로 표시.
+
+### 페이즈 결과
+
+- **Phase 1** (`aac0b95`): `useUserFormWidget.ts` 뷰모드 `handleFormFieldChange` 직렬화 분기를 settings 경로(`useFormWidgetSync.ts:76-77`) 와 동일 4-분기 체인으로 교체 — `null → ''`, `Array → join(',')`, `{start,end} → 'start~end'`, 그 외 → `String(value)`. 두 경로의 직렬화 결과가 모든 `FormFieldValue` 케이스에서 수렴.
+
+### 영향 파일
+
+- `data-craft:src/widgets/form-widgets/lib/useUserFormWidget.ts`
+
 ## v001.193.0
 
 > 통합일: 2026-05-18
