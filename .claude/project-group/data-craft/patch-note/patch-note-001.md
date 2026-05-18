@@ -1,5 +1,61 @@
 # data-craft — Patch Note (001)
 
+## v001.179.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #100
+
+### 페이즈 결과
+
+- **Phase 1** (`8941e30`): `data-craft-mobile/prototype/screens/` 신설. 디자인팀 시안 5종 HTML 사본 + 의존 JSX 자산 (`components/` 8개, `frames/` 2개) 을 sibling 구조 유지하며 복사. 파일 내용 무수정 (byte-identical) — Live Server 정적 호스팅에서 상대 경로 import 자동 해석. +12,538 / -0 across 15 files.
+- **Phase 2** (`1e25e96`): `prototype/index.html` 랜딩 페이지 신규 작성 (Pretendard CDN, 무의존 단일 HTML, 5개 시안 카드 링크, 모바일 퍼스트 반응형). `prototype/README.md` 작성 — VS Code Live Server 실행 절차, 시안 목록 표 (자기완결 여부 명시), 폴더 구조 트리, 디자인 원본 위치 (`../DataCraft/`) 참조. +244 / -0 across 2 files.
+
+### 마스터 의도
+
+디자인팀 시안 (`data-craft-mobile/DataCraft/` 5종 HTML) 을 VS Code Live Server 로 즉시 시연 가능한 정적 프로토타입 폴더로 재패키징. 제약: `apps/` 하위 아닌 mobile 프로젝트 루트에 별도 폴더 (마스터 명시).
+
+### 해석
+
+"디자인팀 시안 기반 프로토타입 만들어줘" 는 **기존 HTML 을 Live Server 호스팅 가능한 형태로 재패키징** (신규 코드 저작 아님). 근거: `Prototype.html` 이 이미 자기완결 Babel-standalone React 단일 파일, Live Server = 정적 호스팅 = 빌드 없음.
+
+### 검증
+
+- advisor #1 (계획) 5관점 PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment.
+- advisor #2 (완료) 5관점 PASS.
+- Phase 1/2 모두 lint gate (`pnpm typecheck`) PASS.
+- 시연 절차: `code data-craft-mobile/` → `prototype/index.html` 우클릭 → "Open with Live Server" → 5개 카드 클릭 시 각 시안 정상 렌더.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `prototype/index.html` (신규)
+  - `prototype/README.md` (신규)
+  - `prototype/screens/prototype-fullflow.html` (신규)
+  - `prototype/screens/midfi-full.html` (신규)
+  - `prototype/screens/midfi.html` (신규)
+  - `prototype/screens/wireframe-v3.html` (신규)
+  - `prototype/screens/wireframe-v4.html` (신규)
+  - `prototype/screens/components/v4-shim.jsx` (신규)
+  - `prototype/screens/components/v4-screens.jsx` (신규)
+  - `prototype/screens/components/midfi-screens.jsx` (신규)
+  - `prototype/screens/components/midfi-part1.jsx` (신규)
+  - `prototype/screens/components/midfi-part2.jsx` (신규)
+  - `prototype/screens/components/midfi-part3.jsx` (신규)
+  - `prototype/screens/components/midfi-part4.jsx` (신규)
+  - `prototype/screens/components/midfi-part5.jsx` (신규)
+  - `prototype/screens/frames/ios-frame.jsx` (신규)
+  - `prototype/screens/frames/design-canvas.jsx` (신규)
+
+### 미사용 자산 (의도적 제외)
+
+`DataCraft/lib/` (8 JSX), `DataCraft/uploads/` (6 PNG) 는 어떤 HTML/JSX 도 참조하지 않음 (grep 확인) — 프로토타입 폴더에 포함하지 않음. 향후 필요 시 마스터 지시로 추가 복사 가능.
+
+### 후속
+
+본 프로토타입은 정적 사본. 디자인 변경은 원본 (`DataCraft/`) 에서 진행하고 `prototype/screens/` 로 재동기화 필요. 빌드 산출물 아니므로 `pnpm-workspace.yaml`, `vite.config.ts`, `tsconfig.json` 변경 없음.
+
+---
+
 ## v001.178.0
 
 > 통합일: 2026-05-18
