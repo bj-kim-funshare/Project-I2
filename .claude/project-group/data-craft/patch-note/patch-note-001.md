@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.164.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #94
+
+### 페이즈 결과
+
+- **Phase 1 (`999b90e6` + lint hotfix `30191eea`)**: Area 픽셀 컨텍스트 유틸 `useWidgetAreaPixels` 신설 (widget→Area 양 경로 탐색, DOM ResizeObserver 측정, SSR 가드, sectionWidthPx 역산 fallback) + `setAreaWidthPercent` 액션 추가 (동료 Area 비례 재배분, MIN_AREA_WIDTH_PERCENT 가드, 합 100% 정규화).
+- **Phase 2 (`05179c59`)**: `InputDesignSection` 을 Area px 너비 조정기로 재배선. `siblingAreaCount === 0` 이면 미렌더, min = `max(MIN_AREA_WIDTH_PX, sectionWidthPx * MIN_AREA_WIDTH_PERCENT / 100)`, max = `sectionWidthPx - min * siblingAreaCount`. `SubAreaHeightInput` 의 Enter+blur+justAppliedRef 패턴 답습. 적용 시 px → % 환산 후 `setAreaWidthPercent` 호출. `properties.width` 결합 완전 제거.
+- **Phase 3 (`cafd2922`)**: `WidgetDesignGroup` 너비/높이 `onChange` 에 실시간 clamp 도입 (max=areaWidthPx/areaHeightPx, ready=0 미적용, min=1). `Input.widget.tsx` 의 mechanical 3-점 수정 — `widthStyle` 변수·wrapper div style·input style spread 제거하고 `w-full` 무조건화. `InputWidgetProps.width` 에 `@deprecated` JSDoc.
+- **Phase 1 런타임 보정 (`30012967`)**: 메인 세션 advisor 사전 검증으로 발견된 DOM 선택자 결함 — `useWidgetAreaPixels` 가 `[data-area-id]` / `[data-section-id]` 를 쓰지만 실제 본체 요소엔 부재 (data-area-id 는 AreaControls 오버레이에만, data-section-id 는 완전 부재). `Area.tsx` 의 두 div 와 `Section.tsx` 본체 div 에 데이터 속성 추가.
+
+### 마스터 의도 충족 — 3개 버그 모두 해소
+
+1. **입력 디자인 너비 = Area 너비**: 컨트롤이 이제 실제로 영역 자체를 px 단위로 조정하며, 동료 Area 들이 비례 축소. 동료 Area 가 없으면 컨트롤이 미렌더.
+2. **위젯 디자인 너비 실효성 회복**: `widthStyle` spread 가 `inlineStyles.width` 를 덮어쓰던 구조 제거 — 이제 `style.width` 가 실제로 `<input>` 에 적용됨.
+3. **Area 픽셀 한계 clamp**: 위젯 디자인 너비/높이 입력이 `areaWidthPx`/`areaHeightPx` 를 초과 못 함 (실시간 clamp, max 초과 시 즉시 max 로 setValue).
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 0 errors (Phase 1·2·3 모두).
+- 다른 위젯 타입 회귀 위험은 `Input.widget.tsx` 단일-파일 mechanical 수정으로 최소화 (`getWidgetInlineStyles` 시그니처/적용 위치 불변).
+
+### 영향 파일
+
+data-craft:
+- `src/entities/layout/model/resizeAreaAction.ts`
+- `src/entities/layout/model/layoutTypes.ts`
+- `src/widgets/property-drawer/lib/useWidgetAreaPixels.ts` (신규)
+- `src/widgets/property-drawer/lib/index.ts` (신규)
+- `src/widgets/property-drawer/ui/property-editors/input-editor/InputDesignSection.tsx`
+- `src/widgets/property-drawer/ui/WidgetTypeDesignExtensions.tsx`
+- `src/widgets/property-drawer/ui/WidgetStylesEditor.tsx`
+- `src/widgets/property-drawer/ui/style-editors/WidgetDesignGroup.tsx`
+- `src/widgets/input-widget/ui/Input.widget.tsx`
+- `src/shared/types/widget-props.types.ts`
+- `src/widgets/layout-canvas/ui/Area.tsx`
+- `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 알려진 영향 (의도된 시각 변경)
+
+기존 페이지에서 `InputWidgetProps.properties.width` 가 설정된 input 위젯은 본 머지 후 시각적 너비가 변함 — 이전: properties.width px, 이후: `w-full` × `style.width` (있을 때). 마스터 명시 의도에 부합 (silent deprecation, 필드 자체는 보존).
+
 ## v001.163.0
 
 > 통합일: 2026-05-18
