@@ -38,10 +38,60 @@
 
 ### 후속 스킬 체인
 
-1. `plan-enterprise #84 hotfix 1` (본 entry) — Phase 5 → data-craft i-dev 머지 + patch-note v001.146.0
+1. `plan-enterprise #84 hotfix 1` (본 entry) — Phase 5 → data-craft i-dev 머지 + patch-note v001.147.0
 2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 2` 또는 `플랜 완료` 트리거 가능.
 
 ---
+
+## v001.146.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #88
+
+### 페이즈 결과
+
+- **Phase 1** (`d18c713`): 설정-플랜 관리 탭에서 "파일 크기 제한" 항목을 사용량 그리드에서 분리하고 "포함된 기능" 섹션 카드로 이동. `CurrentPlanBadge` 의 2×2 사용량 그리드를 3 셀 (페이지/데이터그룹/스토리지) 로 축소, `PlanFeatureList` 가 `maxFileSizeBytes` prop 을 받아 값이 정의되고 `-1` 이 아닐 때 HardDrive(cyan) 합성 카드를 더보기 cap 과 무관하게 그리드 최상단에 항상 표시. `formatStorageSize` 가 정수 GB 케이스를 `toFixed(0)` 으로 분기하여 "1GB" / "500MB" 형태로 깔끔히 출력. i18n `settings.subscriptionFeatures.maxFileUpload` ko/en 추가.
+- **Phase 2** (`f823105`): `PlanFeatureCard` 우측 `ChevronRight` JSX·import·`cursor-pointer` 제거. tooltip / hover 동작은 유지. `PlanFeatureList` 의 더보기/접기 `ChevronDown` / `ChevronUp` 토글은 다른 글리프이고 기능 인디케이터이므로 보존.
+- **Phase 3** (`bba5848`): `CurrentPlanBadge` 첫 줄 라벨 순서 교체 — `[Badge: 플랜명] "현재 플랜"` → `"현재 플랜" [플랜명]`. 프로모션 활성 시 분기에도 동일 규칙 적용 (`프로모션: {{name}} 적용 중` 좌측, 플랜명 우측).
+- **Phase 4** (`18c0f5e`): `getPlanBadgeStyle(planType)` 헬퍼를 `planUtils.ts` 에 추가, `CurrentPlanBadge` 의 `<Badge variant="secondary">` 를 span 기반 커스텀 배지로 교체.
+
+### 플랜별 시각 매핑 (Phase 4 — 마스터 1차 검토 항목)
+
+마스터의 원 명세 라벨 (`lite/pro/business`) 을 실제 PlanType union (`free/basic/standard/premium/enterprise`) 에 tier-order 로 매핑:
+
+| PlanType | 배경 | 아이콘 | 노트 |
+|---|---|---|---|
+| `free` | `bg-muted text-foreground` | — | 의도적 muted (유료 티어 대비 차분) |
+| `basic` | `bg-sky-100 text-sky-700` (다크 페어) | — | light blue tint |
+| `standard` | indigo→purple 그라데이션 | Sparkles | 마스터 명세 "pro" |
+| `premium` | amber→orange 그라데이션 | Crown | 마스터 명세 "business" |
+| `enterprise` | slate dark 그라데이션 | Building2 | — |
+| (unknown) | `bg-muted` fallback | — | — |
+
+공통 wrapper: `inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm` (그라데이션 페이드 티어에만 shadow).
+
+### 추가 노트
+
+- `settings.subscriptionFeatures.maxFileSize` i18n 키는 `PlanComparisonCard.tsx:81` / `PlanCard.tsx:63` 에서 여전히 사용되므로 보존됨 (Phase 1 계획서의 "deliberate cleanup" 은 다른 호출자 미존재 전제였으나 실제 의존 발견하여 보존이 정답).
+- `getPlanBadgeStyle` 은 `planUtils.ts` 에 직접 추가됐고 subscription feature 배럴(`index.ts`) re-export 은 첫 외부 호출자 발생 시점에 별도 추가 (현재는 `CurrentPlanBadge` 가 직접 경로로 import).
+- `free` / `basic` 티어 시각은 의도적으로 차분하게 두었음 — 마스터의 "현재 플랜이 특별해야 함" 명세를 "유료 티어에 prominence 집중, free/basic 은 정직한 인디케이터" 로 해석. face-value 해석 ("모든 현재 플랜 자체가 특별") 을 원하면 핫픽스 가능.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+  - `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`
+  - `src/widgets/settings-dialog/ui/plan/PlanFeatureCard.tsx`
+  - `src/widgets/settings-dialog/ui/plan/PlanFeatureList.tsx`
+  - `src/features/subscription/lib/planFeatures.ts`
+  - `src/features/subscription/lib/planUtils.ts`
+  - `src/shared/i18n/locales/ko.ts`
+  - `src/shared/i18n/locales/en.ts`
+
+### 검증
+
+- 4페이즈 각각 `pnpm typecheck:all && pnpm lint` 통과 (0 errors, 5 warnings — 기존 baseline).
+- 마스터 시각 확인: 설정 다이얼로그 → 플랜 관리 진입 — (1) 사용량 그리드 3셀, (2) "포함된 기능" 최상단에 "최대 NGB 파일 업로드" 카드, (3) 모든 카드에 `>` 없음, (4) 상단 첫 줄 `현재 플랜 [플랜명]` 순서 + 플랜 티어별 차별화된 표기.
 
 ## v001.145.0
 
