@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.192.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 11)
+
+### 개요
+
+마스터 보고: "브라우저 인쇄로 넘어가면 집계 부분은 빈 페이지로 나와". HOTFIX 10 의 잔여 한계 #1 정확 일치 — `BrowserPrintEngine.generatePreview` 의 grid case 가 `generateGridPrintHtml(viewerModel, options)` 만 호출하고 HOTFIX 10 에서 추가한 3번째 인자 `aggregations` 를 패스하지 않음. 결과로 인쇄용 HTML 에 집계 페이지 영역 (`page-break-before: always` 가 있는 컨테이너) 는 emit 되지만 내부 카드 그리드 콘텐츠가 비어 빈 페이지로 나옴.
+
+### 페이즈 결과
+
+- **Phase 19 (HOTFIX 11)** (`2aabe95`): 단순 인자 패스-스루.
+  - **BrowserPrintEngine.ts**: `execute` 와 `generatePreview` 두 메서드 모두에 `aggregations?: Record<number, ServerAggregationResult>` 4번째 인자 추가. grid case 에서 `generateGridPrintHtml(viewerModel, options, aggregations)` 로 패스. 다른 case (calendar/gantt/kanban/dashboard) 는 aggregations 미사용이라 시그니처만 받고 무시.
+  - **PrintContext.tsx**: `executePrint` 의 `engine.execute(...)` 호출에 4번째 인자로 context state 의 `aggregations` 전달. `useCallback` 의존성 배열에 `aggregations` 포함.
+  - **engines/types.ts**: 공통 `PrintEngine` 인터페이스의 `execute` / `generatePreview` 시그니처도 `aggregations?` 추가 — 타입 정합성 유지.
+  - PdfPrintEngine 은 손대지 않음 (jsPDF autoTable 경로는 집계 행 미렌더 — 별 후속).
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/engines/BrowserPrintEngine.ts`
+  - `packages/fs-data-viewer/src/features/print/engines/types.ts`
+  - `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+
+3개 파일 / +13 / -8 / 단일 커밋.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 한 줄씩 패스-스루, PdfPrintEngine 미손댐 권고 반영.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
+### 잔여 한계
+
+PdfPrintEngine (jsPDF autoTable) 경로의 집계 페이지 미지원 — 별 후속 권장.
+
 ## v001.191.0
 
 > 통합일: 2026-05-18
