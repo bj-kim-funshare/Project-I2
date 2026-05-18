@@ -1,10 +1,10 @@
 # data-craft — Patch Note (001)
 
-## v001.182.0
+## v001.183.0
 
 > 통합일: 2026-05-18
 > 플랜 이슈: #84 (hotfix 10)
-> 비고: v001.180.0/181.0 은 #86/#91 가 선점하여 본 entry 는 v001.182.0 으로 bump.
+> 비고: v001.180.0/181.0/182.0 은 #86/#91/#101 가 선점하여 본 entry 는 v001.183.0 으로 bump.
 
 ### 핫픽스 결과 — Phase 14 (`aab4811`)
 
@@ -36,8 +36,54 @@ inner wrapper 는 `overflow-auto` 유지 (위젯 콘텐츠 클리핑 용도). ou
 
 ### 후속 스킬 체인
 
-1. `plan-enterprise #84 hotfix 10` (본 entry) — Phase 14 → data-craft i-dev 머지 + patch-note v001.182.0
+1. `plan-enterprise #84 hotfix 10` (본 entry) — Phase 14 → data-craft i-dev 머지 + patch-note v001.183.0
 2. 마스터 manual test 결과에 따라 PENDING gate 에서 `플랜 완료` 또는 추가 핫픽스.
+
+---
+
+## v001.182.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #101
+> Roadmap-1 단계2 (데이터 뷰어 5종) 잔여 작업 — Dashboard 차트 wiring 완성.
+
+### 페이즈 결과 — Phase 1 (`13d986d`)
+
+advisor 사전·완료 검증 PASS. 5종 viewer 중 4종 (Grid·Kanban·Calendar·Gantt) 은 선행 enterprise-454/457/459 분기에서 이미 실 API 와 wired-up 완료 상태로 인정, 본 plan 의 작업 표면 = Dashboard 차트 wiring 단일 phase 한정.
+
+- **집계 fetch 추가**: `ScreenDashboardViewer` 가 `viewerApi.getDashboardBatchAggregation(groupId, params, signal)` 을 추가 호출. 기존 `getDashboardLayout` 흐름과 단일 `AbortController` 공유 (`useRecordRow` 패턴 미러). `buildWidgetBatchParam` (`@dcm/fs-data-viewer-mobile`) 으로 layout 응답의 위젯 목록에서 batch param 구성.
+- **로컬 placeholder 제거 → 실 차트 위젯 분기**: 기존 ScreenDashboardViewer 내부의 `WidgetCard` placeholder (type 라벨 + dimension 만 표시) 를 완전 제거. `@dcm/fs-data-viewer-mobile/widgets/dashboard/widgets/` 의 7 차트 위젯 (`BarChartWidget`, `LineChartWidget`, `PieChartWidget`, `ScatterChartWidget`, `CardWidget`, `GaugeWidget`, `UserListWidget`) 을 type 별 분기 import + 렌더하는 `renderMobileWidget` 헬퍼를 screen 내부 함수로 도입 (별도 파일 없이 scope 유지).
+- **메타·컬럼 어댑터**: `DashboardWidgetLayoutMeta → DashboardWidget` 변환 (`metaToWidget` — settings 를 `DashboardWidgetConfig` 로 cast) + `viewport.columns → FsGridColumnModel[]` 합성 (`viewportToColumnModels` — width/title/type/enableAggregation 등 차트 위젯이 요구하는 column 모델 합성) 를 screen 내부 헬퍼로 둠.
+- **I18nProvider 래핑**: 차트 위젯들의 `useI18n` 컨텍스트 요구를 충족하도록 위젯 트리를 `I18nProvider` 로 감쌈.
+- **WidgetFullscreenSheet 정합**: `widgetEntity` + `columnModelList` + `aggregationData` props 추가 — 풀스크린 시트에서도 동일한 실 차트가 렌더되도록 정합.
+- **테스트 신규** (`__tests__/ScreenDashboardViewer.test.tsx` — 13 케이스): `vi.mock('@dcm/fs-api-mobile')` 로 layout + aggregation stub, flatten 정렬 (KPI → 차트 → 리스트) 회귀, loading/error/empty 분기, fullscreen sheet open/close, aggregation 호출 검증 모두 커버.
+
+### Informational deviations (실행 막지 않음, 후속 trace 용)
+
+- **Scatter/UserList 데이터 소스**: 두 위젯은 서버 집계 (`aggregationData`) 없이 클라이언트 행 데이터 (`preprocessedRows`) 로만 동작하는 시그니처. 모바일에서 row 데이터를 별도 로드하지 않는 한 두 위젯은 '데이터 소스 미설정' 상태로 렌더. 실 데이터 렌더는 별도 GET paged row fetch 추가 형태로 후속 처리 가능 (Roadmap-1 hard rule 내 가능).
+- **`buildWidgetBatchParam` settings 의존**: 위젯 settings 필드가 `DashboardWidgetConfig` 와 완전히 일치하지 않을 경우 batch param 빌더가 null 반환 → 런타임에서 위젯 집계 없이 fallback 렌더. 실 BE 응답 shape 와의 정합성은 통합 테스트 시점에 확인.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/screens/dashboard-viewer/ScreenDashboardViewer.tsx`
+  - `apps/web/src/mobile/screens/dashboard-viewer/__tests__/ScreenDashboardViewer.test.tsx` (신규)
+  - `apps/web/src/mobile/components/WidgetFullscreenSheet.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile WIP A 워크트리) PASS (exit 0, 0 errors).
+- advisor #1 (계획) / advisor #2 (완료) 모두 5관점 PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계2 `/plan-enterprise data-craft 단계2 데이터 뷰어 5종` 가 🟢 (5종 viewer 모두 FE-가능 최대치 도달) 갱신 가능.
+- 4종 viewer (Grid·Kanban·Calendar·Gantt) 의 선행 완료는 본 patch-note 와 issue #101 이 audit 으로 기록.
+- Scatter/UserList 의 row-data 후속 wiring 은 별도 phase 또는 다음 단계 진행 시 고려.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). data-craft-server / data-craft 리포 read-only 유지.
 
 ---
 
