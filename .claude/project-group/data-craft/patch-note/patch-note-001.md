@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.171.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #97
+> Roadmap-1 단계1-C 현 상태 마감 — record-detail 선행 완료 인정 + search BE 부재 인정 (작업 0).
+
+### 페이즈 결과 — 0 phases
+
+마스터 결정 (a): 현 상태 인정 + 마감. 코드 변경 0. 본 plan 은 audit-trail 이슈 (#97) 생성 + 본 패치노트 항목 추가 + 후속 Roadmap-1 단계1-C 🟢 갱신만으로 종결.
+
+### 전수조사 발견
+
+- **record-detail 영역**: `apps/web/src/mobile/screens/record-detail/ScreenRecordDetail.tsx` + `useRecordRow.ts` 가 enterprise-462 PHASE-01~04 (Roadmap-004 §F [S-6.1]) 에서 이미 완성 — `viewerApi.getSingleRow` (`GET /api/viewer/data/:groupId/row/:rowField`) 실 API 호출, 3 탭 (정보·댓글·활동), AbortController 정리, 낙관적 갱신 (`patchCell`/`rollback`), 좌우 화살표 a11y, `RelationSection`·`RecordEditSheet` 통합, 테스트 `ScreenRecordDetail.test.tsx` RT-01~RT-04 까지 모두 통과.
+- **search 영역**: `apps/web/src/mobile/screens/search/ScreenSearch.tsx` + `useGlobalSearch.ts` 가 enterprise-426 PHASE-05 (Roadmap-004 §F [S-1.4]) 에서 UI/디바운스(300ms)/탭 4종(전체·페이지·레코드·사람)/풀투리프레시/RecentSearches 까지 완성. 내부적으로 `useGlobalSearch` 가 `filterMockSearch()` (mockSearch fixture) 사용 — 실 BE 글로벌 search 부재로 인한 임시 상태.
+- **BE 진단**: `data-craft-server/src/routes/viewer.ts:175~193` 의 모든 `*search*` 라우트는 `/data/:groupId/...search` (POST, per-group 필터). 모바일 글로벌 검색이 가정하는 `GET /v1/search?q=...&type=all|pages|records|people` 미존재. `GET /api/builder/pages` 와 `GET /api/users` 는 존재하나, records 탭 (cross-group 글로벌 record 검색) 은 BE 집계자 없이는 FE-only 구현 불가.
+
+### 운영 결정 (master)
+
+Roadmap-1 의 0-B CORS BLOCK 사례와 동형의 운영 결정 — Roadmap-1 hard rule (BE/DB 무수정) 안에서 더 진행 불가능한 부분 (records 탭 실 데이터 연결) 은 후속 Roadmap (Roadmap-3 또는 후속 Roadmap-005) 으로 이관. 단계1-C 의 형식적 종결은 본 패치노트 항목으로 마감.
+
+### 영향 파일
+
+- (코드 변경 없음)
+- Project-I2: `.claude/project-group/data-craft/patch-note/patch-note-001.md` (본 항목)
+
+### Roadmap-1 진행 영향
+
+- 단계1-C `/plan-enterprise data-craft 단계1-C` 가 🟢 (FE-가능 최대치 도달 인정) 갱신 가능.
+- records-tab 실 데이터 연결은 별도 후속 Roadmap 에서 BE 신규 + mockSearch 제거 + useGlobalSearch 실 fetch 일괄 처리 예정.
+- 병렬 그룹 1 (단계1-A 선행 → 단계1-B / 단계1-C 동기) 완료 — 다음 후보 단계 = 단계 2 (데이터 뷰어 5종, fs-data-viewer-mobile 단일 plan phase 직렬) 또는 단계 4 (메시징·알림·피드, 단일 plan phase 직렬).
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). data-craft-server / data-craft 리포 read-only 유지.
+
 ## v001.170.0
 
 > 통합일: 2026-05-18
