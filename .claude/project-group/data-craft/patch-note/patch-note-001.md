@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.148.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #87
+
+### 페이즈 결과
+
+- **Phase 1** (`1195153`): `isPageEffectivelyHidden(page, getPageById)` 헬퍼 신설 — 본인 `isVisible===false` 이거나 1단계 부모의 `isVisible===false` 이면 true (재귀 없음). `src/entities/page/model/` 아래 위치, `@/entities/page` 에서 재수출. i18n: ko/en 양 locale 의 `editPageDialog.visibleLabel` ("화면 숨기기" / "Hide screen"), `editPageDialog.visibleNote` ("뷰 모드 사이드바에 이 화면이 표시되지 않습니다." / "This screen will not appear in the view-mode sidebar.") 갱신. 신규 키 `sidebar.hiddenTag` ("숨김 화면" / "Hidden"), `tabContentSelector.selectorBoxDisabledTooltip` ("선택 상자로 사용중인 페이지는 탭 위젯에 배치할 수 없습니다." / "Pages used as a selector box cannot be placed in a tab widget.") 추가. 기존 `editPageDialog.visibleNoteChild` 키 (이전엔 docs-only 빈 약속) 는 값 그대로 재활용 — Phase 2 의 자식 락 안내 텍스트로 실제 의미 부여.
+- **Phase 2** (`f157380`): `PageDialogSwitches` 의 가시성 토글을 "화면 숨기기" 의미로 반전 (`checked={!isVisible}`, `onCheckedChange={(v) => setIsVisible(!v)}`). 데이터 필드 `isVisible` 의미는 보존 (true=노출, false=숨김). 신규 prop `parentHidden?: boolean` — true 시 Switch `disabled` + `checked` 강제 ON + 안내 노트를 `editPageDialog.visibleNoteChild` 로 교체 + Label `text-muted-foreground` 처리. `EditPageForm` / `CreatePageForm` 가 `usePageStore.getPageById(parentId)?.isVisible === false` 로 부모 가시성 조회 후 prop 전달. **+ 보정 (`b7df243`)**: `CreatePageForm` 이 `visibleLabelKey="editPageDialog.visibleLabelList"` + `visibleLabelFallback="뷰 모드 화면 목록에 표시"` override 를 전달하던 부분 제거 — Create 다이얼로그도 기본값("화면 숨기기")으로 통일.
+- **Phase 3** (`42e28b7`): 디자인 모드 사이드바의 표시/숨김 분리 영역 폐기. `useDesignSidebarState` 의 `visiblePages`/`hiddenPages` 양분 제거 → 단일 `rootPages`. `DesignSidebar.tsx` 의 "표시 화면" 헤더 + `DesignSidebarHiddenPages` 분리 렌더 (L83~110) 제거 — 단일 `DesignSidebarDndArea` 트리. `DesignSidebarCollapsed` 의 `visiblePages` prop → `rootPages`. `DesignSidebarDndArea` 의 `visibleRootPages` → `rootPages` (hidden 포함 전체 루트, DnD flatten·last-root 계산 모두 갱신). `DesignSidebarHiddenPages.tsx` 삭제 (173줄). `SortableTreeItem.tsx` 에 `isPageEffectivelyHidden(page, getPageById)` 판정 + shadcn `Badge variant="secondary"` ("숨김 화면") 인-플레이스 부착 — 부모 hidden 자식도 헬퍼 기준으로 동일 태그.
+- **Phase 4** (`e02671f`): 탭 위젯 설정 드로어 (`TabContentSelector`) 의 화면 탭 통합. `TargetType` `'visible-page' | 'hidden-page' | 'form'` → `'page' | 'form'` 2개로 축소, `TARGET_TYPE_TABS` 재구성, `TabsList` `grid-cols-3` → `grid-cols-2`. `PageItem` 에 `isHidden`, `isSelectorBox` 필드 추가. `buildPageList` 단일 함수 — isVisible 필터 없이 루트+자식 모두 포함하되 host page 제외 (`item.id !== currentPageId`) 보존. hidden 항목 → 우측 "숨김 화면" Badge. selectorBox 항목 → 시각 동일하되 `aria-disabled`, `onClick` no-op, `cursor-not-allowed opacity-70` + shadcn `Tooltip` ("선택 상자로 사용중인 페이지는 탭 위젯에 배치할 수 없습니다.") 래퍼 — 자식의 selectorBox 가 false 면 정상 선택 가능 (cascade 금지). 자식 hidden 누수 버그는 통합 결과로 자연 해소.
+- **Phase 5** (`4c692bf`): 뷰 모드 + 탭 위젯 런타임에 유효 숨김 헬퍼 일괄 적용. `ViewSidebar.tsx` 의 루트 필터, `ViewSidebarExpanded.tsx` 의 handlePageClick + 자식 렌더 필터 (2곳), `ViewSidebarCollapsed.tsx` 의 자식 렌더 필터를 모두 `c.isVisible !== false` → `!isPageEffectivelyHidden(c, getPageById)` 로 교체 — 부모 hidden 시 자식도 뷰 모드에서 자동 제외 (이전엔 자식 isVisible 만 봐서 부모 숨김 자식 누출 사각지대 존재). `Tabs.widget.tsx` 에 `visibleTabs` 파생 — `getPageById(tab.content)` 가 페이지를 반환하고 `isPageEffectivelyHidden` 이면 그 탭 항목을 렌더 목록에서 제외 (form 탭은 `getPageById` undefined → 필터 통과). 저장 데이터 변경 없음, 표시만 차단.
+
+### 영향 파일
+
+- data-craft:
+  - `src/entities/page/model/isPageEffectivelyHidden.ts` (신규)
+  - `src/entities/page/index.ts`
+  - `src/shared/i18n/locales/ko.ts`
+  - `src/shared/i18n/locales/en.ts`
+  - `src/features/page-management/ui/PageDialogSwitches.tsx`
+  - `src/features/page-management/ui/EditPageForm.tsx`
+  - `src/features/page-management/ui/CreatePageForm.tsx`
+  - `src/widgets/page-navigation/ui/useDesignSidebarState.ts`
+  - `src/widgets/page-navigation/ui/DesignSidebar.tsx`
+  - `src/widgets/page-navigation/ui/DesignSidebarCollapsed.tsx`
+  - `src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx`
+  - `src/widgets/page-navigation/ui/DesignSidebarHiddenPages.tsx` (삭제)
+  - `src/widgets/page-navigation/ui/SortableTreeItem.tsx`
+  - `src/widgets/property-drawer/ui/property-editors/tabContentSelectorTypes.ts`
+  - `src/widgets/property-drawer/ui/property-editors/TabContentSelector.tsx`
+  - `src/widgets/page-navigation/ui/ViewSidebar.tsx`
+  - `src/widgets/page-navigation/ui/ViewSidebarExpanded.tsx`
+  - `src/widgets/page-navigation/ui/ViewSidebarCollapsed.tsx`
+  - `src/widgets/tabs-widget/ui/Tabs.widget.tsx`
+
+### 검증 결과
+
+- 각 phase 직후 lint gate (`pnpm typecheck:all && pnpm lint`) — 5/5 PASS (exit 0, 0 errors, 5~6 warnings — 모두 pre-existing).
+- Phase 2 의 라벨/토글 의미 일관성 — advisor #2 사전 점검에서 발견된 CreatePageForm `visibleLabelList` override 누락 케이스를 보정 커밋(`b7df243`)으로 해소.
+- 최종 advisor #2 (5관점, 완료 시점) PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment 모두 통과.
+
+### UI 의미 일관성 결정
+
+- 가시성 토글의 **의미는 반전** ("화면 숨기기"), **데이터 필드는 보존** (`isVisible: true=노출`). UI 만 반전하므로 기존 저장 데이터 마이그레이션 불필요.
+- 부모-자식 자동 숨김은 **유효 숨김 헬퍼** 로 *계산* — 자식의 `isVisible` 값은 저장 시 변경하지 않음. 부모를 다시 표시하면 자식은 자신의 원래 isVisible 값으로 즉시 복귀.
+- 탭 위젯 런타임에서 hidden 페이지 탭은 **비표시** 채택 (마스터 요구 "뷰 모드에서는 안보이게"). 저장된 탭 데이터는 그대로 보존 — 페이지 가시성 복원 시 탭 자동 재표시.
+
+### 알려진 i18n 후속 부채
+
+- 신규 `tabContentSelector.page` 키는 ko.ts/en.ts 에 미추가, fallback "화면" 으로 동작. 추후 i18n 정합성 sweep 시 양 locale 에 명시 추가 권장.
+- 기존 dead key 후보: `sidebar.visiblePages` ("표시 화면" — Phase 3 에서 분리 헤더 폐기로 미사용), `editPageDialog.visibleLabelList` ("뷰 모드 화면 목록에 표시" — Phase 2 보정으로 미사용). 보수적으로 삭제는 후속.
+
+---
+
 ## v001.147.0
 
 > 통합일: 2026-05-18
