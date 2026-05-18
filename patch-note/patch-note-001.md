@@ -1,5 +1,39 @@
 # 아이OS — Patch Note (001)
 
+## v001.75.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #41
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1** (`a3292dd`): `monitoring/script.js` 의 `computeRealtimeWindows(now, hoursBack)` 본문 교체 — `hoursBack` 있을 때 `weekStart` 의존 / `Math.max(weekStart, now-windowMs)` 클램프 제거, `base=[now-N, now]` / `compare=[now-2N, now-N]` 동일 창폭 반환. `hoursBack` 없을 때는 기존 단독 보기 (`base=[weekStart, now]`) 보존. `applyPeriodSelection` realtime 분기 compare-present 메타 메시지를 `실시간: 최근 ${hoursLabel} vs 그 이전 ${hoursLabel} (동일 창폭 비교)` 로 갱신, `hoursLabel` 매핑과 compare-absent 메시지는 무변경.
+
+### 진단 요지
+
+- 마스터 신고: 월요일 오전에 실시간 모드 "5일 전(120h)" 비교를 선택해도 전주 수요일까지의 데이터가 잡히지 않음 — 실시간 윈도우가 주(週) 단위 데이터 모델에 묶여 있는 정황.
+- 코드 확인: `computeRealtimeWindows` 가 `compareEnd = Math.max(weekStart, now - windowMs)` 로 비교 종료점을 이번 주 월요일 00:00 으로 강제 클램프 + `baseStart`/`compareStart` 둘 다 `weekStart` 고정. 월요일 호출 시 `compareStart == compareEnd == weekStart` → 비교 구간 길이 0.
+- `monitoring/README.md` 사양 ("`[지금-N, 지금]` 기준 / `[지금-2N, 지금-N]` 비교 — 동일 창폭") 과 코드 실제가 처음부터 불일치. 메타 메시지("이번주 월요일 00:00 ~ 지금까지 (vs N 전 누적)") 도 사양과 다른 의미를 표시 중.
+- 데이터 측면: `monitoring/scripts/collect.py` 의 hourly.json retention = 14일. 최대 옵션 5일 → 2N=10일 < 14일 → 데이터 충분. 본 신고는 클라이언트 윈도우 계산 로직 버그.
+
+### 회귀 검증
+
+- main session per-phase verification 5단계 (git fetch, git show --stat, affected_files 교집합, git diff 내용, blockers) 모두 PASS.
+- compare-absent 경로 / `aggregateHoursInWindow` 인터페이스 / `aggregate.json` 일자별 차트 경로 / KPI delta badge 산출식 모두 무변경.
+- 의도된 잔여 비대칭 (deferred): base 토큰 KPI 는 동일 창폭이지만 `by_session` / `by_prompt` 폴백 (script.js:1180-1187) 은 여전히 이번 주 weekly aggregate 출처 — hourly.json 에 세션/프롬프트 분해가 없어 별 사이클로 이관.
+- advisor #1 (계획) / advisor #2 (완료) 6-perspective 모두 PASS, BLOCK 토큰 없음.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 0개. 기존 단일 함수 본문 + 단일 메타 메시지 수정 (Q3 폐기 대상 0개).
+
+### 영향 파일
+
+- `monitoring/script.js`
+
+---
+
 ## v001.74.0
 
 > 통합일: 2026-05-16
