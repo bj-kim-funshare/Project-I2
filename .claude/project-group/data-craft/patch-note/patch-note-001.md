@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.184.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 8)
+
+### 개요
+
+마스터 보고: "여전히 생성 중...에서 멈춰있어, 브라우저로 넘겼으면 데이터 크래프트 측은 작업 종료로 간주하고 모달 닫고 처리 마무리하게 해". HOTFIX 7 의 3중 안전망이 일부 환경에서 fire 안 됨 → 마스터 명시 요구에 따라 `cleanup` 과 `resolve` 분리, `iframeWin.print()` 호출 직후 즉시 resolve.
+
+### 페이즈 결과
+
+- **Phase 16 (HOTFIX 8)** (`4ead5323`): fs-data-viewer 의 `BrowserPrintEngine.execute()` Promise 재설계.
+  - **cleanup·resolve 분리**: HOTFIX 7 의 `finishOnce` (cleanup + resolve 묶음) → `backgroundCleanup` (iframe 제거 전용, 비동기) + 즉시 `resolve()` 분리. `iframeWin.print()` 호출 성공 직후 Promise resolve → executePrint 의 await 종료 → setIsGenerating(false) + setIsOpen(false) 즉시 실행 → 모달 정상 닫힘.
+  - **백그라운드 cleanup 보존**: HOTFIX 7 의 3중 안전망 (onafterprint / matchMedia 'print' change / 60s timeout) 은 *iframe 비동기 제거* 전용으로 유지. 사용자 눈에 띄지 않게 백그라운드 처리.
+  - **about:blank 첫 onload 가드** (advisor concern): srcdoc 적용 이전 시점에 iframe 의 about:blank 로드로 onload 가 발화될 수 있음 → `iframeWin.location.href === 'about:blank'` 시 return.
+  - **print() 동기 throw 처리** (advisor concern): 팝업 차단·security 거부 등 동기 throw 발생 시 backgroundCleanup + reject → executePrint catch 가 status='error' 처리.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/features/print/engines/BrowserPrintEngine.ts`
+
+1개 파일 / +29 / -17 / 단일 커밋.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 3개 concerns 사전 반영 (print() throw → reject, about:blank 가드, cleanup·resolve 분리).
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.183.0
 
 > 통합일: 2026-05-18
