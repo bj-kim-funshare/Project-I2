@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.167.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #95
+> Roadmap-1 단계1-B 잔여 작업 (page-tree hook 실데이터 wiring) 마감.
+
+### 페이즈 결과 — Phase 1 (`3fe1848`)
+
+advisor 사전·완료 검증 PASS. 단일 phase 의 4 step 중 3 step 실행 + 1 step 정보성 deviation.
+
+- **buildPageTree 신규** (`apps/web/src/mobile/lib/buildPageTree.ts`): `BuilderPage[]` 평면 응답 → `PageNode[]` 트리 변환 헬퍼. 매핑 규칙 = `type = isSelectorBox ? 'folder' : 'page'` (desktop selector-box 규칙과 동치), `title ← name`, `parentId: undefined → null` 정규화, 형제 `order` 오름차순. cycle 가드 (조상 체인 visited Set), self-parent 가드, orphan → 루트 배치 포함.
+- **usePageTree rewrite** (`apps/web/src/mobile/hooks/usePageTree.ts`): MOCK_PAGE_TREE stub 완전 제거. `builderApi.getPages({ limit: 500 })` + AbortController + useState(loading/error) + useCallback(fetchOnce) + useEffect(mount fetch) 패턴 (`usePageViewer` 미러). 실 loading / error / refetch 가동.
+- **테스트 갱신**: `buildPageTree.test.ts` 신규 8 케이스 (빈 배열·타입 매핑·parentId 정규화·그룹핑·정렬·orphan·cycle·루트 정렬). `usePageTree.test.ts` 는 vi.mock + waitFor 패턴으로 재작성 (stub 기반 → 실 API mock 기반).
+- **Deviation (정보성)**: 계획 step 3 (ScreenPageTree EmptyState 분기 추가) 은 실행하지 않음 — `PageTreeView.tsx:87-94` 가 이미 `flatNodes.length === 0` 시 `role="status"` 와 함께 "📄 페이지가 없습니다" 메시지를 렌더하고 있어 중복 분기 추가 시 기존 테스트의 단일 `getByRole('status')` 매칭이 깨짐. 빈-트리 요구사항은 하위 컴포넌트에서 이미 충족.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/lib/buildPageTree.ts` (신규)
+  - `apps/web/src/mobile/lib/__tests__/buildPageTree.test.ts` (신규)
+  - `apps/web/src/mobile/hooks/usePageTree.ts`
+  - `apps/web/src/mobile/hooks/__tests__/usePageTree.test.ts`
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile WIP A 워크트리) PASS (exit 0, 0 errors).
+- advisor #1 (계획) / advisor #2 (완료) 모두 5관점 PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계1-B `/plan-enterprise data-craft 단계1-B` 가 🟢 완료 가능. page-viewer 측은 enterprise-427 PHASE-04 (Roadmap-004) 에서 이미 wired-up 완료된 상태로 본 plan 의 잔여 hook 작업만 마감.
+- 병렬 그룹 1 의 동기 단계1-C (레코드 상세 / 검색) 진입 가능.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). data-craft-server / data-craft 리포 read-only 유지.
+
 ## v001.166.0
 
 > 통합일: 2026-05-18
