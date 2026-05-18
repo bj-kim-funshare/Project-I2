@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.145.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84
+
+### 페이즈 결과
+
+- **Phase 1** (`bfe2ef1`): Area 모서리 둥글기 클리핑 회복. 디자인 모드에서 외곽 컨테이너의 `borderRadius` 가 내부 `absolute inset-0 overflow-auto` wrapper (`Area.tsx:95`) 에 미적용되어 배경색이 직각 모서리로 잘리던 회귀 수정. wrapper div 에 동일한 `borderRadius` 인라인 스타일을 조건부 추가하여 클리핑 경계가 외곽 둥근 모서리와 일치하도록 함. AreaControls 는 wrapper 내부 (top-2/right-2) 에 위치하여 추가 처리 불필요.
+- **Phase 2** (`df0ef39`): SubAreaHeightInput % 입력 적용 경로 복구. `updateSubAreaHeight` 의 px 기반 사전 검증이 `isExpanded=true` (flex-1) 섹션에서 stored `section.height` 와 실제 DOM 높이 괴리로 `success=false` 를 반환, 컴포넌트가 롤백되어 입력값이 무시되던 회귀 수정. 드래그 경로 (`resizeAdjacentSubAreas`) 는 enterprise-500 에서 `containerHeight baseOverride` 로 보정됐으나 직접 호출 경로는 미반영 상태. px 검증을 % 범위 검증 + 컴포넌트 단 10% clamp 위임으로 교체. 비례 재분배 / 부동소수점 정규화는 유지.
+- **Phase 3** (`91917bb`): Section 컨트롤바 활성 시 파란 테두리 추가. `FloatingSectionBanner` 컨트롤바 표시 트리거가 `isDesignMode && selectedSectionId !== null` 임을 확인. `Section.tsx` 에 `selectedSectionId === id` 기반 `isSectionSelected` 계산 후 `ring-2 ring-blue-500` Tailwind 클래스 조건부 적용. `Area.tsx` 의 기존 테두리 로직은 변경하지 않음 (마스터 요구가 Section 추가일 뿐 Area 회귀가 아님).
+- **Phase 4** (`63e667a`): 비선택 영역 dim 회귀 복구. `useActiveEditingTarget` 의 우선순위 순서 버그 수정 — `WidgetContainer` 의 위젯 직접 클릭은 `selectWidget()` 만 호출하고 `selectedSectionId`·`isSectionDrawerOpen` 을 초기화하지 않으므로 이전 섹션 드로어 상태 잔류 시 branch 1 (section) 이 먼저 매칭되어 위젯이 속한 area 가 dim 되는 결과 발생. `selectedWidgetId` 분기를 branch 3 → branch 1 로 올려 위젯 선택이 잔류 드로어 플래그보다 항상 우선하도록 정렬.
+
+### 진단 요지
+
+- 1번 (모서리 둥글기): 외곽 `borderRadius` 와 내부 `absolute inset-0` wrapper 의 클리핑 경계 불일치. 배경/콘텐츠가 wrapper 에 그려져 외곽 둥근 모서리를 가림.
+- 2번 (높이 %): stored `section.height` 와 실측 DOM 높이의 괴리로 px 사전 검증이 false-negative — 드래그 경로는 이미 해소, 직접 호출 경로 누락.
+- 3번 (섹션 테두리): `Section.tsx` 에 선택/컨트롤바 상태 대응 테두리 스타일링 자체 부재.
+- 4번 (dim): hook 우선순위에서 widget 분기가 section/area 드로어 분기 뒤에 있어 잔류 드로어 플래그가 widget 선택을 가림.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+  - `src/entities/layout/model/resizeSubAreaActions.ts`
+  - `src/entities/layout/model/useActiveEditingTarget.ts`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) 4 페이즈 모두 PASS (exit 0, 5 warnings, 0 errors).
+- advisor #1 (계획 시점) / advisor #2 (완료 시점) 5관점 모두 PASS. advisor #2 Evidence 항목 = CONCERN (Phase 4 git log 추적 누락) — PENDING gate 의 마스터 manual test 로 검증.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84` (본 entry) — Phase 1~4 → data-craft i-dev 머지 + patch-note v001.145.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.144.0
 
 > 통합일: 2026-05-18
