@@ -1,5 +1,61 @@
 # data-craft — Patch Note (001)
 
+## v001.199.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 12)
+
+### 개요
+
+마스터 보고 (이미지 첨부): "집계 부분이 사진처럼 잘려서 나오고, 지금 쓸데없이 공간을 많이 차지한다는 느낌이 너무 강하게 들어 집계 디자인 설계 다시 개선해". 페이지 14에서 마지막 카드 "작성자" 가 페이지 경계 분할되어 페이지 15 처음에 "39 | 2" 만 잔존. HOTFIX 10 의 카드 디자인이 (a) `break-inside` 미적용으로 페이지 경계 분할 (b) 28pt 큰 강조 + 16px padding + 16px gap + 2 열 으로 공간 과다.
+
+### 페이즈 결과
+
+- **Phase 20 (HOTFIX 12)** (`c5cf4e7` + lint hotfix `874bd83` + lint hotfix2 `4076bc5`): printStyleGenerator + printHtmlBuilder 압축.
+
+#### A. printStyleGenerator.ts — 페이지 분할 방지 + 25-40% 압축
+
+- `.aggregation-card`: `break-inside: avoid` + `page-break-inside: avoid` 이중 emit (브라우저별 호환).
+- 사이즈 압축:
+  - `.aggregation-summary-page` padding: 20mm → 12mm
+  - `.aggregation-summary-title` font-size: 24pt → 18pt
+  - `.aggregation-summary-subtitle` font-size: 11pt → 9pt
+  - `.aggregation-card-grid`: 2열 → **3열**, gap 16px → 10px, `grid-auto-rows: min-content`
+  - `.aggregation-card` padding: 16px → 12px, border: 2px → 1.5px
+  - `.aggregation-card-label` 9pt → 8pt
+  - `.aggregation-card-title` 13pt → 11pt
+  - `.aggregation-card-value`: **28pt → 18pt** (가장 큰 공간 절약)
+  - `.aggregation-card-meta` 9pt → 8pt
+  - `.aggregation-card-details` 10pt → 9pt, padding 2px → 1px
+- `.aggregation-card-more` 신규 — distribution 잔여 항목 "외 N개" 풋노트 스타일 (`border: none !important` 로 셀렉터 충돌 해소).
+
+#### B. printHtmlBuilder.ts — distribution 5항목 상한 + 인라인 스타일 제거
+
+- distribution 카드의 details 출력을 상위 10개 → **상위 5개 + `외 N개` 풋노트** 로 변경.
+- 기존 인라인 `style` 속성 (border/padding/background/color) 모두 제거 — CSS 클래스 위임으로 통일. specificity 충돌 해소.
+
+### Lint hotfix 2 라운드
+
+- iter 1 (`874bd83`): 인라인 스타일 제거로 미사용된 `colorMode` 변수 제거.
+- iter 2 (`4076bc5`): `options` 파라미터 미사용 → `_options` 리네임.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
+2 파일 / +51 / -33 / 본 커밋 + lint hotfix 2개.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — break-inside + 컴팩트 압축 + 3열 + distribution 상한 4축 권고 모두 채택.
+- **lint**: PASS (2회 hotfix iter 후 — 0 errors, 11 warnings).
+
+### 잔여 한계
+
+PdfPrintEngine 의 집계 페이지 미지원 (HOTFIX 11 잔여) 그대로 유지.
+
 ## v001.198.0
 
 > 통합일: 2026-05-18
