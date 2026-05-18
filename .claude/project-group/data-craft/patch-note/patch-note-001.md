@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.175.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #96
+
+### 페이즈 결과
+- **Phase 1** (`274f694`): `data-craft/packages/fs-data-viewer` 의 `documentation` 카테고리(id:5) 를 제거하고 `document` 컬럼 타입을 `usefulColumnTypes` 객체 내부로 이전 (category=`useful`, id/icon/defaultWidth/defaultColor/minWidth/hasUnitEdit 보존). `documentationColumnTypes` 익스포트 + `composition.ts` import/스프레드 정리, i18n `helpers.ts` `CATEGORY_ID_KEY_MAP` 의 `5: 'documentation'` 항목 제거, `types.ts` 의 `columnCategories.documentation` 필드 제거, 4개 번역(`ko/en/zh/ja`) 의 `documentation` 키 삭제. 변경 +3/-18 across 9 files.
+- **Phase 2** (`e7a0b48`): `data-craft/packages/fs-sub-data-viewer` 에 Phase 1 과 1:1 동형 변경 적용. 변경 +3/-18 across 9 files.
+- **Phase 3** (`d219b2d`): `data-craft/packages/fs-external-data-viewer` 에 Phase 1/2 와 1:1 동형 변경 적용. 변경 +3/-18 across 9 files.
+- **Phase 4** (`699f861` — 범위 확장 / advisor #2 사전 검증에서 발견): `data-craft-mobile/packages/fs-data-viewer-mobile` 에 동형 변경 적용. 데스크탑/모바일 양 surface 의 동일 탭 구조 동시 보장. 변경 +3/-18 across 9 files.
+
+**의미**: 데이터 뷰어 "열 추가" 오버레이가 5탭 → 4탭 (`필수 / 편의 / 스마트 / 유용한`) 으로 단순화되고, "유용한 기능" 탭 내용이 `연결 / 듀얼 위젯 / 문서` 3종이 된다. `category` 필드는 사용자 데이터에 직렬화되지 않고 (column-json/column-type 참조 0건) 탭 그루핑 정적 비교에만 사용되므로 기존 저장된 `document` 컬럼은 영향 없음. 컬럼 ID `'document'` 와 `FsGridColumnTypes` 머지 키 보존.
+
+**검증**: advisor #1 / #2 5-perspective (Intent · Logic · Group Policy · Evidence · Command Fulfillment) PASS. lint gate PASS — data-craft `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 11 warnings), data-craft-mobile `pnpm typecheck` exit 0. 4 레포 (data-craft / data-craft-mobile / data-craft-server / data-craft-ai-preview) cross-grep 결과 `documentationColumnTypes` / `FsGridColumnTypeCategories.documentation` / `columnCategories.documentation` 잔존 0건.
+
+### 영향 파일
+
+#### data-craft
+- `packages/fs-data-viewer/src/entities/column-types/categories.ts`
+- `packages/fs-data-viewer/src/entities/column-types/other-types.ts`
+- `packages/fs-data-viewer/src/entities/column-types/composition.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/helpers.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/{ko,en,zh,ja}.ts`
+- `packages/fs-sub-data-viewer/src/entities/column-types/{categories,other-types,composition}.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/{helpers,types}.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/translations/{ko,en,zh,ja}.ts`
+- `packages/fs-external-data-viewer/src/entities/column-types/{categories,other-types,composition}.ts`
+- `packages/fs-external-data-viewer/src/shared/config/i18n/{helpers,types}.ts`
+- `packages/fs-external-data-viewer/src/shared/config/i18n/translations/{ko,en,zh,ja}.ts`
+
+#### data-craft-mobile
+- `packages/fs-data-viewer-mobile/src/entities/column-types/{categories,other-types,composition}.ts`
+- `packages/fs-data-viewer-mobile/src/shared/config/i18n/{helpers,types}.ts`
+- `packages/fs-data-viewer-mobile/src/shared/config/i18n/translations/{ko,en,zh,ja}.ts`
+
 ## v001.174.0
 
 > 통합일: 2026-05-18
