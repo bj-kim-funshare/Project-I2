@@ -876,18 +876,9 @@ async function loadHourlyData() {
   return _hourlyCache;
 }
 
-function currentWeekMondayMs() {
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sunday
-  const daysFromMonday = (dayOfWeek + 6) % 7;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMonday);
-  return monday.getTime();
-}
-
 function computeRealtimeWindows(now, hoursBack) {
   if (!hoursBack) {
-    const weekStart = currentWeekMondayMs();
-    return { baseStart: weekStart, baseEnd: now, compareStart: null, compareEnd: null };
+    return { baseStart: now - 5 * 24 * 3600 * 1000, baseEnd: now, compareStart: null, compareEnd: null };
   }
   const windowMs = hoursBack * 3600 * 1000;
   return {
@@ -1188,7 +1179,7 @@ async function applyPeriodSelection(unit, key, periodsIndex) {
         const hoursLabel = compareKey === '48' ? '2일' : compareKey === '72' ? '3일' : compareKey === '120' ? '5일' : `${compareKey}시간`;
         $('#meta').textContent = `실시간: 최근 ${hoursLabel} vs 그 이전 ${hoursLabel} (동일 창폭 비교)`;
       } else {
-        $('#meta').textContent = `실시간: 이번주 월요일 00:00 ~ 지금까지`;
+        $('#meta').textContent = `실시간: 최근 5일`;
       }
       renderAll(baseData, compareData);
       if (compareData) {
