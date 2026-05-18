@@ -1,5 +1,97 @@
 # data-craft — Patch Note (001)
 
+## v001.170.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #91
+
+### 페이즈 결과
+
+본 플랜은 마스터의 22개 요구사항 + 보강 2건 (인원 추가 결제 고지, DB 병렬 적용) 에 대응하여 결제 시스템 전반을 재검증한 통합 작업이다. 총 14 페이즈 (BE 5 + FE 9).
+
+**BE (data-craft-server)**
+
+- **Phase 1** (`9e93b30`): `user.payment_password` 도메인 신설 — bcrypt 해시 유틸 + set/verify/exists CRUD API. 응답에 해시 미노출.
+- **Phase 2** (`8fe3d27`): 다운그레이드 / 결제 주기 변경 예약의 `*_BLOCKED_PENDING_SEAT_CHANGES` 사전 차단 제거. 충돌 해소는 갱신 시점에 위임.
+- **Phase 3** (`0e2f235`): 라우트 레벨 미들웨어 `requirePaymentPassword` 신설. 7 endpoint (billing/payment, reactivate, schedule-downgrade, schedule-upgrade, schedule-cycle-change, seats/change, promotion/purchase) 에 게이트 부착.
+- **Phase 4** (`dad5284`): `GET /api/subscription/seats/change/quote?delta=N` 신설 (immediate/nextCycle 두 시나리오 일괄 응답). 즉시 인원 추가 산식을 만액→잔여 일수 비례로 전환 (quote 와 동일 함수 공유). 인메모리 `withIdempotency` 결제 중복호출 방지.
+- **Phase 5**: BE 측 "환불 없음" 텍스트 매칭 0건 (모두 내부 로그/타입명) — skip.
+
+**FE (data-craft)**
+
+- **Phase 6** (`c68f867`): 결제 비밀번호 공용 컴포넌트 — `PaymentPasswordInputDialog`, `PaymentPasswordSetupStep`, `usePaymentPasswordGate` hook (exists 조회 → setup/input 자동 분기, PAYMENT_PASSWORD_NOT_SET 응답 회복).
+- **Phase 7** (`029aea4` + lint hotfix `c48b156`): `SeatManageDialog` 통합 모달 (감소 + 증가 next-cycle/즉시 탭) + `NumberInputWithReturn` 공용 컴포넌트 (화살표 제거 + CornerDownLeft) + BillingInfoSection 의 "인원 관리" 버튼 재배치. quote endpoint 디바운스 호출하여 결제 고지문 동적 삽입.
+- **Phase 8** (`118ba4d`): 업그레이드 모달에서 무료/엔터프라이즈 카드 disabled (엔터프라이즈는 "준비중" Badge). UpgradeDialog 타이틀을 `PLAN_LEVEL` 비교로 다운/업 동적 전환.
+- **Phase 9** (`542def4`): UpgradeStepPayment billingCycle 초기값 yearly, NumberInputWithReturn 교체, 결제 버튼 → 비밀번호 게이트 → mutate body 에 password 포함 (즉시/예약/다운 3 경로). 3 mutation isPending 합산 → 응답 도착 전 추가 클릭 차단.
+- **Phase 10** (`ff98858`): UpgradeDialog 단계 전환 squash 픽스 — DialogContent 에 `key={step}` 추가하여 unmount→mount 재마운트.
+- **Phase 11** (`263fd39`): 구독 취소 버튼 → 우측 끝 회색 ghost. `ReactivateConfirmDialog` 신규 — 플랜·인원 표시 후 비밀번호 게이트 → reactivate API. "연간으로 변경 예약" 도 동일 게이트 와이어링.
+- **Phase 12** (`a848aef`): BillingSuccessPage 3 분기 (카드 변경/신규구독/프로모션결제) 에 PaymentPasswordSetupStep 마운트. CurrentPlanBadge 프로모션 활성 시 플랜명 자체를 오렌지 이탤릭. activePromotion 시 "연간으로 변경 예약" 버튼 비표시.
+- **Phase 13** (`c85d404`): PlanFeatureList COLLAPSED_COUNT 4→6 (2열×3행). SeatAddDialog 삭제 (411 lines) + PendingUserList → SeatManageDialog 교체. "환불 없음" 텍스트 자동 소실.
+- **Phase 14** (`cacb7bc` + lint hotfix `48b9f56`): advisor #2 직전 보강 — PlanLimitExceededDialog 결제 콜백이 게이트 paymentPassword/seats 묵살하던 버그 수정 (요구 16/17 우회 차단). SeatManageDialog 에 `onAfterSuccessfulImmediatePay` prop 신규 + PendingUserList 자동 재승인 흐름 복구 (enterprise-496 H4 회귀 해소).
+
+**검증**: advisor #1 (계획) / advisor #2 (완료) 모두 5-perspective (Intent · Logic · Group Policy · Evidence · Command Fulfillment) PASS. 전 페이즈 lint gate PASS (data-craft-server `pnpm lint`, data-craft `pnpm typecheck:all && pnpm lint`).
+
+### 잔여 항목 (PENDING gate 노출 대상 — 마스터 결정 필요)
+
+1. 요구 3 해석 의존: PlanLimitExceededDialog 가 host dialog 로 살아있음 (게이트 우회는 차단됨, UpgradeStepPayment 공유). 문자 그대로의 "두 곳" 충족 위해 UpgradeDialog 라우팅 전환 후속 가능.
+2. `billingRenewal.service.ts` 갱신 시점에 plan change ↔ seat change 흡수 정책 미구현 (Phase 2 잔여). 다음 갱신 도래 전까지 무영향.
+3. `PaymentRequest` / `ScheduleUpgradeRequest` types.ts 의 paymentPassword 필드 정식 선언 미완 (타입 캐스팅 우회 — 런타임 정상).
+4. `scheduleUpgrade` 의 `UPGRADE_BLOCKED_PENDING_SEAT_CHANGES` 가드 일관성 후속.
+5. 신규 카드 등록 후 첫 결제 게이트 — 요구 17 문언상 범위 밖이며 Phase 12 의 setup 강제로 후속 결제 보호.
+6. SeatManageDialog next-cycle 예약 안내 UX 소규모 보강.
+
+### 영향 파일
+
+**data-craft-server**
+
+- `src/utils/paymentPasswordHash.ts` (신규)
+- `src/utils/idempotency.ts` (신규)
+- `src/models/user.model.ts`
+- `src/controllers/paymentPassword.controller.ts` (신규)
+- `src/controllers/seatChange.controller.ts`
+- `src/middlewares/requirePaymentPassword.ts` (신규)
+- `src/types/paymentPassword.types.ts` (신규)
+- `src/types/seatChangeQuote.types.ts` (신규)
+- `src/services/billingSubscription.service.ts`
+- `src/services/seatChange.service.ts`
+- `src/routes/user.ts`
+- `src/routes/subscription.ts`
+- `src/routes/promotion.routes.ts`
+- `src/config/constant.ts`
+- `src/__tests__/billingSubscription.scheduleDowngrade.test.ts` (신규)
+- `src/__tests__/billingSubscription.scheduleBillingCycleChange.test.ts` (신규)
+
+**data-craft**
+
+- `src/features/subscription/api/paymentPassword.api.ts` (신규)
+- `src/features/subscription/api/seatChange.api.ts` (신규)
+- `src/features/subscription/api/billingApi.ts`
+- `src/features/subscription/lib/usePaymentPasswordGate.ts` (신규)
+- `src/features/subscription/lib/planFeatures.ts`
+- `src/features/subscription/model/subscriptionQueries.ts`
+- `src/features/subscription/model/types.ts`
+- `src/features/subscription/ui/PaymentPasswordInputDialog.tsx` (신규)
+- `src/features/subscription/ui/PaymentPasswordSetupStep.tsx` (신규)
+- `src/features/subscription/ui/SeatManageDialog.tsx` (신규)
+- `src/features/subscription/ui/ReactivateConfirmDialog.tsx` (신규)
+- `src/features/subscription/ui/SeatAddDialog.tsx` (삭제)
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+- `src/features/subscription/ui/UpgradeStepSelect.tsx`
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/features/subscription/ui/PlanLimitExceededDialog.tsx`
+- `src/features/subscription/index.ts`
+- `src/shared/ui/number-input-with-return.tsx` (신규)
+- `src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx`
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`
+- `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`
+- `src/widgets/settings-dialog/ui/plan/PlanFeatureList.tsx`
+- `src/widgets/settings-dialog/ui/PendingUserList.tsx`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+**DB (별도 task-db-structure 세션)**
+
+- `user.payment_password VARCHAR(255) NULL` 컬럼 추가
+
 ## v001.169.0
 
 > 통합일: 2026-05-18
