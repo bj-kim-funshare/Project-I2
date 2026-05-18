@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.198.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #105 (HOTFIX 1)
+
+### 개요
+
+마스터 보고: v001.193.0 (Phase 1) 머지 후 시각 확인 결과 (1) 모달 너비가 화면 절반에도 못 미침, (2) 모달 배경 클릭 시 뒤 그리드뷰가 가로 스크롤됨. 두 문제 모두 v001.193.0 의 상수 변경만으로는 해결 불가 — Phase 1 의 `w-[80vw]` 가 베이스 `DialogContent` 의 `sm:max-w-lg` (~512px) cap 에 묶였고, 가로 스크롤은 Radix Dialog close 시 focus 복원이 trigger 한 부작용. advisor 진단 후 hotfix 1 phase 로 분리 처리.
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1)** (`f449f09`): 두 hotfix 동시.
+  - **너비 cap 해제**: `IMAGE_MODAL_CLASSES` 두 사본 (`packages/fs-file-attachment/src/lib/uiConstants.ts`, `src/shared/lib/file-attachment-ui.ts`) 에 `max-w-[80vw] sm:max-w-[80vw]` 토큰 추가. twMerge 가 responsive variant 별로 그룹핑하므로 bare `max-w-*` 만으로는 베이스의 `sm:max-w-lg` 를 override 못함 — `sm:max-w-[80vw]` 가 핵심.
+  - **close 시 underlying scrollIntoView 차단**: ImageZoomDialog 두 사본 (`packages/fs-file-attachment/src/ImageZoomDialog.tsx`, `src/widgets/file-attachment/ui/ImageZoomDialog.tsx`) 의 `<DialogContent>` 에 `onCloseAutoFocus={(e) => e.preventDefault()}` prop 추가. Radix 가 dialog 닫힐 때 trigger element (썸네일) 로 focus 복원 → 그리드의 horizontal scroll 컨테이너가 focused 요소를 `scrollIntoView` 호출하면서 가로 스크롤 트리거되는 부작용 차단. 닫기 동작 (overlay click / ESC / X / 닫기 버튼) 은 모두 보존.
+  - **회귀 방지**: `tests/shared/lib/file-attachment-ui.test.ts` 에 cap-removal 단언 (`toContain('max-w-[80vw]')` + `toContain('sm:max-w-[80vw]')`) test 1개 신규 추가.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-file-attachment/src/lib/uiConstants.ts`
+  - `src/shared/lib/file-attachment-ui.ts`
+  - `packages/fs-file-attachment/src/ImageZoomDialog.tsx` (multi-line prop 형식 — onCloseAutoFocus 별도 라인)
+  - `src/widgets/file-attachment/ui/ImageZoomDialog.tsx` (single-line prop 형식 — onCloseAutoFocus 동일 라인)
+  - `tests/shared/lib/file-attachment-ui.test.ts`
+
+5개 파일 / +9 / -3 / 단일 커밋.
+
+### advisor 검증
+
+- 진단 시점 PASS — 1번 가설 (twMerge variant grouping) 은 정확. 2번 가설 (overlay DOM propagation) 은 틀렸음을 advisor 가 정정 → 실제 원인은 Radix `onCloseAutoFocus` 의 default focus 복원 + browser `scrollIntoView`. 수술적 fix (`e.preventDefault()`) 로 close 동작 보존하며 부작용만 제거하는 방향으로 조정.
+- 완료 시점 PASS — diff 가 advisor #1-validated 진단과 정확 일치, lint gate PASS (0 errors).
+
+### 수동 점검 권장
+
+- `cd /Users/starbox/Documents/GitHub/data-craft && pnpm dev` → 셀의 파일 첨부 이미지 썸네일 클릭 → 모달이 뷰포트 80% × 90% 로 표시되는지 시각 확인 (Phase 1 + HOTFIX 1 누적).
+- 모달 열린 상태에서 배경 (overlay) 클릭 → 모달은 닫히되 뒤 그리드뷰의 가로 스크롤이 발생하지 않는지 확인.
+- ESC / X / 닫기 버튼으로 닫는 경우도 가로 스크롤 발생하지 않는지 확인.
+- `pnpm test tests/shared/lib/file-attachment-ui.test.ts` 로 sync + cap-removal 단언 모두 PASS 재확인.
+
 ## v001.197.0
 
 > 통합일: 2026-05-18
