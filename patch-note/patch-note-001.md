@@ -1,5 +1,39 @@
 # 아이OS — Patch Note (001)
 
+## v001.76.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #41 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1)** (`f63b0de79e246383a378a02543d184abeeb7b983`): `monitoring/script.js` `computeRealtimeWindows` 의 no-compare 분기를 `[now-5*24h, now]` 롤링으로 교체. 기존 `currentWeekMondayMs()` 의존 폐기 (함수가 더 이상 호출되지 않으므로 정의도 삭제). `applyPeriodSelection` 의 compare-absent 메타 메시지 → `실시간: 최근 5일`. compare-present 분기는 무변경. `by_session` / `by_prompt` 폴백은 deferred 유지. `monitoring/README.md` no-compare 윈도우 설명 업데이트.
+
+### 진단 요지
+
+- v001.75.0 머지 직후 마스터 관측: 월요일 09:27 KST 에 no-compare 실시간 모드 KPI 가 ~6.7M (오늘만) 으로 표시, 일자별 차트의 지난주 바(예: 5-15 = 1.3B) 와 시각적 모순. advisor #1 가 계획 단계에서 사전 경고했던 "주 앵커가 실시간 무드와 충돌" 케이스가 그대로 표면화.
+- 원인: no-compare 분기가 여전히 `currentWeekMondayMs()` 앵커. 월요일에는 윈도우가 ~today 로 축소.
+- 결정: 주 앵커 폐기, 가장 큰 compare 옵션(5일)의 창폭과 일치시키고 마스터의 "5일 이내" 표현과도 맞춰 `[now-5*24h, now]` 롤링으로 교체.
+
+### 회귀 검증
+
+- per-phase verification 5단계 PASS, blockers 없음.
+- hourly.json retention 14일 ≥ 5일 → 데이터 부족 없음.
+- compare-present 분기 / `aggregateHoursInWindow` / KPI delta badge 산출식 무변경.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 추가 0개. 기존 함수 한 분기 + 메시지 한 줄 (+ unused 함수 정리) 수정.
+
+### 영향 파일
+
+- `monitoring/script.js`
+- `patch-note/patch-note-001.md`
+- `monitoring/README.md`
+
+---
+
 ## v001.75.0
 
 > 통합일: 2026-05-18
