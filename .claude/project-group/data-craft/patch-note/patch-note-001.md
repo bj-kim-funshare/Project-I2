@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.185.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #102
+
+### 개요
+
+QA 가 입력 위젯 (단일 / 복수 선택) 에 대해 두 가지 결함 지적:
+1. 선택한 값에 따라 위젯 너비가 변동 (콘텐츠 폭에 끌려감) — 기존 설정 너비 고정 필요.
+2. 뷰모드에서 저장된 선택값 삭제 시 빈값 처리 대신 `undefined 외 -1` 문자열 표시.
+
+두 결함 모두 동일 컴포넌트 군 (selector-widget + shared MultiSelectDropdown) 의 좁은 라인 수정으로 해소.
+
+### 페이즈 결과
+
+- **Phase 1** (`3d16f42`): 선택 위젯 너비 고정 — flexbox 자식 `min-width: auto` 기본값이 `flex-1` wrapper 를 트리거 콘텐츠 크기로 늘어나게 만들던 버그 해소. `SelectorDropdown.tsx` (MultiDropdown) / `SingleDropdown.tsx` 의 인덱스 wrapper `div` `cn()` 에 `'min-w-0'` 추가. 자식 트리거의 `w-full + truncate` 가 비로소 동작.
+- **Phase 2** (`9181970`): `MultiSelectDropdown.widget.tsx` `getDisplayText()` 에 `selectedLabels.length === 0` 가드 추가. `selectedValues` 가 비어있지 않으나 모든 값이 현재 `options` 에 매칭되지 않을 때 (stale value) `selectedLabels=[]` 에서 마지막 return 으로 흘러 `undefined 외 -1` 문자열을 생성하던 경로 차단. 매칭 0인 경우 placeholder 로 폴백.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/selector-widget/ui/SelectorDropdown.tsx`
+  - `src/widgets/selector-widget/ui/SingleDropdown.tsx`
+  - `src/shared/ui/widgets/MultiSelectDropdown.widget.tsx`
+
+3개 파일 / +4 / -0 / 2 커밋 + 1 머지 커밋.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — `-1` 생산 지점 (MultiSelectDropdown.widget.tsx:134 `selectedLabels.length - 1`) 특정, shadcn `select.tsx` 기본값 미변경 안전 경로 채택, Phase 1 영향 파일에서 `MultiSelectDropdown.widget.tsx` 제외하여 페이즈 분리.
+- **advisor (완료 사후)**: PASS — 두 페이즈 모두 의도 라인에 정확히 안착 (Phase 1 wrapper `div` cn() / Phase 2 `selectedLabels` 선언 이후 + `length === 1` 분기 이전).
+- **lint** (`pnpm typecheck:all && pnpm lint`): PASS 양 페이즈 (0 errors, 11 warnings — 신규 위반 없음).
+
+### 잔여 / 후속
+
+- 단일 선택 측 stale value 표시는 Radix Select 의 placeholder 폴백 동작에 의존. 단일 선택 변형 결함 신규 보고 시 별도 가드 검토.
+- stale value **저장 측 정정** (서버 저장값이 옵션에 없을 때 자동 빈배열로 정정) 은 본 플랜 범위 외. 표시 레이어 차단만 적용.
+- 브라우저 스모크 테스트 미수행 — 양 페이즈 모두 단일 라인 수정 (canonical `min-w-0` for flex truncation / 단순 length 가드) 으로 정적 검증으로 충분 판단. 마스터의 브라우저 확인 권장.
+
 ## v001.184.0
 
 > 통합일: 2026-05-18
