@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.152.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #90
+
+### 페이즈 결과
+
+- **Phase 1** (`4abc34a`): 공용 로그인 (`SigninForm.tsx`) 과 기업/서브도메인 로그인 (`SubdomainLoginForm.tsx`) 의 이메일 입력에서 Enter 키 누르면 비밀번호 입력으로 포커스 이동. 각 폼에 `passwordRef = useRef<HTMLInputElement>(null)` 추가, 비밀번호 `<Input>` 에 `ref={passwordRef}` 부여, `EmailInput` `onKeyDown` 에서 IME 가드 (`if (e.nativeEvent.isComposing) return;` — 코드베이스 `EnterInput.tsx:64` 컨벤션 일치) 후 Enter 시 `e.preventDefault()` + `passwordRef.current?.focus()` 호출. `EmailInput` 의 `...rest` 가 underlying shadcn `Input` 까지 props 를 전달하므로 컴포넌트 자체 수정 불필요.
+
+### 영향 파일
+
+- data-craft:
+  - `src/pages/auth/SigninForm.tsx`
+  - `src/pages/auth/SubdomainLoginForm.tsx`
+
 ## v001.151.0
 
 > 통합일: 2026-05-18
