@@ -26,7 +26,7 @@
 
 🔴 /project-verification data-craft today
 
-2️⃣ 🔴 /plan-enterprise data-craft 단계3-A 유저폼 / 컴포저 (fs-form-builder-mobile, apps/web/src/mobile/routes/user-form, routes/compose.tsx). 기존 form / record write API 재사용.
+2️⃣ 🟢 /plan-enterprise data-craft 단계3-A 유저폼 / 컴포저 (fs-form-builder-mobile, apps/web/src/mobile/routes/user-form, routes/compose.tsx). 기존 form / record write API 재사용. — 완료 (이슈 #103, v001.189.0; ScreenUserForm 신규 구현 + fs-form-builder-mobile export 활성, 저장은 inputStoreApi.save 사용; compose 는 Roadmap-005 SNS 후속 이관; widget→user-form 네비 시 widgetId/pageId location.state 누락 후속 필수)
 
 2️⃣ 🔴 /plan-enterprise data-craft 단계3-B 데이터 링크 (fs-data-link-mobile). 기존 data-link API 재사용.
 
