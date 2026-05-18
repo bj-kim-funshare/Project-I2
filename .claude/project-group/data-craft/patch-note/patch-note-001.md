@@ -1,9 +1,10 @@
 # data-craft — Patch Note (001)
 
-## v001.180.0
+## v001.181.0
 
 > 통합일: 2026-05-18
 > 플랜 이슈: #84 (hotfix 10)
+> 비고: v001.180.0 은 #86 HOTFIX 7 가 선점하여 본 entry 는 v001.181.0 으로 bump.
 
 ### 핫픽스 결과 — Phase 14 (`aab4811`)
 
@@ -35,8 +36,49 @@ inner wrapper 는 `overflow-auto` 유지 (위젯 콘텐츠 클리핑 용도). ou
 
 ### 후속 스킬 체인
 
-1. `plan-enterprise #84 hotfix 10` (본 entry) — Phase 14 → data-craft i-dev 머지 + patch-note v001.180.0
+1. `plan-enterprise #84 hotfix 10` (본 entry) — Phase 14 → data-craft i-dev 머지 + patch-note v001.181.0
 2. 마스터 manual test 결과에 따라 PENDING gate 에서 `플랜 완료` 또는 추가 핫픽스.
+
+---
+
+## v001.180.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 7)
+
+### 개요
+
+마스터 보고: "인쇄를 누르면 브라우저 인쇄창이 나타남 여기서 pdf 저장을 누르면 파인더에 저장되고 닫히는데 우리측 인쇄 모달은 계속 생성 중...에서 멈춰있어". advisor 사전 검증으로 진단된 근본 원인 = `BrowserPrintEngine.execute()` 가 `iframeWin.onafterprint` 단일 의존 → Chrome/Safari 의 PDF 저장 경로에서 미발화 → Promise 영구 hang → `setIsGenerating(false)` 미호출.
+
+### 페이즈 결과
+
+- **Phase 15 (HOTFIX 7)** (`bebf3c4`): fs-data-viewer 의 `BrowserPrintEngine` 한정 fix (옵션 A — 최소 침습).
+  - **once-guard**: `let resolved = false; const finishOnce = () => { if (resolved) return; resolved = true; cleanup(); resolve(); };` — 3개 신호 중 어느 하나만 발화해도 cleanup + resolve 1회 보장.
+  - **3중 안전망**:
+    1. `iframeWin.onafterprint = finishOnce` — Firefox 등 일관 발화 브라우저.
+    2. `iframeWin.matchMedia('print').addEventListener('change', e => { if (!e.matches) finishOnce(); })` — Chrome/Edge/Safari 의 PDF 저장·취소 경로에서 일관 발화. addListener 폴백 포함.
+    3. `setTimeout(finishOnce, 60_000)` — 모든 이벤트 미발화 시 최후 fallback. 정상 경로 도달 안 됨.
+  - **금지 패턴 명시**: `print()` 호출 직후 finishOnce 호출 금지 (Chrome 의 non-modal 즉시 반환으로 preview 빈 화면 회귀 야기).
+
+### Scope 좁힘 사유
+
+3 패키지 BrowserPrintEngine 검사 결과 — fs-external/fs-sub 는 `window.open + setTimeout(() => { printWindow.print(); printWindow.close(); resolve(); })` 구조로 hang 패턴 부재. fs-data-viewer 만 iframe + onafterprint 단일 의존 패턴이라 마스터 보고 증상이 fs-data-viewer 한정. PdfPrintEngine 은 jsPDF 동기 + doc.save() 라 hang 위험 없음.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/features/print/engines/BrowserPrintEngine.ts`
+
+1개 파일 / +34 / -8 / 단일 커밋.
+
+### 후속 권장
+
+- fs-external/fs-sub 의 BrowserPrintEngine 을 iframe 기반으로 통일하는 별도 아키텍처 후속 (window.open 의 팝업 차단 회피·focus 동작 차이 등 별 회귀 검증 필요).
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — Chrome `window.print()` 가 non-modal 즉시 반환임을 명시 (모델 초기 가정 오류 정정), matchMedia 'print' change 가 주 해소 경로임을 확인, 60s timeout 권장.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
 
 ---
 
