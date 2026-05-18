@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.193.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #105
+
+### 개요
+
+마스터 보고: "상세 파일 업로더의 이미지 미리보기 모달이 세로 길고 가로 좁은 비율로 나옴 — 항상 화면 80% × 90% 차지". 데이터 뷰어 (`fs-data-viewer*` 패키지군) 와 데이터 크래프트 앱 양쪽이 공용으로 쓰는 `fs-file-attachment` 의 `ImageZoomDialog` 가 `w-[50vw] h-[70vh]` 였던 것이 원인. 패키지 layer 독립성 (app import 금지) 때문에 동일 상수가 패키지/앱 두 사본으로 존재하며 동기 의무가 헤더 주석 + 단위 테스트로 강제됨.
+
+### 페이즈 결과
+
+- **Phase 1** (`6d25de3`): 공용 `IMAGE_MODAL_CLASSES` 두 사본을 `w-[80vw] h-[90vh]` 로 동시 갱신.
+  - **packages/fs-file-attachment/src/lib/uiConstants.ts**: `IMAGE_MODAL_CLASSES` 가로·세로 토큰 갱신 + 주석 헤더 `(70vh × 50vw 고정 + min floor)` → `(90vh × 80vw 고정 + min floor)`.
+  - **src/shared/lib/file-attachment-ui.ts**: 위와 동일 (SYNC OBLIGATION 준수).
+  - **tests/shared/lib/file-attachment-ui.test.ts**: sync 단언 (`toContain('w-[50vw]')` / `toContain('h-[70vh]')`) 을 새 값으로 갱신, describe 문구 (`70vh × 50vw + min floor 400×300 포함`) 도 동기.
+  - min-floor (`min-w-[400px] min-h-[300px]`) 와 나머지 토큰 (`p-0 flex flex-col`, IMG `w-full h-full object-contain`) 은 모두 보존.
+  - 모바일 (`data-craft-mobile/packages/fs-file-attachment-mobile`) 동기는 본 플랜 외 (마스터 명령 문언에 모바일 미포함).
+  - 모달 내부 이미지 캡 (`max-h-[55vh]`) 는 미변경 — 90vh 모달에서 여백이 도드라지면 별도 핫픽스로 분리 처리 옵션 보존.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-file-attachment/src/lib/uiConstants.ts`
+  - `src/shared/lib/file-attachment-ui.ts`
+  - `tests/shared/lib/file-attachment-ui.test.ts`
+
+3개 파일 / +7 / -7 / 단일 커밋.
+
+### advisor 검증
+
+- 계획 시점 (#1) PASS — 5관점 (Intent / Logic / Group Policy / Evidence / Command Fulfillment) 모두 통과. 초안에 포함되었던 `ImageZoomDialog.tsx` 의 `max-h-[55vh]` → `max-h-[80vh]` 동반 변경은 advisor 가 스코프 외라 지적해 제외 후 본 계획 확정.
+- 완료 시점 (#2) PASS — diff 가 계획과 정확 일치, lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 11 warnings — 본 페이즈 무관 기존 경고).
+
+### 수동 점검 권장
+
+- `cd /Users/starbox/Documents/GitHub/data-craft && pnpm dev` → 셀의 파일 첨부 이미지 썸네일 클릭 → 모달이 뷰포트 80% × 90% 로 표시되는지 시각 확인 (데이터 크래프트 앱 + 데이터 뷰어 surface 양쪽).
+- `pnpm test tests/shared/lib/file-attachment-ui.test.ts` 로 sync 단언 PASS 재확인.
+
 ## v001.192.0
 
 > 통합일: 2026-05-18
