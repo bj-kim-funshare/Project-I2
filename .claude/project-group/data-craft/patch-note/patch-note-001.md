@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.144.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #85
+
+### 페이즈 결과
+
+- **Phase 1** (`489d54c`): 디자인 모드 사이드바 페이지 행 컴포넌트 2곳의 폭 활용을 교정. 페이지 이름 `<span>` 의 하드코딩 `max-w-[80px]` / `max-w-[100px]` 캡 제거 후 `flex-1 min-w-0 truncate` 적용 — 가용 너비를 채우고 선택 상자 배지(`flex-shrink-0` sibling) 는 우측에 자연 잔류. 우측 액션 버튼 그룹 wrapper className `flex invisible group-hover:visible ... ml-2` → `hidden group-hover:flex ... ml-2` 로 교체 — 비호버 시 DOM 폭 점유 0, 호버 시 flex 복귀. `SortableTreeItem` 의 드래그 핸들 wrapper className 에서 `opacity-0 group-hover:opacity-100 transition-opacity duration-200` 제거 — 비호버 시에도 상시 노출 (마스터 결정).
+
+### 진단 요지
+
+- 비호버 시: 페이지 이름 span 의 `max-w-[80px]` (depth 0 루트는 `max-w-[100px]`) 가 사이드바 폭과 무관하게 캡으로 작용해 텍스트가 80~100px 에서 항상 ellipsis 처리.
+- 호버 시: 우측 액션 버튼 그룹의 `invisible group-hover:visible` 가 DOM 폭은 유지한 채 가시성만 토글 → 비호버 상태에서도 아이콘 자리만큼 추가 폭 점유.
+- 결합 효과: 사이드바 컨테이너 폭이 충분히 남아 있어도 텍스트 span 의 max-w 캡이 우선 작동 → 마스터 관측한 "너비 남는데 말 줄임표" 결함.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/page-navigation/ui/SortableTreeItem.tsx`
+  - `src/widgets/page-navigation/ui/DesignSidebarHiddenPages.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 5 warnings, 0 errors).
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #85` (본 entry) — Phase 1 → data-craft i-dev 머지 + patch-note v001.144.0
+2. `patch-confirmation data-craft` — origin push
+3. `dev-merge data-craft` (i-dev → main)
+4. (브라우저 수동 검증) 디자인 모드 진입 → 사이드바 페이지 행 비호버 시 페이지 이름이 가용 폭을 채우고 짧은 이름은 잘리지 않는지, 루트의 "선택 상자" 배지가 우측 잔류하는지, 호버 시 액션 아이콘 영역만큼만 텍스트가 줄어드는지 확인.
+
 ## v001.143.0
 
 > 통합일: 2026-05-16
