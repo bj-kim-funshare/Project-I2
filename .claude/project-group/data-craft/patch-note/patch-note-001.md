@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.155.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 2)
+
+### 핫픽스 결과 — Phase 6 (`babfa70`)
+
+마스터 의도 정정 + 3건 잔여 회귀 통합 수정.
+
+**마스터 의도 표** (정정):
+
+| 상태 | Area 테두리 | Section 테두리 | dim |
+|---|---|---|---|
+| 드로어 (PropertyDrawer) 열림 | 선택 Area 에 파란 ring | 없음 | 비선택 Area 진한 회색 막 |
+| 컨트롤바만 표시 (드로어 닫힘) | 없음 | 선택 Section 에 파란 ring | 없음 |
+| 둘 다 없음 | 없음 | 없음 | 없음 |
+
+**수정 내용**:
+
+- **6-A (Area 파란 테두리 복원)**: `computeDesignBorderStyleOverride` (`areaBorderStyles.ts`) 가 커밋 `dfa82b47` 이후 항상 `{}` 반환 (no-op) 으로 Area 테두리가 사실상 표시되지 않던 회귀. `Area.tsx` 에서 `isFocused = isDesignMode && isEditing && isBright` 도출 (기존 `useActiveEditingTarget` 출력 재사용), className 에 `ring-2 ring-blue-500 ring-inset` 조건부 추가 — 드로어 열림 + 포커스된 Area 에 파란 ring 복원.
+- **6-B (Section ring drawer 동기)**: `Section.tsx:41` `isSectionSelected = isDesignMode && selectedSectionId === id` 가 drawer-open 상태 무시 → 드로어 열림에도 Section ring 이 떠 마스터 의도 위반. `isSectionDrawerOpen`/`isAreaDrawerOpen` (layoutStore) + `selectedWidgetId` (widgetStore) read 추가, `isSectionSelected` 조건에 `!isSectionDrawerOpen && !isAreaDrawerOpen && !selectedWidgetId` 결합 — `LayoutCanvas.tsx:335` 의 FloatingSectionBanner 표시 조건과 동기.
+- **6-C (dim 강도 보강)**: `Area.tsx:84` dim 클래스 `opacity-20 grayscale` → `opacity-10 brightness-50 grayscale` 으로 강화. 마스터 manual test 에서도 부족하면 hotfix 3 에서 overlay div (`absolute inset-0 bg-black/50`) 로 추가 강화 가능.
+
+### 진단 요지
+
+- 6-A: 기존 ring 적용 경로가 사실상 부재 (helper no-op). 새 className 진입.
+- 6-B: drawer-state 누락이 root cause — FloatingSectionBanner 의 검증된 조건 미러링이 정답.
+- 6-C: Tailwind 단일 opacity-20 만으로는 대조 약함 — opacity + brightness 조합 강화.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor #2 (hotfix 2 시점) 5관점 모두 PASS — 이번 라운드는 Explore 로 정확한 라인/조건 확정 후 처방되어 이전 hotfix 의 Evidence CONCERN 양상 해소.
+
+### 잠재 우려 (block 안 함)
+
+- 6-A: 섹션 드로어 (`isSectionDrawerOpen && selectedSectionId`) 열림 시 `useActiveEditingTarget` 가 sectionId 반환 → 그 섹션 내 모든 Area 에 ring. 마스터 의도가 "단일 Area 만 ring" 이면 manual test 후 정밀화 가능.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 2` (본 entry) — Phase 6 → data-craft i-dev 머지 + patch-note v001.155.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 3` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.154.0
 
 > 통합일: 2026-05-18
