@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.162.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 3b)
+
+### 개요
+
+마스터 보고: "1,2단계도 전부 디자인 다시 개선해 여전히 너무 단순해". HOTFIX 1 (v001.154.0) 의 단계 컴포넌트 디자인이 토큰 위주여서 시각 위계 얕음. 본 핫픽스는 advisor 권고에 따라 HOTFIX 3 분할 두 번째 (3b) — StepShell + 5개 step 컴포넌트의 깊은 시각 위계 + 풍부한 디테일 추가.
+
+### 페이즈 결과
+
+- **Phase 11 (HOTFIX 3b)** (`b13970d`): 3 패키지 12개 파일 동일·시각parity 패턴.
+  - **StepShell**: hero 헤더 영역 도입 — `bg-gradient-to-br from-primary/5 to-transparent` 영역에 `w-12 h-12 rounded-2xl bg-primary/10` 아이콘 배지 + `text-xl font-bold tracking-tight` 제목. 스테퍼 동그라미 사이 connector line + 활성 동그라미 `ring-2 ring-primary ring-offset-2`. 풋터는 `backdrop-blur` + prominent primary Next 버튼 (`shadow-sm shadow-primary/20`). `stepIcon?: LucideIcon` 선택 prop 추가.
+  - **SharedColumnSelectStep**: 상단 요약 카드에 `text-3xl font-bold tabular-nums` 큰 선택수 강조. 24×24 둥근 사각 체크박스 (`rounded-md border-2` + Check 아이콘 오버레이). 컬럼 타입 배지 (`px-2 py-0.5 rounded text-[10px] uppercase bg-muted`) 추가.
+  - **GridRowSelectStep**: 라디오 카드를 `rounded-2xl border-2 p-5` 큰 카드로. 선택 시 `bg-gradient-to-br from-primary/5 to-primary/10 shadow-md` + 우상단 Check 배지 (`absolute top-3 right-3 w-6 h-6 rounded-full bg-primary`). 아이콘 영역 `w-12 h-12 rounded-xl`. 범위 입력은 카드 내부 `border-t border-border/50` 으로 분리.
+  - **CalendarRowSelectStep**: 상단 요약 카드 + 월 배지 (`bg-primary/10 text-primary` Calendar 아이콘 포함). 날짜 그룹 헤더 강화 — `text-base font-bold tabular-nums` 큰 날짜 + `(요일)` + 카운트 배지.
+  - **GanttPeriodSelectStep**: hero summary 카드 (`text-3xl tabular-nums` 일수 강조) + 폼 카드 (`rounded-xl p-5 space-y-4`). "최대 6개월" 헬퍼는 Info 아이콘 동반. 오류 블록은 `bg-destructive/10 border border-destructive/30` 카드.
+  - **GanttRowSelectStep**: 요약 카드 + 행별 기간 라벨 (`inline-flex items-center gap-1` + Calendar 아이콘 size 12). 빈 결과 시 empty state (큰 아이콘 + 안내 텍스트).
+
+### 영향 파일
+
+- data-craft (3 패키지, 12 파일):
+  - **fs-data-viewer** (6): StepShell / SharedColumnSelectStep / GridRowSelectStep / CalendarRowSelectStep / GanttPeriodSelectStep / GanttRowSelectStep
+  - **fs-external-data-viewer** (3): StepShell / SharedColumnSelectStep / GridRowSelectStep
+  - **fs-sub-data-viewer** (3): StepShell / SharedColumnSelectStep / GridRowSelectStep
+
+12 파일 / +698 / -412 / 단일 커밋.
+
+### 잔여 한계 (변동 없음)
+
+v001.150.0 의 5개 알려진 한계 + v001.159.0 의 통합 액션바 미완 (FsGridCustomDialog 풋터 수정 필요) 모두 보존.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: HOTFIX 3 단일 디스패치는 BLOCK → 분할 권고 (3a/3b) 채택.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.161.0
 
 > 통합일: 2026-05-18
