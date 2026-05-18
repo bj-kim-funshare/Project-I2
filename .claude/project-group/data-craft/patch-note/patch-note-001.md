@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.195.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #91 (hotfix 3)
+> 버전 양보 메모: 병렬 세션이 v194 선점하여 v001.195.0 으로 양보.
+
+### 핫픽스 결과 — 3 항목
+
+마스터 보고:
+1. 인원 관리 모달의 변경할 인원수 입력 필드 바로 아래 표기가 그 아래 컴포넌트(감소 안내 / 추가 탭)와 중복.
+2. 결제 수단 등록(신규)이 비밀번호 setup 모달 없이 토스로 직행 — hotfix 1 은 "변경" 진입점만 다뤘고 "등록" 진입점은 별도 컴포넌트.
+3. 카드 삭제 시 기존 비밀번호가 폐기되지 않음 — 마스터 의도 "등록/수정/삭제 시 무조건 폐기 + 등록 단계 필수".
+
+### Phase 18 (BE, `617daf0`) — 카드 삭제 시 payment_password NULL
+
+- `user.model.ts` 에 `clearUserPaymentPasswordHash(connection, userId)` 추가 (`UPDATE user SET payment_password = NULL WHERE id = ? AND is_deleted = 0`).
+- `billingSubscription.service.ts:deleteCard()` 시그니처에 `userId: number` 추가. 기존 트랜잭션 블록 내 commit 직전에 `clearUserPaymentPasswordHash` 호출 — 카드 삭제 + 비밀번호 폐기 원자 처리.
+- `billing.controller.ts:deleteCardController` 가 `req.userId` 파싱 후 service 에 전달.
+
+### Phase 19 (FE, `be145eb`)
+
+**A. SeatManageDialog 중복 텍스트 제거**
+- L170~176 의 `{!isNoChange && <p>…</p>}` 블록 (NumberInputWithReturn 직하 안내) 제거.
+- 하단 감소 안내 / 추가 탭은 유지.
+
+**B. RegisterCardSection (신규 카드 등록) 비밀번호 setup 강제**
+- `handleRegisterCard` 가 기존 loadTossPayments → requestBillingAuth 직행에서 CardInfoSection hotfix 1 패턴 동일하게 전환:
+  1. 클릭 시 PaymentPasswordSetupStep 모달 우선 노출.
+  2. setup 완료 후에만 toss redirect 진행.
+  3. 취소 시 isRegistering false 복원 → toss redirect 발생 안 함 (orphan 방지).
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/controllers/billing.controller.ts`
+- `src/models/user.model.ts`
+- `src/services/billingSubscription.service.ts`
+
+**data-craft**:
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+- `src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx`
+
+### 검증
+
+- BE lint PASS (`pnpm lint`, 경고 1).
+- FE lint PASS (`pnpm typecheck:all && pnpm lint`, 0 errors).
 ## v001.194.0
 
 > 통합일: 2026-05-18
