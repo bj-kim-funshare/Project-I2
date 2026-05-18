@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.169.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #94 (hotfix 1)
+
+### 핫픽스 결과 — Phase 4 (`3c0f6057`)
+
+위젯 디자인 너비/높이 입력 필드의 UI 를 SubAreaHeightInput 패턴으로 통일.
+
+- shadcn `Input` (type="number") → raw `<input type="text" inputMode="numeric">` 교체. 위/아래 스피너 버튼 완전 제거 (`[appearance:textfield]` + webkit spin-button 숨김).
+- `CornerDownLeft` 리턴 아이콘을 우측 절대 위치로 표시 (Auto 비활성 시에만, pointer-events-none).
+- `widthValue` / `heightValue` 별도 state + `isFocusedRef` + `justAppliedRef` 패턴 — Enter+blur 이중 호출 차단.
+- Enter 또는 blur 시점에만 clamp(min=1, max=areaWidthPx/areaHeightPx) 적용 후 `onStyleChange` 커밋.
+- **빈값 허용**: 빈 채로 Enter/blur 하면 `''` 커밋 → `widthIsAuto` 가 true 로 전이되어 Auto 모드로 자연스럽게 전환 (기존 onBlur 의 "빈값 → 100px 강제" 로직 제거).
+- useEffect 내 setState 는 `react-hooks/set-state-in-effect` eslint-disable-next-line 처리 (SubAreaHeightInput 동일 패턴).
+
+### 마스터 의도 충족
+
+> "위젯 디자인의 너비 높이 입력 필드에서 위아래 값 조정 버튼 없애고 키보드 리턴 아이콘 넣어, 비워놓을 수 있게하고 엔터 누르면 적용되게 해"
+
+- 위아래 값 조정 버튼 제거 ✅
+- 키보드 리턴 아이콘 (CornerDownLeft) 추가 ✅
+- 비워놓기 가능 (빈값 → Auto 전이) ✅
+- 엔터 적용 ✅
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 0 errors.
+
+### 영향 파일
+
+- data-craft: `src/widgets/property-drawer/ui/style-editors/WidgetDesignGroup.tsx`
+
 ## v001.168.0
 
 > 통합일: 2026-05-18
