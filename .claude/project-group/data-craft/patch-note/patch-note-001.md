@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.176.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 8) — 마스터 명시 마지막 항목
+
+### 핫픽스 결과 — Phase 12 (`b027384`)
+
+advisor 사전 검증 PASS. 마스터 의도 (드로어 열림 + 비포커스 Area + hover 시 AreaControls 만 dim 위에 표시) 와 정확히 매핑.
+
+### 마스터 의도 (최종)
+
+| 상태 | AreaControls 가시성 |
+|------|---------|
+| 드로어 닫힘 | 모든 Area 에 표시 |
+| 드로어 열림 + 포커스 Area | 표시 (변경 없음) |
+| 드로어 열림 + 비포커스 Area, hover 없음 | 숨김 (opacity-0) |
+| 드로어 열림 + 비포커스 Area, **hover** | **표시 — dim overlay 위, 어둡지 않게** |
+
+### 처방 (a — className prop 통과)
+
+- **Area.tsx**: `isDesignMode && !area.isRowSplit && !isDimmed` → `isDesignMode && !area.isRowSplit` (가드 제거). dim 영역에서도 AreaControls/width-indicator 항상 DOM 에 렌더. `isDimmed` 시 `z-30` 전달 (dim overlay z-20 위).
+- **AreaControls.tsx**: optional `className?: string` prop 추가, 내부 `cn()` 끝에 병합.
+- **width-indicator**: 인라인 JSX, `z-10` → `z-30` 조건부.
+
+### 핵심 발견 — hotfix 5~7 의 진단 오류 정리
+
+`AreaControls.tsx` 의 className 에 `opacity-0 group-hover/area:opacity-100 transition-opacity` 가 **원래부터 존재**. 즉 마스터의 hotfix 5 "1초 이내 깜박임" 보고는 사실은 hover 가 잠깐 매칭된 정상 동작이었음 (클릭하면서 마우스가 영역 위를 지나간 케이스). hotfix 5/6/7 의 "깜박임 차단" 시도 (`!isDimmed`, `!isAnyDrawerOpen`) 가 마스터의 hover reveal 의도와 **반대 방향**이었음. 본 hotfix 가 의도 정합.
+
+### 진단 history 종결
+
+| Hotfix | 시도 | 의도 부합 |
+|--------|------|------|
+| 5 (9-A) | `!isDimmed` 가드 추가 (dim 영역 unmount) | ✗ hover reveal 차단 |
+| 6 (10-B) | `!isAnyDrawerOpen` (더 strict, focused 까지 차단) | ✗ focused 도 차단 |
+| 7 (11-A) | `!isDimmed` 복원 | ✗ hover reveal 여전히 막힘 |
+| **8 (12-A/B)** | **가드 제거 + z-30 으로 dim 위 reveal** | **✓ 의도 정합** |
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/AreaControls.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 5관점 PASS.
+
+### 잠재 우려 / Latent (누적)
+
+- FloatingSectionBanner X 버튼이 widget 경로 banner 닫지 못함.
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 8` (본 entry) — Phase 12 → data-craft i-dev 머지 + patch-note v001.176.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `플랜 완료` 트리거 가능. (마스터 명시 "마지막 항목")
+
+---
+
 ## v001.175.0
 
 > 통합일: 2026-05-18
