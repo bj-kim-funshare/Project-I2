@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.168.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 5)
+
+### 개요
+
+마스터 보고: "미리보기는 용지 규격에 맞게 페이지 단위로 나와야해, 현재 그냥 세로로 전부 길게 한번에 나오고 있어 페이지네이션 넣어". HOTFIX 4 와 같은 advisor 분할 라운드의 두 번째 (5) — 페이지네이션 동적 구현.
+
+### 페이즈 결과
+
+- **Phase 13 (HOTFIX 5)** (`de00dc6`): 3 패키지 PrintPreview 동일 패턴.
+  - **totalPages 동적 측정**: 하드코딩된 `totalPages={1}` → `useState(1)` + iframe `onLoad` 이벤트에서 `contentDocument.body.scrollHeight / contentDocument.documentElement.scrollHeight 최댓값` 측정 후 `paperHeightPx = paperDimensions.height * 3.7795` 로 나누어 `Math.max(1, Math.ceil(...))` 산출.
+  - **현재 페이지로 iframe scrollTo**: `currentPage` 변경 시 `useEffect` 가 `iframeRef.current.contentWindow.scrollTo({ top: (currentPage - 1) * paperHeightPx, behavior: 'smooth' })` 호출. transform 적용된 paper card 의 fitScale·zoom 과 무관 (transform 은 rendered output 만 영향, scrollTo 는 iframe 의 내부 좌표공간 사용).
+  - **콘텐츠 교체 시 currentPage clamp**: onLoad 핸들러 내 단일 경로로 totalPages 초과 시 clamp.
+  - **스크롤바 시각 노출 최소화**: paper card wrapper 에 `overflow-hidden`, iframe 에 `scrollbarWidth: none` (Firefox). WebKit (Safari) 은 `::-webkit-scrollbar` 규칙을 iframe srcDoc 에 주입해야 완전 차단 — 본 핫픽스는 PrintPreview scope 라 미적용.
+
+### 영향 파일
+
+- data-craft (3 패키지):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintPreview.tsx`
+
+3개 파일 / +84 / -6 / 단일 커밋.
+
+### 알려진 한계
+
+1. **스크롤 분할 vs 인쇄 page-break 경계 불일치**: 화면 페이지네이션은 paperHeightPx 등간격 N등분. 실제 인쇄 시점은 CSS `page-break-after / inside / before` 규칙으로 적용되어 행 중간 등에서 break — 미리보기 페이지 경계와 인쇄 페이지 경계가 정확히 일치하지 않을 수 있음. 마스터의 "페이지 단위 UX" 요구는 충족. 완전 일치는 별 핫픽스 (printHtmlBuilder 가 페이지 div 명시 emit + PrintPreview 가 enumerate 하는 방식) 필요.
+2. **WebKit iframe 스크롤바**: Safari/Chrome 에서 iframe 내부 스크롤바가 paper 카드 안쪽에 보일 수 있음. iframe srcDoc 의 CSS 주입 (printHtmlBuilder scope) 필요.
+3. **printHtmlBuilder 가 body overflow: hidden** 설정 시 scrollHeight 가 paper 높이로 고정되어 totalPages=1 로 묶일 가능성 — printHtmlBuilder.ts 가 scope 외라 미검증.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: HOTFIX 4·5 분할 권고 채택. 5는 advisor 의 Approach B (scroll-based) 로 선택.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.167.0
 
 > 통합일: 2026-05-18
