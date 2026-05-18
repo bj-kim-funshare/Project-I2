@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.190.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 10)
+
+### 개요
+
+마스터 보고: "인쇄의 집계는 현재 그리드뷰의 집계를 전혀 고려하지 않아서 사실상 의미가 없는 수준이고 0으로만 나와 — 집계는 인쇄에서 표의 연장선이 아니라 집계 전용 페이지를 별도로 구축해서 집계 대상 열에 대해서만 정리해서 시각적으로 인쇄되도록 해줘". 근본 원인 = `useGridPrint.buildAggregationRow` 가 viewerModel.rowModelList 의 in-memory 일부 행만 자체 `values.reduce` sum 계산. 실제 그리드뷰는 서버 집계 (`useServerAggregation` 8 타입) 사용. advisor 사전 검증으로 publish/subscribe 패턴 + 별도 페이지 디자인 spec 확정.
+
+### 페이즈 결과
+
+- **Phase 18 (HOTFIX 10)** (`93bcb15`): 정찰 → publish/subscribe 패턴 → useGridPrint 재구성 → 별도 페이지 빌더 + CSS.
+
+#### 정찰 결과 (advisor.Logic.1 충족)
+
+`PrintProvider` 호출처는 `data-viewer/context/index.tsx` — 여기서는 aggregations 데이터에 접근 불가. 실제 aggregations 는 `useServerPagingOrchestrator → useTableView → FsGridTableView.tv.serverPaging.aggregations` 경로로 존재. PrintProvider 가 FsGridTableView 보다 상위 컴포넌트라 단순 props 전달 불가 → **publish/subscribe 패턴** 채택: PrintContext 에 `publishAggregations` 콜백 추가, `FsGridTableView` 가 aggregations 변경 시 `useEffect` 로 게시.
+
+#### 구현
+
+- **types.ts**: `PrintContextValue.aggregations?: Record<number, ServerAggregationResult>` + `publishAggregations` 콜백 추가.
+- **PrintContext.tsx**: aggregations state + publishAggregations callback 노출.
+- **FsGridTableView.tsx**: `useEffect` 로 `tv.serverPaging.aggregations` 변경 시 `publishAggregations` 호출.
+- **useGridPrint.ts**: 자체 `buildAggregationRow` (in-memory sum) 완전 제거 + tfoot 출력 제거. 본문 table 후 `<div class="page-break"></div>` + `buildAggregationSummaryPage` 호출. aggregations undefined / empty 시 silent fallback (집계 페이지 emit 안 됨).
+- **printHtmlBuilder.ts**: `buildAggregationSummaryPage` 신규 함수. 집계 대상 열 (`enableAggregation && aggregations[columnField]`) 만 카드 그리드 (`grid-cols-2`) 로 정리. numeric 열은 `formattedValue` + 합계/평균 meta, distribution 열은 상위 10개 항목 목록.
+- **printStyleGenerator.ts**: `.aggregation-summary-page`/`.aggregation-card-grid`/`.aggregation-card` 등 신규 CSS (page-break-before: always, 카드 border + 큰 `tabular-nums` 28pt 강조값, grayscale 모드 대응).
+
+#### 타입 라벨 매핑 (한국어)
+
+`sum=합계 / average=평균 / min=최소 / max=최대 / total=총합 / weightedAverage=가중평균 / weightedSum=가중합계 / distribution=분포`
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/types.ts`
+  - `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+  - `packages/fs-data-viewer/src/features/print/views/grid/useGridPrint.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+
+6개 파일 / +224 / -68 / 단일 커밋.
+
+### 잔여 한계
+
+1. `BrowserPrintEngine.ts` 의 `generatePreview` 메서드도 `generateGridPrintHtml` 을 aggregations 인자 없이 호출 → 미리보기 생성 시점에는 집계 페이지 emit 안 됨. PrintContext 가 publish 받은 aggregations 를 useGridPrint 로 전달하는 미리보기 경로는 활성화되어 있어 PrintContext 의 htmlContent 는 정상 생성. BrowserPrintEngine 의 `generatePreview` 직접 호출 경로 (= 실제 인쇄) 도 aggregations 주입 가능한지는 추가 검토 필요 — 별 후속 권장.
+2. rowScope (HOTFIX 3 의 전체/선택/범위) 와 무관하게 화면 캐시된 aggregations 그대로 사용 (마스터 "그리드뷰의 집계" 해석). subset 집계는 별 후속.
+3. fs-external/fs-sub 손대지 않음 — 그리드 전용이지만 별 후속.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: BLOCK → 정찰 우선 + 디자인 spec 명시 + 6단계 순서 권고 채택. 정찰 결과로 publish/subscribe 패턴 확정.
+- **lint**: PASS (0 errors, 11 warnings — 신규 위반 없음).
+
 ## v001.189.0
 
 > 통합일: 2026-05-18
