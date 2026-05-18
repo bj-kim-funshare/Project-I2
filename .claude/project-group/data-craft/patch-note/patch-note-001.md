@@ -1,5 +1,79 @@
 # data-craft — Patch Note (001)
 
+## v001.197.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #98
+> 데이터 뷰어 "행 연결" (rowLink) 컬럼 타입 신규 추가. 기존 "연결" (connection) 단일-셀 타입을 그룹 단위로 확장하여, 하나의 리더 열 선택만으로 타겟 그룹 행 데이터가 N 개 매핑 열에 자동 입력되는 구조. 8 페이즈, multi-repo (data-craft + data-craft-server).
+
+### 페이즈 결과
+
+- **Phase 1** (`6f3f8b4`, data-craft-server): `ViewerType` 유니온 + `VIEWER_TYPE_TO_COLUMN_TYPE` weight 맵 + `COLUMN_TYPES` 미러 객체에 `'rowLink'` 등록 (`useful` 카테고리, icon Link, defaultWidth 180, weight 2).
+- **Phase 2** (`fc4d8ac`, data-craft): `usefulColumnTypes.rowLink` 추가, `entities/row-link/` 신규 (RowLinkConfig 타입 + helpers 4종: stringify/parse/isRowLinkConfig/generateLinkGroupId), E 네임스페이스 등록.
+- **Phase 3** (`aad3308`, data-craft, lint-hotfix 2): `RowLinkConfigDialog.tsx` 5-step 마법사 (타겟 그룹 → mode → 열 개수 → 매핑 → 리더). 확정 시 N 개 config 가 동일 linkGroupId 공유, 정확히 1개만 isLeader.
+- **Phase 4** (`7276f51`, data-craft, typecheck-hotfix 1): `addRowLinkColumns()` 헬퍼 신규 — N 회 순차 `postChanges('columnAdd')` + 중간 실패 시 역순 클라이언트 rollback. `FsGridColumnGenerator` 에 rowLink 분기 + 다이얼로그 마운트.
+- **Phase 5** (`083f739`, data-craft, lint-hotfix 2): 셀 렌더러 3종 신규 — `FsGridRowLinkCellRenderer` (그리드, 리더 ConnectionEditOverlay 재사용 / 비리더 readonly), `RowLinkRenderer` (비그리드 readonly), `useRowLinkCell` (리더 저장 → copy 면 비리더 일괄 채움 / reference 면 row 식별자 저장 + 표시 시 lookup, 리더 클리어 정책). `GridContext` 에 `requestRowLinkTargetRow` optional 콜백 타입 추가.
+- **Phase 6** (`9330179`, data-craft, lint-hotfix 3): 열 메뉴 분기 (`rowLinkManage` / `rowLinkEdit`) + 2 다이얼로그 신규 (`RowLinkGroupManageDialog` 982L 표 편집 / `RowLinkGroupEditDialog` 리더 변경·매핑 수정·새 열 추가·재동기화·그룹 해제). `useRowLinkGroup` 헬퍼. i18n ko/en/ja/zh 4언어 + types.ts.
+- **Phase 7** (`9b8f672`, data-craft): 다이얼로그 mount wiring 완료 (`UseGridColumnMenuProps` → `useTableViewState` → `useTableViewInit` → `FsGridTableView`). 행/페이스트 정합성 — `isRowLinkNonLeaderColumn` 헬퍼로 rowLink 비리더 셀 페이로드 오염 차단. allowlist/restrictions 에 rowLink 정책. 4 뷰 rendererMap 자연 통과 확인.
+- **Phase 8** (`a2da189`, data-craft): `canDeleteRowLinkColumn` 헬퍼 — 리더 단독 삭제 + N=2 그룹의 비리더 삭제 차단 (disabled + tooltip). 칸반 컴팩트 registry 에 rowLink 등록.
+
+### 영향 파일
+
+- data-craft-server:
+  - `src/types/viewer.types.ts`
+  - `src/types/grid/column-type.types.ts`
+
+- data-craft:
+  - `packages/fs-data-viewer/src/entities/column-types/other-types.ts`
+  - `packages/fs-data-viewer/src/entities/index.ts`
+  - `packages/fs-data-viewer/src/entities/row-link/types.ts` (신규)
+  - `packages/fs-data-viewer/src/entities/row-link/helpers.ts` (신규)
+  - `packages/fs-data-viewer/src/entities/row-link/index.ts` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupEditDialog.tsx` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkRenderer.tsx` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkGroup.ts` (신규)
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/index.ts` (신규)
+  - `packages/fs-data-viewer/src/widgets/column-generator/addRowLinkColumns.ts` (신규)
+  - `packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx`
+  - `packages/fs-data-viewer/src/shared/ui/cell-renderers/rendererMap.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/index.ts`
+  - `packages/fs-data-viewer/src/widgets/fs_grid_renderer/cell-renderer-map.tsx`
+  - `packages/fs-data-viewer/src/features/data-viewer/context/GridContext.tsx`
+  - `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+  - `packages/fs-data-viewer/src/features/grid/hooks/column-menu/types.ts`
+  - `packages/fs-data-viewer/src/features/grid/hooks/column-menu/useGridColumnMenu.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/helpers/column-allowlist.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/helpers/column-restrictions.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/row-management/rowAddHelpers.ts`
+  - `packages/fs-data-viewer/src/features/grid/lib/row-management/rowPasteUtils.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+  - `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableViewState.ts`
+  - `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableViewInit.ts`
+  - `packages/fs-data-viewer/src/widgets/kanban-board/kanban-card/cell-renderers/compact/index.ts`
+  - `packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts`
+  - `packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts`
+  - `packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts`
+  - `packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts`
+  - `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+
+### 회귀 검증
+
+- `pnpm lint` (data-craft-server) PASS (exit 0).
+- `pnpm typecheck:all && pnpm lint` (data-craft WIP A) 최종 PASS (0 errors, 17 pre-existing warnings).
+- advisor #1 (계획) 5관점 PASS, advisor #2 (완료) 5관점 PASS.
+
+### 호스트 측 wiring 후속 (master 수동 테스트 전 확인)
+
+다음 3건은 consumer 측(host) wiring 이 필요하며, 미연동 시 리더값 자동 채움이 silent no-op 동작합니다:
+
+1. **`requestRowLinkTargetRow(targetGroupId, leaderColumnId, leaderValue) → Promise<Record<targetColumnId,string>>`** — host 가 cross-group row lookup 을 구현해 grid context 에 주입 필요. 기존 `requestConnectionValues` 와 별개 신규 콜백. 미연동 시 copy/reference mode 양쪽에서 비리더 자동 채움이 빈값 폴백.
+2. **`requestConnectionValues`** — 리더 셀의 ConnectionEditOverlay 가 값 목록을 표시할 때 재사용. 기존 connection 셀이 동작 중이라면 wired 되어 있음. 미동작 시 양쪽 동일 부재.
+3. **비그리드 뷰 리더 자동 채움** — 현재 `RenderParams` 가 `rowField`/`saveChange` 를 칸반/캘린더/간트에 전달하지 않음. 그리드에서는 정상 동작, 비그리드 뷰에서 리더 값 변경 시 비리더 채움은 후속 wiring 후 활성.
+
 ## v001.196.0
 
 > 통합일: 2026-05-18
