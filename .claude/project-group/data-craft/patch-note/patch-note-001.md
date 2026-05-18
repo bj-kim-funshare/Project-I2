@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.147.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 1)
+> 비고: v001.146.0 은 #88 동시 진행으로 선점되어 본 entry 가 v001.147.0 으로 bump.
+
+### 핫픽스 결과 — Phase 5 (`28604f4`)
+
+마스터 manual test 보고 3건 잔여 회귀를 단일 hotfix phase 로 통합 수정.
+
+- **5-A (Area 안쪽 여백 미적용, 신규)**: 디자인 모드 inner wrapper (`absolute inset-0`) 가 외곽 컨테이너의 `padding` 영역을 덮어버려 `AreaDesignGroup` 의 패딩 슬라이더 값이 시각적으로 무효. Phase 1 의 `borderRadius` 미러링과 동일 패턴으로 inner wrapper style 에 `padding: areaPadding` 미러링 추가.
+- **5-B (Section 파란 테두리 Phase 3 회귀)**: Phase 3 의 `ring-2 ring-blue-500` 이 outward box-shadow 라 상위 컨테이너 `overflow-hidden` 으로 클리핑되어 시각 미반영. `ring-inset` 추가하여 ring 을 섹션 내부에 그림 — 클리핑 회피.
+- **5-C (비선택 영역 dim Phase 4 회귀)**: Phase 4 의 우선순위 재정렬이 root cause 가 아니었음. `widgetStore` 의 `widgets[id]?.cellId` 가 null/empty 일 때 dim 발동 안 됨. `useActiveEditingTarget` 에 `findAreaByWidgetId` fallback 신설 — `layoutStore` 의 `area.widgetId === widgetId` (SubArea 포함) 로 직접 탐색하여 어떤 widget 선택 경로에서도 해당 Area 식별 가능.
+
+### 진단 요지
+
+- 5-A: 외곽 padding 은 absolute inset-0 자식에게 시각 영향 없음 (자식이 padding-box 전체를 덮음). Phase 1 패턴 미러링이 정답.
+- 5-B: ring 의 outward box-shadow 가 상위 클리핑에 노출. `ring-inset` 으로 inset shadow 전환.
+- 5-C: 기존 widgetCellId 경로는 보존하면서 layoutStore 직접 탐색 fallback 추가 — 어떤 경로 실패에도 회복.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/ui/Area.tsx`
+  - `src/widgets/layout-canvas/ui/Section.tsx`
+  - `src/entities/layout/model/useActiveEditingTarget.ts`
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 5 warnings, 0 errors).
+- advisor #2 (hotfix 시점) 5관점 PASS, Evidence = CONCERN — 5-B/5-C 는 root cause 미확정 defensive fallback 특성. 부작용 없음. 마스터 manual test 가 진실 검증.
+
+### 잔류 latent blocker
+
+- `openAreaDrawer` 호출처 없음 → `isAreaDrawerOpen` 영구 false → `PropertyDrawer` 의 Area 에디터 경로 + `useActiveEditingTarget` 의 `isAreaDrawerOpen` 분기 도달 불가. 본 hotfix 범위 외, 별도 진단 필요.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 1` (본 entry) — Phase 5 → data-craft i-dev 머지 + patch-note v001.146.0
+2. 마스터 manual test 결과에 따라 PENDING gate 에서 `핫픽스 2` 또는 `플랜 완료` 트리거 가능.
+
+---
+
 ## v001.145.0
 
 > 통합일: 2026-05-18
