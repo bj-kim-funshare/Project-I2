@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.154.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 1)
+
+### 개요
+
+v001.150.0 (#86 본체) 의 인쇄 단계 UI 가 raw HTML 프리미티브 (`<button>`/`<input type="radio">`/`<input type="checkbox">`/`<input type="date">`/`<ul>/<li>`) 로 작성되어 마스터가 "90년대 웹사이트 같다" 로 반려. tailwind 디자인 토큰 + lucide-react 아이콘 기반으로 15개 파일 (3개 데이터-뷰어 패키지) 전면 재작성. 동작 변경 없음 — 시각 layer 만 교체.
+
+### 페이즈 결과
+
+- **Phase 8 (HOTFIX 1)** (`a56eaa6`):
+  - **StepShell** (3 패키지): 번호 원형 인디케이터 (active/past/future 상태별 색상 분기) + ChevronLeft/ChevronRight 아이콘 버튼 풋터. `bg-card rounded-xl border` 카드 셸.
+  - **SharedColumnSelectStep** (3 패키지): 커스텀 체크박스 (Check 아이콘 오버레이) + 선택 수 요약 헤더 + 전체 선택/해제 토글. row hover 시 `bg-muted/50`.
+  - **GridRowSelectStep** (3 패키지): 3종 라디오를 카드형 선택 UI 로 전환. 아이콘 Database (전체) / CheckSquare (선택) / ListFilter (범위). 선택 카드는 `border-primary bg-primary/5`. 범위 선택 시 두 number input 펼침.
+  - **CalendarRowSelectStep** (fs-data-viewer): 날짜 그룹 헤더 sticky (`bg-card/80 backdrop-blur`) + 스크롤 가능 max-h 컨테이너 + 카운트 요약 + 전체 선택 컨트롤.
+  - **GanttPeriodSelectStep** (fs-data-viewer): `grid grid-cols-2 gap-3` 날짜 입력 + `text-sm font-medium` 라벨 + 6개월 초과 시 AlertCircle 아이콘 + `text-destructive` 오류 노출.
+  - **GanttRowSelectStep** (fs-data-viewer): 행별 기간 라벨 (`2026-05-18 → 2026-06-12`) 표시, 스크롤 목록 + 전체 선택 + 카운트 요약.
+  - **PrintPreview** (3 패키지): 세로/가로 토글을 pill 세그먼트 컨트롤로 교체 — 활성 `bg-background shadow-sm`, 비활성 회색 텍스트. RectangleVertical/RectangleHorizontal lucide 아이콘.
+
+### 영향 파일
+
+- data-craft:
+  - **fs-data-viewer** (7개):
+    - `src/features/print/ui/steps/StepShell.tsx`
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx`
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx`
+    - `src/features/print/ui/steps/CalendarRowSelectStep.tsx`
+    - `src/features/print/ui/steps/GanttPeriodSelectStep.tsx`
+    - `src/features/print/ui/steps/GanttRowSelectStep.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+  - **fs-external-data-viewer** (4개):
+    - `src/features/print/ui/steps/StepShell.tsx`
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx`
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+  - **fs-sub-data-viewer** (4개):
+    - `src/features/print/ui/steps/StepShell.tsx`
+    - `src/features/print/ui/steps/SharedColumnSelectStep.tsx`
+    - `src/features/print/ui/steps/GridRowSelectStep.tsx`
+    - `src/features/print/ui/PrintPreview.tsx`
+
+총 15개 파일 / +770 / -535 / 단일 커밋.
+
+### 잔여 한계 (v001.150.0 알려진 한계 그대로 유지)
+
+본 핫픽스는 시각 layer 만 교체 — v001.150.0 의 5개 알려진 한계 (그리드 fetch-all 부재 / 캘린더 currentMonth 동기 / fs-external i18n 키 / 간트 style 인라인 중복 / 간트 dead code 잔존 가능성) 는 변동 없음. 핵심 BLOCK 사유 (그리드 fetch-all) 는 후속 핫픽스 또는 별 plan-enterprise 권장.
+
+### advisor 검증
+
+- **advisor #2 (핫픽스 완료)**: PASS — 코드 의도 충족 (raw HTML → tailwind 토큰 + lucide). 시각 완성도는 마스터 브라우저 확인이 최종 신호.
+
 ## v001.153.0
 
 > 통합일: 2026-05-18
