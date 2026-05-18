@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.156.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 2)
+
+### 개요
+
+마스터 보고: "미리보기는 선택된 용지와 방향에 따라 용지를 먼저 그려넣고 그 용지 내부에서 미리보기가 그려지는게 정상인데 현재 방향이나 용지를 바꿔도 전혀 이게 어떻게 프린트된다는건지 알 수 없음." 기존 PrintPreview 는 단순 흰 박스 + 그림자였고 그리드만 방향 토글이 있었음. 용지의 시각성·식별성 보강 + 용지/방향 즉시 반영을 모든 뷰에 적용.
+
+### 페이즈 결과
+
+- **Phase 9 (HOTFIX 2)** (`992ce71`): 3개 패키지 PrintPreview 동일 패턴 수정.
+  - **용지 카드 시각화**: 단순 `shadow-lg bg-white` → `shadow-[0_8px_30px_rgb(0,0,0,0.15)]` + `border border-gray-200` 적용으로 배경과 명확히 분리되는 종이 느낌. `transition-[width,height] duration-200` 으로 용지/방향 변경 시 모핑.
+  - **용지 정보 pill 레이블**: 미리보기 영역 상단에 `{용지명} · {방향} · {width}×{height}mm` 형식 pill (`inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-card border border-border text-xs text-muted-foreground`) 배치. 현재 설정 한눈 확인.
+  - **방향 토글 + 용지 크기 select 모든 뷰 노출**: 기존 `viewMode === 'grid'` 게이팅 제거. RectangleVertical/RectangleHorizontal pill 세그먼트 + A4/A3/Letter/Legal `<select>` 컨트롤이 그리드·캘린더·간트 어디서나 동작.
+
+### 영향 파일
+
+- data-craft (3 패키지):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-external-data-viewer/src/features/print/ui/PrintPreview.tsx`
+  - `packages/fs-sub-data-viewer/src/features/print/ui/PrintPreview.tsx`
+
+3개 파일 / +153 / -102 / 단일 커밋.
+
+### 잔여 한계 (v001.150.0 그대로 유지)
+
+본 핫픽스는 미리보기 시각 layer 만 보강 — v001.150.0 의 5개 알려진 한계는 변동 없음. 핵심 BLOCK 사유 (그리드 fetch-all) 후속 권장.
+
+### advisor 검증
+
+- lint PASS (0 errors, 11 warnings — 신규 위반 없음).
+- 코드 의도 충족 (paper-shape 시각화 + 모든 뷰 컨트롤 노출 + transition). 시각 완성도는 마스터 브라우저 확인 신호.
+
 ## v001.155.0
 
 > 통합일: 2026-05-18
