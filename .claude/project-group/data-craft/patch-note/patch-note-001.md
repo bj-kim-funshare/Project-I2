@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.189.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #103
+> Roadmap-1 단계3-A user-form 화면 신규 구현 완성 (compose 는 Roadmap-005 이관).
+
+### 페이즈 결과 — Phase 1 (`8e89fb5`)
+
+advisor 사전·완료 검증 PASS. 단일 phase 의 5 step 모두 충족 + 정정 사항 1건.
+
+- **신규 `ScreenUserForm`** (`apps/web/src/mobile/screens/user-form/`): `builderApi.getFormById` 로 폼 메타 로드 (AbortController + loading/error/empty 단계1-B / 단계2 패턴 미러). `@dcm/fs-form-builder-mobile` 의 `FormFieldRenderer` 를 per-field 로 직접 호출 (FormCanvas 의 dnd-kit + useFormStore 의존 회피 — 입력 모드 한정). widgetId/pageId 는 location.state (WidgetCard 경유) 또는 query param 으로 수신. recordId query 존재 시 편집 모드, 없으면 신규 row 작성. 저장 성공 시 toast 1.2초 후 navigate(-1), 실패 시 인라인 에러 + 재시도.
+- **`fs-form-builder-mobile/src/index.ts` 핵심 export 활성**: 본 plan 이 "후속 G-3 mobile page viewer 에서 결정" 주석에 명시된 G-3 후속에 해당. `FormFieldRenderer` / `FormFieldRendererProps` / `FormFieldValue` / `convertUserFormToForm` / `Form` / `FormField` 활성 (ScreenUserForm 이 필요한 최소만).
+- **`routes/user-form/[id].tsx`**: Placeholder import 제거, `record/[id].tsx` 패턴 미러로 Suspense + lazy `ScreenUserFormLazy` 재작성.
+- **`routes/compose.tsx`**: 변경 없음 — Roadmap-005 (SNS 후속) 이관 인정.
+- **테스트 신규** (`__tests__/ScreenUserForm.test.tsx` — 10 케이스): 로딩 / 에러+재시도 / 빈 폼 / 필드 렌더 / 신규 제출 성공 / 저장 실패 / widgetId 누락 에러 / 편집 모드 (recordId 분기) / 컨테이너 마운트 / 뒤로 버튼.
+
+### 정정 사항 (plan vs outcome divergence)
+
+본 plan 본문은 저장 API 로 `viewerApi.postChanges` / `saveChanges` 를 언급했으나, phase-executor 가 실제 구현 시 발견: 두 API 는 `FormField.id` (UUID) → grid `columnId` (numeric) 매핑 정보를 클라이언트에서 보유하지 않아 폼 값을 그리드 셀로 직접 쓸 수 없음. **올바른 저장 경로는 `inputStoreApi.save`** — 서버가 fieldName=widgetId UUID 기반으로 매핑 처리. phase-executor 가 자율적으로 inputStoreApi.save 로 pivot. **`inputStoreApi.save` 도 기존 API 이므로 BE 변경 0 hard rule 유지**. plan 본문의 API 선택 오류만 정정 — 작업 결과는 형식적으로 동치.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/screens/user-form/ScreenUserForm.tsx` (신규)
+  - `apps/web/src/mobile/screens/user-form/__tests__/ScreenUserForm.test.tsx` (신규)
+  - `apps/web/src/mobile/routes/user-form/[id].tsx`
+  - `packages/fs-form-builder-mobile/src/index.ts`
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile WIP A 워크트리) PASS (exit 0, 0 errors).
+- advisor #1 (계획) / advisor #2 (완료) 모두 5관점 PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계3-A `/plan-enterprise data-craft 단계3-A` 가 🟢 (user-form 측 wiring 완료) 갱신 가능. compose 분기는 Roadmap-005 이관 명시.
+- 병렬 그룹 2 의 동기 단계 (3-B 데이터링크 / 3-C 관계빌더 / 3-D 파일첨부) 진입 가능.
+
+### 후속 필수 작업 (master attention required)
+
+- **widget→user-form 네비 state 누락**: ScreenGridViewer / ScreenCalendarViewer / ScreenKanbanViewer 가 `navigate('/m/user-form/${linkedFormId}')` 호출 시 widgetId/pageId 를 location.state 에 포함하지 않음. 현 ScreenUserForm 은 저장 시 widgetId 부재로 인라인 에러를 표시. 위젯에서 user-form 진입 후 저장이 정상 동작하려면 3 viewer 의 navigate 호출 부분에 state 추가 필요. **본 plan 범위 밖, 별도 hotfix 또는 phase 로 분리 권장**.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). `inputStoreApi.save` 는 기존 BE 엔드포인트 호출.
+
 ## v001.188.0
 
 > 통합일: 2026-05-18
