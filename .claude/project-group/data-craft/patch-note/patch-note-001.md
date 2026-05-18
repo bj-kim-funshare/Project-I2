@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.186.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #84 (hotfix 11)
+
+### 핫픽스 결과 — Phase 15 (`d6f47e9`)
+
+advisor 사전 검증 PASS — 6회 hotfix yo-yo 끝, dynamic shift 처방.
+
+### Root cause
+
+`shouldOffset ? 'right-[28.5rem]' : 'right-2'` 의 **28.5rem 고정 시프트가 좁은 area (너비 20%, ~230px) 에서는 area 자체 너비보다 큰 값** → controls 가 area 좌측 경계 너머로 밀려 이전 area 의 시각 영역에 노출. hotfix 10 의 `overflow-visible` 가 클리핑을 풀어 결과적으로 다른 area 에 침범 시각화.
+
+hotfix 9 → 10 → 11 의 layered diagnosis:
+1. hotfix 9: CSS calc 공백 명세 위반 → 클래스 무효 → 시프트 발생 안 함 (wide area 도 가려짐). FIXED.
+2. hotfix 10: 시프트는 작동하나 narrow area 에서 overflow-auto 클리핑으로 안 보임. FIXED (outer Area 로 이동).
+3. **hotfix 11 (본 entry)**: 클리핑 풀린 후 28.5rem 고정 시프트가 narrow area 좌측 경계 넘김 → 다른 area 침범. dynamic shift 로 정확 양만 적용. FIXED.
+
+### 처방
+
+- **`useDrawerOverlap.ts`**: 반환 타입 `boolean` → `number shiftPx`. `shiftPx = Math.max(0, rect.right - drawerLeft) + 8` (8px safety margin). drawer 와 겹치는 픽셀만큼만 정확히 시프트.
+- **`AreaControls.tsx`**: `shouldOffset ? 'right-[28.5rem]' : 'right-2'` → `shiftPx === 0 && 'right-2'` + `style={shiftPx > 0 ? { right: \`${shiftPx}px\` } : undefined}` (inline). `transition-[opacity,right]` 유지 — inline style 변화에도 transition 작동.
+- **`SubAreaControls.tsx`**: 동일 버그 (`right-[calc(28rem+0.5rem)]` 고정) 동시 처방. row-split SubArea 도 같은 동작.
+
+### 의미
+
+- 좁은 area: shiftPx = drawer 침범 양 + 8px → controls 가 area 우측 가시 경계 (drawer 왼쪽 8px) 에 머무름. **area 좌측 경계 넘김 없음**.
+- 넓은 area: shiftPx = drawer 침범 양 + 8px (이전 28.5rem 안전 margin 으로 잡았으나 실제론 침범 양보다 클 수 있음 — 본 fix 가 정확 양만).
+- 오버랩 없음: shiftPx = 0, `right-2` fallback (평소대로).
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/layout-canvas/hooks/useDrawerOverlap.ts`
+  - `src/widgets/layout-canvas/ui/AreaControls.tsx`
+  - `src/widgets/layout-canvas/ui/SubAreaControls.tsx` (동일 버그 동시 처방)
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` (data-craft worktree) PASS (exit 0, 11 warnings, 0 errors).
+- advisor 사전 검증 5관점 PASS — 6회 layered diagnosis 정리.
+
+### 잠재 우려 / Latent
+
+- controls 자체 너비 (~200-300px) 가 매우 좁은 area (e.g. 너비 100px) 보다 크면 controls 일부 좌측 빠질 수 있음. drawer 침범은 0, area 침범은 최소화 — acceptable degradation.
+- 누적 latent: FloatingSectionBanner X 버튼 widget 경로 미닫힘 / `openAreaDrawer` 호출처 없음.
+
+### 후속 스킬 체인
+
+1. `plan-enterprise #84 hotfix 11` (본 entry) — Phase 15 → data-craft i-dev 머지 + patch-note v001.186.0
+2. 마스터 manual test 결과에 따라 PENDING gate.
+
+---
+
 ## v001.185.0
 
 > 통합일: 2026-05-18
