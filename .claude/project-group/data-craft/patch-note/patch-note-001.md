@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.200.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #107 (HOTFIX 1)
+
+### 개요
+
+마스터 보고: "현재 폼 위젯에서 데이터를 초기화 누르고 저장해도 초기화 전 데이터로 나와, 새로고침해도 동일하게 문제 발생". 폼 위젯의 view-mode 에서 필드 변경 시 `useFormWidgetSync.handleFormFieldChange` 가 `scheduleFullSave` 로 500ms debounce 저장을 widgetDataManager 에 등록한다. 사용자가 "초기화" 클릭 시 `useFormWidgetHistory.resetForm` 이 store 만 비울 뿐 pending timer 를 취소하지 않아 **500ms 후 초기화 전 데이터로 서버 저장이 발화** → 새로고침 시 서버에서 다시 받아와 영구화. settings 경로 (`SettingsFormTabContent.tsx:139`) 는 `cancelPendingSave()` 를 `resetForm()` 직전에 호출해 동일 race 를 회피 (정상). 폼 위젯 경로는 이 호출이 누락되어 있었다.
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1)** (`4b2121d`): `useUserFormWidget.ts` return 객체에 `resetForm: () => { data.cancelPendingSave(); data.resetForm(); }` 합성 핸들러를 명시적으로 오버라이드 — spread 로 전달된 `data.resetForm` 대신 합성 버전이 위젯 toolbar 의 "초기화" 클릭(`UserFormWidget.tsx:68`) 에 사용. widgetDataManager 의 pending debounce timer 를 먼저 드롭(`widgetDataManager.cancelPending` = `clearTimeout`, `widgetDataManager.ts:436`)한 후 store 비우기. settings 경로 `handleDialogCancel` 과 의미적 동일화.
+
+### 영향 파일
+
+- `data-craft:src/widgets/form-widgets/lib/useUserFormWidget.ts`
+
+### 배포 후 잔존 데이터 정리
+
+본 핫픽스는 향후 발생을 막을 뿐, **이미 서버에 잘못 저장된 데이터는 코드 수정만으로 사라지지 않는다**. 배포 후 영향 받은 폼 위젯에서 한 번 더 "초기화 → 저장" 을 수행해 서버 측 잔존 데이터를 정리할 것.
+
 ## v001.199.0
 
 > 통합일: 2026-05-18
