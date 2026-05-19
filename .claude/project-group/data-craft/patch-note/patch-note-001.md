@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.241.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 7)
+> HOTFIX 6 이후에도 폼 그룹이 외부 탭에 남아 있던 현상 픽스. 원인: HOTFIX 6 의 isForm 마킹이 `resolveFormGroupNames` 의 `__wdata_*` 패턴 매칭에 의존했는데, external API 의 폼 그룹은 이미 nice-name (예: "회사정보 폼") 으로 와서 패턴이 안 맞았음. 한편 `ExternalDataGroupListItem.dataType: 'single' | 'multi' | 'form'` 필드가 이미 server response 에 존재하므로 그것을 직접 사용.
+
+### 핫픽스 결과 — 1 phase (`8f1007c`)
+
+- `src/features/viewer/lib/connectionCallbacks.ts` 의 external 그룹 매핑 loop:
+  - `(g as { dataType?: string }).dataType === 'form'` 이면 `isForm: true` 직접 세팅.
+  - 런타임 데이터엔 `dataType` 이 존재하지만 `GroupListResponse.groups: BaseGroupListItem[]` 로 타입이 좁아져 있어 캐스팅 사용.
+- HOTFIX 6 의 패턴 매칭 (`SETTINGS_FORM_PATTERN` / `WIDGET_DATA_PATTERN`) 은 main/sub 그룹의 `__wdata_*` 패턴 케이스용으로 유지.
+
+### 영향 파일
+
+- data-craft:
+  - `src/features/viewer/lib/connectionCallbacks.ts`
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.240.0
 
 > 통합일: 2026-05-19
