@@ -47,6 +47,7 @@
 - **뒷배경 가로 스크롤 (HOTFIX 4 예정)**: HOTFIX 1 의 `onCloseAutoFocus` 는 wrong layer 였음. 진짜 위치 = `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridImageCellRenderer/ImageDialog.tsx` 의 backdrop. backdrop 이 `onMouseDownCapture stopPropagation` 만 가짐 — wheel (trackpad horizontal scroll) 이벤트는 미차단. fix 후보: `onWheel preventDefault` on backdrop, `overscroll-behavior: contain` on dialog wrapper, 또는 `useScrollLock` 을 horizontal 까지 확장. 마스터 confirm 후 진입.
 - **다른 패키지의 동일 dist resolution 이슈**: `fs_data_viewer`, `fs_api`, `fs_sub_data_viewer`, `fs_external_data_viewer`, `fs_data_link`, `fs_relation_builder`, `fs_shared` 모두 `./dist/` 가리킴 + 자동 watch 안 됨. 본 hotfix 는 fs_file_attachment 한 패키지만. 다른 패키지 src 편집 시 동일 fix 필요 (concurrently 명령에 추가). 단발성 추가로 진행하든 일괄 turbo 전환하든 별도 plan 분리.
 - **prop-name mismatch**: 패키지 ImageZoomDialog `open` vs app 사본 `isOpen` — latent silent-break. 별도 후속.
+
 ## v001.213.0
 
 > 통합일: 2026-05-19
