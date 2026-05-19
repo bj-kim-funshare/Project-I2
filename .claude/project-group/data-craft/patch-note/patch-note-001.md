@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.268.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #118 (HOTFIX 1)
+
+### 개요
+
+마스터 보고 두 가지: ①디자인 모드 → 리더 열 → 열 메뉴의 "행 연결 그룹 관리" 와 "행 연결 그룹 편집" 두 항목을 하나로 합쳐. ②부하 행 (비리더 컬럼) 들은 애초에 열 메뉴 열기 버튼 (아래 화살표 chevron) 자체가 안 나오게.
+
+### 페이즈 결과
+
+- **HOTFIX 1** (`5424c6b` + typecheck fix `46d2c9f`):
+  - **A. 메뉴 항목 통합**: 기존 "행 연결 그룹 관리" (열별 속성 편집) 와 "행 연결 그룹 편집" (매핑 / 리더 / 해제 / 재동기화 / 새 열 추가) 두 항목을 단일 메뉴 항목 **"행 연결 그룹 관리"** 로 통합. `RowLinkGroupEditDialog.tsx` 삭제, 해당 편집 섹션 (컬럼 매핑 + 리더 지정 + 전체 재동기화 + 매핑 적용 + 그룹 해제 + 그룹에 새 열 추가) 을 `RowLinkGroupManageDialog` 상단 별도 섹션으로 흡수. 메뉴 항목은 리더 열에만 노출 (기존엔 모든 rowLink 열에 표시되던 동작 정정).
+  - **B. 비리더 컬럼 chevron 차단**: `ColumnHeader.tsx` 에서 rowLink + isLeader=false 컬럼은 `showColumnMenu=false` → chevron 자체 렌더 제거. `parseRowLinkConfig` 결과로 식별. 비rowLink 컬럼은 기존 동작 유지.
+  - **i18n 4언어 동시 갱신**: ko / en / ja / zh translation 키 일괄 정정.
+  - **Typecheck fix**: `ColumnHeader` 의 `columnModel` 변수 hoisting 정정 (참조 전 선언).
+
+### advisor 검증
+
+- 완료 시점 (advisor #2): PASS — 5관점 모두 PASS. column-scoped chevron 차단 git show 로 확인.
+
+### 영향 파일
+
+수정 (14): `features/grid/hooks/column-menu/menuItems.ts`, `column-menu/types.ts`, `column-menu/useGridColumnMenu.ts`, `widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`, `widgets/cell-renderers/row-link/index.ts`, `widgets/grid-table/FsGridTableView.tsx`, `widgets/grid-table/components/ColumnHeader.tsx`, `widgets/grid-table/hooks/useTableViewInit.ts`, `widgets/grid-table/hooks/useTableViewState.ts`, `shared/config/i18n/translations/{ko,en,ja,zh}.ts`, `shared/config/i18n/types.ts`.
+
+삭제 (1): `widgets/cell-renderers/row-link/RowLinkGroupEditDialog.tsx` (RowLinkGroupManageDialog 로 흡수).
+
 ## v001.267.0
 
 > 통합일: 2026-05-19
