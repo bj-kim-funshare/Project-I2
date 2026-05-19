@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.227.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 20)
+
+### 개요
+
+마스터 명령: "제목은 좀 크고 굵게 나오게 해줘". `.print-header` 의 폰트 사이즈·굵기·색상 강조.
+
+### 페이즈 결과
+
+- **Phase 28 (HOTFIX 20)** (`bd32958`): `printStyleGenerator.ts` 의 `.print-header` 블록 3가지 속성 변경.
+  - `font-size: ${10 * scale}px` → `${18 * scale}px` (10 → 18).
+  - `font-weight: bold` 신규 추가.
+  - `color: #666` → `#222` (선명).
+  - `text-align: center` / `margin-bottom` 보존.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +3 / -2 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.226.0
 
 > 통합일: 2026-05-19
