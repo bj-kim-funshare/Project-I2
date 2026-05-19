@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.228.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 3)
+> "행 연결" 항목이 모달엔 노출되지만 아이콘이 `?` 로 표시되는 현상 픽스. `COLUMN_ICONS` (column-generator/icons.ts) 매핑이 누락되어 `ColumnTypeButton` 의 fallback `?` glyph 가 표시됐던 것. HOTFIX 2 의 AVAILABLE 화이트리스트 누락과 동일한 패턴 — Phase 2 검증 시 column-generator widget 내부의 second-layer 들을 통합 확인 안 한 결과.
+
+### 핫픽스 결과 — 1 phase (`2319bc4`)
+
+- 3개 viewer 패키지 `widgets/column-generator/icons.ts` 의 `COLUMN_ICONS` 에 `rowLink: Combine` 매핑 추가 (lucide-react `Combine` 아이콘, 행 데이터 결합 의미). `Link2` 와 시각적으로 구분되어 연결과 행 연결을 한 눈에 식별 가능.
+- fs-sub-data-viewer / fs-external-data-viewer dist 재빌드 완료.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/column-generator/icons.ts`
+  - `packages/fs-sub-data-viewer/src/widgets/column-generator/icons.ts`
+  - `packages/fs-external-data-viewer/src/widgets/column-generator/icons.ts`
+
+### 회귀 검증
+
+- 마스터 dev server 갱신 후 유용한 기능 탭에서 "행 연결" 버튼이 Combine 아이콘과 함께 표시 기대.
+
 ## v001.227.0
 
 > 통합일: 2026-05-18
