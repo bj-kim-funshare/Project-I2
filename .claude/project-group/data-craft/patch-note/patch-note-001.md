@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.266.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119 (HOTFIX 3)
+
+### 개요
+
+마스터 보고: 간트뷰 인쇄에서 지정한 기간(dateRange) 에 막대가 있음에도 행 선택 단계에 "선택된 기간에 해당하는 행이 없습니다." 로 표시. 근인은 `GanttRowSelectStep.tsx:45` 가 `viewerModel.rowModelList` 를 데이터 소스로 사용하는 반면 `FsGanttChart.tsx:227-231` 은 서버 페이징 모드에서 `paging.serverRows` 를 displayRows 로 사용하기 때문 — 페이징 모드에서 rowModelList 가 비어 있어 행 선택 단계가 항상 빈 결과. 캘린더 HOTFIX 1 (`publishCalendarRows` 채널) 과 정확히 동일 구조의 버그. 동일 publish/subscribe 패턴을 간트에 적용해 해소.
+
+### 페이즈 결과
+
+- **Phase 5 (HOTFIX 3)** (`0885fc2`):
+  - `types.ts`: `GanttPrintOptions.rowsOverride?: E.FsGridRowModel[]` 옵셔널 필드 + `PrintContextValue.publishGanttRows(rows)` + `DEFAULT_PRINT_OPTIONS.gantt.rowsOverride: undefined`.
+  - `PrintContext.tsx`: `publishedGanttRows` state + callback, `openPrintDialog` 의 새 gantt 분기에서 `rowsOverride: publishedGanttRows` 주입, useCallback 의존성 배열 + value 노출.
+  - `FsGanttChart.tsx`: `usePrintContextOptional` import + `displayRows` 가 변할 때마다 `publishGanttRows(displayRows)` 호출하는 useEffect 추가 (paging.serverRows 가 있으면 그 값, 없으면 viewerModel.rowModelList).
+  - `GanttRowSelectStep.tsx`: `overlappingRows` useMemo 의 `viewerModel.rowModelList` 사용을 `options.gantt?.rowsOverride ?? viewerModel.rowModelList` 로 전환 + 의존성 배열 갱신.
+  - `useGanttPrint.ts`: `prepareGanttData` 시그니처에 `options: PrintOptions` 인자 추가, 함수 내부에서 `options.gantt?.rowsOverride ?? viewerModel.rowModelList` 사용, 호출처 `generateGanttPrintHtml` 도 options 전달.
+  - `GanttPdfAdapter.ts`: line 41 forEach 데이터 소스 동일 패턴 전환.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/types.ts`
+- `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/gantt-chart/FsGanttChart.tsx`
+- `packages/fs-data-viewer/src/features/print/ui/steps/GanttRowSelectStep.tsx`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+- `packages/fs-data-viewer/src/features/print/adapters/GanttPdfAdapter.ts`
+
+6 파일 / +41 / -8 / 단일 커밋.
+
+### lint
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 20 warnings).
+
 ## v001.265.0
 
 > 통합일: 2026-05-19
