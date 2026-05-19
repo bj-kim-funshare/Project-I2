@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.234.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 4)
+> RowLinkConfigDialog 의 6개 UX 요구 일괄 반영. 마스터 명시 후 advisor 사전 검증 통과 후 단일 파일 리팩터로 진행.
+
+### 핫픽스 결과 — 1 phase (`9fc201a`)
+
+1. **Step 1 그룹 선택 4탭** (뷰어/서브/외부/폼) 추가. groupType `main`/`sub`/`external` 매핑, "폼" 탭은 현재 `ConnectionGroupItem.groupType` 에 `'form'` 부재로 빈 상태 안내만 노출 (탭 자체는 4개 유지).
+2. **그룹 검색 input** 추가 — `groupName.toLowerCase().includes(query.toLowerCase())` 필터.
+3. **mode 기본값 `copy` → `reference`** (state 초기값 + 리셋 핸들러).
+4. **열 개수 입력 보강** — state 타입 `number` → `string`, `<input type="text" inputMode="numeric">` 로 브라우저 화살표 제거, `CornerDownLeft` (lucide-react) 아이콘 absolute 배치, Next 클릭 시 `Math.max(2, parseInt(value || '2'))` 자동 정수화. empty 입력 허용.
+5. **타겟 컬럼 select → 커스텀 드롭다운** — 같은 파일 inline `<CustomColumnDropdown>` 컴포넌트 신설. `useLayoutEffect` + `useState<DOMRect|null>` anchor 패턴 (react-hooks/refs 룰 준수), fixed positioning, 외부 클릭 닫힘.
+6. **리더 자동 타겟** — `leaderTargetColumnId` 별도 state/picker 제거. handleConfirm 에서 `mappingRows[leaderIndex].mappedTargetColumnId` 로 자동 도출. Step 5 UI 는 리더 라디오만 남음. `RowLinkConfig.leaderTargetColumnId` 필드는 emit 형태 그대로 보존 (useRowLinkCell / addRowLinkColumns 영향 0).
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (+213 / -106)
+
+### 회귀 검증
+
+- `pnpm typecheck:all && pnpm lint` PASS (0 errors).
+- advisor 사전 검증 PASS (5관점).
+
 ## v001.233.0
 
 > 통합일: 2026-05-19
