@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.223.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 18)
+
+### 개요
+
+마스터 보고: "모든 페이지 상단에 {dataViewerTitle}이라고 나오는데 이건 뭐야 뷰어 타이틀은 젤 위에 하나만 나오면 되는데 전부 나오고 제대로 된 값이 아니라 {dataViewerTitle} 이렇게 나와". 두 증상:
+1. `{dataViewerTitle}` placeholder 미치환 — default headerText (`types.ts:288`, `templates/defaults.ts`) 는 `{dataViewerTitle}` 인데 `buildHeaderContent` 는 `{title}` 만 치환.
+2. `.print-header { position: fixed; top: 0 }` — fixed-position 으로 모든 페이지 반복 표시.
+
+### 페이즈 결과
+
+- **Phase 26 (HOTFIX 18)** (`94d830d`):
+  - **printHtmlBuilder.ts**: `buildHeaderContent` 의 `{title}` / `{dataViewerTitle}` alias 둘 다 치환. 기존 두 분리 변수 (`displayText`/`displayDate`) 처리 버그 (둘 중 하나만 적용) 도 chain replace 로 정리.
+  - **printStyleGenerator.ts**: `.print-header` 의 `position: fixed / top / left / right / height` 속성 제거 → normal flow. `margin-bottom` 으로 본문과 간격 보존. 헤더가 첫 페이지 본문 시작 직전 1회만 표시.
+  - 푸터 (`.print-footer`) 의 fixed-position 동작은 페이지 번호 등 의도된 반복 — scope 외로 보존.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+2 파일 / +8 / -16 / 단일 커밋.
+
+### 잔여 한계
+
+- `.print-content` 의 `margin-top: ${margins.top}mm` 가 기존 fixed header 오프셋 보정 목적이었으나 normal-flow 전환 후 상단 여백 과도하게 느껴질 수 있음 — 실제 인쇄 확인 후 별 픽스 권장 (phase-executor blocker 보고).
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.222.0
 
 > 통합일: 2026-05-19
