@@ -32,7 +32,7 @@
 
 2️⃣ 🟢 /plan-enterprise data-craft 단계3-C 관계 빌더 (fs-relation-builder-mobile). 기존 relation API 재사용. — 완료 (이슈 #108, v001.201.0 + 핫픽스1 v001.202.0 DesignerDialog 모바일 fit + 핫픽스2 v001.206.0 DataLinkDialog 전역 CSS fit; 모바일 첫 React Query 도입 milestone; 잔존: QueryProvider 검증 / 권한 게이트 BE 데이터 부재 / 아이콘 그룹화 3-D 진입 시 재검토)
 
-2️⃣ 🔴 /plan-enterprise data-craft 단계3-D 파일 첨부 (fs-file-attachment-mobile). 기존 attachment 업로드/다운로드 API 재사용 (S3 presigned 등 BE 변경 없이).
+2️⃣ 🟢 /plan-enterprise data-craft 단계3-D 파일 첨부 (fs-file-attachment-mobile). 기존 attachment 업로드/다운로드 API 재사용 (S3 presigned 등 BE 변경 없이). — 완료 (이슈 #112, v001.222.0; FormFieldRenderer 'file-attachment' dispatch + FileAttachmentFieldRenderer 신규 + FormFieldWidgetType 12→13 + FormField 첨부 옵션 5개 추가; BE/DB 변경 없음; 후속: per-record identifier 스코핑 (ScreenUserForm → FormFieldRenderer 에 recordId 전파), 데이터뷰어 셀 fileCellWidget wiring 미연결 — 단계3-E 후보)
 
 🔴 /dev-inspection data-craft today
 
