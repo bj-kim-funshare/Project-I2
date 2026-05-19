@@ -1,5 +1,55 @@
 # data-craft — Patch Note (001)
 
+## v001.231.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #113
+
+### 개요
+
+마스터 명령: 단계4 메시징·알림·피드 통합 — DM/알림/인박스/피드/홈/프로필/팔로우 를 단일 plan 으로 묶고 phase 분해 (`기존 message / notification / feed / profile API 재사용`, BE 변경 없이). Step 1 sharpening 결과, 7개 stub 라우트 중 **BE 가 실제로 완비된 영역은 notification (`/api/notification` 4개) + profile-이미지 (`/api/profile` 4개) 둘뿐**임이 드러나 (DM/피드/페이지팔로우/프로필 상세는 BE 부재, v2/social 라우트는 2026-05-01 deprecated), 마스터 선택 (옵션 B) 으로 본 plan 의 범위를 **Notification + Inbox + Profile-이미지** 로 좁힘. DM/피드/팔로우/프로필 상세는 별도 plan-enterprise (BE 선행) 로 분리. BE/DB 변경 없음 (마스터 이중 lock).
+
+### 페이즈 결과
+
+- **Phase 1** (`8d406eb`): `ScreenNotifications` + `ScreenInbox` 신규 (각 248/252 줄). `notificationApi.getNotifications` 로 목록 로드, 카드 리스트 (loading/error/ready 상태머신 + AbortController), 항목 탭 → `markAsRead` (optimistic), 헤더 "모두 읽음" → `markAllAsRead`, "읽은 항목 삭제" → `deleteRead` 후 재로드. `ScreenInbox` 는 동일 데이터를 `isRead===0` 우선 + `createdAt` DESC 정렬. `routes/notifications.tsx` / `routes/inbox.tsx` 두 Placeholder 를 lazy + Suspense delegate 로 교체. 각 화면 vitest+testing-library 스모크 테스트 2케이스. `NotificationItem.isRead` 가 0|1 숫자 리터럴 union 이라 optimistic 업데이트 시 `as const` 캐스트 적용.
+
+- **Phase 2** (`86addf6`): `packages/fs-api-mobile/src/api/profile.ts` 신규 (`getProfile/uploadProfile/updateProfile/deleteProfile`, multipart field 명 `'image'`). `index.ts` 에 `profileApi` export. `ScreenProfile` 신규 — `id === 'me'` 일 때만 GET + 업로드/교체/삭제 액션, 타 사용자 ID 는 "타 사용자 프로필은 추후" 안내 (read-only). `routes/profile/[id].tsx` Placeholder → lazy+Suspense delegate. 스모크 2케이스. 선언된 affected_files 8개 중 `constants.ts` 부재 + `types/requests/profile.ts` / `types/requests/index.ts` 이미 충분 → 실제 변경 5개 파일 (스코프 ⊆ 선언, 합법).
+
+### 영향 파일
+
+data-craft-mobile:
+- `apps/web/src/mobile/screens/notifications/ScreenNotifications.tsx` (신규)
+- `apps/web/src/mobile/screens/notifications/__tests__/ScreenNotifications.test.tsx` (신규)
+- `apps/web/src/mobile/screens/inbox/ScreenInbox.tsx` (신규)
+- `apps/web/src/mobile/screens/inbox/__tests__/ScreenInbox.test.tsx` (신규)
+- `apps/web/src/mobile/screens/profile/ScreenProfile.tsx` (신규)
+- `apps/web/src/mobile/screens/profile/__tests__/ScreenProfile.test.tsx` (신규)
+- `apps/web/src/mobile/routes/notifications.tsx`
+- `apps/web/src/mobile/routes/inbox.tsx`
+- `apps/web/src/mobile/routes/profile/[id].tsx`
+- `packages/fs-api-mobile/src/api/profile.ts` (신규)
+- `packages/fs-api-mobile/src/index.ts`
+
+총 11 파일 (Phase 1 = 6 / Phase 2 = 5). +1020 / -15.
+
+### 위험 / 후속
+
+- **본 plan 범위 외 (BE 부재로 분리)**: DM (목록/채팅/권한), 피드, 페이지 팔로우, 프로필 상세 필드 (bio/follower/팔로우 토글 등) 는 별도 plan-enterprise (BE 선행) 필요. 현재 stub 라우트 (`dm/`, `feed.tsx`, `page-follow/[id].tsx`, `dm-permission.tsx`) 는 Placeholder 유지.
+- **Inbox v1 의미론 한계**: DM 미구현 상태에서 "통합 인박스" = notification 의 unread 우선 view. DM 도입 시 통합 inbox 재설계 (별도 plan).
+- **`NotificationItem.isRead` 타입 한계**: 0|1 숫자 리터럴 union — boolean 일관화 시 화면 동기 필요.
+- **에러 처리 / optimistic 롤백 부재**: 본 plan v1 의도적 단순화 — 별도 plan 또는 핫픽스 후보.
+- **`/m/profile/me` 라우트 매칭 확인 (수동)**: 라우터 config `:id` 와일드카드 매칭 dev server 검증 필요.
+- **이미지 multipart field 명 `'image'`**: BE 컨트롤러 read 로 확정.
+
+### 버전 충돌 메모
+
+- 본 plan 머지 진입 시 v001.230.0 이 동시 진행 중이던 plan-enterprise #91 HOTFIX 11 에 의해 main 에 선점되어 본 entry 는 v001.231.0 으로 부여. 1차 doc WIP (`-문서`, commit aab15c6, v001.230.0) 는 폐기되고 v2 doc WIP 로 재작성.
+
+### advisor 검증
+
+- 계획 단계 (#1): 5관점 PASS, no BLOCK.
+- 완료 단계 (#2): 5관점 PASS, no BLOCK. Plan affected_files 정확도 (under-declared 단계3-D / over-declared 단계4) 는 비차단 meta 후속.
+
 ## v001.230.0
 
 > 통합일: 2026-05-19
