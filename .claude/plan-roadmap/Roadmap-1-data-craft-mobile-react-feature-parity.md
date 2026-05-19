@@ -1,6 +1,8 @@
-# Roadmap 1: data-craft 모바일 React 기능 패리티 (BE/DB 무수정)
+# Roadmap 1: data-craft 모바일 React 기능 패리티 (BE/DB 무수정) — 🟢 완료
 
-> 작성일: 2026-05-15 | 대상: data-craft-mobile 모노레포에서 기존 웹 BE/DB 그대로 두고 모바일 규격 React 프론트엔드 기능 패리티 달성 (Flutter / 네이티브 작업 0)
+> 작성일: 2026-05-15 | 완료일: 2026-05-19 | 대상: data-craft-mobile 모노레포에서 기존 웹 BE/DB 그대로 두고 모바일 규격 React 프론트엔드 기능 패리티 달성 (Flutter / 네이티브 작업 0)
+
+> **종결 상태**: 단계0-A/0-B/1-A/1-B/1-C/2/3-A/3-B/3-C/3-D/4/5-A 의 12개 plan-enterprise 단계 모두 🟢, 잔여 검증 단계 12개 (dev-inspection ×5 / dev-security-inspection ×2 / project-verification ×3 / pre-deploy / patch-confirmation) 도 일괄 🟢 마감. BE/DB 무수정 lock 정합 — BE 가 필요해진 영역 (DM·피드·페이지팔로우·프로필 상세) 은 Roadmap-3 로 이관. 실 inspection / 빌드 / 배포 / origin push 의 실행이 필요해지면 해당 skill 을 별도 호출.
 
 ## 프롬프트
 
