@@ -1166,6 +1166,53 @@ function openSkillInvocationModal(idx) {
     return `<tr><td><span class="skill-chip" style="--skill-hue:${aHue}">${escapeHtml(name)}</span></td>${tokenCells(rec)}</tr>`;
   }).join('');
 
+  // Agent viz section
+  const agentEntries = Object.entries(agentMap);
+  let agentsSection = '';
+  if (agentEntries.length > 0) {
+    const agentStats = agentEntries.map(([name, rec]) => {
+      const usage = (rec.input || 0) + (rec.output || 0);
+      const cache = (rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0);
+      const total = usage + cache;
+      const cost = rec.cost_usd != null ? rec.cost_usd : 0;
+      return { name, usage, cache, total, cost };
+    });
+    agentStats.sort((a, b) => b.total - a.total);
+    const maxUsage = Math.max(...agentStats.map(a => a.usage));
+    const maxCache = Math.max(...agentStats.map(a => a.cache));
+    const agentRowsViz = agentStats.map(({ name, usage, cache, total, cost }) => {
+      const aHue = skillColor(name);
+      const usagePct = maxUsage > 0 ? ((usage / maxUsage) * 100).toFixed(1) : '0';
+      const cachePct = maxCache > 0 ? ((cache / maxCache) * 100).toFixed(1) : '0';
+      return `
+        <div class="agent-row">
+          <div class="agent-row-head">
+            <span class="agent-pill" style="--agent-hue:${aHue}">${escapeHtml(name)}</span>
+            <span class="agent-row-total">${formatTokensCompact(total)} 토큰 · $${cost.toFixed(4)}</span>
+          </div>
+          <div class="agent-row-bars">
+            <div class="bar-row">
+              <span class="bar-label">사용</span>
+              <div class="bar-track"><div class="bar-fill bar-fill-usage" style="width:${usagePct}%"></div></div>
+              <span class="bar-num">${formatTokensCompact(usage)}</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">캐시</span>
+              <div class="bar-track"><div class="bar-fill bar-fill-cache" style="width:${cachePct}%"></div></div>
+              <span class="bar-num">${formatTokensCompact(cache)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    agentsSection = `
+      <div class="modal-agents-section">
+        <h4>서브 에이전트별 사용량</h4>
+        <div class="agent-row-list">${agentRowsViz}</div>
+      </div>
+    `;
+  }
+
   const lastSeenRow = w.last_seen_timestamp
     ? `<div><dt>마지막 활동</dt><dd>${escapeHtml(w.last_seen_timestamp)}</dd></div>`
     : '';
@@ -1201,6 +1248,8 @@ function openSkillInvocationModal(idx) {
     </div>
 
     ${channelBar}
+
+    ${agentsSection}
 
     <h4 style="margin:12px 0 4px;font-size:12px;color:var(--muted)">토큰 채널 분해</h4>
     <table class="modal-token-table">
