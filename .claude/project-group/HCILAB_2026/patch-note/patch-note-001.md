@@ -1,5 +1,48 @@
 # HCILAB_2026 — Patch Note (001)
 
+## v001.3.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: [jieun410/HCILAB_2026#1](https://github.com/jieun410/HCILAB_2026/issues/1)
+> 핫픽스: 2차
+
+### 핫픽스 페이즈 결과
+
+- **Phase 4 (HOTFIX 2) — 포트 통일 (FE 5180 strict + BE 3002 default 정렬)** (커밋 `e6c2af9`): 마스터가 dev 서버 기동 시 FE 가 5174 로 떠 CORS 차단된 사건 후속. 원인은 (a) `app/vite.config.ts` 가 port 를 강제하지 않아 Vite 기본 5173 + fallback 으로 5174 에 안착, (b) BE 코드의 기본 fallback (`3001`) 이 dev.md (3002) 와 불일치. 7개 파일에서 8건 stale port 참조를 일괄 정렬했고, FE 는 `strictPort: true` 로 5180 점유 시 부팅 실패하도록 강제 (fail-fast 신규 동작 도입).
+
+### 영향 파일
+
+**HCILAB_2026** (커밋된 파일 7개, +12 / -8):
+
+```
+app/vite.config.ts                                  (수정 — server.port 5180 + strictPort true 추가)
+app/.env.example                                    (수정 — VITE_API_BASE_URL :3001 → :3002)
+app/src/_domain/contact/Contact.tsx                 (수정 — axios fallback :3001 → :3002)
+app/src/_domain/component/molecule/logo/logo.tsx    (수정 — 하드코딩 http://localhost:5173/home → 상대 경로 /home)
+server/src/index.js                                 (수정 — CORS default :5173 → :5180, PORT default 3001 → 3002)
+server/.env.example                                 (수정 — PORT 3001 → 3002, CORS_ORIGIN :5173 → :5180)
+server/README.md                                    (수정 — 3001 표기 → 3002)
+```
+
+gitignored 로컬 파일 (커밋 외):
+- `server/.env`: `CORS_ORIGIN` 을 5180 으로 원복 (직전 임시조정 5174 → 정식 5180).
+
+### 신규 동작 — fail-fast
+
+- `vite.config.ts` `strictPort: true` 도입 → 5180 점유 시 dev 서버가 fallback 없이 부팅 실패. 의도된 동작 (재발 방지). 점유 시 master 가 즉시 인지 가능.
+
+### 운영 메모
+
+- **원인 깊이**: vite 의 port fallback 은 silent 실패였음 — dev.md 의 5180 선언이 코드와 unenforced 분리되어 있던 게 본질. policy ↔ code 간 단일 진실 (dev.md 가 진리, 코드가 동기화) 회복.
+- **logo.tsx 절대 URL 제거**: 하드코딩 `http://localhost:5173/home` 은 포트뿐 아니라 production 배포 환경에서도 깨질 잠재 버그였음. same-origin 상대 경로 `/home` 으로 정정.
+- **수동 검증**: `pnpm dev` 실행 시 콘솔에 `Local: http://localhost:5180/` 출력 확인. 5180 점유 시 부팅 실패 확인 (별도 프로세스로 5180 선점 후 재시도).
+
+### advisor 검증
+
+- 핫픽스 완료 시점 advisor #2 5관점 (Intent/Logic/Group Policy/Evidence/Command Fulfillment) 모두 PASS, BLOCK 없음.
+
+---
+
 ## v001.2.0
 
 > 통합일: 2026-05-19
