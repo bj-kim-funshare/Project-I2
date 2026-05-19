@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.224.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 19)
+
+### 개요
+
+HOTFIX 18 의 잔여 한계 해소. `.print-content` 의 `margin-top: ${margins.top}mm` 가 기존 fixed-header 오프셋 보정 목적이었으나 HOTFIX 18 에서 헤더가 normal-flow 로 전환된 후 과도한 상단 여백만 남기는 부작용. margin-top 제거.
+
+### 페이즈 결과
+
+- **Phase 27 (HOTFIX 19)** (`5bb01ae`): `printStyleGenerator.ts` 의 기본 `.print-content` 블록에서 `margin: ${margins.top}mm auto 0` → `margin: 0 auto`. @media print / @media screen 블록은 이미 `margin: 0` 또는 미설정이라 변경 불필요.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +1 / -1 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.223.0
 
 > 통합일: 2026-05-18
