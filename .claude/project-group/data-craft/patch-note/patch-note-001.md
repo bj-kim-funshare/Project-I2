@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.258.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #117
+
+### 개요
+
+data-craft-mobile 의 웹 인증 UI 갭 5건 채우기. 기존 SessionEngine / SecureTokenStorage / RouteGuard 아키텍처는 그대로 두고, 로그아웃·회원탈퇴·회원가입 화면과 이메일 인증 공통 컴포넌트, 환경변수 와이어링을 추가. BE/DB 무수정 (Roadmap-1 FE-only lock 정합).
+
+### 페이즈 결과
+
+- **Phase 1** (`6930073`): `VITE_API_BASE_URL` env 변수 도입 + sessionEngine getSessionEngine() 의 AuthClient baseUrl fallback 을 `''` → `'http://localhost:8000'` 으로 교체. `.env.example` 신규.
+- **Phase 2** (`24ac0d7`): 이메일 인증 공통 — `useEmailVerification` 훅 (idle→sending→sent→verifying→verified|error 상태 머신, 60초 쿨다운, 한국어 에러 매핑) + `EmailVerificationField` 컴포넌트 (a11y 16px input / 48px button, role=alert/status, purpose prop = signup|withdraw|password-change|password-reset). authClient 의 purpose 타입이 좁아 훅에서 direct fetch 채택.
+- **Phase 3** (`f09ebaf`): 로그아웃 UI — `ConfirmDialog` 신규(role=dialog, aria-modal, ESC/backdrop 닫기) + `LogoutButton` 신규(다이얼로그 → `getSessionEngine().logout()` → `/m/login` navigate, 처리중 disabled + 스피너). `ScreenProfile` isMe+ready 블록 하단에 마운트.
+- **Phase 4** (`415e7f8`): 회원탈퇴 UI — `useWithdraw` 훅(direct fetch, POST `/api/auth/withdraw`, `withdrawType + companyId` 파싱) + `WithdrawDialog` (이메일 인증 → 비밀번호 재확인 → 제출 4단계, EmailVerificationField purpose="withdraw" 재사용). 'company' → `/m/login`, 'personal' → `/m/login?tenant=<companyId>` 분기. ScreenProfile 에 소형 red 텍스트 진입 버튼.
+- **Phase 5** (`e5db2035`): 회원가입 화면 — `ScreenSignup` + `SignupForm` (9필드: businessNumber, companyName, companyPhone, companyId, adminName, adminEmail+인증, adminPassword+확인, adminPhone, isTermsAgreed, 인라인 validation, EmailVerificationField purpose="signup"). router.tsx 에 `/m/signup` 공개 라우트 등록, ScreenLogin linkRow 에 회원가입 링크.
+
+### 영향 파일
+
+data-craft-mobile:
+- `apps/web/.env.example` (신규)
+- `apps/web/src/mobile/auth/sessionEngine.ts`
+- `apps/web/src/mobile/auth/hooks/useEmailVerification.ts` (신규)
+- `apps/web/src/mobile/auth/hooks/useWithdraw.ts` (신규)
+- `apps/web/src/mobile/auth/components/EmailVerificationField.tsx` (신규)
+- `apps/web/src/mobile/auth/components/LogoutButton.tsx` (신규)
+- `apps/web/src/mobile/auth/components/WithdrawDialog.tsx` (신규)
+- `apps/web/src/mobile/components/ConfirmDialog.tsx` (신규)
+- `apps/web/src/mobile/screens/profile/ScreenProfile.tsx`
+- `apps/web/src/mobile/screens/login/ScreenLogin.tsx`
+- `apps/web/src/mobile/screens/login/ScreenLogin.module.css`
+- `apps/web/src/mobile/screens/signup/ScreenSignup.tsx` (신규)
+- `apps/web/src/mobile/screens/signup/ScreenSignup.module.css` (신규)
+- `apps/web/src/mobile/screens/signup/SignupForm.tsx` (신규)
+- `apps/web/src/mobile/router.tsx`
+- `apps/web/src/mobile/routes/signup.tsx` (신규)
+
+### 후속 권장 사항 (본 플랜 스코프 외)
+
+- API 클라이언트 패턴 3중화 정리: sessionEngine→authClient.ts (기존), fs-api-mobile/authApi (시그니처만 정의, 호출처 없음), direct fetch (Phase 2/4/5) — 단일 경로로 통일 필요.
+- 웹에 존재하나 모바일 미와이어: `checkCompanyId` (회사 ID 중복확인), `validateBusinessNumber` (사업자등록번호 인증) — 회원가입 UX 보강.
+- `useResetFlow.ts` baseUrl 하드코딩 fallback `''` 정리.
+- 수동 스모크 테스트 (`pnpm dev :5174`): 로그인/로그아웃/탈퇴/회원가입 4 흐름 마스터 확인 권장.
+
 ## v001.257.0
 
 > 통합일: 2026-05-19
