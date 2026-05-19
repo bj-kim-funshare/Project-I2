@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.229.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 21)
+
+### 개요
+
+마스터 보고 (이미지 2장):
+1. **푸터 겹침** (8/14 페이지): 본문 마지막 행 셀과 푸터 `2026-05-19 - 0 -` 가 겹침.
+2. **빈 페이지** (13/14 페이지): 페이지 13 이 완전히 빈 페이지 (푸터만), 14가 집계 페이지.
+
+advisor 사전 검증 + 정찰 결과 두 증상 모두 정확 진단:
+- (1) HOTFIX 19 의 `.print-content { margin: 0 auto }` (bottom margin 0) 가 fixed-position 푸터 reserve space 를 없앤 직접 원인.
+- (2) `useGridPrint.ts` 가 집계 페이지 앞에 `buildPageBreak()` (`<div class="page-break"></div>`, CSS `page-break-after: always`) 를 emit + `.aggregation-summary-page` CSS 가 `page-break-before: always` → 브라우저가 두 break 를 모두 적용해 사이에 빈 페이지 삽입.
+
+### 페이즈 결과
+
+- **Phase 29 (HOTFIX 21)** (`8bde25e`):
+  - **printStyleGenerator.ts**: `.print-content` 의 base 규칙 + `@media print` 규칙 양쪽에 `padding-bottom: ${margins.bottom + 5}mm` 명시. base 규칙의 padding 단축 속성을 @media print 가 덮어쓰므로 양쪽 명시 필요. fixed-position 푸터의 height (margins.bottom/2mm) + 5mm 여유로 reserve.
+  - **useGridPrint.ts**: 집계 페이지 앞의 `buildPageBreak()` 호출 제거. `.aggregation-summary-page` 의 `page-break-before: always` CSS 단독으로 break 처리 — 일원화로 이중 break 해소.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+  - `packages/fs-data-viewer/src/features/print/views/grid/useGridPrint.ts`
+
+2 파일 / +3 / -2 / 단일 커밋.
+
+### 잔여 한계
+
+- `useGridPrint.ts:121` `subGridsHtml` 가 현재 빈 문자열. 추후 서브그리드 구현 시 `buildPageBreak()` + subGridsHtml 패턴이 서브그리드 자체에 `page-break-before` CSS 가 있으면 동일한 이중 break 재발 위험 — 구현 시 검토 필요.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — `@page` margin 조정 / padding-bottom 복원 / inspect 우선 권고. 정찰 결과로 두 원인 모두 확인 후 fix 적용.
+- **lint**: PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.228.0
 
 > 통합일: 2026-05-19
