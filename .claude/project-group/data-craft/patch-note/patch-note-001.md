@@ -1,5 +1,54 @@
 # data-craft — Patch Note (001)
 
+## v001.230.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 11)
+
+### 핫픽스 결과 — 3 항목
+
+마스터 보고:
+1. PIN 모달이 옛 shadcn Dialog 안에 중첩 노출 (스크린샷 — 새 디자인 PIN 카드가 옛 모달 안에 비대칭).
+2. BillingSuccessPage 의 타임아웃이 setup 입력 중에도 fire → 사용자가 비밀번호 입력하는 사이 화면 강제 전환.
+3. **치명**: setup 모달 닫기/이탈 시 카드는 BE 에 등록된 채 남고 비밀번호 없음 → orphan 카드.
+
+### Phase 28 (FE, `dd2d9d8` + `9023149`)
+
+**A. PaymentPasswordSetupStep self-contained 화**
+- 기존: PinModal 만 반환 → 호출 측이 shadcn Dialog 로 감싸 중첩.
+- 신규: props `{ open, onOpenChange, onComplete, onCancel? }` 로 자체 Portal+Overlay+Content (PaymentPasswordInputDialog 와 동일 패턴). 호출 측 Dialog 래퍼 제거.
+
+**B. BillingSuccessPage 타임아웃 차단**
+- 타임아웃 useEffect 의존성에 showPasswordSetup 추가. setup 모달 open 동안 타이머 중단, close 후 30초 재시작.
+
+**C. orphan 카드 자동 삭제 (치명 결함 대응)**
+- handlePasswordSetupDone 을 complete (`handlePasswordSetupComplete`) / dismiss (`handlePasswordSetupDismiss`) 두 핸들러로 분리.
+- currentActionRef + passwordCompleted ref 로 액션 타입 + 완료 여부 추적.
+- card-change 에서 사용자가 비밀번호 설정 없이 모달 닫기:
+  - `window.confirm("비밀번호를 설정하지 않으면 등록한 카드가 삭제됩니다. 계속하시겠습니까?")` → 확인 시 `deleteCard()` → navigate.
+  - 취소 시 setup 모달 재오픈.
+- 페이지 이탈 (브라우저 뒤로/탭 닫기) 시 best-effort `navigator.sendBeacon('/api/subscription/billing/delete-card')` (인증 헤더 미포함 한계 — BE-side 정리 후속 권장).
+- 신규구독 / 프로모션결제 분기는 이미 결제 완료 — 그대로 둠.
+
+**D. usePaymentPasswordGate update**
+- setup 분기도 Dialog 래퍼 없이 PaymentPasswordSetupStep 에 open/onOpenChange 직접 전달.
+
+### 영향 파일
+
+**data-craft**:
+- `src/features/subscription/ui/PaymentPasswordSetupStep.tsx`
+- `src/features/subscription/lib/usePaymentPasswordGate.ts`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
+
+### 잔여
+
+- best-effort beacon delete-card 는 인증 헤더 한계로 보장 안 됨 → BE-side 미설정 카드 24h 자동 정리 (또는 세션 쿠키 인증) 후속 필요.
+- billingApi.ts 와 cardApi.ts 의 deleteCard 위치 불일치 — 명명 정합 후속 권장.
+
 ## v001.229.0
 
 > 통합일: 2026-05-19
