@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.248.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 11)
+> Step 4 컬럼 드롭다운 패널 안에서 마우스 휠 스크롤이 작동하지 않는 현상 픽스. Radix Dialog 의 `react-remove-scroll` 이 document 레벨 wheel 이벤트를 차단해 portal 된 패널의 자체 overflow 스크롤도 영향. 패널 본체 `onWheel` / `onTouchMove` 에서 `stopPropagation` 으로 격리.
+
+### 핫픽스 결과 — 1 phase (`79e2bb1`)
+
+`RowLinkConfigDialog.tsx` CustomColumnDropdown 패널 :
+```tsx
+onWheel={(e) => e.stopPropagation()}
+onTouchMove={(e) => e.stopPropagation()}
+```
+패널 안 wheel 이벤트가 document 까지 bubble 하기 전에 중단 → react-remove-scroll 의 preventDefault 영향에서 격리되어 패널 자체 스크롤 정상 작동.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (+4)
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.247.0
 
 > 통합일: 2026-05-19
