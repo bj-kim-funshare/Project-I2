@@ -1,5 +1,32 @@
 # HCILAB_2026 — Patch Note (001)
 
+## v001.4.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: [jieun410/HCILAB_2026#3](https://github.com/jieun410/HCILAB_2026/issues/3)
+
+### 페이즈 결과
+
+- **Phase 1 — BE phone 필드 통과** (커밋 `aa6dfcd`): `server/src/routes/contact.js` 가 `req.body` 에서 `phone` 도 추출하도록 보완 (선택 필드, 값이 있으면 string 타입만 검사 — 정규식 강제 X). `server/src/lib/mailer.js` `send()` 시그니처에 `phone` 인자 추가. Phase 2 의 정식 템플릿 교체를 위한 임시 통과 단계로, plain-text 본문에 "전화: <phone>" 한 줄을 임시 삽입했다가 Phase 2 에서 제거.
+- **Phase 2 — HTML 메일 템플릿 적용** (커밋 `e1c4388`): `server/src/lib/emailTemplates.js` 신규 생성 — `buildContactEmail({name, email, subject, phone, message})` 가 `{html, text}` 반환. 모든 사용자 입력에 `escapeHtml` 적용, `phone` 빈 값 시 전화번호 행 자체 생략. HTML 은 600px max-width 카드 (HCI LAB 워드마크 + "Human-Computer Interaction Lab" 부제 + divider + 안내 문구 + 5행 정보 카드 (이름·이메일·제목·전화번호·문의 내용) + 자동발신 안내 + 3컬럼 풋터) 의 이메일 호환 table 레이아웃, 인라인 스타일 only. `mailer.js` 의 Phase 1 임시 plain-text 본문을 제거하고 `buildContactEmail()` 호출로 교체하여 `sendMail` 에 html + text 양쪽 전달.
+
+### 영향 파일
+
+**HCILAB_2026** (커밋된 파일 3개, +172 / -4):
+
+```
+server/src/lib/emailTemplates.js     (신규 — buildContactEmail 함수 + LAB_INFO 상수 + escapeHtml 헬퍼)
+server/src/lib/mailer.js             (수정 — buildContactEmail 호출, sendMail 에 text + html 양쪽 전달, phone 시그니처)
+server/src/routes/contact.js         (수정 — phone 추출 + 선택 검증 + send payload 통과)
+```
+
+### 비고
+
+- 로고는 자산 부재로 1차 워드마크 텍스트 로고로 완성 (HCI LAB + 부제). 첨부 이미지의 lightbulb/gear/magnifier 아이콘 정확 매칭 필요 시 정적 자산 추가 후속 핫픽스 가능.
+- 풋터 전화번호는 마스터 입력 이미지 그대로 `053-850-xxxx` 마스킹 사용.
+- 메일 클라이언트 호환을 위해 table 레이아웃 + 인라인 스타일만 사용. `<tr>` 의 `border-bottom` 은 Gmail/Outlook 이 무시할 수 있어 행 구분이 약하게 보일 수 있음 — 시각 차이 발생 시 `<td>` 의 border 로 옮기는 후속 가능.
+- 검증: `DISABLE_MAIL=true` 로그 분기는 새 템플릿을 호출하지 않음 (subject/email 만 로그). 실제 렌더링 확인은 `DISABLE_MAIL=false` 로 본인 메일에 실송 후 Gmail 웹/앱에서 시각 비교 필요.
+
 ## v001.3.0
 
 > 통합일: 2026-05-19
