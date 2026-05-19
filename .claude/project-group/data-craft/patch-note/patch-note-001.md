@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.220.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 17)
+
+### 개요
+
+마스터 보고: "부가 정보에서 '외 1개' 이런건 없어야 해, 전부 표기하게 해". HOTFIX 12 부터 도입된 상위 5개 + "외 N개" 잘림을 제거하고 distribution 의 모든 항목을 인라인 표기.
+
+### 페이즈 결과
+
+- **Phase 25 (HOTFIX 17)** (`91edcfa`): `printHtmlBuilder.ts` 의 `buildAggregationSummaryPage` distribution 분기에서 `result.details.slice(0, 5)` + `외 N개` 처리 (총 4줄) 제거 → `result.details.map(...)` 전체 변환 (1줄). HOTFIX 15 의 `white-space: normal` + HOTFIX 16 의 셀 중앙 정렬로 항목 많아도 wrap 가독성 보존.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
+1 파일 / +1 / -4 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.219.0
 
 > 통합일: 2026-05-19
