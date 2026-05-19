@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.247.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 10)
+> Step 4 의 컬럼 선택 드롭다운이 열리기만 하고 클릭/스크롤 등 상호작용이 차단되던 현상 픽스. Radix Dialog 가 modal 일 때 body 에 `pointer-events: none` 을 적용해 \`createPortal(panel, document.body)\` 된 패널 자식까지 차단된 것. 기존 \`ConnectionEditOverlay\` 와 동일하게 패널 본체에 \`pointerEvents: 'auto'\` 명시.
+
+### 핫픽스 결과 — 1 phase (`a5e171c`)
+
+- `RowLinkConfigDialog.tsx` 의 CustomColumnDropdown 패널 style 에 `pointerEvents: 'auto'` 추가 (3줄).
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.246.0
 
 > 통합일: 2026-05-19
