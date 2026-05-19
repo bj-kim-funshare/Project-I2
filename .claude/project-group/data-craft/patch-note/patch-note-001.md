@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.202.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #108 (hotfix 1)
+> Roadmap-1 단계3-C 관계 빌더 — DesignerDialog 모바일 fit 보강 + optional prop 타입 정리.
+
+### 핫픽스 결과 — Phase 2 (`4d4a5f7`)
+
+마스터 입력 `핫픽스, 재검토 진행해서 알아서 해결` 에 대응. 직전 plan 페이즈 1 commit `5e5797c` (v001.201.0) 의 DesignerDialog 마운트 코드 리뷰 후 2 fix 적용. advisor 사전·완료 검증 PASS.
+
+- **모바일 fit className 적용**: `<DesignerDialog className="!w-[95vw] !h-[95vh] !max-w-[95vw]" ...>` — 다이얼로그 기본 `80vw × 90vh` 데스크탑 스타일을 모바일 친화 95vw × 95vh 로 `!important` override. 데스크탑 AppHeader 의 className 패턴을 모바일 비율로 조정한 형태.
+- **Optional prop 정리**: 이전 마운트의 `selectedGroupId={null}` + `onSelectGroup={() => {}}` 제거. `DesignerDialogProps` 의 `selectedGroupId?: number` / `onSelectGroup?: (groupId: number) => void` 둘 다 optional. `null` 은 `number | undefined` 시그니처와 타입 거짓말이었으므로 default `undefined` 로 정상화.
+- **테스트 갱신**: DesignerDialog mock 에 className prop 캡처 추가 + `'95vw' / '95vh'` 포함 회귀 1 케이스 신규.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/components/AppHeader.tsx`
+  - `apps/web/src/mobile/components/__tests__/AppHeader.test.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile hotfix WIP 워크트리) PASS (exit 0, 0 errors).
+- advisor #2 (hotfix outcome) PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계3-C 의 시각 보강 후속 작업 항목 1건 해소 (모바일 fit). 권한 게이트 / QueryProvider 검증은 잔존 — 후속 별도 처리.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수).
+
 ## v001.201.0
 
 > 통합일: 2026-05-19
