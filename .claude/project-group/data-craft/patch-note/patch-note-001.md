@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.240.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 24)
+
+### 개요
+
+마스터 명령: "문서 타입 셀 인쇄에 있을 때는 내부 데이터를 한번 사용자 친화적으로 개량해서 들어가게 해". 문서 셀이 인쇄 시 `{"title":"폼 - 사용자 설정","content":"[{\"id\":\"...\",\"type\":\"paragr...}]"}` 형태 raw JSON 으로 노출되어 가독성 없음. BlockNote JSON 을 파싱하여 plain text 추출.
+
+### 페이즈 결과
+
+- **Phase 32 (HOTFIX 24)** (`e1f1b64`): `cellValueFormatter.ts` 의 `formatDocument` 함수 전면 교체.
+  - **정찰**: 문서 셀 값 = `FsGridDocumentModel` JSON (`title` + `content` 필드, content 는 BlockNote JSON 배열 문자열). 영향 파일 = `cellValueFormatter.ts` 단독 (useGridPrint / printHtmlBuilder 는 formatCellValue 경유로 무관).
+  - **구현**:
+    1. 외부 JSON 파싱으로 `title` + `content` 추출.
+    2. `extractBlockNoteText` 재귀 함수 — BlockNote 노드 트리 (`{ text }`, `{ content: [] }`, array 등) 에서 plain text 수집.
+    3. `title — bodyText` 조합 후 200자 초과 시 `…` truncate.
+    4. 파싱 실패 / 빈 content / null → 빈 문자열 fallback.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/cellValueFormatter.ts`
+
+1 파일 / +40 / -5 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.239.0
 
 > 통합일: 2026-05-19
