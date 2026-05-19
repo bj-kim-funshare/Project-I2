@@ -854,6 +854,216 @@ function renderBySession(rows) {
   );
 }
 
+// ---------- Skill Invocations ----------
+
+let __skillInvData = [];
+let __skillInvPage = 1;
+const SKILL_INV_PAGE_SIZE = 30;
+
+function formatDurationSec(sec) {
+  if (!sec || sec <= 0) return '0s';
+  if (sec >= 3600) return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+  if (sec >= 60) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  return `${sec}s`;
+}
+
+function formatTokensCompact(n) {
+  if (!n || n <= 0) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return String(n);
+}
+
+function skillInvTotalTokens(rec) {
+  return (rec.input || 0) + (rec.output || 0) + (rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0);
+}
+
+function formatStartTimestamp(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return ts;
+  const yyyy = d.getUTCFullYear();
+  const MM = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${yyyy}-${MM}-${dd} ${hh}:${mm}`;
+}
+
+function renderSkillInvPager(containerId, page, totalPages) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (totalPages <= 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const prevDisabled = page <= 1 ? 'disabled' : '';
+  const nextDisabled = page >= totalPages ? 'disabled' : '';
+  el.innerHTML = `
+    <button ${prevDisabled} data-inv-prev>◀</button>
+    <span>${page} / ${totalPages}</span>
+    <button ${nextDisabled} data-inv-next>▶</button>
+  `;
+  el.querySelector('[data-inv-prev]')?.addEventListener('click', () => {
+    if (__skillInvPage > 1) { __skillInvPage--; renderSkillInvocations(); }
+  });
+  el.querySelector('[data-inv-next]')?.addEventListener('click', () => {
+    const tp = Math.ceil(__skillInvData.length / SKILL_INV_PAGE_SIZE) || 1;
+    if (__skillInvPage < tp) { __skillInvPage++; renderSkillInvocations(); }
+  });
+}
+
+function renderSkillInvocations() {
+  const tableWrap = document.getElementById('skill-invocations-table');
+  if (!tableWrap) return;
+
+  const total = __skillInvData.length;
+  const totalPages = total > 0 ? Math.ceil(total / SKILL_INV_PAGE_SIZE) : 1;
+  if (__skillInvPage > totalPages) __skillInvPage = totalPages;
+  if (__skillInvPage < 1) __skillInvPage = 1;
+
+  renderSkillInvPager('skill-invocations-pager', __skillInvPage, total > 0 ? totalPages : 0);
+  renderSkillInvPager('skill-invocations-pager-bottom', __skillInvPage, total > 0 ? totalPages : 0);
+
+  if (total === 0) {
+    tableWrap.innerHTML = '<p style="padding:12px;color:var(--muted)">데이터 없음</p>';
+    return;
+  }
+
+  const start = (__skillInvPage - 1) * SKILL_INV_PAGE_SIZE;
+  const slice = __skillInvData.slice(start, start + SKILL_INV_PAGE_SIZE);
+
+  const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 토큰', '메인', '서브에이전트'];
+  const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+
+  const rows = slice.map((w, localIdx) => {
+    const globalIdx = start + localIdx;
+    const startTs = formatStartTimestamp(w.start_timestamp);
+    const duration = formatDurationSec(w.duration_sec);
+    const skill = escapeHtml(w.skill || '—');
+    const titleFull = w.title_prompt || '';
+    const titleTrunc = titleFull.length > 60 ? titleFull.slice(0, 60) + '…' : titleFull;
+    const titleAttr = escapeHtml(titleFull);
+    const artifactId = escapeHtml(w.artifact_id || '—');
+    const totalTok = formatTokensCompact(skillInvTotalTokens(w.total || {}));
+    const mainTok = formatTokensCompact(skillInvTotalTokens(w.main_session || {}));
+
+    const agentMap = w.by_agent || {};
+    const agentKeys = Object.keys(agentMap);
+    let agentsCell;
+    if (agentKeys.length === 0) {
+      agentsCell = '—';
+    } else {
+      agentsCell = agentKeys.map(name => {
+        const tok = formatTokensCompact(skillInvTotalTokens(agentMap[name]));
+        return `${escapeHtml(name)}: ${tok}`;
+      }).join(' · ');
+    }
+
+    return `<tr data-window-index="${globalIdx}">
+      <td>${startTs}</td>
+      <td>${duration}</td>
+      <td>${skill}</td>
+      <td class="title-cell" title="${titleAttr}">${escapeHtml(titleTrunc)}</td>
+      <td>${artifactId}</td>
+      <td>${totalTok}</td>
+      <td>${mainTok}</td>
+      <td class="agents-cell">${agentsCell}</td>
+    </tr>`;
+  }).join('');
+
+  tableWrap.innerHTML = `<table class="skill-inv-table">${thead}<tbody>${rows}</tbody></table>`;
+
+  tableWrap.querySelectorAll('tr[data-window-index]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const idx = parseInt(tr.getAttribute('data-window-index'), 10);
+      openSkillInvocationModal(idx);
+    });
+  });
+}
+
+function openSkillInvocationModal(idx) {
+  const modal = document.getElementById('skill-invocation-modal');
+  if (!modal) return;
+  const w = __skillInvData[idx];
+  if (!w) return;
+
+  const body = modal.querySelector('.modal-body');
+  if (!body) return;
+
+  function fmtTokenRow(rec) {
+    if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+    return [
+      rec.messages, rec.input, rec.output,
+      rec.cache_creation_5m, rec.cache_creation_1h, rec.cache_read,
+      (rec.cost_usd != null ? `$${rec.cost_usd.toFixed(4)}` : '—'),
+    ].map(v => `<td>${v != null ? fmtNum(v) : '—'}</td>`).join('');
+  }
+
+  function fmtCostCell(rec) {
+    if (!rec || rec.cost_usd == null) return '<td>—</td>';
+    return `<td>$${rec.cost_usd.toFixed(4)}</td>`;
+  }
+
+  function tokenCells(rec) {
+    if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+    return [
+      rec.messages != null ? fmtNum(rec.messages) : '—',
+      rec.input != null ? fmtNum(rec.input) : '—',
+      rec.output != null ? fmtNum(rec.output) : '—',
+      rec.cache_creation_5m != null ? fmtNum(rec.cache_creation_5m) : '—',
+      rec.cache_creation_1h != null ? fmtNum(rec.cache_creation_1h) : '—',
+      rec.cache_read != null ? fmtNum(rec.cache_read) : '—',
+      rec.cost_usd != null ? `$${rec.cost_usd.toFixed(4)}` : '—',
+    ].map(v => `<td>${v}</td>`).join('');
+  }
+
+  const agentMap = w.by_agent || {};
+  const agentRows = Object.entries(agentMap).map(([name, rec]) => {
+    return `<tr><td>${escapeHtml(name)}</td>${tokenCells(rec)}</tr>`;
+  }).join('');
+
+  body.innerHTML = `
+    <h3 style="margin:0 0 6px">${escapeHtml(w.skill || '—')}</h3>
+    <p class="modal-title-prompt">${escapeHtml(w.title_prompt || '')}</p>
+    <dl>
+      <dt>세션</dt><dd>${escapeHtml(w.session_id || '—')}</dd>
+      <dt>시작</dt><dd>${escapeHtml(w.start_timestamp || '—')}</dd>
+      <dt>종료</dt><dd>${escapeHtml(w.end_timestamp || '—')}</dd>
+      <dt>소요</dt><dd>${formatDurationSec(w.duration_sec)}</dd>
+      <dt>종료 사유</dt><dd>${escapeHtml(w.close_reason || '—')}</dd>
+      <dt>생성물</dt><dd>${escapeHtml(w.artifact_kind || '—')} / ${escapeHtml(w.artifact_id || '—')}</dd>
+    </dl>
+    <h4 style="margin:12px 0 4px">토큰 분해</h4>
+    <table class="modal-token-table">
+      <thead><tr><th>채널</th><th>messages</th><th>input</th><th>output</th><th>cache_5m</th><th>cache_1h</th><th>cache_read</th><th>cost</th></tr></thead>
+      <tbody>
+        <tr><td>총합</td>${tokenCells(w.total)}</tr>
+        <tr><td>메인 세션</td>${tokenCells(w.main_session)}</tr>
+        ${agentRows}
+      </tbody>
+    </table>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeSkillInvocationModal() {
+  const modal = document.getElementById('skill-invocation-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function loadSkillInvocations(data) {
+  __skillInvData = (data.by_skill_invocation || [])
+    .slice()
+    .sort((a, b) => (b.start_timestamp || '').localeCompare(a.start_timestamp || ''));
+  __skillInvPage = 1;
+  renderSkillInvocations();
+}
+
 // ---------- Orchestration ----------
 
 let _aggregateCache = null;
@@ -1254,8 +1464,26 @@ async function refresh() {
 document.addEventListener('DOMContentLoaded', async () => {
   $('#refresh-btn').addEventListener('click', refresh);
 
+  // Wire modal close: backdrop/close button clicks and ESC key
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close-modal]')) {
+      closeSkillInvocationModal();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('skill-invocation-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        closeSkillInvocationModal();
+      }
+    }
+  });
+
   try {
     const agg = await loadAggregate();
+
+    // Load skill invocations once from the unfiltered full aggregate (not affected by period/compare toggles)
+    loadSkillInvocations(agg);
 
     const urlParams = new URLSearchParams(location.search);
     const initUnit = urlParams.get('period') || 'all';
