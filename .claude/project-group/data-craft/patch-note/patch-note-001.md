@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.219.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #111
+
+### 개요
+
+마스터 보고: "데이터 뷰어 → 그리드 뷰에서 트랙 패드로 가로 스크롤 할때는 괜찮은데, 마우스로 클릭한채로 끌어서 가로 스크롤 할 때는 렉이 너무 심해, 정확한 원인 파악하고 성능 개선해줘". 진단 결과 두 가지 합산 원인 — (1) `useDragScroll` 이 매 React `onMouseMove` 마다 `scrollLeft` 를 직접 동기 쓰기 (트랙패드 wheel 은 브라우저 coalescing 으로 매끄러우나 JS 직접 쓰기는 합치 안 됨), (2) `useScrollSync` 가 매 scroll 이벤트마다 3~4 개 컨테이너를 동기 sync 하여 mousemove 당 forced reflow 가 폭주. 두 핸들러를 rAF 합치 + native pointer 부착으로 재작성.
+
+### 페이즈 결과
+
+- **Phase 1** (`6b18135`): `useDragScroll` rAF 합치 + document 부착으로 전환. mousedown 시 document 에 native mousemove/mouseup 부착 → 드래그가 그리드 경계를 벗어나도 끊기지 않음. mousemove 는 pendingScrollLeft ref 만 갱신, rAF 콜백에서 scrollLeft 1회만 쓰기. 반환 surface 를 `handleDragScrollMouseDown` 1개로 축소, 연관 5개 파일의 타입·prop·핸들러 연쇄 정리. 드래그 종료 시멘틱 = mouseup 까지 유지 (표준 드래그-스크롤 UX).
+- **Phase 2** (`3d82b92`): `useScrollSync` rAF 배치 sync 로 전환. `createScrollHandler` 팩토리에 pendingScrollLeft + rafId 클로저 변수 추가 → 동일 프레임 내 복수 scroll 이벤트를 단일 rAF 콜백으로 배치. rAF flush 시 guard set → 일괄 쓰기 → guard 해제 순서로 재진입 루프 안전 차단. 공개 서명 보존하여 소비자 무수정.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/useDragScroll.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/useGridScroll.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/gridScrollTypes.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/types.ts`
+
+### 후속 검토 (Phase 1 blocker)
+
+- `fs_grid_sub/components/SubGridDragScroll.tsx` 및 `SubGridBody.tsx` (서브그리드 전용 드래그 스크롤) 는 여전히 React 합성 이벤트 방식. 본 페이즈 스코프 외 — 마스터가 동일 lag 경험 시 동일 패턴 적용을 위한 별도 페이즈/핫픽스 가능.
+
+### advisor 검증
+
+- 계획 단계 (#1): Intent/Logic/Group Policy/Evidence/Command Fulfillment 5관점 모두 PASS, no BLOCK.
+- 완료 단계 (#2): no BLOCK — 본 스코프 (메인 그리드 드래그 스크롤) 가 마스터 명령에 부합. SubGrid 는 PENDING 게이트의 핫픽스 경로로 routing 가능.
+
 ## v001.218.0
 
 > 통합일: 2026-05-18
