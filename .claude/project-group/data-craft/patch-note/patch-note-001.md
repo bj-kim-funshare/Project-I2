@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.203.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 4)
+
+### 핫픽스 결과 — SeatManageDialog quote 무한 로딩 회복
+
+마스터 보고: 인원 관리 → 다음 결제일 결제 탭 spinner 영구 표시 → 결제 진행 불가. useQuery 의 기본 3회 exp backoff retry + 에러 상태 미표시 조합으로 사용자가 에러 자체를 알 수 없음.
+
+### Phase 20 (FE, `5066475`)
+
+- `SeatManageDialog.tsx` useQuery 옵션 보강: `retry: 1`, `retryDelay: 500` — 1회 즉시 재시도 후 에러 전환.
+- `quoteError` 구조 분해 → 두 탭 (next-cycle / immediate) 모두 에러 시 spinner 대신 "결제 견적을 불러오지 못했습니다. 잠시 후 다시 시도하세요." 안내 + 결제 버튼 disabled.
+- `seatChange.api.ts` getSeatChangeQuote catch 블록 `console.error` → `console.warn` (retry 노이즈 톤 다운) + 응답 shape 가드 (`nextCycle` / `immediate` 두 키 없으면 `INVALID_QUOTE_RESPONSE_SHAPE` throw).
+
+### 영향 파일
+
+**data-craft**:
+- `src/features/subscription/api/seatChange.api.ts`
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+
+### 검증
+
+- FE lint PASS (0 errors).
+
+### 잔여 진단 (다음 핫픽스 후보)
+
+- 본 hotfix 는 FE 회복만 — quote endpoint 의 BE 응답 실패 근본 원인은 미진단. 마스터 다음 진입 시 에러 메시지 노출되면 (네트워크 탭 + 에러 토스트) 원인 좁힘 가능.
+
 ## v001.202.0
 
 > 통합일: 2026-05-19
