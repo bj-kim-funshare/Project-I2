@@ -30,7 +30,7 @@
 
 2️⃣ 🟢 /plan-enterprise data-craft 단계3-B 데이터 링크 (fs-data-link-mobile). 기존 data-link API 재사용. — 완료 (이슈 #106, v001.196.0; AppHeader 우측 Bot 아이콘 trigger + DataLinkDialog 마운트; 후속 권장: 권한 게이트 / flat-path 죽은 테스트 / 모바일 dialog 시각 보강)
 
-2️⃣ 🔴 /plan-enterprise data-craft 단계3-C 관계 빌더 (fs-relation-builder-mobile). 기존 relation API 재사용.
+2️⃣ 🟢 /plan-enterprise data-craft 단계3-C 관계 빌더 (fs-relation-builder-mobile). 기존 relation API 재사용. — 완료 (이슈 #108, v001.201.0 + 핫픽스1 v001.202.0 DesignerDialog 모바일 fit + 핫픽스2 v001.206.0 DataLinkDialog 전역 CSS fit; 모바일 첫 React Query 도입 milestone; 잔존: QueryProvider 검증 / 권한 게이트 BE 데이터 부재 / 아이콘 그룹화 3-D 진입 시 재검토)
 
 2️⃣ 🔴 /plan-enterprise data-craft 단계3-D 파일 첨부 (fs-file-attachment-mobile). 기존 attachment 업로드/다운로드 API 재사용 (S3 presigned 등 BE 변경 없이).
 
