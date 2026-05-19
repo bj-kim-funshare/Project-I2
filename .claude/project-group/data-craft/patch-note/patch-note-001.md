@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.256.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 28)
+
+### 개요
+
+마스터 보고: "캘린더 뷰에서 인쇄할 때 일정 카드가 해당 월에 존재하는데도 불구하고 행선택에 아무것도 안나와". 정찰 결과 `CalendarRowSelectStep` 의 `dateColumns` 필터가 `date / dateTime / deadline` 만 포함하고 **dualWidget 타입을 누락** — 캘린더 본체 (useCalendarColumns) 는 `getAutoDateColumnCandidates` 로 dualWidget 내 날짜 서브위젯도 포함하므로 dualWidget 기반 캘린더에서 dateColumns 가 0개 → 행 미표시.
+
+### 페이즈 결과
+
+- **Phase 36 (HOTFIX 28)** (`5f27c54` + typecheck fix `ab3bd50`):
+  - **CalendarRowSelectStep.tsx**: dateColumns 필터에 dualWidget 추가. 날짜 파싱을 `calendarEventParsers.ts` 의 `parseDate` 로 교체 (date-only 문자열 로컬 자정 기준). dualWidget 셀 값 추출 + deadline JSON 처리를 `parseCalendarEvents` 선례와 동일 구현. dateColumns[0] 만 사용 (normal-168 정책 — 중복 카드 방지).
+  - **타입 fix** (`ab3bd50`): `entities/data-viewer-props.types.ts` 의 `FsDataViewerProps` 에 `requestRowLinkTargetRow` 누락 (별 플랜 잔재) 정리 — i-dev base 의 typecheck 오류였음. plan-enterprise 의 lint gate 통과 위해 self-fix.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/ui/steps/CalendarRowSelectStep.tsx` (본체)
+  - `packages/fs-data-viewer/src/entities/data-viewer-props.types.ts` (별 플랜 잔재 typecheck fix)
+
+2 파일 / +82 / -46 / 본 커밋 + typecheck fix.
+
+### 잔여 한계
+
+- 인쇄 다이얼로그 진입 시 `options.calendar.monthView` 가 *항상 현재 날짜* 로 초기화되어, 사용자가 캘린더에서 이전/이후 월을 보고 있다가 인쇄하면 그 월이 아닌 오늘 월 기준이 됨. monthView publish/subscribe 도입 별 후속 권장.
+
+### lint
+
+- 1차: FAIL (별 플랜의 typecheck 오류 — HOTFIX 28 책임 외).
+- typecheck fix 후 PASS (0 errors, 17 warnings).
+
 ## v001.255.0
 
 > 통합일: 2026-05-19
