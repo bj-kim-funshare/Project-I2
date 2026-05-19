@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.261.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #117 (HOTFIX 2)
+
+### 개요
+
+HOTFIX 1 의 root errorElement 만으로는 부족했음. 마스터 스크린샷으로 트리거 확보 — `localhost:5174/contact` 직접 URL 입력. 콘솔 로그 "No routes matched location '/contact'". `/contact` 는 `/` (정확 매칭) 도 `/m/*` 도 매칭하지 않아 react-router 가 routing-level 에서 ErrorResponse(404) 를 던지는데, root `errorElement` 는 `path: '/'` 라우트 본인의 에러만 잡고 미매칭은 못 잡음. 이번에는 진짜 NotFound 화면 + top-level path:'*' 라우트로 정정.
+
+### 페이즈 결과
+
+- **Phase 7 (HOTFIX 2)** (`c055da8`, +53 줄, 2 파일):
+  - `apps/web/src/mobile/screens/not-found/ScreenNotFound.tsx` (신규): `useLocation` 으로 미매칭 경로 표시 + "홈으로" 링크 (a11y 16px 폰트 / 48px 버튼). silent redirect 가 아니므로 진단 신호 보존.
+  - `apps/web/src/mobile/router.tsx`: top-level `{ path: '*', element: <ScreenNotFound /> }` 라우트 추가. HOTFIX 1 의 root errorElement 는 그대로 (라우트 본체 에러 대응).
+
+### 영향 파일
+
+data-craft-mobile:
+- `apps/web/src/mobile/router.tsx`
+- `apps/web/src/mobile/screens/not-found/ScreenNotFound.tsx` (신규)
+
+### 학습 메모
+
+- HOTFIX 1 의 root errorElement 는 라우트 본체 (예: `/` 의 Navigate 가 throw) 에러만 잡음. 미매칭 URL 은 routing 단계에서 발생하므로 별도 `path: '*'` catch-all 라우트가 필요. errorElement 와 catch-all 은 별개 메커니즘.
+- 트레드밀과 graceful NotFound 의 차이: silent redirect ↔ 정보 표시 + 진입점. 후자는 진단 신호 보존이라 트레드밀이 아님.
+
 ## v001.260.0
 
 > 통합일: 2026-05-19
