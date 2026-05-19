@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.211.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 14)
+
+### 개요
+
+마스터 보고 (런타임 에러): `Unexpected Application Error! usePrintContext must be used within PrintProvider` — `useHeaderState.ts:65` 가 `usePrintContext()` 호출 시 일부 mount 경로에서 PrintProvider 가 트리상 부재. 정찰 결과 이론적으로는 FsGridHeader 가 PrintProvider 의 children 내부지만 런타임 throw 가 실제 발생 → 트리 구조 변경보다 방어적 optional hook 사용으로 회귀 위험 최소화.
+
+### 페이즈 결과
+
+- **Phase 22 (HOTFIX 14)** (`02c460c`): `useHeaderState.ts` 한 줄 변경 — `usePrintContext` 호출을 기존에 이미 존재하는 `usePrintContextOptional` 로 교체.
+  - `usePrintContextOptional` 은 PrintContext.tsx:329 에 이미 존재 (FsGridTableView.tsx:54 의 선례 사용).
+  - PrintProvider 없으면 undefined 반환, throw 안 함. useHeaderState 가 안전 가드 후 `openPrintDialog` 호출.
+  - 반환 타입 `() => void` 유지 → HeaderActions / HeaderSearch / FsGridHeader 호출자 시그니처 무변경. HOTFIX 1 의 `onOpenPrintDialog optional` 인터페이스가 자연 적용되어 미노출 처리.
+  - import 교체 + hook 호출 라인 변경만 — 신규 코드 없음.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/widgets/data-viewer-header/useHeaderState.ts`
+
+1 파일 / +4 / -4 / 단일 커밋.
+
+### 잔여 한계
+
+- `__tests__/useHeaderState.guide.test.ts` 의 vi.mock 팩토리에 `usePrintContextOptional` 추가 필요 (mock 객체에 누락 시 `TypeError: usePrintContextOptional is not a function`). 테스트 파일은 본 핫픽스 scope 외 — 별 후속 핫픽스 권장 (또는 마스터가 테스트 실행 안 하면 무영향).
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 옵션 A2 (mount 재배치) 1차 / A1 (optional hook) fallback 명시. 정찰 후 A1 채택 — 트리 모델/현실 불일치 상태에서 mount 재배치 회귀 위험이 더 크다는 phase-executor 판단.
+- **lint**: PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.210.0
 
 > 통합일: 2026-05-19
