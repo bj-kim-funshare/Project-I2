@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.206.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #108 (hotfix 2)
+> Roadmap-1 단계3-C — DataLinkDialog 모바일 fit 전역 CSS override (잔존 권장 작업 4건 중 1건 해소).
+
+### 핫픽스 결과 — Phase 3 (`959429c`)
+
+마스터 입력 `핫픽스, 잔존도 처리해` 에 대응. 직전 hotfix 1 (v001.202.0) 보고서의 잔존 권장 4건 중 fixable 1건만 적용, 나머지 3건 사유 명시 후 skip.
+
+### 적용 fix
+
+**DataLinkDialog 모바일 fit 전역 CSS override**:
+- `DataLinkDialog` (@dcm/fs-data-link-mobile) 는 `className` prop 미노출 + Radix portal 이 document.body 마운트 → wrapper descendant 선택자 도달 불가.
+- 해결: 전역 CSS 파일 `apps/web/src/mobile/styles/data-link-override.css` 신규 생성. 선택자 `[data-slot="dialog-content"].w-\[80vw\].h-\[90vh\]` 로 DataLinkDialog DialogContent 전용 매칭 (핫픽스1 에서 95vw/95vh 적용된 DesignerDialog 와 충돌 없음). width/height/max-width 95vw/95vh/95vw `!important` override.
+- `AppHeader.tsx` 에 CSS side-effect import 한 줄 추가.
+
+### Skip 사유 (잔존 3건)
+
+- **QueryProvider 로컬 wrap 검증**: 추측성 우려, 실 런타임 사용 외에 정적 검증 불가. 실 사용 시 BLOCK 발생 시 별도 hotfix.
+- **권한 게이트 v1 미적용**: `SessionState` 에 `design_external_data` 권한 필드 부재 → BE 측 데이터 변경 없이 게이트 구현 불가. Roadmap-1 hard rule (BE/DB 무수정) 와 상충 → 후속 Roadmap 로 자연 이관.
+- **AppHeader 아이콘 그룹화**: 현재 우측 아이콘 3개 (Bot/Network/Bell) — premature optimization. 단계3-D 진입 시 trigger 4 개로 늘면 재검토.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/components/AppHeader.tsx` (CSS side-effect import 추가)
+  - `apps/web/src/mobile/styles/data-link-override.css` (신규)
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile hotfix WIP 워크트리) PASS (exit 0, 0 errors).
+- advisor #2 (hotfix outcome) PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계3-C 의 후속 권장 작업 4건 중 fixable 1건 (DataLinkDialog 모바일 fit) 해소. 잔존 3건은 사유 명시되어 별도 처리 트랙.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수).
+
 ## v001.205.0
 
 > 통합일: 2026-05-19
