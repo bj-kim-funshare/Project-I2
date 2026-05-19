@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.243.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 8)
+> HOTFIX 7 적용 후에도 폼 그룹이 폼 탭에 안 나오는 현상 보완. 서버 (data-craft-server `models/externalData.model.ts`) 가 폼 그룹명에 `[폼] ` prefix 를 붙여 보내는 점 확인 → connectionCallbacks 의 폼 식별을 `dataType === 'form'` OR `groupName.startsWith('[폼] ')` 다중 신호로 확장.
+
+### 핫픽스 결과 — 1 phase (`737e0b0`)
+
+- `src/features/viewer/lib/connectionCallbacks.ts` external 그룹 매핑 loop:
+  - 기존: `dataType === 'form'` 단일 조건.
+  - 변경: `dataType === 'form' || groupName.startsWith('[폼] ')` 다중 신호 OR. 둘 중 하나라도 만족하면 `isForm: true`.
+  - 서버 측 SQL (`CONCAT('[폼] ', user_fl.form_name)`) 보장으로 prefix 는 안정적 마커.
+
+### 영향 파일
+
+- data-craft:
+  - `src/features/viewer/lib/connectionCallbacks.ts`
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.242.0
 
 > 통합일: 2026-05-19
