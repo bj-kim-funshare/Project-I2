@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.254.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 13)
+> 매핑 행의 기본 title 정책 변경. 기존: `행 연결 {N}` hardcoded. 신규: 타겟 컬럼 선택 시 타겟 컬럼명을 기본으로 자동 채택, 같은 그룹 내 다른 행과 중복되면 `이름 (2)` / `이름 (3)` 접미사 dedup. 사용자가 title 을 직접 편집한 행은 `titleEdited` 플래그로 자동 갱신에서 제외하여 수동 입력 보존.
+
+### 핫픽스 결과 — 1 phase (`3d8acb5`)
+
+`RowLinkConfigDialog.tsx`:
+- `ColumnMappingRow` 에 `titleEdited: boolean` 필드 추가.
+- `initMappingRows`: 초기 title=빈 문자열, titleEdited=false.
+- `dedupTitle(baseName, rows, excludeIdx)` 헬퍼 신규: 그룹 내 다른 행 타이틀과 비교해 비어있으면 그대로, 중복이면 `(2)`, `(3)` 차례로 부여.
+- `updateMappingRow` 확장:
+  - title 명시 수정 시 titleEdited=true 자동 세팅.
+  - mappedTargetColumnId 변경 시, titleEdited=false 행이라면 columns 에서 해당 columnName 을 찾아 dedupTitle 적용.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (+44 / -5)
+
+### 미해결 — 마스터 추가 요구 (HOTFIX 14 + 별도 작업 필요)
+
+마스터 추가 메시지: "연결행은 타입도 연결 대상 열과 동일하게 들어가야해, 지금 다 텍스트 타입 열로 생성하는것 같아".
+현재 행 연결 컬럼은 `type='rowLink'` 로 생성되어 `RowLinkRenderer` 가 cellValue 문자열만 그대로 표시 → 숫자/날짜/통화 등의 타겟 컬럼 포매팅 적용 안 됨. 진짜 타입 매칭은 다음 두 옵션 중 하나가 필요:
+- (A) column.type 을 타겟 type 으로 변경 — rendererMap 이 자연 dispatch. 단 leader 셀의 ConnectionEditOverlay 진입 UI 가 사라지므로 rowLink 동작 자체가 깨짐. 별도 cross-cutting 분기 도입 필요.
+- (B) RowLinkRenderer 안에서 `customDataList[0].mappedTargetColumnTypeId` 를 보고 타겟 type 의 renderer 에 위임 (delegate). 또한 unit/optionList 등 타겟 컬럼 props 도 RowLinkConfig 에 동봉 필요.
+
+둘 다 renderer/아키텍처 변경이 큰 작업이라 본 HOTFIX 범위 밖. 별도 HOTFIX 또는 plan-enterprise 후속으로 분리.
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.253.0
 
 > 통합일: 2026-05-19
