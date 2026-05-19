@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.204.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 13)
+
+### 개요
+
+마스터 보고: "이제 브라우저 인쇄에서 집계 부분도 나타나는데 여전히 디자인은 문제야, 집계를 별도로 표기하라고는 했지만 지금 디자인은 상단 그리드 디자인과 너무 다르잖아, 문서 느낌이 전혀 안나". HOTFIX 10·12 의 카드 디자인 (28pt → 18pt 압축에도) 이 본문 그리드 표와 시각 vocabulary 동떨어짐. advisor 권고 옵션 C 채택 — 메인 요약 표 + distribution 부속 표.
+
+### 페이즈 결과
+
+- **Phase 21 (HOTFIX 13)** (`ec2b7d1`): 본문 table CSS 정찰 → 동일 vocabulary 표 형태로 전면 재설계.
+  - **printStyleGenerator.ts**: HOTFIX 10·12 의 `.aggregation-card*` CSS 블록 8개 전부 제거. 본문 table/th/td 와 동일한 `border-collapse`, colorMode 조건부 border 색상, padding, th background 를 사용하는 `aggregation-summary-table` + `aggregation-distribution-table` 신규 블록.
+  - **printHtmlBuilder.ts**: `buildAggregationSummaryPage` 의 카드 그리드 빌더 폐기 → 4열 메인 요약 표 (`열 이름 / 집계 타입 / 값 / 부가 정보`) + distribution 컬럼별 소형 부속 표 ("{컬럼명} — 분포" 제목 + 항목/건수 2열, 상위 5 + 외 N개 풋노트).
+  - 색상 강조·큰 폰트 강조 제거. break-inside avoid 는 `tr` (메인) / `table` (distribution 부속) 단위 유지.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
+2 파일 / +130 / -78 / 단일 커밋.
+
+### 버전 비트 (v001.204.0 사유)
+
+v001.203.0 발행 시도 시 동시 머지된 별 플랜에 선점 — v001.204.0 으로 재발행. 코드/머지 사실 변동 없음.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 옵션 C (메인 요약 표 + 분포 부속 표) 권고 + 본문 table CSS 정찰 우선 요구 반영.
+- **lint**: PASS (0 errors, 17 warnings — 신규 위반 없음, 다른 worktree 누적).
+
 ## v001.203.0
 
 > 통합일: 2026-05-19
