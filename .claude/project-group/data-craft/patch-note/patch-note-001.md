@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.246.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 25)
+
+### 개요
+
+마스터 명령: "집계 결과에서 총 n개 열 집계 문구는 밑에 말고 집계 결과 우측에 연한 괄호로 표기해". 별도 줄의 부제목 → 제목 우측 인라인 통합.
+
+### 페이즈 결과
+
+- **Phase 33 (HOTFIX 25)** (`4369340`):
+  - **printHtmlBuilder.ts**: `<p class="aggregation-summary-subtitle">` 별도 줄 제거 → `<h2>` 안에 `<span class="aggregation-summary-count">(총 N개 열 집계)</span>` 으로 인라인 통합.
+  - **printStyleGenerator.ts**: `.aggregation-summary-subtitle` CSS 블록 삭제. `.aggregation-summary-count` 신규 추가 (`font-size: 10pt`, `font-weight: normal`, `color: #888`, `margin-left: 6px`) — 연한 색 + 작은 폰트.
+  - HOTFIX 16 의 `.aggregation-summary-title text-align: center` 보존 — span 도 같은 라인 중앙 정렬 자연 상속.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+2 파일 / +6 / -7 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings).
+
 ## v001.245.0
 
 > 통합일: 2026-05-19
