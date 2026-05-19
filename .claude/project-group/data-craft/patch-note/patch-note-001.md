@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.250.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 12)
+> 리더 셀에서 값을 선택해도 같은 행의 비리더(연결 부하) 셀들에 값이 자동 입력되지 않던 현상 픽스. 원인: Phase 5 의 caveat 였던 `requestRowLinkTargetRow` 콜백이 host (data-craft top-level + viewer 패키지 라우팅) 측에 wiring 안 됨 → useRowLinkCell.handleLeaderValueSave 의 propagation 코드가 silent return. host 콜백 구현 + 6-layer 라우팅 완결.
+
+### 핫픽스 결과 — 1 phase (`bb6616f`)
+
+10 파일 +78 / -0:
+
+1. **`src/features/viewer/lib/connectionCallbacks.ts`** — `requestRowLinkTargetRow` 콜백 신규 구현. `viewerApi.getPagedGridData(targetGroupId, { filters: [{ columnId: leaderColumnId, operator: 'eq', value: leaderValue }], limit: 1 })` 로 서버 측 일치 행 1개 조회 후 `ServerRowData.cells` (`Record<string,string>`) 를 `Record<number,string>` 으로 변환 반환.
+2. **`src/widgets/viewer-widget/ui/Viewer.widget.tsx`** — viewerCallbacks → FsDataViewer prop 전달.
+3. **`src/widgets/sub-viewer-widget/ui/useSubViewerCallbacks.ts`** + **`SubViewer.widget.tsx`** — baseCallbacks 통과 + prop 전달.
+4. **`src/widgets/external-viewer-widget/ui/useExternalViewerCallbacks.ts`** + **`ExternalViewer.widget.tsx`** — 동일 패턴.
+5. **`packages/fs-data-viewer/src/app/types.ts`** — `FsDataViewerProps` + `NormalizedProps` + `normalizeProps` 모두에 `requestRowLinkTargetRow` 추가.
+6. **`packages/fs-data-viewer/src/app/FsDataViewer.tsx`** — normalizedProps destructure + Router 에 prop 전달.
+7. **`packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx`** — destructure + DataViewerProvider 에 prop 전달.
+8. **`packages/fs-data-viewer/src/features/data-viewer/context/index.tsx`** — `DataViewerProviderProps` + destructure + GridProvider 에 prop 전달.
+9. **(이미 정의돼 있던)** `GridContext.tsx` — `requestRowLinkTargetRow` props 흡수 + context value 노출 (Phase 5 hotfix 시점에 기본 구조 이미 마련).
+10. **(이미 정의돼 있던)** `useRowLinkCell.handleLeaderValueSave` — context 에서 콜백을 받아 `targetRow[mappedTargetColumnId]` 로 비리더 셀 일괄 채움.
+
+### 영향 파일
+
+- data-craft:
+  - `src/features/viewer/lib/connectionCallbacks.ts`
+  - `src/widgets/viewer-widget/ui/Viewer.widget.tsx`
+  - `src/widgets/sub-viewer-widget/ui/useSubViewerCallbacks.ts`
+  - `src/widgets/sub-viewer-widget/ui/SubViewer.widget.tsx`
+  - `src/widgets/external-viewer-widget/ui/useExternalViewerCallbacks.ts`
+  - `src/widgets/external-viewer-widget/ui/ExternalViewer.widget.tsx`
+  - `packages/fs-data-viewer/src/app/types.ts`
+  - `packages/fs-data-viewer/src/app/FsDataViewer.tsx`
+  - `packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx`
+  - `packages/fs-data-viewer/src/features/data-viewer/context/index.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.249.0
 
 > 통합일: 2026-05-19
