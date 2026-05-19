@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.269.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119 (HOTFIX 5)
+
+### 개요
+
+마스터 요구: 간트뷰 인쇄 기간 선택 단계에서 OS/브라우저 네이티브 캘린더(`<input type="date">`) 대신 커스텀 컴포넌트 사용. 기존 shared 빌딩 블록(`useDatePickerState` + `DatePickerDropdown`) 을 재사용하여 파일 내부 전용 `CustomDateField` 컴포넌트를 작성하고 두 input 을 교체. 새 의존성 도입 없음 — `YYYY-MM-DD` 문자열 contract 보존으로 기존 validation 로직(parseInputDate / endBeforeStart / overSixMonths) 무변경.
+
+### 페이즈 결과
+
+- **Phase 7 (HOTFIX 5)** (`614441a`):
+  - `GanttPeriodSelectStep.tsx` 상단에 `useDatePickerState` + `DatePickerDropdown` import 추가.
+  - 파일 내부 전용 `CustomDateField` 컴포넌트 신규 — props `{value, onChange, placeholder}`, 내부에서 `useDatePickerState(value || undefined)` 사용 후 trigger 버튼 + DatePickerDropdown 합성.
+  - 시작일·종료일 두 곳의 `<input type="date">` 를 `<CustomDateField ... />` 로 교체. label 옆 Calendar 아이콘 / "최대 6개월" 안내 / 에러 표시 모두 보존.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/ui/steps/GanttPeriodSelectStep.tsx`
+
+1 파일 / +69 / -8 / 단일 커밋.
+
+### lint
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 20 warnings).
+
 ## v001.268.0
 
 > 통합일: 2026-05-19
