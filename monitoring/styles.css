@@ -597,8 +597,8 @@ i { color: var(--muted); }
 .skill-inv-table th { text-align: left; background: var(--surface-2); position: sticky; top: 0; color: var(--muted); }
 .skill-inv-table tbody tr { cursor: pointer; }
 .skill-inv-table tbody tr:hover { background: var(--surface-3); }
-.skill-inv-table td.title-cell { max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-inv-table td.agents-cell { max-width: 240px; word-break: break-word; }
+.skill-inv-table td.title-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-inv-table td.agents-cell { max-width: 180px; word-break: break-word; }
 .pager { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 0.85em; }
 .pager button { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); padding: 2px 10px; cursor: pointer; border-radius: var(--radius-sm); }
 .pager button:disabled { opacity: 0.4; cursor: not-allowed; }

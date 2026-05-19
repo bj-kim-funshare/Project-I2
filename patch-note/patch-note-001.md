@@ -1,5 +1,35 @@
 # 아이OS — Patch Note (001)
 
+## v001.78.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 1** (HOTFIX 1 단일 커밋): 스킬 호출별 토큰 사용량 표 및 모달의 토큰 컬럼을 "총 토큰" 단일 합산에서 "사용량(input+output)" 과 "캐시(cache_creation_5m + cache_creation_1h + cache_read)" 로 분리. 표 컬럼: 시작 시각 / 소요 시간 / 스킬 / 제목 / 생성물 / 총 사용 / 총 캐시 / 메인 사용 / 메인 캐시 / 서브에이전트(`agent: 사용/캐시`). 모달의 토큰 분해 테이블에는 채널별 raw 값 5 컬럼 끝에 "사용 합" / "캐시 합" 2 컬럼 추가.
+
+### 진단 요지
+
+- v001.77.0 직후 마스터 관측: 사용량(신규 토큰)과 캐시 토큰은 가격·동작 특성이 달라 단일 합산이 의사결정에 부적합.
+
+### 회귀 검증
+
+- node --check JS 문법 OK.
+- 기존 모달의 채널별 5 컬럼 raw 값은 무변경, 우측에 합산 2 컬럼 추가만.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 없음, 표시 분리만.
+
+### 영향 파일
+
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/README.md`
+- `patch-note/patch-note-001.md`
+
 ## v001.77.0
 
 > 통합일: 2026-05-19
