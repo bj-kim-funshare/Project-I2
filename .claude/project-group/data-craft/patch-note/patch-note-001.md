@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.264.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119 (HOTFIX 2)
+
+### 개요
+
+마스터 보고: 행 선택 단계에는 현재 월에 행이 3개만 보이는데 실제 인쇄 캘린더 본문에는 그것보다 많은 행이 나옴. 근인은 `useCalendarPrint.collectEvents` 가 `dateColumns.forEach` 로 **모든** 날짜 컬럼을 iterate 하며 한 행을 컬럼 수만큼 중복 노출 + 행 선택 스텝이 보지 않는 컬럼(예: dualWidget) 의 행까지 포함시킨 것. 동시에 dualWidget 서브위젯 추출 / deadline JSON 처리 / `calendarEventParsers.parseDate` (로컬 자정 기준) 사용이 모두 누락되어 행 선택 스텝 / 캘린더 본체와 데이터 추출 방식이 분기되어 있었음. 본 핫픽스는 collectEvents 를 행 선택 스텝의 dateGroups 로직과 정합화하여 미스매치 해소.
+
+### 페이즈 결과
+
+- **Phase 4 (HOTFIX 2)** (`3fb4a90`):
+  - `useCalendarPrint.ts` collectEvents 전면 재작성 — `dateColumns[0]` 만 사용 (normal-168 정책, 캘린더 본체 + 행 선택 스텝과 동일).
+  - dualWidget 처리 추가 — `parseDualWidgetConfig` / `getDateSubWidgets` / `parseDualWidgetCellValue` 로 첫 date 서브위젯 값 추출 + `isDateTime` 판정.
+  - deadline JSON `{"date":"..."}` 형식 파싱 추가.
+  - 날짜 파서를 `parseDateValue` 에서 `calendarEventParsers.parseDate(value, isDateTime)` 로 교체 — 로컬 자정 기준 통일.
+  - `generateCalendarPrintHtml` 의 `dateColumns` 필터에 `dualWidget` 추가 — 이전엔 dualWidget-only 뷰어가 "날짜 컬럼이 설정되지 않았습니다" 로 렌더되던 회귀까지 동시 해소 (행 선택 스텝의 `getAutoDateColumnCandidates` 와 정합).
+  - `parseDateValue` 는 외부 test / `index.ts` 사용처 보존을 위해 export 유지 (collectEvents 내부 호출만 제거).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.ts`
+
+1 파일 / +63 / -25 / 단일 커밋.
+
+### lint
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 19 pre-existing warnings).
+
+### 후속 cleanup 후보 (본 핫픽스 scope 외)
+
+- `parseDateValue` 함수가 collectEvents 외 사용처는 `__tests__` 와 `features/print/index.ts` export 뿐 — 별도 cleanup 이슈에서 외부 사용 정리 후 함수 자체를 제거하는 것이 권장됨.
+
 ## v001.263.0
 
 > 통합일: 2026-05-19
