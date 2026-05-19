@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.260.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #117 (HOTFIX 1)
+
+### 개요
+
+플랜 #117 작업 종료 후 마스터가 "Unexpected Application Error! 404 Not Found 💿 Hey developer 👋" (React Router 기본 404 boundary) 노출 보고. 트리거 URL/액션은 미확보. 코드상 Phase 1–5 에서 추가한 navigate 타깃은 모두 `/m/*` 정합 — 구조적 버그 미발견. 방어형 핫픽스로 root `/` 라우트에 errorElement 부착해 최상위 미매칭 시 ScreenErrorBoundary 가 렌더되도록 변경 (와일드카드 catch-all 은 advisor 권고로 회피 — 트레드밀 패턴, 진단 신호 보존 우선).
+
+### 페이즈 결과
+
+- **Phase 6 (HOTFIX 1)** (`0332d9d`, 누적 1줄 추가):
+  - `apps/web/src/mobile/router.tsx`: root `/` 라우트에 `errorElement: <ScreenErrorBoundary />` 추가.
+  - 1차 시도(`29a633a`) 의 `/m/*` 및 root `*` 와일드카드 catch-all 두 줄은 advisor 권고에 따라 제거(`0332d9d`).
+  - 기존 `/m` parent 의 errorElement 는 그대로 — `/m/*` 하위 미매칭은 이미 ScreenErrorBoundary 가 잡고 있었음. 본 핫픽스는 root 레벨 미매칭 (예: `/foo`, `/`) 진입 시 동일한 한국어 boundary 가 렌더되도록 보강.
+
+### 영향 파일
+
+data-craft-mobile:
+- `apps/web/src/mobile/router.tsx`
+
+### 미해결 — 마스터 확인 필요
+
+- 트리거 URL/액션 미확보로 근본 원인은 미특정. 본 핫픽스는 root-레벨 미스매치 케이스 한정의 graceful UX. 재현 시 마스터가 어떤 화면/링크/버튼에서 노출됐는지 공유 요청 — 그 시점에 정확한 후속 핫픽스 가능.
+
 ## v001.259.0
 
 > 통합일: 2026-05-19
