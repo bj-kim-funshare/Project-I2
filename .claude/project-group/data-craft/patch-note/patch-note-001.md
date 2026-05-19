@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.201.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #108
+> Roadmap-1 단계3-C 관계 빌더 진입점 wiring 완료 — **모바일 첫 React Query 도입 인프라 milestone**.
+
+### 페이즈 결과 — Phase 1 (`5e5797c`)
+
+advisor 사전·완료 검증 PASS. 단일 phase 4 step 충족.
+
+- **`apps/web/src/mobile/components/AppHeader.tsx`** 의 Bot 아이콘 우측에 Network 아이콘 trigger 버튼 (44×44 hit target, `aria-label="관계 빌더"`) 추가. `useState<boolean>(false)` 로 `relationOpen` state 관리.
+- **`<QueryProvider>{<DesignerDialog isOpen onClose onSave selectedGroupId={null} onSelectGroup />}</QueryProvider>` 조건부 마운트** — `relationOpen` true 일 때만 트리에 출현. `fs-relation-builder-mobile` 의 self-contained hooks (`useSystemDataGroups` 등) 가 기존 `relation.ts` (`/api/relation/*`) 호출.
+- **QueryProvider 마운트 결정 = (A) 로컬 wrap**:
+  - 근거: 다른 모바일 패키지 (fs-data-link-mobile, fs-file-attachment-mobile 등) 영향 최소화 + dialog close 시 QueryClient 도 함께 소멸 (메모리·상태 격리).
+  - 본 plan 이 **모바일 앱의 첫 React Query 도입** — 향후 3-D 또는 다른 패키지가 hooks 도입 시 (B) 전역 mount 로 재검토 가능.
+- **데스크탑 패턴 미러**: `data-craft/src/widgets/header/ui/AppHeader.tsx:122` 의 DesignerDialog + `DesignModeToolbar.onDesignerDialogOpen` 패턴을 모바일에 동치 적용 (모바일은 toolbar 없이 헤더 버튼 직결).
+- **테스트 갱신** (`__tests__/AppHeader.test.tsx`): 기존 3-B 데이터 링크 회귀 유지 + 신규 관계 빌더 trigger 클릭 / dialog 열림 / 44×44 hit-target 3 케이스. `vi.mock('@dcm/fs-relation-builder-mobile')` 에 QueryProvider 패스스루 stub 포함 — 테스트 환경에서 실 QueryClientProvider 미마운트.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `apps/web/src/mobile/components/AppHeader.tsx`
+  - `apps/web/src/mobile/components/__tests__/AppHeader.test.tsx`
+
+### 회귀 검증
+
+- `pnpm typecheck` (data-craft-mobile WIP A 워크트리) PASS (exit 0, 0 errors).
+- advisor #1 (계획) / advisor #2 (완료) 모두 5관점 PASS.
+
+### Roadmap-1 진행 영향
+
+- 단계3-C `/plan-enterprise data-craft 단계3-C` 가 🟢 (모바일에서 관계 빌더 다이얼로그 진입 가능) 갱신 가능.
+- 병렬 그룹 2 의 동기 단계 (3-D 파일첨부) 진입 가능.
+- **3-D 진입 전 검토 사항**: AppHeader 우측 아이콘이 Bot (3-B) + Network (3-C) + Bell = 3개로 증가. 3-D 가 또 다른 trigger 를 직접 추가하면 4개로 빽빽해짐 — 메뉴 그룹화 또는 다른 진입점 검토 권장.
+
+### 후속 권장 작업 (선택 — 기능 동작은 정상)
+
+- **QueryProvider (A) 로컬 wrap 검증**: DesignerDialog 내부 훅이 마운트 시점에 무조건 QueryClient 필요한 경우 (A) 가 불충분할 수 있음 — 실 사용 검증 후 (B) 전역 마운트 전환 가능.
+- **DesignerDialog 80vw × 90vh 데스크탑 스타일**: 모바일에서 비좁음 — 3-B 와 동일 시각 보강 권장.
+- **권한 게이트 v1 미적용**: `SessionState` 권한 필드 부재로 인증 사용자 전원 노출 — 3-B 와 동형 후속 보강.
+
+### BE/DB 영향
+
+- 0 (Roadmap-1 hard rule 준수). fs-relation-builder-mobile 내부 호출은 기존 `/api/relation/*` 엔드포인트.
+
 ## v001.200.0
 
 > 통합일: 2026-05-18
