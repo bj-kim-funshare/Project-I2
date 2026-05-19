@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.239.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 6)
+> 폼 데이터 그룹이 외부 탭에서 노출되던 현상 픽스. `__wdata_*` 패턴 그룹은 `getExternalGroupList()` 응답 안에 섞여 들어와 `groupType: 'external'` 유지하기 때문에 외부 탭에 분류되고 있었음. `ConnectionGroupItem` 에 `isForm?: boolean` 마커 도입 + `connectionCallbacks.ts` 의 `resolveFormGroupNames` 가 패턴 매칭 시 `isForm: true` 세팅하도록 변경 + `RowLinkConfigDialog` 필터 분기 정정.
+
+### 핫픽스 결과 — 1 phase (`9def0ca`)
+
+- `ConnectionGroupItem.isForm?: boolean` 마커 추가 (3개 viewer 패키지 동일 — fs-data-viewer / fs-sub-data-viewer / fs-external-data-viewer).
+- `connectionCallbacks.resolveFormGroupNames`: `SETTINGS_FORM_PATTERN` / `WIDGET_DATA_PATTERN` 매칭 시 반환 객체에 `isForm: true` 추가. 리네임 실패해도 마커는 유지.
+- `RowLinkConfigDialog` 필터:
+  - 폼 탭: `isForm === true` 만 노출.
+  - 그 외 탭: `isForm === true` 그룹은 제외 + `groupType === activeGroupTab` 매칭.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/entities/connection/types.ts`
+  - `packages/fs-sub-data-viewer/src/entities/connection/types.ts`
+  - `packages/fs-external-data-viewer/src/entities/connection/types.ts`
+  - `src/features/viewer/lib/connectionCallbacks.ts`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx`
+
+### 검증
+
+- typecheck + lint PASS (0 errors).
+- sub/external dist 재빌드 완료.
+
 ## v001.238.0
 
 > 통합일: 2026-05-19
