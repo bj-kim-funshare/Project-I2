@@ -868,10 +868,8 @@ function formatDurationSec(sec) {
 }
 
 function formatTokensCompact(n) {
-  if (!n || n <= 0) return '0';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
-  return String(n);
+  if (!n || n <= 0) return '0.00M';
+  return `${(n / 1_000_000).toFixed(2)}M`;
 }
 
 function skillColor(name) {
@@ -924,34 +922,16 @@ function renderSkillInvPager(containerId, page, totalPages) {
     if (__skillInvPage > 1) { __skillInvPage--; renderSkillInvocations(); }
   });
   el.querySelector('[data-inv-next]')?.addEventListener('click', () => {
-    const tp = Math.ceil(__skillInvData.length / SKILL_INV_PAGE_SIZE) || 1;
+    const completed = __skillInvData.filter(w => w.close_reason !== 'in_progress');
+    const tp = Math.ceil(completed.length / SKILL_INV_PAGE_SIZE) || 1;
     if (__skillInvPage < tp) { __skillInvPage++; renderSkillInvocations(); }
   });
 }
 
-function renderSkillInvocations() {
-  const tableWrap = document.getElementById('skill-invocations-table');
-  if (!tableWrap) return;
-
-  const total = __skillInvData.length;
-  const totalPages = total > 0 ? Math.ceil(total / SKILL_INV_PAGE_SIZE) : 1;
-  if (__skillInvPage > totalPages) __skillInvPage = totalPages;
-  if (__skillInvPage < 1) __skillInvPage = 1;
-
-  renderSkillInvPager('skill-invocations-pager', __skillInvPage, total > 0 ? totalPages : 0);
-  renderSkillInvPager('skill-invocations-pager-bottom', __skillInvPage, total > 0 ? totalPages : 0);
-
-  if (total === 0) {
-    tableWrap.innerHTML = '<p style="padding:12px;color:var(--muted)">데이터 없음</p>';
-    return;
-  }
-
-  const start = (__skillInvPage - 1) * SKILL_INV_PAGE_SIZE;
-  const slice = __skillInvData.slice(start, start + SKILL_INV_PAGE_SIZE);
-
-  // Compute per-column max for proportional bars (current page only)
+function buildInvTableRows(items, artifactCellFn, tokCellFn, extraRowClass) {
+  if (!items.length) return '';
   let maxTotalUsage = 0, maxTotalCache = 0, maxMainUsage = 0, maxMainCache = 0;
-  slice.forEach(w => {
+  items.forEach(({ w }) => {
     const t = w.total || {};
     const m = w.main_session || {};
     maxTotalUsage = Math.max(maxTotalUsage, (t.input || 0) + (t.output || 0));
@@ -959,25 +939,8 @@ function renderSkillInvocations() {
     maxMainUsage = Math.max(maxMainUsage, (m.input || 0) + (m.output || 0));
     maxMainCache = Math.max(maxMainCache, (m.cache_creation_5m || 0) + (m.cache_creation_1h || 0) + (m.cache_read || 0));
   });
-
-  function tokCell(val, colMax, cssClass) {
-    const pct = colMax > 0 ? Math.round((val / colMax) * 100) : 0;
-    return `<div class="tok-cell ${cssClass}"><span class="tok-num">${formatTokensCompact(val)}</span><div class="tok-bar"><div class="tok-bar-fill" style="width:${pct}%"></div></div></div>`;
-  }
-
-  function artifactCell(kind, id) {
-    if (!kind || kind === 'none' || !id || id === '-') return '—';
-    const kindMap = { issue: 'art-issue', 'patch-note': 'art-doc', roadmap: 'art-doc' };
-    const cls = kindMap[kind] || 'art-doc';
-    return `<span class="art-tag ${cls}">${escapeHtml(id)}</span>`;
-  }
-
-  const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 사용', '총 캐시', '메인 사용', '메인 캐시', '서브에이전트'];
-  const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
-
-  const rows = slice.map((w, localIdx) => {
-    const globalIdx = start + localIdx;
-    const zebraClass = localIdx % 2 === 1 ? ' row-odd' : '';
+  return items.map(({ w, i }, localIdx) => {
+    const zebraClass = extraRowClass || (localIdx % 2 === 1 ? ' row-odd' : '');
     const startTs = formatStartTimestamp(w.start_timestamp);
     const durSec = w.duration_sec || 0;
     const durText = formatDurationSec(durSec);
@@ -987,14 +950,12 @@ function renderSkillInvocations() {
     const titleFull = w.title_prompt || '';
     const titleTrunc = titleFull.length > 70 ? titleFull.slice(0, 70) + '…' : titleFull;
     const titleAttr = escapeHtml(titleFull);
-
     const totalRec = w.total || {};
     const mainRec = w.main_session || {};
     const totalUsageVal = (totalRec.input || 0) + (totalRec.output || 0);
     const totalCacheVal = (totalRec.cache_creation_5m || 0) + (totalRec.cache_creation_1h || 0) + (totalRec.cache_read || 0);
     const mainUsageVal = (mainRec.input || 0) + (mainRec.output || 0);
     const mainCacheVal = (mainRec.cache_creation_5m || 0) + (mainRec.cache_creation_1h || 0) + (mainRec.cache_read || 0);
-
     const agentMap = w.by_agent || {};
     const agentKeys = Object.keys(agentMap);
     let agentsCell;
@@ -1009,20 +970,94 @@ function renderSkillInvocations() {
         return `<span class="agent-pill" style="--agent-hue:${aHue}">${escapeHtml(name)} <span class="agent-tok">${usage}/${cache}</span></span>`;
       }).join(' ');
     }
-
-    return `<tr data-window-index="${globalIdx}" class="${zebraClass}">
+    return `<tr data-window-index="${i}" class="${zebraClass}">
       <td>${startTs}</td>
       <td><span class="dur-pip dur-bucket-${bucket}"></span>${durText}</td>
       <td><span class="skill-chip" style="--skill-hue:${hue}">${escapeHtml(skillName)}</span></td>
       <td class="title-cell" title="${titleAttr}">${escapeHtml(titleTrunc)}</td>
-      <td>${artifactCell(w.artifact_kind, w.artifact_id)}</td>
-      <td>${tokCell(totalUsageVal, maxTotalUsage, 'tok-total-usage')}</td>
-      <td>${tokCell(totalCacheVal, maxTotalCache, 'tok-total-cache')}</td>
-      <td>${tokCell(mainUsageVal, maxMainUsage, 'tok-main-usage')}</td>
-      <td>${tokCell(mainCacheVal, maxMainCache, 'tok-main-cache')}</td>
+      <td>${artifactCellFn(w.artifact_kind, w.artifact_id)}</td>
+      <td>${tokCellFn(totalUsageVal, maxTotalUsage, 'tok-total-usage')}</td>
+      <td>${tokCellFn(totalCacheVal, maxTotalCache, 'tok-total-cache')}</td>
+      <td>${tokCellFn(mainUsageVal, maxMainUsage, 'tok-main-usage')}</td>
+      <td>${tokCellFn(mainCacheVal, maxMainCache, 'tok-main-cache')}</td>
       <td class="agents-cell">${agentsCell}</td>
     </tr>`;
   }).join('');
+}
+
+function renderSkillInvocations() {
+  const tableWrap = document.getElementById('skill-invocations-table');
+  if (!tableWrap) return;
+
+  const allItems = __skillInvData.map((w, i) => ({ w, i }));
+  const inprogItems = allItems.filter(x => x.w.close_reason === 'in_progress');
+  const completedItems = allItems.filter(x => x.w.close_reason !== 'in_progress');
+
+  // Render in-progress section
+  const ipSection = document.getElementById('skill-inv-inprogress');
+  if (ipSection) {
+    if (inprogItems.length === 0) {
+      ipSection.hidden = true;
+      ipSection.innerHTML = '';
+    } else {
+      ipSection.hidden = false;
+      function artifactCellFn(kind, id) {
+        if (!kind || kind === 'none' || !id || id === '-') return '—';
+        const kindMap = { issue: 'art-issue', 'patch-note': 'art-doc', roadmap: 'art-doc' };
+        const cls = kindMap[kind] || 'art-doc';
+        return `<span class="art-tag ${cls}">${escapeHtml(id)}</span>`;
+      }
+      function tokCellFn(val, colMax, cssClass) {
+        const pct = colMax > 0 ? Math.round((val / colMax) * 100) : 0;
+        return `<div class="tok-cell ${cssClass}"><span class="tok-num">${formatTokensCompact(val)}</span><div class="tok-bar"><div class="tok-bar-fill" style="width:${pct}%"></div></div></div>`;
+      }
+      const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 사용', '총 캐시', '메인 사용', '메인 캐시', '서브에이전트'];
+      const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+      const rows = buildInvTableRows(inprogItems, artifactCellFn, tokCellFn, 'row-inprogress');
+      ipSection.innerHTML = `
+        <div class="skill-inv-inprogress-heading">🔴 진행 중인 호출 (실시간 부분 집계)</div>
+        <div class="table-wrap"><table class="skill-inv-table">${thead}<tbody>${rows}</tbody></table></div>
+      `;
+      ipSection.querySelectorAll('tr[data-window-index]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const idx = parseInt(tr.getAttribute('data-window-index'), 10);
+          openSkillInvocationModal(idx);
+        });
+      });
+    }
+  }
+
+  const total = completedItems.length;
+  const totalPages = total > 0 ? Math.ceil(total / SKILL_INV_PAGE_SIZE) : 1;
+  if (__skillInvPage > totalPages) __skillInvPage = totalPages;
+  if (__skillInvPage < 1) __skillInvPage = 1;
+
+  renderSkillInvPager('skill-invocations-pager', __skillInvPage, total > 0 ? totalPages : 0);
+  renderSkillInvPager('skill-invocations-pager-bottom', __skillInvPage, total > 0 ? totalPages : 0);
+
+  if (total === 0) {
+    tableWrap.innerHTML = '<p style="padding:12px;color:var(--muted)">데이터 없음</p>';
+    return;
+  }
+
+  const start = (__skillInvPage - 1) * SKILL_INV_PAGE_SIZE;
+  const slice = completedItems.slice(start, start + SKILL_INV_PAGE_SIZE);
+
+  function artifactCell(kind, id) {
+    if (!kind || kind === 'none' || !id || id === '-') return '—';
+    const kindMap = { issue: 'art-issue', 'patch-note': 'art-doc', roadmap: 'art-doc' };
+    const cls = kindMap[kind] || 'art-doc';
+    return `<span class="art-tag ${cls}">${escapeHtml(id)}</span>`;
+  }
+
+  function tokCell(val, colMax, cssClass) {
+    const pct = colMax > 0 ? Math.round((val / colMax) * 100) : 0;
+    return `<div class="tok-cell ${cssClass}"><span class="tok-num">${formatTokensCompact(val)}</span><div class="tok-bar"><div class="tok-bar-fill" style="width:${pct}%"></div></div></div>`;
+  }
+
+  const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 사용', '총 캐시', '메인 사용', '메인 캐시', '서브에이전트'];
+  const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+  const rows = buildInvTableRows(slice, artifactCell, tokCell, null);
 
   tableWrap.innerHTML = `<table class="skill-inv-table">${thead}<tbody>${rows}</tbody></table>`;
 
@@ -1043,20 +1078,71 @@ function openSkillInvocationModal(idx) {
   const body = modal.querySelector('.modal-body');
   if (!body) return;
 
-  function fmtTokenRow(rec) {
-    if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
-    return [
-      rec.messages, rec.input, rec.output,
-      rec.cache_creation_5m, rec.cache_creation_1h, rec.cache_read,
-      (rec.cost_usd != null ? `$${rec.cost_usd.toFixed(4)}` : '—'),
-    ].map(v => `<td>${v != null ? fmtNum(v) : '—'}</td>`).join('');
-  }
+  const closeReasonLabels = {
+    explicit: '명시 종료',
+    plain_prompt: '일반 프롬프트',
+    next_skill: '다음 스킬',
+    attribution_drop: 'attribution 변경',
+    session_end: '세션 종료',
+    in_progress: '🔴 진행 중',
+  };
+  const closeReason = w.close_reason || 'session_end';
+  const closeLabel = closeReasonLabels[closeReason] || escapeHtml(closeReason);
 
-  function fmtCostCell(rec) {
-    if (!rec || rec.cost_usd == null) return '<td>—</td>';
-    return `<td>$${rec.cost_usd.toFixed(4)}</td>`;
-  }
+  const skillName = w.skill || '—';
+  const hue = skillColor(skillName);
+  const artifactKind = w.artifact_kind || 'none';
+  const artifactId = w.artifact_id || '-';
 
+  const kindMap = { issue: 'art-issue', 'patch-note': 'art-doc', roadmap: 'art-doc' };
+  const artCls = kindMap[artifactKind] || 'art-doc';
+  const artTag = (artifactKind !== 'none' && artifactId !== '-')
+    ? `<span class="art-tag ${artCls}">${escapeHtml(artifactId)}</span>`
+    : '';
+
+  // Stat values
+  const totalRec = w.total || {};
+  const totalUsage = (totalRec.input || 0) + (totalRec.output || 0);
+  const totalCache = (totalRec.cache_creation_5m || 0) + (totalRec.cache_creation_1h || 0) + (totalRec.cache_read || 0);
+  const totalCost = totalRec.cost_usd != null ? totalRec.cost_usd : 0;
+  const durSec = w.duration_sec || 0;
+
+  const startShort = (w.start_timestamp || '').replace('T', ' ').replace(/\..+/, '').replace(/Z$/, '');
+  const endShort = (w.end_timestamp || '').replace('T', ' ').replace(/\..+/, '').replace(/Z$/, '');
+
+  // Channel bar data
+  const chInput = totalRec.input || 0;
+  const chOutput = totalRec.output || 0;
+  const ch5m = totalRec.cache_creation_5m || 0;
+  const ch1h = totalRec.cache_creation_1h || 0;
+  const chRead = totalRec.cache_read || 0;
+  const chTotal = chInput + chOutput + ch5m + ch1h + chRead;
+  function pctW(v) { return chTotal > 0 ? ((v / chTotal) * 100).toFixed(1) : '0'; }
+  const channelColors = {
+    input: '#3b82f6',
+    output: '#60a5fa',
+    cache_5m: '#a855f7',
+    cache_1h: '#7c3aed',
+    cache_read: '#c084fc',
+  };
+  const channelBar = `
+    <div class="channel-bar">
+      <div class="channel-seg" style="width:${pctW(chInput)}%;background:${channelColors.input}" title="input ${fmtNum(chInput)}"></div>
+      <div class="channel-seg" style="width:${pctW(chOutput)}%;background:${channelColors.output}" title="output ${fmtNum(chOutput)}"></div>
+      <div class="channel-seg" style="width:${pctW(ch5m)}%;background:${channelColors.cache_5m}" title="cache_write_5m ${fmtNum(ch5m)}"></div>
+      <div class="channel-seg" style="width:${pctW(ch1h)}%;background:${channelColors.cache_1h}" title="cache_write_1h ${fmtNum(ch1h)}"></div>
+      <div class="channel-seg" style="width:${pctW(chRead)}%;background:${channelColors.cache_read}" title="cache_read ${fmtNum(chRead)}"></div>
+    </div>
+    <div class="channel-legend">
+      <span class="channel-legend-chip" style="--ch-color:${channelColors.input}">input</span>
+      <span class="channel-legend-chip" style="--ch-color:${channelColors.output}">output</span>
+      <span class="channel-legend-chip" style="--ch-color:${channelColors.cache_5m}">cache_5m</span>
+      <span class="channel-legend-chip" style="--ch-color:${channelColors.cache_1h}">cache_1h</span>
+      <span class="channel-legend-chip" style="--ch-color:${channelColors.cache_read}">cache_read</span>
+    </div>
+  `;
+
+  // Per-channel table rows
   function tokenCells(rec) {
     if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
     const usageSum = (rec.input || 0) + (rec.output || 0);
@@ -1069,36 +1155,73 @@ function openSkillInvocationModal(idx) {
       rec.cache_creation_1h != null ? fmtNum(rec.cache_creation_1h) : '—',
       rec.cache_read != null ? fmtNum(rec.cache_read) : '—',
       rec.cost_usd != null ? `$${rec.cost_usd.toFixed(4)}` : '—',
-      fmtNum(usageSum),
-      fmtNum(cacheSum),
+      formatTokensCompact(usageSum),
+      formatTokensCompact(cacheSum),
     ].map(v => `<td>${v}</td>`).join('');
   }
 
   const agentMap = w.by_agent || {};
   const agentRows = Object.entries(agentMap).map(([name, rec]) => {
-    return `<tr><td>${escapeHtml(name)}</td>${tokenCells(rec)}</tr>`;
+    const aHue = skillColor(name);
+    return `<tr><td><span class="skill-chip" style="--skill-hue:${aHue}">${escapeHtml(name)}</span></td>${tokenCells(rec)}</tr>`;
   }).join('');
 
+  const lastSeenRow = w.last_seen_timestamp
+    ? `<div><dt>마지막 활동</dt><dd>${escapeHtml(w.last_seen_timestamp)}</dd></div>`
+    : '';
+
   body.innerHTML = `
-    <h3 style="margin:0 0 6px">${escapeHtml(w.skill || '—')}</h3>
-    <p class="modal-title-prompt">${escapeHtml(w.title_prompt || '')}</p>
-    <dl>
-      <dt>세션</dt><dd>${escapeHtml(w.session_id || '—')}</dd>
-      <dt>시작</dt><dd>${escapeHtml(w.start_timestamp || '—')}</dd>
-      <dt>종료</dt><dd>${escapeHtml(w.end_timestamp || '—')}</dd>
-      <dt>소요</dt><dd>${formatDurationSec(w.duration_sec)}</dd>
-      <dt>종료 사유</dt><dd>${escapeHtml(w.close_reason || '—')}</dd>
-      <dt>생성물</dt><dd>${escapeHtml(w.artifact_kind || '—')} / ${escapeHtml(w.artifact_id || '—')}</dd>
-    </dl>
-    <h4 style="margin:12px 0 4px">토큰 분해</h4>
+    <div class="modal-hero">
+      <span class="skill-chip skill-chip-hue" style="--skill-hue:${hue}">${escapeHtml(skillName)}</span>
+      ${artTag}
+      <span class="modal-close-reason close-${escapeHtml(closeReason)}">${closeLabel}</span>
+    </div>
+    <pre class="modal-title-prompt">${escapeHtml(w.title_prompt || '')}</pre>
+
+    <div class="modal-stats">
+      <div class="stat-card stat-usage">
+        <div class="stat-label">총 사용 토큰</div>
+        <div class="stat-value">${formatTokensCompact(totalUsage)}</div>
+        <div class="stat-sub">${fmtNum(totalUsage)} 개</div>
+      </div>
+      <div class="stat-card stat-cache">
+        <div class="stat-label">총 캐시 토큰</div>
+        <div class="stat-value">${formatTokensCompact(totalCache)}</div>
+        <div class="stat-sub">${fmtNum(totalCache)} 개</div>
+      </div>
+      <div class="stat-card stat-duration">
+        <div class="stat-label">소요 시간</div>
+        <div class="stat-value">${formatDurationSec(durSec)}</div>
+        <div class="stat-sub">${escapeHtml(startShort)} → ${escapeHtml(endShort)}</div>
+      </div>
+      <div class="stat-card stat-cost">
+        <div class="stat-label">추정 비용</div>
+        <div class="stat-value">$${totalCost.toFixed(4)}</div>
+      </div>
+    </div>
+
+    ${channelBar}
+
+    <h4 style="margin:12px 0 4px;font-size:12px;color:var(--muted)">토큰 채널 분해</h4>
     <table class="modal-token-table">
       <thead><tr><th>채널</th><th>messages</th><th>input</th><th>output</th><th>cache_5m</th><th>cache_1h</th><th>cache_read</th><th>cost</th><th>사용 합</th><th>캐시 합</th></tr></thead>
       <tbody>
-        <tr><td>총합</td>${tokenCells(w.total)}</tr>
+        <tr class="modal-row-total"><td>총합</td>${tokenCells(w.total)}</tr>
         <tr><td>메인 세션</td>${tokenCells(w.main_session)}</tr>
         ${agentRows}
       </tbody>
     </table>
+
+    <details class="modal-session-footer">
+      <summary>세션 메타</summary>
+      <dl class="modal-session-dl">
+        <div><dt>세션 ID</dt><dd>${escapeHtml(w.session_id || '—')}</dd></div>
+        <div><dt>시작</dt><dd>${escapeHtml(w.start_timestamp || '—')}</dd></div>
+        <div><dt>종료</dt><dd>${escapeHtml(w.end_timestamp || '—')}</dd></div>
+        <div><dt>종료 사유</dt><dd>${closeLabel}</dd></div>
+        ${lastSeenRow}
+      </dl>
+    </details>
   `;
 
   modal.classList.remove('hidden');

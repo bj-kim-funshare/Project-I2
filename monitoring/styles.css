@@ -670,16 +670,165 @@ i { color: var(--muted); }
 }
 .agent-tok { color: rgba(255,255,255,0.55); font-size: 0.9em; }
 
+/* ================= SKILL INVOCATIONS — IN-PROGRESS SECTION ================= */
+.skill-inv-inprogress-section {
+  margin-bottom: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.skill-inv-inprogress-heading {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.25);
+}
+.skill-inv-table tr.row-inprogress {
+  background: rgba(239, 68, 68, 0.06);
+  border-left: 3px solid var(--danger);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+.skill-inv-table tr.row-inprogress:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+@keyframes pulse-border {
+  0%, 100% { border-left-color: var(--danger); }
+  50% { border-left-color: rgba(239, 68, 68, 0.3); }
+}
+
 /* ================= MODAL ================= */
 .modal { position: fixed; inset: 0; z-index: 9999; }
 .modal.hidden { display: none; }
 .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
-.modal-content { position: relative; max-width: 720px; max-height: 80vh; overflow: auto; margin: 5vh auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius); }
+.modal-content { position: relative; max-width: 760px; max-height: 85vh; overflow: auto; margin: 5vh auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius); }
 .modal-close { position: absolute; top: 6px; right: 10px; background: transparent; color: var(--muted); border: none; font-size: 22px; cursor: pointer; }
-.modal-body dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
-.modal-body dt { color: var(--muted); }
-.modal-body .modal-title-prompt { color: var(--text); white-space: pre-wrap; background: var(--surface-2); padding: 8px; border-left: 3px solid var(--border); margin: 4px 0 8px; font-size: 0.9em; }
+.modal-body .modal-title-prompt { color: var(--text); white-space: pre-wrap; background: var(--surface-2); padding: 8px; border-left: 3px solid var(--border); margin: 8px 0; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; }
 .modal-token-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85em; }
 .modal-token-table th, .modal-token-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: right; color: var(--text); }
 .modal-token-table th { background: var(--surface-2); color: var(--muted); }
 .modal-token-table th:first-child, .modal-token-table td:first-child { text-align: left; }
+.modal-token-table tbody tr:nth-child(even) { background: var(--surface-2); }
+.modal-token-table tbody tr.modal-row-total { font-weight: 700; background: var(--surface-3); }
+
+/* Modal hero */
+.modal-hero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.modal-close-reason {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+.close-explicit { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.35); }
+.close-plain_prompt { background: rgba(139,147,167,0.15); color: var(--muted); border: 1px solid var(--border); }
+.close-next_skill { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.35); }
+.close-attribution_drop { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
+.close-session_end { background: rgba(139,147,167,0.12); color: var(--muted); border: 1px solid var(--border); }
+.close-in_progress {
+  background: rgba(239,68,68,0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.4);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+/* Stat strip */
+.modal-stats {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+.stat-card {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-card.stat-usage { border-top: 3px solid #3b82f6; }
+.stat-card.stat-cache { border-top: 3px solid #f59e0b; }
+.stat-card.stat-duration { border-top: 3px solid #10b981; }
+.stat-card.stat-cost { border-top: 3px solid #facc15; }
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.stat-sub { font-size: 11px; color: var(--muted); }
+
+/* Channel bar */
+.channel-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface-3);
+  margin: 8px 0 4px;
+}
+.channel-seg { height: 100%; min-width: 1px; }
+.channel-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.channel-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text);
+}
+.channel-legend-chip::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--ch-color);
+  flex-shrink: 0;
+}
+
+/* Session footer */
+.modal-session-footer {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.modal-session-footer summary {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  background: var(--surface-2);
+  list-style: none;
+  user-select: none;
+}
+.modal-session-footer summary::-webkit-details-marker { display: none; }
+.modal-session-footer summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--accent-2);
+  transition: transform 0.15s;
+}
+.modal-session-footer[open] summary::before { transform: rotate(90deg); }
+.modal-session-dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+.modal-session-dl > div { display: flex; gap: 6px; }
+.modal-session-dl dt { color: var(--muted); white-space: nowrap; }
+.modal-session-dl dd { margin: 0; color: var(--text); word-break: break-all; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
