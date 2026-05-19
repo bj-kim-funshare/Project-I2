@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.251.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 27)
+
+### 개요
+
+마스터 보고 (이미지): "여전히 정렬 안맞는데? 괄호가 더 내려가 있잖아". HOTFIX 26 의 `vertical-align: middle` 은 부모 폰트의 x-height middle 기준이라 14pt 제목 + 10pt 부제 간 baseline 어긋남. flex container + `align-items: baseline` 으로 baseline 일치.
+
+### 페이즈 결과
+
+- **Phase 35 (HOTFIX 27)** (`113f33a`):
+  - `.aggregation-summary-title` 에 `display: flex; align-items: baseline; justify-content: center; gap: 6px` 추가. `text-align: center` 제거 (flex 정렬로 대체).
+  - `.aggregation-summary-count` 의 `margin-left: 6px` (gap 으로 대체) + `vertical-align: middle` (align-items baseline 으로 대체) 제거.
+  - flex baseline 정렬로 두 텍스트의 실제 baseline 일치 → 시각적 어긋남 해소.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +4 / -3 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings).
+
 ## v001.250.0
 
 > 통합일: 2026-05-19
