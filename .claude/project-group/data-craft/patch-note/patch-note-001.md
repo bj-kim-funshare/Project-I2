@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.216.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #110
+
+### 페이즈 결과
+- **Phase 1**: AI 비서 버튼 표시 위치를 영구 토글 모델로 전환. `useFabStore` 의 `hiddenDate` (날짜 기반 일회성 가리기) 를 `displayMode: 'floating' | 'header'` 로 교체하고 `hideForToday`/`restore` 액션을 `pinToHeader`/`unpinToFloating` 으로 대체. 모달 하단 버튼은 현재 모드에 따라 "헤더에서 표기하기" / "플로팅으로 표시하기" 로 조건부 렌더링. 헤더 아이콘 클릭 시 자동 플로팅 복귀 (`restore`) 가 제거되어 헤더 모드 유지하면서 모달만 열림. `getTodayString` 헬퍼와 날짜 비교 로직 전체 제거. localStorage 키 `dc_fab` 유지 (`partialize` 항목만 `displayMode` 로 교체) — 기존 사용자의 잔존 `{hiddenDate}` 는 zustand persist 기본 머지로 누락 필드가 `initialState.displayMode = 'floating'` 으로 자연 폴백.
+
+### 영향 파일
+- `data-craft`:
+  - `src/entities/fab/model/fabStore.ts`
+  - `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx`
+  - `src/widgets/header/ui/HeaderAIIconButton.tsx`
+
+### 번호 재할당 사유
+- 본 플랜 최초 작성 시점 (`origin/plan-enterprise-110-ai-floating-toggle-문서` `dbe0a54`) 에는 v001.214.0 으로 매겼으나, 머지 직전 `#105 hotfix 3` 머지가 다른 세션에서 양측 보존으로 마무리되며 v001.214.0/v001.215.0 자리를 점유 → 본 플랜은 다음 마이너 v001.216.0 으로 재할당. 기존 `dbe0a54` 브랜치는 origin 보존 (감사 흔적), 신규 작성은 본 `-문서-v2` 브랜치.
+
 ## v001.215.0
 
 > 통합일: 2026-05-19
