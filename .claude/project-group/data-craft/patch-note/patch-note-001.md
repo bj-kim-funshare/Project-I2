@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.233.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 22)
+
+### 개요
+
+마스터 보고: "빈 페이지는 없지만 여전히 날짜가 표와 겹쳐짐, 겹쳐지는 행은 다음 페이지로 넘어가는게 정상이야". HOTFIX 21 의 `.print-content padding-bottom` 은 *전체 콘텐츠 끝* 에만 작용 — *중간 페이지* 의 행이 fixed-position 푸터와 겹치는 것 미해결. advisor 권고로 `@page margin-bottom` + `tr break-inside avoid` 페이지 단위 fix.
+
+### 페이즈 결과
+
+- **Phase 30 (HOTFIX 22)** (`068a026`): `printStyleGenerator.ts` 의 2가지 CSS 변경.
+  - **`@page` margin-bottom 보강**: `margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm` → `${margins.bottom + 10}mm`. footer 영역 reserve. 인쇄 엔진이 content area 에서 footer 공간 제외.
+  - **`table tr { page-break-inside: avoid; break-inside: avoid }`**: 페이지 끝 행이 footer 영역에 들어가지 않고 자연스럽게 다음 페이지로 이동. modern `break-inside` + legacy `page-break-inside` 이중 emit.
+  - HOTFIX 21 의 `.print-content padding-bottom` 은 마지막 페이지 안전망으로 유지.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +6 / -1 / 단일 커밋.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — `@page margin-bottom` 보강이 메인 fix, `tr break-inside avoid` 보조. HOTFIX 21 padding-bottom 은 마지막 페이지 안전망으로 유지 권고.
+- **lint**: PASS (0 errors, 17 warnings).
+
 ## v001.232.0
 
 > 통합일: 2026-05-19
