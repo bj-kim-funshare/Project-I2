@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.245.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 13)
+
+### 핫픽스 결과 — 결제 비밀번호 변경 시 기존 verify 선행
+
+마스터: "결제 비밀번호 변경은 기존 비밀번호 먼저 입력 받아서 일치하면 할 수 있게 해". 케밥 메뉴 "결제 비밀번호 변경" 옵션이 검증 없이 바로 setup (덮어쓰기) 진입하던 보안 결함 해소.
+
+### Phase 30 (FE, `4a7cbe3`)
+
+- `CardInfoSection.tsx`: 케밥 메뉴 "결제 비밀번호 변경" 핸들러 재설계.
+  1. `existsPaymentPassword()` 호출로 기존 설정 여부 확인.
+  2. 설정 상태 → **PaymentPasswordInputDialog (verify 모드)** 우선 노출 → verify 성공 시 PaymentPasswordSetupStep 진입.
+  3. 미설정 → verify 단계 skip, 곧바로 setup.
+- state machine: `passwordChangeStep: 'idle' | 'verify' | 'setup'`.
+- 중복 클릭 방지 (`isCheckingPassword`) + API 실패 toast.
+- 카드 등록/변경 BillingSuccessPage 흐름은 무영향 (덮어쓰기 정상).
+
+### 영향 파일
+
+**data-craft**:
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.244.0
 
 > 통합일: 2026-05-19
