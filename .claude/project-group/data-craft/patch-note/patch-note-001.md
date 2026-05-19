@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.253.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #116 (HOTFIX 1)
+
+### 개요
+
+v001.252.0 (Phase 1) 의 루트 `package.json` `"dev": "pnpm --filter ./apps/web dev"` 위임이 **dev 서버 기동을 실제로 망가뜨림**. 마스터 보고: `pnpm dev` 가 5174 에서 listen 은 했으나 Vite dependency scan 단계에서 다수 import 해결 실패 — `apps/web/vite.config.ts` 에 `'@'` alias 가 없고 (`@/widgets/...`, `@/entities/...`, `@/shared/...` 등 fs-*-mobile 패키지 내부 import 해결 불가), 다수 외부 deps (`@dnd-kit/*`, `@tanstack/react-query`, `framer-motion`, `jspdf`, `pdf-lib`, `@blocknote/*` 등) 가 `apps/web/package.json` 에 미선언. 즉 루트 `index.html` + 루트 `vite.config.ts` (alias 완비) 가 원래의 실제 dev 진입점이었음을 Phase 1 단계에서 검증하지 못했음.
+
+해결: 루트 `dev` 스크립트를 `"vite"` 로 되돌리고, 루트 `vite.config.ts` 에 `server: { port: 5174, strictPort: true }` 를 추가하여 원 dev 경로 (루트 index.html + 루트 vite.config) 를 유지하면서 포트만 5174 로 강제. v001.252.0 의 `apps/web/vite.config.ts strictPort:true` 는 그대로 보존 (apps/web 단독 실행 경우의 안전망).
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1)** (`d77b809`):
+  - `package.json`: `"dev": "pnpm --filter ./apps/web dev"` → `"dev": "vite"` 로 되돌림 (v001.252.0 의 위임 변경 reverter).
+  - `vite.config.ts` (루트): `defineConfig` 객체에 `server: { port: 5174, strictPort: true }` 한 줄 추가.
+  - 결합 효과: 루트 `pnpm dev` 가 원래의 alias-완비 진입점으로 기동하면서 반드시 5174 에서 listen 하거나 `EADDRINUSE` 로 명시적 실패.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `package.json`
+  - `vite.config.ts`
+
+2 파일 / +2 / -1 / 단일 커밋.
+
+### lint
+
+- PASS (pnpm typecheck, 0 errors).
+
 ## v001.252.0
 
 > 통합일: 2026-05-19
