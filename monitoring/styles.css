@@ -593,16 +593,82 @@ i { color: var(--muted); }
 
 /* ================= SKILL INVOCATIONS VIEW ================= */
 .skill-inv-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-.skill-inv-table th, .skill-inv-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.skill-inv-table th { text-align: left; background: var(--surface-2); position: sticky; top: 0; color: var(--muted); }
+.skill-inv-table th, .skill-inv-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.skill-inv-table th { text-align: left; background: var(--surface-2); position: sticky; top: 0; color: var(--muted); z-index: 1; }
 .skill-inv-table tbody tr { cursor: pointer; }
+.skill-inv-table tbody tr.row-odd { background: rgba(255,255,255,0.02); }
 .skill-inv-table tbody tr:hover { background: var(--surface-3); }
-.skill-inv-table td.title-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-inv-table td.agents-cell { max-width: 180px; word-break: break-word; }
+.skill-inv-table td.title-cell { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace; font-size: 0.9em; }
+.skill-inv-table td.agents-cell { max-width: 240px; word-break: break-word; display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
 .pager { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 0.85em; }
 .pager button { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); padding: 2px 10px; cursor: pointer; border-radius: var(--radius-sm); }
 .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
 #skill-invocations-section .hint { color: var(--muted); font-size: 0.8em; margin: 0 0 6px 0; }
+
+/* Token bar cells */
+.tok-cell { display: flex; flex-direction: column; gap: 2px; min-width: 52px; }
+.tok-num { font-size: 0.88em; font-feature-settings: "tnum"; white-space: nowrap; }
+.tok-bar { height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+.tok-bar-fill { height: 100%; border-radius: 2px; }
+.tok-total-usage .tok-bar-fill { background: #3b82f6; }
+.tok-total-cache .tok-bar-fill { background: #f59e0b; }
+.tok-main-usage .tok-bar-fill { background: #60a5fa; }
+.tok-main-cache .tok-bar-fill { background: #fbbf24; }
+
+/* Skill chip */
+.skill-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background: hsl(var(--skill-hue), 50%, 20%);
+  border-left: 3px solid hsl(var(--skill-hue), 60%, 50%);
+  color: hsl(var(--skill-hue), 80%, 85%);
+  white-space: nowrap;
+}
+
+/* Duration pip */
+.dur-pip {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.dur-bucket-fast { background: var(--muted); }
+.dur-bucket-med { background: var(--good); }
+.dur-bucket-slow { background: var(--warn); }
+.dur-bucket-very-slow { background: var(--danger); }
+
+/* Artifact tags */
+.art-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.art-issue { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.35); }
+.art-doc { background: rgba(168,85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.35); }
+
+/* Agent pills */
+.agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.78em;
+  background: hsl(var(--agent-hue), 40%, 18%);
+  border: 1px solid hsl(var(--agent-hue), 40%, 35%);
+  color: hsl(var(--agent-hue), 70%, 80%);
+  white-space: nowrap;
+}
+.agent-tok { color: rgba(255,255,255,0.55); font-size: 0.9em; }
 
 /* ================= MODAL ================= */
 .modal { position: fixed; inset: 0; z-index: 9999; }

@@ -874,6 +874,22 @@ function formatTokensCompact(n) {
   return String(n);
 }
 
+function skillColor(name) {
+  let h = 5381;
+  for (let i = 0; i < name.length; i++) {
+    h = ((h << 5) + h) ^ name.charCodeAt(i);
+    h = h >>> 0;
+  }
+  return h % 360;
+}
+
+function formatDurationBucket(sec) {
+  if (!sec || sec < 60) return 'fast';
+  if (sec < 600) return 'med';
+  if (sec < 3600) return 'slow';
+  return 'very-slow';
+}
+
 function skillInvTotalTokens(rec) {
   return (rec.input || 0) + (rec.output || 0) + (rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0);
 }
@@ -933,24 +949,51 @@ function renderSkillInvocations() {
   const start = (__skillInvPage - 1) * SKILL_INV_PAGE_SIZE;
   const slice = __skillInvData.slice(start, start + SKILL_INV_PAGE_SIZE);
 
+  // Compute per-column max for proportional bars (current page only)
+  let maxTotalUsage = 0, maxTotalCache = 0, maxMainUsage = 0, maxMainCache = 0;
+  slice.forEach(w => {
+    const t = w.total || {};
+    const m = w.main_session || {};
+    maxTotalUsage = Math.max(maxTotalUsage, (t.input || 0) + (t.output || 0));
+    maxTotalCache = Math.max(maxTotalCache, (t.cache_creation_5m || 0) + (t.cache_creation_1h || 0) + (t.cache_read || 0));
+    maxMainUsage = Math.max(maxMainUsage, (m.input || 0) + (m.output || 0));
+    maxMainCache = Math.max(maxMainCache, (m.cache_creation_5m || 0) + (m.cache_creation_1h || 0) + (m.cache_read || 0));
+  });
+
+  function tokCell(val, colMax, cssClass) {
+    const pct = colMax > 0 ? Math.round((val / colMax) * 100) : 0;
+    return `<div class="tok-cell ${cssClass}"><span class="tok-num">${formatTokensCompact(val)}</span><div class="tok-bar"><div class="tok-bar-fill" style="width:${pct}%"></div></div></div>`;
+  }
+
+  function artifactCell(kind, id) {
+    if (!kind || kind === 'none' || !id || id === '-') return '—';
+    const kindMap = { issue: 'art-issue', 'patch-note': 'art-doc', roadmap: 'art-doc' };
+    const cls = kindMap[kind] || 'art-doc';
+    return `<span class="art-tag ${cls}">${escapeHtml(id)}</span>`;
+  }
+
   const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 사용', '총 캐시', '메인 사용', '메인 캐시', '서브에이전트'];
   const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
 
   const rows = slice.map((w, localIdx) => {
     const globalIdx = start + localIdx;
+    const zebraClass = localIdx % 2 === 1 ? ' row-odd' : '';
     const startTs = formatStartTimestamp(w.start_timestamp);
-    const duration = formatDurationSec(w.duration_sec);
-    const skill = escapeHtml(w.skill || '—');
+    const durSec = w.duration_sec || 0;
+    const durText = formatDurationSec(durSec);
+    const bucket = formatDurationBucket(durSec);
+    const skillName = w.skill || '—';
+    const hue = skillColor(skillName);
     const titleFull = w.title_prompt || '';
-    const titleTrunc = titleFull.length > 60 ? titleFull.slice(0, 60) + '…' : titleFull;
+    const titleTrunc = titleFull.length > 70 ? titleFull.slice(0, 70) + '…' : titleFull;
     const titleAttr = escapeHtml(titleFull);
-    const artifactId = escapeHtml(w.artifact_id || '—');
+
     const totalRec = w.total || {};
     const mainRec = w.main_session || {};
-    const totalUsage = formatTokensCompact((totalRec.input || 0) + (totalRec.output || 0));
-    const totalCache = formatTokensCompact((totalRec.cache_creation_5m || 0) + (totalRec.cache_creation_1h || 0) + (totalRec.cache_read || 0));
-    const mainUsage = formatTokensCompact((mainRec.input || 0) + (mainRec.output || 0));
-    const mainCache = formatTokensCompact((mainRec.cache_creation_5m || 0) + (mainRec.cache_creation_1h || 0) + (mainRec.cache_read || 0));
+    const totalUsageVal = (totalRec.input || 0) + (totalRec.output || 0);
+    const totalCacheVal = (totalRec.cache_creation_5m || 0) + (totalRec.cache_creation_1h || 0) + (totalRec.cache_read || 0);
+    const mainUsageVal = (mainRec.input || 0) + (mainRec.output || 0);
+    const mainCacheVal = (mainRec.cache_creation_5m || 0) + (mainRec.cache_creation_1h || 0) + (mainRec.cache_read || 0);
 
     const agentMap = w.by_agent || {};
     const agentKeys = Object.keys(agentMap);
@@ -962,20 +1005,21 @@ function renderSkillInvocations() {
         const rec = agentMap[name];
         const usage = formatTokensCompact((rec.input || 0) + (rec.output || 0));
         const cache = formatTokensCompact((rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0));
-        return `${escapeHtml(name)}: ${usage}/${cache}`;
-      }).join(' · ');
+        const aHue = skillColor(name);
+        return `<span class="agent-pill" style="--agent-hue:${aHue}">${escapeHtml(name)} <span class="agent-tok">${usage}/${cache}</span></span>`;
+      }).join(' ');
     }
 
-    return `<tr data-window-index="${globalIdx}">
+    return `<tr data-window-index="${globalIdx}" class="${zebraClass}">
       <td>${startTs}</td>
-      <td>${duration}</td>
-      <td>${skill}</td>
+      <td><span class="dur-pip dur-bucket-${bucket}"></span>${durText}</td>
+      <td><span class="skill-chip" style="--skill-hue:${hue}">${escapeHtml(skillName)}</span></td>
       <td class="title-cell" title="${titleAttr}">${escapeHtml(titleTrunc)}</td>
-      <td>${artifactId}</td>
-      <td>${totalUsage}</td>
-      <td>${totalCache}</td>
-      <td>${mainUsage}</td>
-      <td>${mainCache}</td>
+      <td>${artifactCell(w.artifact_kind, w.artifact_id)}</td>
+      <td>${tokCell(totalUsageVal, maxTotalUsage, 'tok-total-usage')}</td>
+      <td>${tokCell(totalCacheVal, maxTotalCache, 'tok-total-cache')}</td>
+      <td>${tokCell(mainUsageVal, maxMainUsage, 'tok-main-usage')}</td>
+      <td>${tokCell(mainCacheVal, maxMainCache, 'tok-main-cache')}</td>
       <td class="agents-cell">${agentsCell}</td>
     </tr>`;
   }).join('');
