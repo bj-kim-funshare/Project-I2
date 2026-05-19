@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.267.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119 (HOTFIX 4)
+
+### 개요
+
+마스터 보고: 간트뷰 인쇄에는 캘린더와 달리 하단 "선택된 행 (N개)" 부록 표가 안 나옴. 캘린더는 `buildSelectedRowsAppendix` 가 이미 본문 뒤에 부록 표를 append 하지만 간트는 그 단계가 없었음. 캘린더의 helper(`buildCalendarAppendixTable`) 와 CSS(`.calendar-appendix`) 를 그대로 재사용하여 간트 인쇄에 동일 부록 표 부착.
+
+### 페이즈 결과
+
+- **Phase 6 (HOTFIX 4)** (`1bc6b06`):
+  - `useGanttPrint.ts` import 에 `buildCalendarAppendixTable` 추가 (`formatCellValue` 는 기존 import 합산).
+  - `buildSelectedRowsAppendix` helper 신규 — `options.gantt.selectedRowIds` 기반 행 필터링 후 `viewerModel.columnModelList` 전체 컬럼으로 부록 표 생성 (간트엔 컬럼 선택 단계 없으므로 캘린더의 `selectedColumns` 분기 불필요).
+  - `generateGanttPrintHtml` 의 `buildFullHtml` 호출 3번째 인자를 `ganttHtml + appendixHtml` 로 변경 — 페이지 끝에 부록 표 자동 append.
+  - `generateGanttStyles` 에 캘린더 측 `.calendar-appendix` 8개 CSS 룰 그대로 복사. helper wrapping 클래스명 정합 유지를 위해 클래스명 변경 없이 재사용 (차후 cleanup 에서 `buildAppendixTable` / `.print-appendix` 로 rename 가능).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+1 파일 / +71 / -2 / 단일 커밋.
+
+### lint
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 20 warnings).
+
+### 후속 cleanup 후보 (본 핫픽스 scope 외)
+
+- `buildCalendarAppendixTable` / `.calendar-appendix` 명명은 이제 간트 + 캘린더 공용 — 별도 cleanup 에서 generic 명칭(`buildAppendixTable` / `.print-appendix`) 으로 rename 권장. 본 hotfix scope 에선 양쪽 동시 변경 회피 위해 보존.
+
 ## v001.266.0
 
 > 통합일: 2026-05-19
