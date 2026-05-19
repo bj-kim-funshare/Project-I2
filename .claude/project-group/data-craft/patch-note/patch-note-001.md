@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.205.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #107 (HOTFIX 2)
+
+### 개요
+
+마스터 보고 (이미지 첨부): "초기화하고 저장했더니 다시 [] 괄호에 감싸져서 나와" — 데이터 목록의 다중·추가다중 컬럼이 빈 `[]` 표시. v001.194.0 (Phase 1) 가 `useUserFormWidget.ts:62` 만 고쳤고, 동일 3-분기 JSON.stringify 패턴이 `useFormDialogHandlers.ts:80` (편집 dialog 제출) + `:93` (신규 dialog 제출) 두 곳에 남아 있었던 누락 사용처. "+ 신규등록" 클릭 → FormRenderer 가 multi-select 초기값을 빈 배열 `[]` 로 세팅 → 사용자가 "저장" → `handleDialogSubmit` 신규 분기가 `JSON.stringify([])` → `'[]'` 문자열로 store 저장 → submitNewData 가 그대로 서버 전송 → record 표시 시 `cellRenderers.tsx:103` 의 `Array.isArray('[]')` 실패 → `formatValue` fall-through 로 `'[]'` 그대로 표시.
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 2)** (`fa643e07`): `useFormDialogHandlers.ts` line 80 (편집 분기) + line 93 (신규 분기) 두 곳의 `typeof value === 'object' ? JSON.stringify(value)` 3-분기 체인을 v001.194.0 / v001.200.0 와 동일한 4-분기 체인으로 교체:
+  - `null` → `''`
+  - `Array` → `value.join(',')` (빈 배열 → `''`, 다중선택 정상 표시)
+  - `typeof object` → `` `${value.start}~${value.end}` `` (날짜범위)
+  - 그 외 → `String(value)`
+
+  편집·신규 두 dialog 경로 모두 settings 경로(`useFormWidgetSync.ts:76-77`) 와 의미 동등화 — 직렬화 컨벤션이 폼 위젯 전 경로에서 통일.
+
+### 영향 파일
+
+- `data-craft:src/widgets/form-widgets/lib/useFormDialogHandlers.ts`
+
+### 배포 후 잔존 데이터 정리
+
+- 기존에 `'[]'` 로 저장된 record 는 코드 수정만으로 사라지지 않음. 영향 받은 record 는 (a) 수동 삭제 후 신규 등록, 또는 (b) 편집 dialog 에서 다중선택을 다시 채워 저장하면 정상 직렬화로 덮어쓰기 됨.
+- 기존 `'["a","b"]'` 형태 legacy record 를 편집 dialog 로 열면 `Array.isArray('["a","b"]')` 실패로 빈 셀렉트로 로드됨. 재저장 시 `''` 로 덮어쓰기 — 마스터는 legacy 행 편집 전에 값 손실 위험 인지 필요.
+
+### 잔여 한계 (스코프 외)
+
+- 4-분기 직렬화가 이제 `useFormWidgetSync.ts` / `useUserFormWidget.ts` / `useFormDialogHandlers.ts` 3곳에 중복 — 공용 유틸 `serializeFormFieldValue` 추출 후보 (별 플랜).
+- `useSelectorWidgetSync.ts:108` 의 `JSON.stringify` 는 selector 위젯의 별도 의미 — 본 hotfix 범위 외.
+
 ## v001.204.0
 
 > 통합일: 2026-05-18
