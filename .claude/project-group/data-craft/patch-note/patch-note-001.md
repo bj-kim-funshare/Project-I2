@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.236.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 23)
+
+### 개요
+
+마스터 명령: "여전히 날짜 겹쳐짐, 날짜 하단 표기 자체를 제거해". HOTFIX 22 의 `@page margin-bottom + tr break-inside avoid` 후에도 겹침 잔존. 근본 해소로 푸터 자체 emit 제거.
+
+### 페이즈 결과
+
+- **Phase 31 (HOTFIX 23)** (`20ee4af` + lint hotfix `fb07d37`):
+  - **printHtmlBuilder.ts**: `buildFullHtml` 의 `footerHtml` 산출 로직 (5줄 조건 분기) → `footerHtml = ''` 단일 라인 + `printDate` 변수 선언 제거. footer div 자체가 HTML 에 emit 안 됨.
+  - `buildFooterContent` 함수 자체는 보존 (PdfPrintEngine 등 다른 호출 경로 후방 호환).
+  - `.print-footer` CSS / `@page margin-bottom +10mm` (HOTFIX 22) / `.print-content padding-bottom` (HOTFIX 21) 모두 손대지 않음 — 최소 침습. footer 가 emit 안 되므로 fixed-position CSS 는 무용 (잔재) 이나 무해.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
+1 파일 / +1 / -10 / 본 커밋 + lint hotfix (printDate 변수 제거).
+
+### lint
+
+- iter 1: FAIL (printDate unused) → code-fixer 로 변수 제거.
+- iter 2: PASS (0 errors, 17 warnings).
+
 ## v001.235.0
 
 > 통합일: 2026-05-19
