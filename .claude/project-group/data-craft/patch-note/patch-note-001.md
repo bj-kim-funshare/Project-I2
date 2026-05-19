@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.218.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 16)
+
+### 개요
+
+마스터 보고: "집계에서 텍스트 전부 지금 좌측상단 배치하는데 중앙으로 정렬해". HOTFIX 15 의 표 셀들이 좌측·top 정렬 — 페이지 제목/부제도 좌측. 모두 horizontal + vertical 중앙으로 변경.
+
+### 페이즈 결과
+
+- **Phase 24 (HOTFIX 16)** (`8439f8b`): `printStyleGenerator.ts` 4곳 변경.
+  - `.aggregation-summary-title`: `text-align: center` 추가.
+  - `.aggregation-summary-subtitle`: `text-align: center` 추가.
+  - `.aggregation-summary-table th/td` 공통: `text-align: left → center`, `vertical-align: top → middle`.
+- 인라인 분포 텍스트 (`라벨 N · 라벨 N · ...`) 도 셀 중앙 정렬 자연 적용. `white-space: normal` (wrap 허용) 보존.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +4 / -2 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.217.0
 
 > 통합일: 2026-05-19
