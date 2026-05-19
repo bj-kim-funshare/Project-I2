@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.242.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #115
+
+### 개요
+
+마스터 명령: 단계5-A PWA 마감 — service worker 활성화 (`apps/web/src/mobile/sw-register.ts`), 정적 자원 캐시·오프라인 fallback·로딩/에러 바운더리·접근성 라벨. BE 변경 0 (Roadmap-1 lock 정합). Step 2 Explore 결과 명령 7개 항목 중 대부분 이미 구현 완료 (sw-register / vite-plugin-pwa workbox 캐시 / manifest / OfflineBanner / ScreenErrorBoundary / 9 라우트 inline Suspense / AppHeader-BottomTabs aria-label) — 남은 5개 polish gap 만 단일 phase 로 마감.
+
+### 페이즈 결과
+
+- **Phase 1** (`a447c4c`): 5개 polish gap 일괄 처리. (1) `AppErrorBoundary.tsx` (React class, 82 줄) 신규 + `main.tsx` 의 `RouterProvider` 최상위 래핑 — Router 외부 throw catch (route-level `ScreenErrorBoundary` 와 양립). (2) `LoadingSpinner.tsx` (33 줄) 신규 + 5 라우트 (inbox / notifications / profile/[id] / record/[id] / user-form/[id]) inline Suspense fallback 교체. grid/kanban/calendar 3 라우트 파일은 부재로 노터치 (선언 15 중 12 실제 변경, 스코프 ⊆ 선언). (3) `apps/web/public/offline.html` 신규 (51 줄, Korean, JS 무의존) + `vite.config.ts` VitePWA workbox `navigateFallback: 'index.html'` → `'/offline.html'` (base 템플릿 변수 보존, `navigateFallbackDenylist` 의 `/api/`, `/v1/api/` 유지). (4) `BottomTabs.tsx` 활성 탭에 `aria-current={isActive ? 'page' : undefined}` 1줄 추가. (5) `AppShell.tsx` AppHeader 직전 (문서 최초 focus 위치) 에 Tailwind `sr-only focus:not-sr-only` skip-to-main link 추가 + `<main id="main">` 부여. `pnpm typecheck` PASS.
+
+### 영향 파일
+
+data-craft-mobile:
+- `apps/web/src/mobile/components/AppErrorBoundary.tsx` (신규)
+- `apps/web/src/mobile/components/LoadingSpinner.tsx` (신규)
+- `apps/web/public/offline.html` (신규)
+- `apps/web/src/mobile/main.tsx`
+- `apps/web/src/mobile/layouts/AppShell.tsx`
+- `apps/web/src/mobile/components/BottomTabs.tsx`
+- `apps/web/src/mobile/routes/inbox.tsx`
+- `apps/web/src/mobile/routes/notifications.tsx`
+- `apps/web/src/mobile/routes/profile/[id].tsx`
+- `apps/web/src/mobile/routes/record/[id].tsx`
+- `apps/web/src/mobile/routes/user-form/[id].tsx`
+- `apps/web/vite.config.ts`
+
+총 12 파일 +192 / -7.
+
+### 위험 / 후속
+
+- **`@keyframes spin` 동작 검증 필요**: LoadingSpinner 가 inline keyframe 으로 작성되었으므로 Tailwind v4 `animate-spin` 의 글로벌 keyframe 의존 여부 미확인. 마스터 dev 검증 시 회전 미동작이면 핫픽스 1줄 (Tailwind `animate-spin` 클래스 적용 또는 `<style>` 블록에 `@keyframes spin` 선언).
+- **`navigateFallback: /offline.html` 효과는 PROD-only**: `pnpm dev` 에서는 SW 비활성 (sw-register.ts PROD-only 가드). `pnpm build && pnpm preview` 또는 실 배포 후 DevTools Application → Service Workers → Offline toggle 로만 확인 가능.
+- **grid/kanban/calendar 라우트 부재**: 3개 라우트 파일이 i-dev 에 존재하지 않아 LoadingSpinner 미적용. 라우트 생성 시 별도 phase / hotfix.
+- **AppErrorBoundary vs ScreenErrorBoundary 위계**: 두 boundary 양립. RouterProvider 내부 throw 는 ScreenErrorBoundary 가 우선 catch, RouterProvider 외부 / Router 자체 throw 만 AppErrorBoundary 가 catch.
+- **plan affected_files 사실 확인 갭 (메타)**: 단계3-D under-declared / 단계4 over-declared / 본 plan over-declared (15→12). 패턴 누적 — plan 작성 시 affected_files 사실 확인 1회 추가 가치 있음. 본 plan 범위 외 메타 후속.
+
+### advisor 검증
+
+- 계획 단계 (#1): 5관점 PASS, no BLOCK.
+- 완료 단계 (#2): 5관점 PASS, no BLOCK. Command Fulfillment 의 두 비차단 (`@keyframes spin` / navigateFallback PROD-only) 은 위 "위험 / 후속" 에 명시.
+
 ## v001.241.0
 
 > 통합일: 2026-05-19
