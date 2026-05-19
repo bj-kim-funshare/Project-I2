@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.259.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 30)
+
+### 개요
+
+마스터 보고: 런타임 throw `usePrintContext must be used within PrintProvider` (PrintDialog.tsx:33). HOTFIX 14 에서 `useHeaderState` 만 optional 처리했으나, `PrintDialog` 자체도 일부 mount 경로에서 PrintProvider 외부 렌더 → throw. PrintDialog 도 optional + early null return 으로 외부 mount 안전망.
+
+### 페이즈 결과
+
+- **Phase 38 (HOTFIX 30)** (`033ebe9`): `PrintDialog.tsx` 의 `usePrintContext` → `usePrintContextOptional` 교체.
+  - `if (!ctx) return null` early return (외부 mount 시 다이얼로그 미렌더).
+  - React rules-of-hooks 위반 회피: ctx 의존 hook (`useEffect` 키보드 / `useMemo` paperDimensions) 은 unconditional 호출 + `ctx?.` optional chain. destructure / handler 함수는 ctx null 체크 이후 배치.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`
+
+1 파일 / +56 / -48 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 18 warnings).
+
 ## v001.258.0
 
 > 통합일: 2026-05-19
