@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.225.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 10)
+
+### 핫픽스 결과 — PIN 모달 디자인 시안 픽셀 정확 재구현 (테마 격리)
+
+마스터: "디자인 팀 설계안 보고 결재 비밀번호 부분 아예 다시 만들어, 특히 디자인 팀 시안 그대로 만들어야해, 테마에 영향 안받게해". 디자인 소스 (`Data-Craft (1).zip` 내 pin-modal.jsx / pin-states.jsx) 확보 후 전면 재구현.
+
+### Phase 27 (FE, `d84608e`)
+
+**A. 신규 모듈 `src/features/subscription/ui/payment-pin/`** — 9 atomic 컴포넌트 + 토큰
+- `tokens.ts` — PIN 색상 토큰 (bg #f0eee9, surface #ffffff, accent #c96442, err #c0463a 등 18종).
+- `PinIcon.tsx` — 12 종 inline SVG (lock / lockOpen / shield / check / checkCircle / alert / info / close / back / delete / shuffle / eye / eyeOff).
+- `StepHeader.tsx` — 단계 인디케이터 (가변폭 도트) + 뒤로 + X.
+- `PinTitle.tsx` — tone 별 (default/success/error) 아이콘 + 19px 800 weight 타이틀 + 13px 본문.
+- `PinDots.tsx` — 6칸 도트 (tone 별 색상, shake 옵션).
+- `PinStatusRow.tsx` — error/warning/success/info 인라인 행 + 32px 자리 고정 (점프 방지).
+- `PinKeypad.tsx` — 4×3 셔플 (seed 기반 deterministic, 좌하단 재배치 / 우하단 삭제 고정, 10 digits 무작위 배치).
+- `PinSecurityFooter.tsx` — 보안 안내 풋터.
+- `PinModal.tsx` — 모달 카드 frame (440px / 14px radius / shadow) + @keyframes pinShake 단일 위치 선언.
+
+**테마 격리**: 모든 컴포넌트 `className` 일절 사용 금지, `style={{...}}` 또는 `<style>` 인라인만. Tailwind / shadcn 토큰 영향 0.
+
+**B. PaymentPasswordInputDialog 재작성** (verify 단일 단계)
+- Dialog + Portal + Overlay (matte) + DialogPrimitive.Content (inline style 포지셔닝) + PinModal.
+- 6자리 완성 시 즉시 verify API → 성공 onSuccess(password) / 실패 PinDots error + shake + StatusRow error → 500ms 후 reset.
+
+**C. PaymentPasswordSetupStep 재작성** (setup 2단계)
+- Step 1 enter — 6자리 완성 시 weak check (123456 / 111111 / 654321 등 연속·반복 패턴) → warn 또는 complete → 500ms 후 Step 2.
+- Step 2 confirm — 일치 → set API → onComplete / 불일치 → error + shake → 500ms 후 Step 1 리셋.
+- 호출처 시그니처 (`{ onComplete(password), onCancel? }`) 보존.
+
+**삭제**: `src/shared/ui/pin-pad.tsx`.
+
+### 영향 파일
+
+**data-craft**:
+- 신규 (10): `src/features/subscription/ui/payment-pin/{tokens.ts, PinIcon, StepHeader, PinTitle, PinDots, PinStatusRow, PinKeypad, PinSecurityFooter, PinModal, index}`.
+- 재작성 (2): `src/features/subscription/ui/{PaymentPasswordInputDialog, PaymentPasswordSetupStep}.tsx`.
+- 삭제 (1): `src/shared/ui/pin-pad.tsx`.
+
+### 검증
+
+- typecheck + lint PASS (0 errors).
+
+### 잔여 (시안 외 / 본 hotfix 범위 외)
+
+- **생년월일·전화번호 일치 경고** (시안 StateBirthdayWarn): 사용자 PII 접근 흐름 미정의 — 본 페이즈 외 후속.
+- 호출처 (CardInfoSection / RegisterCardSection / BillingSuccessPage / usePaymentPasswordGate) 는 시그니처 호환되어 코드 변경 없음.
+
 ## v001.224.0
 
 > 통합일: 2026-05-18
