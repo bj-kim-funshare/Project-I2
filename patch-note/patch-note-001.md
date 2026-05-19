@@ -1,5 +1,36 @@
 # 아이OS — Patch Note (001)
 
+## v001.79.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42 (HOTFIX 2)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 2** (HOTFIX 2 단일 커밋): (1) charts 섹션 순서 재배치 — `#skill-invocations-section` 을 tables-section 에서 charts-section 으로 이동하여 `#chart-agent-bar` (서브에이전트 사용량) 바로 아래에 배치, `#chart-session-bar` (세션 Top 10) 를 charts-section 맨 끝으로 이동. (2) 스킬 호출별 표 시각화 강화 — 토큰 컬럼 4종에 컬럼 최댓값 대비 비례 가로 막대 inline 렌더, 스킬명을 해시 기반 색상 칩으로 표시, 소요 시간 옆에 버킷 색상 pip(<1m 회색 / <10m 초록 / <1h 노랑 / >=1h 빨강), 생성물에 종류별 태그 라벨, 서브에이전트 셀을 pill 형태로 분리, 행 zebra-striping 강화, 제목 셀 모노스페이스.
+
+### 진단 요지
+
+- v001.78.0 머지 직후 마스터 관측: 텍스트만으로 구성된 표가 30개 행 페이지 환경에서 빠른 비교가 어려움. 토큰 크기 / 스킬 종류 / 소요 시간 분포를 한눈에 파악할 시각 단서 필요.
+
+### 회귀 검증
+
+- node --check 문법 OK.
+- DOM 순서 재배치는 표시 전용 — 파이프라인 / 데이터 / 함수 시그너처 무변경.
+- 기존 `formatTokensCompact` 그대로 사용, 막대는 추가 레이어.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 없음, 표시 강화만.
+
+### 영향 파일
+
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `patch-note/patch-note-001.md`
+
 ## v001.78.0
 
 > 통합일: 2026-05-19
