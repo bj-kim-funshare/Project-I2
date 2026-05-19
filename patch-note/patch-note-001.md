@@ -1,5 +1,58 @@
 # 아이OS — Patch Note (001)
 
+## v001.77.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1** (`884ad22`): `monitoring/scripts/collect.py` 에 `_FALLBACK_GATED_SKILLS` / `_FALLBACK_NON_GATED_SKILLS` 하드코딩, `_load_known_skills()` SKILL.md 자동 추출 함수, `_parse_skill_command()` `<command-name>` 태그 파서, `build_by_skill_invocation()` 스킬 호출 윈도우 생성 함수 신규 추가. 종료 우선순위 4 단계(explicit / next_skill / attribution_drop / session_end), 메인 세션 ↔ 서브에이전트 토큰 분리, 생성물 자동 캡처(issue > patch-note > roadmap), `duration_sec` 계산 포함. `collect()` 에서 per-session 호출 후 `_all_skill_invocations` 내부 키로 누적.
+- **Phase 2** (`556e2b9`): `_load_known_skills()` 성공 경로에 폴백 enum 과의 union 추가하여 SKILL.md 의 "PENDING gate" 마커 부재 케이스에서도 기존 14 gated 스킬이 항상 올바르게 분류되도록 보강. `main()` 의 `_all_skill_invocations` 를 pop-and-drop 대신 `aggregate.json` 의 `by_skill_invocation` 키로 직렬화 (start_timestamp 내림차순, top-N cap 없음). `periods/*.json` 및 `hourly.json` 에는 미포함 (aggregate-only — 본 뷰는 기간/비교 토글 영향 받지 않음).
+- **Phase 3** (`200ccf5`): `monitoring/index.html` 의 tables-section 끝에 `#skill-invocations-section` (페이저 + 테이블 컨테이너) 및 `#skill-invocation-modal` 추가, 캐시 버스터 v17→v18. `monitoring/script.js` 에 `__skillInvData` / `__skillInvPage` / `SKILL_INV_PAGE_SIZE=30`, `formatDurationSec` / `formatTokensCompact` 헬퍼, `renderSkillInvPager` / `renderSkillInvocations` / `openSkillInvocationModal` / `closeSkillInvocationModal` / `loadSkillInvocations` 추가. `DOMContentLoaded` 에서 클릭/ESC 모달 닫기 핸들러 1회 등록 + 초기 `loadSkillInvocations(agg)` 1회만 호출(기간/비교 토글 독립). `monitoring/styles.css` 에 CSS 변수 기반 다크테마 스타일 추가.
+- **Phase 4** (`cfc7b39`): `monitoring/README.md` 에 "스킬 호출별 토큰 사용량" 섹션 — 윈도우 경계 규칙, 중첩 처리, UX(페이지네이션/모달), 데이터 누적·무손실 보장, v1 한계 4 항.
+- **Phase 5 (보정)** (`75b20ae`): 실측 결과 `dev-start` 최대 duration 이 4904 초까지 누적되어 비gated 스킬이 후속 무관 마스터 프롬프트를 흡수하는 logic gap 발견. `build_by_skill_invocation` 메인 스캔에 **Rule plain_prompt** 추가 — 활성 비gated 윈도우는 어떤 내용의 마스터 프롬프트가 도착해도 즉시 종료. `attribution_drop` 은 폴백으로 잔존. README 5-rule 로 갱신. 재실행 후 `dev-start` 38 건 전량 `plain_prompt` 종료 확인 (백그라운드 세션 utility 특성상 duration 0 은 정당한 데이터 특성).
+
+### 진단 요지
+
+- 기존 `by_skill` 시각화는 누적 합산만 제공 — 한 스킬 호출 단위의 시작·종료·중간 핫픽스·일반 프롬프트·서브에이전트 사용량 분해를 볼 수 없음.
+- JSONL 의 슬래시 커맨드는 `<command-name>/X</command-name>` 태그로 user message content 안에 항상 wrap 됨(실측). free-text 정규식 매칭 대비 신뢰도 우위.
+- 마스터 명시: 본 뷰는 헤더 기간/비교 토글 영향 받지 않음 / 30 개씩 페이지네이션 / 1 페이지·상단 = 최신 / 행 클릭 모달 / 누적 보존.
+
+### advisor 결과
+
+- 계획 단계 (#1): Intent / Logic / Harness Integrity / Evidence / Command Fulfillment PASS, Treadmill Audit NOT APPLICABLE.
+- 완료 단계 (#2): 동일 6 관점 PASS / NOT APPLICABLE, BLOCK 없음.
+
+### 회귀 검증
+
+- per-phase verification 5 단계 PASS, blockers 없음.
+- 244 윈도우 실측 생성, close_reason 분포(explicit 105 / plain_prompt 52 / next_skill 54 / session_end 33 / attribution_drop 0) 합리적. artifact 캡처 issue 92 / patch-note 7 / roadmap 5 / none 140.
+- node --check `monitoring/script.js` 문법 OK.
+- Phase 5 커밋에 `monitoring/data/hourly.json` 빌드 부산물 포함 (collect.py 재실행 결과 — 정상).
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙·훅·에이전트·스킬·검증축·자기보호 invariant 추가 0. monitoring 제품 기능 확장만.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/README.md`
+- `monitoring/data/aggregate.json` (재생성 부산물 — Phase 2 / Phase 5)
+- `monitoring/data/hourly.json` (재생성 부산물 — Phase 5)
+
+### v1 한계 (v2 후보)
+
+- 세션 가로지름 미지원 — `plan-enterprise` explicit 의 44 % (45/103) 가 artifact 미캡처 (이슈는 세션 A 에서 생성, 완료는 세션 C 등).
+- `attribution_drop` 사실상 dead rule (`plain_prompt` 가 그 자리를 대체).
+- 미등록 슬래시 커맨드 (`/clear` / `/help` / `/model` 등 Claude Code 내장) 윈도우 미생성.
+- `cost_usd` 는 collect.py PRICING 표 v1 근사치.
+
 ## v001.76.0
 
 > 통합일: 2026-05-18
