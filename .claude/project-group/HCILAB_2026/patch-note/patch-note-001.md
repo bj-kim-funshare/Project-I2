@@ -1,5 +1,49 @@
 # HCILAB_2026 — Patch Note (001)
 
+## v001.2.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: [jieun410/HCILAB_2026#1](https://github.com/jieun410/HCILAB_2026/issues/1)
+> 핫픽스: 1차
+
+### 핫픽스 페이즈 결과
+
+- **Phase 3 (HOTFIX 1) — 누락 이미지 자산 복구 + .gitignore 정정** (커밋 `311cf5a`): `app/.gitignore` 의 `peopleImg/` 와 `image/` 두 bare-pattern 라인 제거. 마스터가 제공한 `/Users/starbox/Downloads/assets.zip` 에서 peopleImg/ 4종 (eunbin/geuna/jeonghoon/jieun, 약 9.8MB) + publicationImg/ conference 9종 + journals 1종 (약 5.2MB) 총 14개 이미지 파일을 추출하여 `app/src/common/assets/image/peopleImg/` 와 `.../publicationImg/{conference,journals}/` 로 배치 후 커밋. `_index.ts` 의 모든 import 경로가 이제 실제 파일로 resolve 됨.
+
+### 영향 파일
+
+**HCILAB_2026** (커밋된 파일 15개):
+
+```
+app/.gitignore                                                                    (수정 — peopleImg/, image/ 제거)
+app/src/common/assets/image/peopleImg/eunbin.jpeg                                 (신규)
+app/src/common/assets/image/peopleImg/geuna.jpeg                                  (신규)
+app/src/common/assets/image/peopleImg/jeonghoon.png                               (신규)
+app/src/common/assets/image/peopleImg/jieun.jpeg                                  (신규)
+app/src/common/assets/image/publicationImg/conference/CEIC2025Platforms.png       (신규)
+app/src/common/assets/image/publicationImg/conference/ICCT2025WebRTC.png          (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2023GAME.png           (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2023VR.png             (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2024Metaverse.png      (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2024PulseWave.png      (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2024Ticket.png         (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2025Relationship.png   (신규)
+app/src/common/assets/image/publicationImg/conference/KICSP2025STTSER.png         (신규)
+app/src/common/assets/image/publicationImg/journals/KCI2024.png                   (신규)
+```
+
+### 운영 메모
+
+- **원인**: `app/.gitignore` 의 `peopleImg/` `image/` bare-pattern 이 git 추적을 차단하여 마스터의 원본 머신에만 이미지가 존재. plan-enterprise #1 의 Phase 2 i-dev sync 시 main 의 `_index.ts` 가 합류하면서 import 경로 부재 사실이 드러남 — Vite import-analysis 실패로 사이트 전체 부팅 차단.
+- **사전 확인**: `_index.ts`, `logo/HCI.png`, `logo/HciLabLogo.png` 는 `.gitignore` 추가 이전에 이미 추적된 상태였음 (`git ls-files` 확인). 신규 클론에서도 부팅 가능.
+- **수동 검증**: `cd app && pnpm dev` → http://localhost:5180 에서 `/`, `/contact`, `/members`, `/publications` 모두 정상 렌더링.
+
+### advisor 검증
+
+- 핫픽스 완료 시점 advisor #2 5관점 (Intent/Logic/Group Policy/Evidence/Command Fulfillment) 모두 PASS, BLOCK 없음.
+
+---
+
 ## v001.1.0
 
 > 통합일: 2026-05-19
