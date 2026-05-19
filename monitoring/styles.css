@@ -590,3 +590,30 @@ i { color: var(--muted); }
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ================= SKILL INVOCATIONS VIEW ================= */
+.skill-inv-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.skill-inv-table th, .skill-inv-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.skill-inv-table th { text-align: left; background: var(--surface-2); position: sticky; top: 0; color: var(--muted); }
+.skill-inv-table tbody tr { cursor: pointer; }
+.skill-inv-table tbody tr:hover { background: var(--surface-3); }
+.skill-inv-table td.title-cell { max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-inv-table td.agents-cell { max-width: 240px; word-break: break-word; }
+.pager { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 0.85em; }
+.pager button { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); padding: 2px 10px; cursor: pointer; border-radius: var(--radius-sm); }
+.pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+#skill-invocations-section .hint { color: var(--muted); font-size: 0.8em; margin: 0 0 6px 0; }
+
+/* ================= MODAL ================= */
+.modal { position: fixed; inset: 0; z-index: 9999; }
+.modal.hidden { display: none; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.modal-content { position: relative; max-width: 720px; max-height: 80vh; overflow: auto; margin: 5vh auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius); }
+.modal-close { position: absolute; top: 6px; right: 10px; background: transparent; color: var(--muted); border: none; font-size: 22px; cursor: pointer; }
+.modal-body dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.modal-body dt { color: var(--muted); }
+.modal-body .modal-title-prompt { color: var(--text); white-space: pre-wrap; background: var(--surface-2); padding: 8px; border-left: 3px solid var(--border); margin: 4px 0 8px; font-size: 0.9em; }
+.modal-token-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85em; }
+.modal-token-table th, .modal-token-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: right; color: var(--text); }
+.modal-token-table th { background: var(--surface-2); color: var(--muted); }
+.modal-token-table th:first-child, .modal-token-table td:first-child { text-align: left; }
