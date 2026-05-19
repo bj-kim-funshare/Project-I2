@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.222.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #112
+
+### 개요
+
+마스터 명령: "단계3-D 파일 첨부 (fs-file-attachment-mobile). 기존 attachment 업로드/다운로드 API 재사용 (S3 presigned 등 BE 변경 없이)". 모바일 폼의 `FormFieldRenderer` 가 `'file-attachment'` widgetType 을 dispatch 하지 못해 폼 정의에 첨부 필드를 둘 수 없던 상태를 해소. `@dcm/fs-file-attachment-mobile` 패키지 본체 (FsFileAttachment 컴포넌트 + 훅 + parallelUploader) 와 `@dcm/fs-api-mobile` 의 file API (uploadFile/downloadFile/deleteFile 등) 는 이미 구현 완료 상태였으므로, 본 단계는 폼 dispatch wiring 만 추가하여 기존 자산을 연결. BE/DB 변경 없음 — 기존 `/api/file*` endpoint + S3 presigned 흐름 그대로 재사용.
+
+### 페이즈 결과
+
+- **Phase 1** (`9001b00`): `FormFieldWidgetType` union 에 `'file-attachment'` 추가 (12 → 13가지). `FormField` 인터페이스에 첨부 전용 옵션 필드 5개 (`fileCategoryType`, `identifier`, `usePreview`, `maxFileSize`, `useOnlyImage`) 추가. `FileAttachmentFieldRenderer` 신규 작성 — `FsFileAttachment` 를 `FormFieldLabel` / `FormFieldError` 셸로 래핑, field config → FsFileAttachmentProps 매핑 (fallback 포함). `FormFieldRenderer.tsx` switch 에 `case 'file-attachment'` 분기 등록. `fs-form-builder-mobile/package.json` 에 `@dcm/fs-file-attachment-mobile` workspace 의존성 추가. 함께 `DataCraft-mobile-v2/handoff/phase0/audit/` 하위 stale audit md 3개 정리. 1차 dispatch 는 `form.types.ts` 누락 감지하여 `scope_expansion_needed` 보고 → affected_files 확장 후 2차 디스패치에서 단일 commit 완료. `pnpm typecheck` lint gate PASS.
+
+### 영향 파일
+
+data-craft-mobile:
+- `packages/fs-form-builder-mobile/src/form-builder/ui/FileAttachmentFieldRenderer.tsx` (신규)
+- `packages/fs-form-builder-mobile/src/form-builder/ui/FormFieldRenderer.tsx`
+- `packages/fs-form-builder-mobile/src/shared/types/form.types.ts`
+- `packages/fs-form-builder-mobile/package.json`
+- `DataCraft-mobile-v2/handoff/phase0/audit/appshell-audit.md` (삭제)
+- `DataCraft-mobile-v2/handoff/phase0/audit/monorepo-audit.md` (삭제)
+- `DataCraft-mobile-v2/handoff/phase0/audit/route-paths-audit.md` (삭제)
+
+### 위험 / 후속
+
+- **per-record `identifier` 스코핑 미구현**: 현 renderer 는 `field.identifier ?? field.name` 폴백을 적용하여 form-scoped 동작 (동일 폼의 모든 record 가 같은 file_group 공유). 실제 record 별 첨부 분리를 위해서는 `recordId` 를 `ScreenUserForm` → `FormFieldRenderer` → `FieldRendererProps` 까지 전파하는 후속 wiring 필요. 데스크탑은 `FsGridFileCellRenderer` 등 row context 에서 `formId_rowId` 패턴으로 식별자를 구성.
+- **데이터뷰어 셀 흐름 (`fileCellWidget`) 미연결**: 모바일 그리드/리스트 뷰의 파일 셀 탭 시 `UnsupportedServiceDialog` 가 계속 표시됨. `FsDataViewer` 의 `fileCellWidget` prop 에 `FsFileAttachment` 기반 다이얼로그 wiring 이 필요한 후속 단계 (예: 단계3-E) 로 분리됨 — 마스터 명시 (sharpening 답변) 로 본 플랜 범위 외.
+
+### 버전 충돌 메모
+
+- 본 플랜 머지 진입 시 v001.221.0 이 동시 진행 중이던 plan-enterprise #91 HOTFIX 9 에 의해 main 에 선점되어 본 entry 는 v001.222.0 으로 부여. 원 doc WIP (`plan-enterprise-112-3d-file-attachment-wiring-문서`, commit 332446a) 는 origin 에 v001.221.0 으로 존속하나 main 머지 직전 v001.222.0 으로 재작성된 -v2 doc WIP 로 대체됨.
+
+### advisor 검증
+
+- 계획 단계 (#1): Intent/Logic/Group Policy/Evidence/Command Fulfillment 5관점 PASS, no BLOCK.
+- 완료 단계 (#2): no BLOCK. Command Fulfillment 는 PARTIAL — wiring 자체는 충족, 단 위 "위험 / 후속" 2개 항목은 별도 후속 (PENDING 게이트의 핫픽스 또는 단계3-E) 으로 처리 가능.
+
 ## v001.221.0
 
 > 통합일: 2026-05-19
