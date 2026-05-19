@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.226.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 2)
+> 데이터 뷰어 디자인 모드 → 열 추가 → 유용한 기능 탭에서 "행 연결" 항목이 끝까지 노출되지 않는 현상 근본 픽스. 원 플랜 Phase 2 가 `usefulColumnTypes` 에 rowLink 를 등록은 했으나, **`packages/fs-data-viewer/src/widgets/column-generator/available-types.ts` 의 `AVAILABLE_COLUMN_TYPE_IDS` 화이트리스트 누락** 으로 `ColumnTypeButton` 에서 `if (!isInAvailableList) return null` 차단되어 버튼이 렌더되지 않고 있었음. HOTFIX 1 의 sub/external registry 추가도 같은 패키지의 `available-types.ts` 누락이라 동일 차단. 본 HOTFIX 2 가 3개 viewer 패키지 모두에 `'rowLink'` 화이트리스트 항목 추가.
+
+### 핫픽스 결과 — 1 phase (`af01bdd`)
+
+- **`packages/fs-data-viewer/src/widgets/column-generator/available-types.ts`** 의 `AVAILABLE_COLUMN_TYPE_IDS` 배열에 `'rowLink'` 추가.
+- **`packages/fs-sub-data-viewer/src/widgets/column-generator/available-types.ts`** 동일 추가.
+- **`packages/fs-external-data-viewer/src/widgets/column-generator/available-types.ts`** 동일 추가.
+- fs-sub-data-viewer / fs-external-data-viewer 의 `dist` 도 머지 후 재빌드 완료.
+
+### 진단 정리 (실수 기록)
+
+원 플랜 Phase 2 가 `column-types` registry 만 검증하고 column-generator widget 의 `available-types.ts` allowlist 의 존재를 놓침. ColumnTypeButton 의 `isInAvailableList` 가드가 hard-cut 으로 작동하여 type 이 registry 에 있어도 화이트리스트 없으면 완전 숨김 — second-layer filter 의 존재를 마스터의 반복 신고 후에야 ColumnTypeButton.tsx 직접 확인으로 발견. Phase 2-8 / HOTFIX 1 모두 이 파일을 검증 범위에 안 넣은 점이 직접 원인.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/column-generator/available-types.ts`
+  - `packages/fs-sub-data-viewer/src/widgets/column-generator/available-types.ts`
+  - `packages/fs-external-data-viewer/src/widgets/column-generator/available-types.ts`
+
+### 회귀 검증
+
+- 마스터 dev server 재시작 후 데이터 뷰어 → 디자인 모드 → 열 추가 → 유용한 기능 탭에 "연결 / 행 연결 / 듀얼 위젯 / 문서" 4개 노출 기대.
+
 ## v001.225.0
 
 > 통합일: 2026-05-19
