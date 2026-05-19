@@ -656,7 +656,13 @@ def build_by_skill_invocation(
         ts = rec.get("timestamp")
 
         # Check for explicit closure signal (rule 1, gated skills only)
-        if active_window is not None and active_is_gated:
+        # Skip the invocation record itself AND any same-timestamp records: Claude Code
+        # injects the skill body as a separate role=user record sharing the exact same
+        # timestamp as the <command-args> record. Both can contain "플랜 완료" as
+        # documentation text. The real closure signal always comes in a later master
+        # prompt (different timestamp, different conversation turn).
+        active_start_ts = active_window["start_timestamp"] if active_window is not None else None
+        if active_window is not None and active_is_gated and i != active_start_idx and ts != active_start_ts:
             if "플랜 완료" in text or "핫픽스 완료" in text:
                 # Include records up to (but not including) the next master prompt.
                 # Find the next master prompt after index i.

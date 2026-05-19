@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-19T06:18:13.825475+00:00",
+  "generated_at": "2026-05-19T06:27:00.896293+00:00",
   "hours": [
     {
       "hour": "2026-05-10T02",
@@ -4259,71 +4259,71 @@
     },
     {
       "hour": "2026-05-19T15",
-      "input": 429,
-      "output": 126427,
-      "cache_creation_5m": 72368,
-      "cache_creation_1h": 269582,
-      "cache_read": 68554783,
-      "messages": 184,
-      "cost_usd": 120.0941,
+      "input": 585,
+      "output": 201391,
+      "cache_creation_5m": 94575,
+      "cache_creation_1h": 364846,
+      "cache_read": 112527611,
+      "messages": 276,
+      "cost_usd": 194.3499,
       "by_model": [
         {
           "model": "claude-haiku-4-5",
-          "input": 8,
-          "output": 175,
-          "cache_creation_5m": 22100,
+          "input": 13,
+          "output": 277,
+          "cache_creation_5m": 43921,
           "cache_creation_1h": 0,
-          "cache_read": 23082
+          "cache_read": 34724
         },
         {
           "model": "claude-opus-4-7",
-          "input": 414,
-          "output": 121698,
+          "input": 563,
+          "output": 195285,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 269582,
-          "cache_read": 68354901
+          "cache_creation_1h": 364846,
+          "cache_read": 112220570
         },
         {
           "model": "claude-sonnet-4-6",
-          "input": 7,
-          "output": 4554,
-          "cache_creation_5m": 50268,
+          "input": 9,
+          "output": 5829,
+          "cache_creation_5m": 50654,
           "cache_creation_1h": 0,
-          "cache_read": 176800
+          "cache_read": 272317
         }
       ],
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 166,
-          "output": 53336,
+          "input": 207,
+          "output": 68662,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 84191,
-          "cache_read": 38188944
+          "cache_creation_1h": 101274,
+          "cache_read": 54682838
         },
         {
           "skill": "group-policy",
-          "input": 22,
-          "output": 6357,
+          "input": 42,
+          "output": 19583,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 7892,
-          "cache_read": 1072547
+          "cache_creation_1h": 22446,
+          "cache_read": 2663355
         },
         {
           "skill": "plan-enterprise",
-          "input": 153,
-          "output": 43422,
-          "cache_creation_5m": 72002,
-          "cache_creation_1h": 106205,
-          "cache_read": 24572014
+          "input": 244,
+          "output": 81433,
+          "cache_creation_5m": 93972,
+          "cache_creation_1h": 159557,
+          "cache_read": 49721070
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 72,
-          "output": 21212,
-          "cache_creation_5m": 366,
-          "cache_creation_1h": 32480,
-          "cache_read": 4525462
+          "input": 76,
+          "output": 29613,
+          "cache_creation_5m": 603,
+          "cache_creation_1h": 42755,
+          "cache_read": 5264532
         },
         {
           "skill": "메인 세션",

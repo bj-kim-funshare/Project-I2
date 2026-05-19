@@ -9,14 +9,17 @@
 ### 페이즈 결과
 
 - **HOTFIX 5** (HOTFIX 5 단일 커밋): in_progress 판정에 JSONL 파일 mtime 60분 임계를 추가. 기존 last record ts 30분 임계와 **OR** 조건 — 둘 중 하나라도 만족하면 마지막 윈도우를 in_progress 로 마킹. 사유: Claude Code 가 record 를 즉시 flush 하지 않는 케이스에서 file mtime 이 더 신뢰성 높은 활성 시그널. 본 세션 검증 시 in_progress 윈도우 정상 등장 확인.
+- **HOTFIX 5 보강** (추가 커밋): explicit close 검사가 스킬 invocation 타임스탬프 클러스터(invocation command-args 레코드 + 동일 타임스탬프의 스킬 본문 주입 레코드)에서 "플랜 완료" substring 오탐 발동하여 윈도우가 즉시 닫히는 버그 수정 (`i != active_start_idx and ts != active_start_ts` 이중 가드). 실제 원인: Claude Code 가 스킬 본문을 동일 타임스탬프의 별도 role=user 레코드로 주입하며, 그 스킬 본문 안의 문서 텍스트("플랜 완료" 키워드 설명)가 오탐을 유발. HOTFIX 5 단일 커밋 이후에도 in_progress 카운트 0 에 머물렀던 근본 원인 해소. 수정 후 in_progress 카운트 6 확인 (현재 `/plan-enterprise-os #42` 세션 포함).
 
 ### 진단 요지
 
 - v001.81.0 머지 직후 마스터 관측: 진행 중 본 세션 (`/plan-enterprise-os #42`) 이 표 상단 "🔴 진행 중인 호출" 영역에 안 나타남. 원인: 윈도우 end_timestamp ≈ 04:55, 새로고침 시각 ≈ 06:13 → 1h18m 차이로 30분 임계 미달. JSONL flush timing 으로 record content 가 실시간 활동을 정확히 반영하지 못함.
+- HOTFIX 5 단일 커밋(mtime 60분 임계) 적용 후에도 in_progress 카운트 0 유지됨. 2차 원인: Claude Code 가 스킬 본문을 invocation command-args 레코드와 동일 타임스탬프의 별도 role=user 레코드로 주입하는 구조. 이 레코드가 `_is_master_prompt` 검사를 통과하고, 스킬 본문 내 "플랜 완료" 키워드 설명 텍스트에 explicit close 검사가 오탐 발동 → 윈도우 즉시 닫힘. `i != active_start_idx and ts != active_start_ts` 이중 가드로 invocation 타임스탬프 클러스터 전체를 건너뜀으로써 수정.
 
 ### 회귀 검증
 
-- collect.py 재실행 후 in_progress 카운트 0 → 1+ 로 증가 확인.
+- collect.py 재실행 후 in_progress 카운트 0 → 6 증가 확인. 현재 `/plan-enterprise-os #42` 세션 (`2026-05-19T04:11:38`) 포함.
+- plan-enterprise explicit close 윈도우 무회귀 확인: `with_issue=77, no_artifact=1` (이전 동일 수준 유지).
 - 파이프라인 / 표 / 모달 UI 무변경 — 데이터 필드 partial / close_reason 의 값만 추가 케이스.
 
 ### Treadmill Audit
