@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.207.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #105 (HOTFIX 2)
+
+### 개요
+
+마스터 보고: HOTFIX 1 (v001.198.0) 머지 + dev server 재시작 + 하드 리프레시 후에도 "여전히 이미지 크기만큼만 나타남, 요청한 크기로 나와야 하고 이미지도 그만큼 확장해야 함 (비율 유지)". 코드 검증으로 `IMAGE_MODAL_CLASSES` (80vw × 90vh) + `onCloseAutoFocus` 모두 i-dev HEAD 에 정확히 반영 확인. 실제 visible 결함은 비-zoom 이미지의 `max-h-[55vh]` cap (Phase 1 "위험 2" 로 deferred 한 항목) — 90vh 모달 안에서 이미지가 55vh 에서 멈춰 그 아래에 회색 공간이 생기고, 시각적으로 "모달이 이미지 크기만큼만" 으로 인식됨.
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 2)** (`042b7d2`): 비-zoom 이미지 캡 교체.
+  - 두 ImageZoomDialog 사본 (`packages/fs-file-attachment/src/ImageZoomDialog.tsx`, `src/widgets/file-attachment/ui/ImageZoomDialog.tsx`) 의 `max-w-full max-h-[55vh] object-contain cursor-zoom-in` 토큰 중 `max-h-[55vh]` 를 `max-h-[calc(90vh-8rem)]` 로 교체. header (~4rem) + footer (~4rem) 예산을 명시한 calc 기반 cap — 부모 height 체인 (`min-h-full` wrap) 의 percentage 해상도 함정과 무관하게 robust.
+  - advisor 진단 흐름:
+    - 1차 시도 `max-h-full` 은 percentage 해상도 함정 — 부모 wrap div 가 `flex items-center justify-center min-h-full p-4` 로 `h-full` 부재. min-h-full 은 definite height 가 아니라 `max-h-full` 이 image 자연 크기로 resolve → 동일 증상. 마스터 보고 어휘와 정확 일치.
+    - 2차 (확정) `max-h-[calc(90vh-8rem)]` 은 viewport 단위 기반이라 부모 height 와 무관, object-contain 가 비율 유지.
+  - zoom 상태 (`isZoomed`) 의 inline `width/height` style 경로는 손대지 않음 — 줌 + pan 동작 기존 보존.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-file-attachment/src/ImageZoomDialog.tsx`
+  - `src/widgets/file-attachment/ui/ImageZoomDialog.tsx`
+
+2개 파일 / +2 / -2 / 단일 페이즈 (advisor followup 포함 2 commit).
+
+### advisor 검증
+
+- 진단 시점 PASS — image cap 가설 advisor 확인. 1차 시도 (`max-h-full`) 의 percentage 해상도 함정도 advisor 가 사전 지적해 calc 로 우회.
+- 완료 시점 PASS — 최종 diff (`max-h-[calc(90vh-8rem)]`) 가 advisor 권고와 일치, lint gate PASS (0 errors, 17 warnings).
+
+### 수동 점검 권장
+
+- `pnpm dev` 후 셀 파일 첨부 이미지 썸네일 클릭 → 모달 안 이미지가 모달 내부 가용 공간 (~ 90vh - 8rem header/footer) 만큼 비율 유지하며 확장되는지 확인.
+- 큰 가로 비율 이미지 / 큰 세로 비율 이미지 양쪽 모두 잘림 없이 표시되는지 확인 (object-contain 보존).
+- 줌 모드 (이미지 클릭) 의 zoom + pan 동작이 기존과 동일한지 확인 (해당 경로 미변경).
+
+### 미해결 (잔여 후속)
+
+- **뒷배경 가로 스크롤**: 마스터 메시지에 "여전히 ... 뒷배경 스크롤" 언급. HOTFIX 1 의 `onCloseAutoFocus` 는 i-dev HEAD 에 정확히 반영 확인됨. fresh screenshot/재현 결과 보고 후 별도 hotfix 진입 가능 (`useScrollLock`/`useBackdropClickClose` 상호작용 가능성).
+- **prop-name mismatch**: 패키지 `ImageZoomDialog` 는 `open` prop, app 사본은 `isOpen` prop — latent silent-break 버그 (한쪽 호출자가 잘못된 이름 쓰면 dialog 안 열림). 본 plan 책임 외 — 별도 후속 정렬 권장.
+
 ## v001.206.0
 
 > 통합일: 2026-05-19
