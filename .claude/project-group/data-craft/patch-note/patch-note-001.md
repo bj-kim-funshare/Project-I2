@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.212.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 6)
+
+### 핫픽스 결과 — getSeatChangeQuote response envelope 평탄화 (근본 픽스)
+
+마스터 보고 (hotfix 5 후): 모달 에러 메시지 "(원인: INVALID_QUOTE_RESPONSE_SHAPE)". hotfix 4 의 FE shape 가드가 BE 응답의 nextCycle / immediate 키 부재를 감지. 진단 결과 — BE 컨트롤러가 `buildAuthResponse(req, { callId, message, data: quote })` 로 quote 를 한 단계 더 wrapping 하여 FE 의 `response.data` 가 `{ callId, message, data: <실제 quote> }` 가 되어 nextCycle/immediate 가 한 레벨 깊이에 위치.
+
+### Phase 23 (BE, `3871899`)
+
+- `seatChange.controller.ts:getSeatChangeQuoteController` 의 호출을 다른 정상 컨트롤러 (billing.controller.ts 의 customerKey / executePayment 등) 패턴 그대로 `buildAuthResponse(authReq, quote)` 로 평탄화. callId/message 는 errorCatch 가 이미 다루는 경로이므로 응답 본문에서 제거.
+- 변경: 1 파일 / +1 / -7.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/controllers/seatChange.controller.ts`
+
+### 검증
+
+- BE lint PASS.
+- 평탄화 후 FE response.data 가 `{ nextCycle: {...}, immediate: {...} }` 직접 도달 → shape 가드 통과.
+
 ## v001.211.0
 
 > 통합일: 2026-05-18
