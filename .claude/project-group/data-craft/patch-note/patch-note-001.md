@@ -1,5 +1,53 @@
 # data-craft — Patch Note (001)
 
+## v001.255.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 14)
+> HOTFIX 13 후속 — "행 연결 컬럼이 타겟 컬럼 타입과 동일하게 표시" 요구 반영. 옵션 (B) 채택: column.type=rowLink 유지 (leader cell rowLink 동작 보존) + 타겟 컬럼의 표시 속성 (viewerType / unit / unitPosition / defaultValue) 을 새 컬럼에 상속 + 렌더러가 unit 적용. 옵션 (A) (column.type 자체 변경) 는 leader 셀의 ConnectionEditOverlay 진입 UI 가 깨지므로 보류.
+
+### 핫픽스 결과 — 1 phase + 1 fixup (`147af9a` + `817ec54`)
+
+11 파일 +125 / -18:
+
+1. **`ConnectionColumnItem`** 3개 viewer 패키지 동일 확장: `columnType?: string` (server viewerType), `unit?: string`, `unitPosition?: 'left'|'right'`, `defaultValue?: string`.
+2. **host `requestConnectionColumns`** (connectionCallbacks.ts): `col.setting?.viewerType / unit / unitPosition`, `col.defaultValue` 동봉 반환.
+3. **`RowLinkConfig.mappedTargetColumnType?: string`** 추가 (렌더러 포매팅 분기용).
+4. **`RowLinkConfigDialog.handleConfirm`**: 각 행마다 columns lookup → mappedTargetColumnType 채움 + 별도 채널 `displayProps[]` (`{unit, unitPosition, defaultValue}`) 도 emit.
+5. **onConfirm 시그니처 확장**: `(configs, titles, displayProps[])`.
+6. **`FsGridColumnGenerator.handleRowLinkConfirm`**: 3번째 인자 받아 `addRowLinkColumns` 전달.
+7. **`addRowLinkColumns`**: 새 컬럼의 `defaultValue/unit/unitPosition` 을 displayProps 에서 상속 적용.
+8. **`FsGridRowLinkCellRenderer`**: 표시 시 `columnModel.unit` + `unitPosition` 으로 prefix/suffix 적용.
+9. **`RowLinkRenderer`** (칸반/캘린더/간트): `unit`/`unitPosition` props 받아 표시 시 적용.
+10. **`rendererMap.tsx`**: rowLink entry 의 extraProps 에 `unit`/`unitPosition` 추가.
+11. **fixup**: sed 트리플 쿼트 버그 정정 (`'''left''' | '''right'''` → `'left' | 'right'`).
+
+### 본 hotfix 의 범위 + 한계
+
+- ✅ 적용: number/currency/percent 같은 unit-기반 타입의 표시 (예: "1,000 원" 같은 unit suffix 가 행 연결 셀에도 동일하게 나옴).
+- ❌ 미적용: date/dateTime 의 형식 변환 (날짜 포매팅), singleSelect/multiSelect 의 옵션 배지 렌더링, formula 의 계산식 결과 등 type-specific 렌더링 로직. RowLinkRenderer 가 type 별 renderer 에 delegation 하는 더 큰 refactor 필요 — 향후 plan-enterprise 후속 대상.
+- ✅ leader 셀의 ConnectionEditOverlay 진입 UI는 보존 (column.type=rowLink 유지).
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/entities/connection/types.ts`
+  - `packages/fs-sub-data-viewer/src/entities/connection/types.ts`
+  - `packages/fs-external-data-viewer/src/entities/connection/types.ts`
+  - `src/features/viewer/lib/connectionCallbacks.ts`
+  - `packages/fs-data-viewer/src/entities/row-link/types.ts`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx`
+  - `packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx`
+  - `packages/fs-data-viewer/src/widgets/column-generator/addRowLinkColumns.ts`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkRenderer.tsx`
+  - `packages/fs-data-viewer/src/shared/ui/cell-renderers/rendererMap.tsx`
+
+### 검증
+
+- typecheck:all + lint PASS (0 errors).
+- sub/external dist 재빌드 통과 (fixup 후).
+
 ## v001.254.0
 
 > 통합일: 2026-05-19
