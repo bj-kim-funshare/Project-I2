@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.265.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #118
+
+### 개요
+
+행 연결(rowLink) 컬럼 타입의 비리더 셀 표시를 타겟 컬럼의 모든 셀 타입과 완전히 일치시키는 풀-매칭 구현. HOTFIX 14 (v001.255.0) 가 unit/unitPosition/defaultValue 3개 메타데이터만 상속하여 number/currency/percent 의 unit suffix 정도만 표시 일치시켰던 한계를 전 타입 (text/longText/number/link/phone/email/currency/percent/code/boolean/timeline/date/dateTime/time/checkbox/log/lastUpdate/singleSelect/multiSelect/deadline/formula/simpleFormula/colorPicker/timer/user/worldTime/uniqueId/tag/vote/rating/progress/nation/image/file/dualWidget/document 등) 으로 확장. 옵션 B 의 풀-매칭 — `column.type='rowLink'` 를 유지하면서 RowLinkRenderer / FsGridRowLinkCellRenderer 가 비리더 셀 표시 시 타겟 타입의 실제 renderer 에 delegate 하여 완전 동등 출력. 리더 셀의 ConnectionEditOverlay 진입 + useRowLinkCell propagation 훅은 무변경 보존.
+
+### 페이즈 결과
+
+- **Phase 0 — 사전 결정 lock** (이슈 본문):
+  - 결정 1: RowLinkConfig = transport/persistence form (`targetColumnMetadata` snapshot 동봉), column model = materialized rendering source. 두 출처 drift 차단.
+  - 결정 2: 타입별 raw cellValue 정책 표 lock (singleSelect/multiSelect/tag/vote=valueId, file/image=ref id readonly, button=action id readonly, log/lastUpdate/uniqueId=드롭다운 제외).
+  - 결정 3: 신규 `cellRendererRegistry.ts` 단방향 모듈로 circular import 회피.
+  - 결정 4: formula/simpleFormula 분기 = Phase 1 BE 정찰 결과 → **in-scope** (VIEW 경로 계산 결과 반환 확인).
+
+- **Phase 1** (`ddc6553`): BE 응답 정찰 (formula in-scope 확정) + `ConnectionColumnItem` 풀 메타데이터 필드 추가 + host `requestConnectionColumns` 콜백 4개 (fs-data-viewer-explorer / fs-sub-data-viewer-explorer / fs-external-data-viewer-explorer / src/features/viewer) 매핑 확장 + `RowLinkConfig.targetColumnMetadata` 도입 + `parseRowLinkConfig` 구버전 후방호환 (평탄 unit/unitPosition/defaultValue → `targetColumnMetadata` lift).
+
+- **Phase 2** (`4c25ed8` + lint hotfix `3ddf662`): 신규 `RowLinkColumnDropdown.tsx` 헬퍼 도입 — COLUMN_ICONS + FsGridColumnTypes 재사용 타입 아이콘 + 한글 라벨. `filterMappableColumns` 로 log/lastUpdate/uniqueId 시스템 컬럼 드롭다운 제외 (formula/simpleFormula 포함 유지). RowLinkConfigDialog Step 4 displayProps 빌더를 `RowLinkTargetColumnMetadata` 전체 필드로 확장. RowLinkGroupEditDialog 동일 적용. Lint hotfix = `filterMappableColumns` 헬퍼 sibling 파일 분리 (`react-refresh/only-export-components`).
+
+- **Phase 3** (`7090039`): `addRowLinkColumns` displayProps 파라미터 타입 확장 (좁은 unit/unitPosition/defaultValue shape → `RowLinkTargetColumnMetadata` 전체). columnTemplate (BE 전송) + newColumn (FE 로컬 상태) 양쪽에 optionList / cellRendererModelList / enableSorting / enableAggregation / aggregationDisplayType / importanceLevels / textAlign 상속. customDataList 는 rowLink config 첫 entry + 타겟 nested append (dualWidget/document nested config 보존).
+
+- **Phase 4a** (`173b5a6`): 비-rowLink 셀 렌더러 34종을 신규 `cellRendererRegistry.ts` 로 이주. `RendererProps / RendererConfig / RenderParams / simpleRenderer` 공유 타입·헬퍼 동반 이동 + rendererMap.tsx 에서 re-export. rendererMap 은 registry spread + rowLink 단일 엔트리 추가 thin wrapper 로 축소. 단방향 의존 그래프 완성.
+
+- **Phase 4b** (`e3aa860` + lint hotfix `7555cbb`): 신규 `rowLinkDelegateDispatcher.tsx` — registry 에서 mappedTargetColumnType lookup, registry 미등록 시 unit decoration fallback, 등록 시 delegate Component 위임. `viewerIsReadOnly=true` + 모든 onChange/onCommit 류 noop 강제. Lint hotfix = `resolveDelegateRenderer` util 함수 sibling 파일 `rowLinkDelegateResolver.ts` 분리.
+
+- **Phase 5** (`15660c3`): 그리드/비그리드 RowLink 렌더러 비리더 셀 위임 적용. dispatcher 의 cellModel 의존을 `cellValue: string` 으로 교체. 그리드 (FsGridRowLinkCellRenderer) — renderContent() 내부 비리더 분기에서 getViewerModel + rendererContext.rowField 추출 dispatcher 호출, HOTFIX 14 인라인 unit decoration 제거. 비그리드 (RowLinkRenderer) — 모든 hooks 호출 이후 비리더 조기 반환 (React hooks 규칙 준수). rendererMap extraProps 보강 (columnModel / rowField / userList / 파일 관련 props 공급).
+
+- **Phase 6** (`470da8b`): `useRowLinkCell.handleLeaderValueSave` JSDoc 확장 — 비리더 cellValue raw string 저장 정책 + viewerType 별 의미 명문화. dispatcher fallback TODO 코멘트. column-restrictions.ts 감사 (rowLink 가 이미 DISABLE_* 세 목록에 포함 — 변경 불필요). rowLinkDelegateResolver.ts 사용 확인 (변경 불필요).
+
+- **Phase 6 보강** (`c697b521`): dispatcher fallback 분기에 HOTFIX 14 빈값 placeholder (`-`) 복원 — 회귀 매칭 완전.
+
+### advisor 검증
+
+- 계획 시점 (advisor #1): PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment 5관점 모두 PASS.
+- 완료 시점 (advisor #2): PASS — 전체 5관점 PASS. BLOCK 없음.
+
+### 의도된 partial / 후속 핫픽스 후보
+
+- **그리드 비리더 file/image preview wiring**: 그리드 경로는 userList/onFileLoad/fileCell/dataViewerField 를 dispatcher 에 공급하지 않아 실제 파일 목록 미조회 (비그리드 경로는 rendererMap extraProps 로 공급되어 정상). req 6 의 file/image "정책 결정" 항목을 `그리드 = placeholder 표시 / 비그리드 = 풀 preview` 로 분리 결정. 그리드 풀 wiring 은 마스터 필요 시 `핫픽스` 재진입.
+- **BE textAlign 필드 부재**: FE 타입은 추가했으나 host callback 매핑 시 undefined. 향후 BE 가 textAlign 추가 시 매핑 보완.
+- **requestConnectionColumns 콜백 4-중복 drift 위험**: 향후 구현체 추가 시 동기화 누락 위험. drift 방지는 별도 리팩토링 후보.
+- **EAV 폴백 경로 formula write 검증**: 본 플랜 외 BE 후속.
+
+### 영향 파일 (data-craft)
+
+신규 (5): `cellRendererRegistry.ts`, `RowLinkColumnDropdown.tsx`, `rowLinkColumnFilters.ts`, `rowLinkDelegateDispatcher.tsx`, `rowLinkDelegateResolver.ts`.
+
+수정 (12): `entities/connection/types.ts`, `entities/row-link/types.ts`, `entities/row-link/helpers.ts`, `RowLinkConfigDialog.tsx`, `RowLinkGroupEditDialog.tsx`, `FsGridRowLinkCellRenderer.tsx`, `RowLinkRenderer.tsx`, `useRowLinkCell.ts`, `addRowLinkColumns.ts`, `rendererMap.tsx`, `connectionCallbacks.ts` ×4.
+
 ## v001.264.0
 
 > 통합일: 2026-05-19
