@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.257.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 29)
+
+### 개요
+
+HOTFIX 28 의 잔여 한계 해소: 캘린더 본체의 currentMonth 와 인쇄 진입 시점 monthView 동기. advisor 권고로 HOTFIX 10 의 aggregations publish/subscribe + HOTFIX 14 의 `usePrintContextOptional` 패턴 동일 적용.
+
+### 페이즈 결과
+
+- **Phase 37 (HOTFIX 29)** (`f3efeac` + typecheck fix `ac96e1c`):
+  - **정찰**: 캘린더 본체의 currentMonth 는 `FsCalendarChart.tsx` 의 useState (year/month, 1-indexed). `CalendarPrintOptions.monthView` 타입 = `Date | undefined` (ISO 변환 불필요).
+  - **types.ts**: `PrintContextValue.publishCalendarMonth?: (monthDate: Date) => void` 시그니처 추가.
+  - **PrintContext.tsx**: `publishedCalendarMonth` 별도 useState + `publishCalendarMonth` 콜백. `openPrintDialog` 의 calendar 분기에서 publishedCalendarMonth 가 있으면 monthView 씨딩. setOptions(defaultOptions) 의 초기화 타이밍 문제 회피.
+  - **FsCalendarChart.tsx**: `usePrintContextOptional()` import + currentMonth 변경 effect 로 publish. provider 없으면 no-op.
+  - **CalendarRowSelectStep.tsx**: HOTFIX 28 의 fallback effect 가 이미 정상 (monthView 미설정 시 오늘 날짜) — 수정 없이 보존.
+  - **부수 typecheck fix** (`ac96e1c`): `RowLinkGroupEditDialog.tsx:221` 의 `addRowLinkColumns` 3 인자 호출 → 4 인자 (누락된 `displayProps` 추가). i-dev base 의 별 플랜 잔재.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+  - `packages/fs-data-viewer/src/features/print/types.ts`
+  - `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupEditDialog.tsx` (별 플랜 잔재 typecheck fix)
+
+4 파일 / +25 / -3 / 본 커밋 + typecheck fix.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — publish 시점 + 인쇄 진입 시 최후 publish 값 사용 + provider 없을 때 no-op 패턴 권고. 정찰 후 publishAggregations 와 동일한 별도 상태 + openPrintDialog seeding 채택 (타이밍 안전성).
+- **lint**: 1차 FAIL (별 플랜 typecheck 잔재) → fix 후 PASS (0 errors, 18 warnings).
+
 ## v001.256.0
 
 > 통합일: 2026-05-19
