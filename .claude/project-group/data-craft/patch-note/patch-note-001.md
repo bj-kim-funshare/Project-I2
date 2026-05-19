@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.221.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 9)
+
+### 핫픽스 결과 — GridViewPage useSaveContext throw 해소
+
+마스터 보고: `Error: useSaveContext must be used within SaveProvider at GridViewPage.tsx:17`. 결제 시스템 본 플랜과는 직접 관련 없으나 마스터가 PENDING 게이트 동안 동반 fix 요청.
+
+원인: GridViewPage 가 일부 mount 경로에서 SaveProvider 의 children 트리 외부에 마운트되어 `useSaveContext()` 가 throw. #86 HOTFIX 14 의 `usePrintContext` 동일 패턴.
+
+### Phase 26 (FE, `fead899`)
+
+- `GridViewPage.tsx` import 를 `useSaveContext` → `useSaveContextOptional` (SaveContext.tsx 에 이미 export 됨).
+- `const { saveChange } = useSaveContext()` → `const saveChange = useSaveContextOptional()?.saveChange ?? (() => {})` (noop 폴백 — `FsGridTableView` 의 `saveChange: SaveChangeFn` required prop 충족).
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/pages/GridViewPage.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
+
+### 별도 항목 (PIN 모달 디자인 시안)
+
+마스터 요청: "디자인 팀 설계안 보고 결재 비밀번호 부분 아예 다시 만들어 — /Users/starbox/Downloads/Payment PIN Modal.html".
+**HTML 파일이 4개 외부 .jsx 파일을 참조 (`design-canvas.jsx`, `pin-modal.jsx`, `pin-states.jsx`, `pin-app.jsx`) 하나 해당 파일들이 Downloads 에 존재하지 않음 — 본 hotfix 에서 시안 구현 불가.**
+
+후속 진행 방법:
+- 마스터가 4개 .jsx 파일을 프로젝트 내 (예: `data-craft/_design-mockup/`) 에 복사 후 추가 hotfix.
+- 또는 단일 self-contained HTML (inline JSX) / Figma export / 스크린샷 (테마 + 인터랙션 명세) 로 전달.
+
 ## v001.220.0
 
 > 통합일: 2026-05-18
