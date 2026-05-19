@@ -44,7 +44,7 @@
 
 🔴 /project-verification data-craft today
 
-🔴 /plan-enterprise data-craft 단계5-A PWA 마감 — service worker 활성화 (apps/web/src/mobile/sw-register.ts), 정적 자원 캐시·오프라인 fallback·로딩/에러 바운더리·접근성 라벨. BE 변경 0.
+🟢 /plan-enterprise data-craft 단계5-A PWA 마감 — service worker 활성화 (apps/web/src/mobile/sw-register.ts), 정적 자원 캐시·오프라인 fallback·로딩/에러 바운더리·접근성 라벨. BE 변경 0. — 완료 (이슈 #115, v001.242.0; 명령 7개 항목 중 대부분이 이미 구현 완료 (sw-register / vite-plugin-pwa workbox / manifest / OfflineBanner / ScreenErrorBoundary / Suspense / aria-label) 임이 Explore 로 확인되어, 남은 5개 polish gap 만 단일 phase 12 파일 +192/-7 로 마감. AppErrorBoundary (최상위 React class) + LoadingSpinner (재사용 fallback, 5 라우트 적용; grid/kanban/calendar 는 라우트 파일 부재로 노터치) + offline.html + vite navigateFallback (SW cold-start 오프라인) + BottomTabs `aria-current="page"` + AppShell skip-to-main 링크. BE/DB 변경 없음. 잔여 검증/후속: LoadingSpinner `@keyframes spin` 동작 / grid·kanban·calendar 라우트 생성 시 LoadingSpinner 교체 phase / Lighthouse 점수 변화)
 
 🔴 /dev-inspection data-craft today
 
