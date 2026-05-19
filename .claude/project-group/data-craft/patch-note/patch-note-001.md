@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.263.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119 (HOTFIX 1)
+
+### 개요
+
+플랜 #119 초기 작업 완료(v001.262.0) 후 마스터가 브라우저 인쇄 다이얼로그로 넘어갔을 때 캘린더 본문(달력 그리드) + "선택된 행 (N개)" 부록 표가 페이지 좌측에 붙어 표시되는 회귀를 스크린샷과 함께 보고. 본 플랜 변경(데이터 소스 분기)은 CSS 무수정이었으나, 처음으로 인쇄 내용이 정상 노출되면서 사전 좌측 정렬 버그가 가시화됨. 근인은 `printStyleGenerator.ts` 의 `@media print` 룰이 화면 모드의 `margin: 0 auto` 가운데정렬을 `margin: 0` 으로 덮어쓰던 것 — 초기 squash 시점부터 존재한 사전 버그.
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 1)** (`2f101da`): `printStyleGenerator.ts:287` `.print-content` `@media print` 룰 `margin: 0` → `margin: 0 auto` (단어 한 개 추가). screen 모드 무영향, 5 인쇄 뷰(grid / calendar / gantt / kanban / dashboard) 공유 컨테이너이므로 모든 인쇄 경로에서 가운데정렬 회복. `.print-content` width = paperWidth - margins.left - margins.right 로 정확히 printable area 폭이므로 양옆 절단 없이 fit.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +1 / -1 / 단일 커밋.
+
+### lint
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) PASS (0 errors, 19 pre-existing warnings).
+
 ## v001.262.0
 
 > 통합일: 2026-05-19
