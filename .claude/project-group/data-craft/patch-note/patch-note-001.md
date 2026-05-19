@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.249.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #86 (HOTFIX 26)
+
+### 개요
+
+마스터 명령: "집계 결과와 옆 괄호가 정렬이 안맞아, 더 내려가 있는데?". HOTFIX 25 의 `(총 N개 열 집계)` span 이 default `vertical-align: baseline` 으로 큰 제목 baseline 에 맞춰져 시각적으로 아래로 보임. `vertical-align: middle` 명시.
+
+### 페이즈 결과
+
+- **Phase 34 (HOTFIX 26)** (`5cde575`): `printStyleGenerator.ts` 의 `.aggregation-summary-count` 블록에 `vertical-align: middle` 한 줄 추가. 기존 font-size/font-weight/color/margin-left 보존.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+1 파일 / +1 / -0 / 단일 커밋.
+
+### lint
+
+- PASS (0 errors, 17 warnings).
+
 ## v001.248.0
 
 > 통합일: 2026-05-19
