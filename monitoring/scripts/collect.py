@@ -182,7 +182,11 @@ def _load_known_skills() -> tuple[frozenset[str], frozenset[str]]:
     Classifies as gated if the SKILL.md body contains "PENDING gate" or
     "completion-gate" substrings.
 
-    Falls back to the hardcoded sets on any extraction error (OSError,
+    On success, unions the auto-extracted sets with the hardcoded fallback sets so
+    that new skills are picked up automatically while established gated skills remain
+    classified correctly even if their SKILL.md doesn't contain the literal gate marker.
+
+    Falls back entirely to the hardcoded sets on any extraction error (OSError,
     empty result, etc.) — this is intentional so callers always get a usable set.
     """
     try:
@@ -208,7 +212,13 @@ def _load_known_skills() -> tuple[frozenset[str], frozenset[str]]:
         if not all_skills:
             raise ValueError("no skills found — falling back to hardcoded set")
 
-        return frozenset(gated), frozenset(all_skills)
+        # Union with fallback sets: auto-extraction picks up new skills automatically;
+        # the hardcoded fallback guarantees the established 14 gated skills are always
+        # classified correctly even if their SKILL.md doesn't contain the gate marker.
+        return (
+            frozenset(gated | _FALLBACK_GATED_SKILLS),
+            frozenset(all_skills | _FALLBACK_NON_GATED_SKILLS | _FALLBACK_GATED_SKILLS),
+        )
 
     except Exception:
         # Any failure: fall back to hardcoded sets
@@ -1334,8 +1344,14 @@ def main() -> int:
     hourly_messages = result.pop("_hourly_messages", {})
     hourly_by_model = result.pop("_hourly_by_model", {})
     hourly_by_skill = result.pop("_hourly_by_skill", {})
-    # Phase 2 will stop popping this and expose it as "by_skill_invocation" in aggregate.json.
-    result.pop("_all_skill_invocations", [])
+    # Serialize all skill-invocation windows to aggregate.json only (not periods/*.json or hourly.json).
+    # Defensive re-sort by start_timestamp descending at serialization time.
+    all_skill_invocations = result.pop("_all_skill_invocations", [])
+    result["by_skill_invocation"] = sorted(
+        all_skill_invocations,
+        key=lambda w: w.get("start_timestamp", ""),
+        reverse=True,
+    )
 
     output_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {output_path}", file=sys.stderr)
