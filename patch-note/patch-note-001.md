@@ -1,5 +1,34 @@
 # 아이OS — Patch Note (001)
 
+## v001.81.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42 (HOTFIX 4)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 4** (HOTFIX 4 단일 커밋): 상세 모달의 서브 에이전트별 수치를 시각화. 모달 본문에 `.modal-agents-section` 신규 추가 — 각 sub-agent 마다 1 row, 에이전트명 해시 색상 chip + 총 토큰·비용 요약 헤더, 그 아래 "사용" / "캐시" 가로 막대 2개 (윈도우 내 max 대비 비례, X.XXM 라벨). 총 토큰 내림차순 정렬. 기존 채널별 raw 테이블은 유지.
+
+### 진단 요지
+
+- v001.80.0 직후 마스터 관측: 모달의 sub-agent 행이 plain 표 형태라 시각 비교 어려움.
+
+### 회귀 검증
+
+- node --check JS OK. 모달 외 다른 표/차트 무변경, additive 만.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 시각화 강화만.
+
+### 영향 파일
+
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/README.md` (모달 시각 강화 항목 한 줄 추가)
+- `patch-note/patch-note-001.md`
+
 ## v001.80.0
 
 > 통합일: 2026-05-19
