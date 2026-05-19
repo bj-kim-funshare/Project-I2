@@ -441,12 +441,17 @@ def build_by_skill_invocation(
     Close priorities (whichever fires first):
       1. For gated skills only: a subsequent master prompt containing "플랜 완료" or
          "핫픽스 완료" — that prompt's records are included in the closing window.
-      2. A subsequent master prompt with a recognized <command-name>/Y</command-name>
+      2. For non-gated skills: any subsequent master prompt (plain or slash command)
+         closes the active window before the new prompt is evaluated. Non-gated skills
+         complete within a few assistant turns; the next master prompt unambiguously
+         starts new scope regardless of content.
+      3. A subsequent master prompt with a recognized <command-name>/Y</command-name>
          (any known skill, including same skill re-invoked) — the new prompt opens a
          new window; the old window closes just before this new master prompt's position.
-      3. For non-gated skills: the last record where attributionSkill equals the window's
-         skill, i.e., when attribution changes to a different value, the window closes.
-      4. End of session records.
+      4. For non-gated skills: the last record where attributionSkill equals the window's
+         skill, i.e., when attribution changes to a different value, the window closes
+         (fallback; rule 2 usually fires first).
+      5. End of session records.
 
     Nested skill handling (v1 simplification): when /Y opens during an active /X window,
     /X is closed immediately (rule 2). The windows are therefore non-overlapping within a
@@ -657,7 +662,15 @@ def build_by_skill_invocation(
                 # This record does NOT start a new window; continue scanning.
                 continue
 
-        # Check for new skill invocation (rule 2: new /Y opens → old window closes before this prompt)
+        # Rule 2 (non-gated): close on ANY subsequent master prompt regardless of content.
+        # Non-gated skills complete in a few assistant turns; the next master prompt
+        # starts new scope. Unlike gated PENDING windows, plain prompts cannot
+        # legitimately belong to a non-gated skill window.
+        if active_window is not None and not active_is_gated:
+            _finalize_window(i, "plain_prompt")
+            active_window = None
+
+        # Rule 3: new /Y skill command → close old window before this prompt
         skill_name, raw_args = _parse_skill_command(text)
 
         if active_window is not None and skill_name is not None:

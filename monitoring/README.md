@@ -83,12 +83,13 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
 
 **컬럼**: 시작 시각 / 소요 시간 / 스킬 / 제목(원 프롬프트 60자 트렁케이트) / 생성물(이슈 #N | patch-note-NNN | Roadmap-N | -) / 총 토큰 / 메인 토큰 / 서브에이전트별 토큰
 
-**윈도우 경계 규칙 (4 우선순위)**:
+**윈도우 경계 규칙 (5 우선순위)**:
 
 1. **명시적 종료어** — gated 스킬에서 `플랜 완료` 또는 `핫픽스 완료`가 포함된 마스터 프롬프트 도착 → 그 프롬프트까지 포함하여 닫음.
-2. **새 스킬 호출** — 다른 `<command-name>/Y</command-name>` 도착 → 이전 윈도우를 닫고 새 윈도우 열림.
-3. **attribution_drop (비gated)** — `attributionSkill`이 다른 스킬로 전환 → 직전 동일-attribution 레코드까지로 닫음 (grace window 없음).
-4. **세션 종료** — 위 셋 모두 미발생 시 세션 마지막 레코드까지.
+2. **plain_prompt (비gated)** — 비gated 스킬 활성 중 어떤 내용이든 마스터 프롬프트 도착 → 즉시 닫음. 비gated 스킬은 수 턴 내 완료되므로 다음 마스터 프롬프트는 항상 새 scope의 시작이다.
+3. **새 스킬 호출** — 다른 `<command-name>/Y</command-name>` 도착 → 이전 윈도우를 닫고 새 윈도우 열림.
+4. **attribution_drop (비gated)** — `attributionSkill`이 다른 스킬로 전환 → 직전 동일-attribution 레코드까지로 닫음 (grace window 없음; 규칙 2가 먼저 발동하는 경우 대체로 불필요).
+5. **세션 종료** — 위 넷 모두 미발생 시 세션 마지막 레코드까지.
 
 **중첩 처리**: v1은 새 `/Y` 도착 시 이전 `/X`를 즉시 닫는 단순 분할(비-overlap). 향후 마스터 요청 시 외곽 누적 방식 옵션 추가 가능.
 
