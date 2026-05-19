@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.215.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #105 (HOTFIX 3)
+
+### 개요
+
+마스터 보고 (이전 hotfix 들 모두 "여전히" 미반영): **이전 3 round 코드는 모두 정확했으나 실행 환경에 도달하지 못함**. 진단으로 진짜 원인 발견 — `fs_file_attachment` 패키지의 `package.json` 이 `main`/`module`/`exports` 를 `./dist/index.js` 로 가리키고, `dist/` 가 5/16 11:59 빌드본 (Phase 1 직전). root `pnpm dev` 는 단순 `vite` 라 패키지의 `tsup --watch` 미실행 → 패키지 src 변경 시 dist 가 자동 재빌드 안 됨. 마스터가 본 dialog 는 **5/16 빌드된 옛 ImageZoomDialog** (50vw × 70vh + sm:max-w-lg ≈ 512px cap → 1280-1366px 화면에서 ~30% 너비 정확 일치). 모든 우리 변경 (80vw cap-해제, onCloseAutoFocus, max-h calc) 이 src 안에는 있으나 컴파일 결과물에 없음.
+
+### 페이즈 결과
+
+- **Phase 4 (HOTFIX 3)** (`a875ad73`): root `dev` script 갱신.
+  - `package.json` scripts.dev: `"vite"` → `"concurrently -k -n fs-fa,vite \"pnpm --filter fs_file_attachment dev\" \"vite\""`.
+  - devDependencies 에 `"concurrently": "^9.1.0"` 추가, `pnpm-lock.yaml` 동반 갱신.
+  - 효과: `pnpm dev` 가 vite + `fs_file_attachment` 의 `tsup --watch` 동시 실행. 한쪽 종료 시 다른 쪽도 종료 (`-k` kill-others) — orphan tsup process 방지. 향후 패키지 src 변경 시 dist 자동 재빌드.
+  - 초기 시도 (shell 백그라운드 `&`) 는 advisor 가 orphan process 누수 사전 지적 → concurrently 로 정정.
+  - **즉시 효과 보장**: hotfix 3 머지 직후 main working tree 에서 `pnpm --filter fs_file_attachment build` 1회 실행 → dist 가 5/19 빌드로 갱신. 마스터의 현재 dev server (있다면) 가 dist 변경 즉시 HMR reload — 마스터는 페이지 hard refresh 만으로 80vw × 90vh 모달 + calc 이미지 cap 확인 가능. `pnpm install` 은 향후 dev script 재실행 전 1회 필요.
+
+### 영향 파일
+
+- data-craft:
+  - `package.json` (scripts.dev + devDependencies.concurrently)
+  - `pnpm-lock.yaml` (concurrently 의존성 추가)
+
+2개 파일 / +32 / -1 / 2 commit (초기 + concurrently 정정).
+
+### advisor 검증
+
+- 진단 시점 PASS — dist resolution 가설 advisor 확인 (Case A: build-first monorepo, 모든 fs_* 패키지가 dist 가리킴). scroll 문제는 wrong layer fix 였음을 advisor 가 정정 — HOTFIX 1 의 ImageZoomDialog `onCloseAutoFocus` 가 아니라 data-viewer 의 ImageDialog backdrop (wheel 이벤트 미차단) 이 진짜 위치. 본 hotfix 3 은 dist resolution 만 처리, scroll 은 HOTFIX 4 로 분리.
+- 완료 시점 PASS — concurrently 채택 + lockfile 갱신 정합, lint gate PASS (0 errors, 17 warnings).
+
+### 마스터 절차 (한 번)
+
+1. `pnpm install` — concurrently 의존성 설치.
+2. 기존 `pnpm dev` 종료, 다시 `pnpm dev` — vite + fs_file_attachment watch 동시 실행.
+3. 브라우저 hard refresh — 우리가 머지 직후 1회 빌드 해두었으므로 이번 단계 없이도 즉시 확인 가능.
+
+### 수동 점검 권장
+
+- 셀 파일 첨부 이미지 썸네일 클릭 → 모달이 뷰포트 80% × 90% 표시 + 이미지가 내부 가용 공간만큼 비율 유지 확장 확인.
+- 향후 패키지 src 수정 시 dist 자동 재빌드 + vite HMR 정상 동작 확인.
+
+### 미해결 (잔여 후속)
+
+- **뒷배경 가로 스크롤 (HOTFIX 4 예정)**: HOTFIX 1 의 `onCloseAutoFocus` 는 wrong layer 였음. 진짜 위치 = `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridImageCellRenderer/ImageDialog.tsx` 의 backdrop. backdrop 이 `onMouseDownCapture stopPropagation` 만 가짐 — wheel (trackpad horizontal scroll) 이벤트는 미차단. fix 후보: `onWheel preventDefault` on backdrop, `overscroll-behavior: contain` on dialog wrapper, 또는 `useScrollLock` 을 horizontal 까지 확장. 마스터 confirm 후 진입.
+- **다른 패키지의 동일 dist resolution 이슈**: `fs_data_viewer`, `fs_api`, `fs_sub_data_viewer`, `fs_external_data_viewer`, `fs_data_link`, `fs_relation_builder`, `fs_shared` 모두 `./dist/` 가리킴 + 자동 watch 안 됨. 본 hotfix 는 fs_file_attachment 한 패키지만. 다른 패키지 src 편집 시 동일 fix 필요 (concurrently 명령에 추가). 단발성 추가로 진행하든 일괄 turbo 전환하든 별도 plan 분리.
+- **prop-name mismatch**: 패키지 ImageZoomDialog `open` vs app 사본 `isOpen` — latent silent-break. 별도 후속.
 ## v001.213.0
 
 > 통합일: 2026-05-19
