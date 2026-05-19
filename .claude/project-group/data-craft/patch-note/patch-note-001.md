@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.238.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #114 (HOTFIX 1)
+
+### 개요
+
+플랜 #114 의 PENDING 단계 마스터 검증 결과 3건 보정 요청:
+1. **설정 X 위치 — 조건부**: 본문 확장 토글이 노출되지 않을 때는 기존 위치 (`right-4`) 로 복귀해야 함. v001.232.0 의 항상 `right-9` 정책 보완.
+2. **문서 모달 백드롭 — 미적용 원인 식별**: v001.232.0 Phase 2 의 공용 `DialogOverlay` 톤 조정이 효과 없었음. 추가 탐색 결과 마스터가 지칭한 "문서 모달" 은 `DocumentEditDialog` (`packages/fs-data-viewer/.../document-edit/DocumentEditDialog.tsx`) 로 shadcn `Dialog` 가 아닌 커스텀 `createPortal` + 수동 `fixed inset-0` wrapper 구조. wrapper div 에 backdrop 색상 토큰 자체가 부재 → 완전 투명. 직접 `bg-black/70` 추가.
+3. **컨테이너 후보 라벨 — 사용자 친화화**: `LoadDataActionSection` Step 3 후보 표기에서 내부 키 (`empty-viewer` 등) 노출 → `WIDGET_TYPE_INFO[emptyType]?.name` 으로 치환하여 "데이터 뷰어 컨테이너 (d87401cb)" 식 사용자 가시명 표기.
+
+### 페이즈 결과
+
+- **Phase 4 / HOTFIX 1** (`8572c98e`): A) `SettingsDialog` 의 커스텀 `DialogClose` className 을 `right-9` 고정에서 `${isCustomSettingsActive ? 'right-9' : 'right-4'}` 동적 ternary 로 변경. B) `DocumentEditDialog` line 113 wrapper className 에 `bg-black/70` 추가, 그 외 (z-index 토큰, onClick/onMouseDown/onKeyDown 핸들러, 주석) 모두 보존. C) `LoadDataActionSection` 에 `WIDGET_TYPE_INFO` import 추가, line 89 라벨 템플릿 `${emptyType}` → `${WIDGET_TYPE_INFO[emptyType]?.name ?? emptyType}` 치환.
+
+### 영향 파일
+
+data-craft:
+- `src/widgets/settings-dialog/ui/SettingsDialog.tsx`
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx`
+- `src/widgets/property-drawer/ui/property-editors/button-editor/LoadDataActionSection.tsx`
+
+### 후속 메모 (정보)
+
+`FsGridCellStyleDialog` (`packages/fs-data-viewer/src/widgets/cell-style-dialog/FsGridCellStyleDialog.tsx`) 와 `AggregationDetailDialog` (`packages/fs-data-viewer/src/widgets/grid-table/components/AggregationDetailDialog.tsx`) 도 동일 패턴 (custom `fixed inset-0` + 배경색 미설정) 으로 백드롭이 투명한 결함 발견. 본 핫픽스는 마스터 지칭 (문서 모달) 에 한정 — 해당 2개 모달 사용 시 가시성 문제 재현되면 추가 핫픽스 대상.
+
 ## v001.237.0
 
 > 통합일: 2026-05-19
