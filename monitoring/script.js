@@ -933,7 +933,7 @@ function renderSkillInvocations() {
   const start = (__skillInvPage - 1) * SKILL_INV_PAGE_SIZE;
   const slice = __skillInvData.slice(start, start + SKILL_INV_PAGE_SIZE);
 
-  const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 토큰', '메인', '서브에이전트'];
+  const headers = ['시작 시각', '소요 시간', '스킬', '제목', '생성물', '총 사용', '총 캐시', '메인 사용', '메인 캐시', '서브에이전트'];
   const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
 
   const rows = slice.map((w, localIdx) => {
@@ -945,8 +945,12 @@ function renderSkillInvocations() {
     const titleTrunc = titleFull.length > 60 ? titleFull.slice(0, 60) + '…' : titleFull;
     const titleAttr = escapeHtml(titleFull);
     const artifactId = escapeHtml(w.artifact_id || '—');
-    const totalTok = formatTokensCompact(skillInvTotalTokens(w.total || {}));
-    const mainTok = formatTokensCompact(skillInvTotalTokens(w.main_session || {}));
+    const totalRec = w.total || {};
+    const mainRec = w.main_session || {};
+    const totalUsage = formatTokensCompact((totalRec.input || 0) + (totalRec.output || 0));
+    const totalCache = formatTokensCompact((totalRec.cache_creation_5m || 0) + (totalRec.cache_creation_1h || 0) + (totalRec.cache_read || 0));
+    const mainUsage = formatTokensCompact((mainRec.input || 0) + (mainRec.output || 0));
+    const mainCache = formatTokensCompact((mainRec.cache_creation_5m || 0) + (mainRec.cache_creation_1h || 0) + (mainRec.cache_read || 0));
 
     const agentMap = w.by_agent || {};
     const agentKeys = Object.keys(agentMap);
@@ -955,8 +959,10 @@ function renderSkillInvocations() {
       agentsCell = '—';
     } else {
       agentsCell = agentKeys.map(name => {
-        const tok = formatTokensCompact(skillInvTotalTokens(agentMap[name]));
-        return `${escapeHtml(name)}: ${tok}`;
+        const rec = agentMap[name];
+        const usage = formatTokensCompact((rec.input || 0) + (rec.output || 0));
+        const cache = formatTokensCompact((rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0));
+        return `${escapeHtml(name)}: ${usage}/${cache}`;
       }).join(' · ');
     }
 
@@ -966,8 +972,10 @@ function renderSkillInvocations() {
       <td>${skill}</td>
       <td class="title-cell" title="${titleAttr}">${escapeHtml(titleTrunc)}</td>
       <td>${artifactId}</td>
-      <td>${totalTok}</td>
-      <td>${mainTok}</td>
+      <td>${totalUsage}</td>
+      <td>${totalCache}</td>
+      <td>${mainUsage}</td>
+      <td>${mainCache}</td>
       <td class="agents-cell">${agentsCell}</td>
     </tr>`;
   }).join('');
@@ -1006,7 +1014,9 @@ function openSkillInvocationModal(idx) {
   }
 
   function tokenCells(rec) {
-    if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+    if (!rec) return '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+    const usageSum = (rec.input || 0) + (rec.output || 0);
+    const cacheSum = (rec.cache_creation_5m || 0) + (rec.cache_creation_1h || 0) + (rec.cache_read || 0);
     return [
       rec.messages != null ? fmtNum(rec.messages) : '—',
       rec.input != null ? fmtNum(rec.input) : '—',
@@ -1015,6 +1025,8 @@ function openSkillInvocationModal(idx) {
       rec.cache_creation_1h != null ? fmtNum(rec.cache_creation_1h) : '—',
       rec.cache_read != null ? fmtNum(rec.cache_read) : '—',
       rec.cost_usd != null ? `$${rec.cost_usd.toFixed(4)}` : '—',
+      fmtNum(usageSum),
+      fmtNum(cacheSum),
     ].map(v => `<td>${v}</td>`).join('');
   }
 
@@ -1036,7 +1048,7 @@ function openSkillInvocationModal(idx) {
     </dl>
     <h4 style="margin:12px 0 4px">토큰 분해</h4>
     <table class="modal-token-table">
-      <thead><tr><th>채널</th><th>messages</th><th>input</th><th>output</th><th>cache_5m</th><th>cache_1h</th><th>cache_read</th><th>cost</th></tr></thead>
+      <thead><tr><th>채널</th><th>messages</th><th>input</th><th>output</th><th>cache_5m</th><th>cache_1h</th><th>cache_read</th><th>cost</th><th>사용 합</th><th>캐시 합</th></tr></thead>
       <tbody>
         <tr><td>총합</td>${tokenCells(w.total)}</tr>
         <tr><td>메인 세션</td>${tokenCells(w.main_session)}</tr>
