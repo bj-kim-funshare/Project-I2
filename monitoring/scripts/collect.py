@@ -23,6 +23,9 @@ from typing import Any
 # Hardcoded for I2 — the Claude Code per-project session directory.
 SESSION_DIR = Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I2"
 
+# Sessions whose last record is within this many seconds of now() are considered still ongoing.
+_IN_PROGRESS_THRESHOLD_SEC = 1800
+
 # Pricing per million tokens (approximate, USD). Adjust as needed.
 # Source: Anthropic pricing pages; cached and uncached input differ.
 PRICING = {
@@ -623,6 +626,7 @@ def build_by_skill_invocation(
             "artifact_kind": artifact_kind,
             "artifact_id": artifact_id,
             "close_reason": close_reason,
+            "partial": False,
             "total": total_record,
             "main_session": dict(main_session),
             "by_agent": by_agent_out,
@@ -696,6 +700,36 @@ def build_by_skill_invocation(
     # Rule 4: close any still-open window at session end
     if active_window is not None:
         _finalize_window(len(records), "session_end")
+
+    # Post-process: detect in-progress sessions.
+    # A session is in_progress if its last record timestamp is within
+    # _IN_PROGRESS_THRESHOLD_SEC of now. For such sessions, the last
+    # session_end window becomes in_progress (partial=True).
+    if windows:
+        session_last_ts: str | None = None
+        for rec in reversed(records):
+            ts = rec.get("timestamp")
+            if ts:
+                session_last_ts = ts
+                break
+
+        if session_last_ts is not None:
+            last_dt = _parse_dt(session_last_ts)
+            now_dt = datetime.now(timezone.utc)
+            if last_dt is not None and (now_dt - last_dt).total_seconds() <= _IN_PROGRESS_THRESHOLD_SEC:
+                # Find the window with the latest start_timestamp that has close_reason == "session_end"
+                candidate_idx: int | None = None
+                candidate_ts: str = ""
+                for wi, w in enumerate(windows):
+                    if w.get("close_reason") == "session_end":
+                        wts = w.get("start_timestamp", "")
+                        if wts >= candidate_ts:
+                            candidate_ts = wts
+                            candidate_idx = wi
+                if candidate_idx is not None:
+                    windows[candidate_idx]["close_reason"] = "in_progress"
+                    windows[candidate_idx]["partial"] = True
+                    windows[candidate_idx]["last_seen_timestamp"] = session_last_ts
 
     return windows
 

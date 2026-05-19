@@ -1,5 +1,38 @@
 # 아이OS — Patch Note (001)
 
+## v001.80.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42 (HOTFIX 3)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 3** (HOTFIX 3 단일 커밋): (1) 진행 중 호출 표시 — `build_by_skill_invocation` 의 session_end 후처리에서 세션 last record timestamp 가 현재 시각 기준 30분 이내인 경우 마지막 윈도우의 close_reason 을 `in_progress` 로 마킹하고 `partial: true` / `last_seen_timestamp` 메타 추가. (2) 프론트 상단 분리 — `renderSkillInvocations` 가 in_progress 행을 별도 "🔴 진행 중인 호출 (실시간 부분 집계)" 섹션으로 렌더, 메인 표는 완료된 호출만 페이지네이션. (3) 모달 시각 개선 — hero 블록 (skill chip + artifact tag + close_reason pill), 4-card stat strip (사용/캐시/소요/비용), 채널별 stacked horizontal bar, 채널 분해 테이블 zebra, 세션 메타 collapsible footer. (4) 표/모달의 모든 토큰 수치를 `X.XXM` 소수점 M 단위로 통일.
+
+### 진단 요지
+
+- v001.79.0 머지 직후 마스터 관측: (a) 진행 중 호출도 시각 구분되어 표시될 필요. (b) 기존 모달이 dl + 단순 테이블 위주로 표 시각화 강화에 비해 정보 밀도 / 미감 격차.
+
+### 회귀 검증
+
+- node --check 문법 OK.
+- 진행 중 판정은 collect.py 가 실행되는 시점의 datetime.now() 기준 — JSONL flush timing 에 의존. 30분 임계는 보수적 기본값.
+- 기존 완료 호출 표 / 페이지네이션 / 모달 채널별 raw 테이블 무변경, 추가 레이어만.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 없음, 표시 분리·강화만.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+- `monitoring/index.html` (필요 시 — 모달 컨테이너 구조 변경 시)
+- `monitoring/script.js`
+- `monitoring/styles.css`
+- `monitoring/README.md`
+- `patch-note/patch-note-001.md`
+
 ## v001.79.0
 
 > 통합일: 2026-05-19

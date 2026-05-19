@@ -95,6 +95,19 @@ input + output 은 신규 토큰(사용량)이고 cache_creation_5m + cache_crea
 
 **중첩 처리**: v1은 새 `/Y` 도착 시 이전 `/X`를 즉시 닫는 단순 분할(비-overlap). 향후 마스터 요청 시 외곽 누적 방식 옵션 추가 가능.
 
+**진행 중인 호출 (in_progress)**:
+collect.py 가 실행되는 시점에 마지막 레코드 timestamp 가 현재 시각 기준 30분 이내인 세션은 "진행 중" 으로 판정된다. 해당 세션의 마지막 `session_end` 윈도우는 `close_reason: in_progress`, `partial: true`, `last_seen_timestamp` 가 설정된다 (부분 집계임을 의미). 이 윈도우들은 메인 표/페이지네이션과 분리되어 상단 별도 "🔴 진행 중인 호출 (실시간 부분 집계)" 영역에 표시된다.
+
+**모달 시각 강화 (HOTFIX 3)**:
+행 클릭 시 열리는 모달에 다음 레이어가 추가되었다:
+- **hero 블록**: 스킬명 chip (해시 색상) + artifact 태그 + close_reason pill 을 상단 1행으로 요약.
+- **4-card stat strip**: 총 사용 토큰 / 총 캐시 토큰 / 소요 시간 / 추정 비용.
+- **채널별 stacked horizontal bar**: input / output / cache_5m / cache_1h / cache_read 비율 시각화 + 범례.
+- **collapsible session footer**: 세션 ID · 시작/종료 timestamp · 종료 사유 · 마지막 활동 시각을 `<details>` 로 접어둠.
+
+**단위 표기**:
+스킬 호출별 표의 모든 토큰 수치 (총 사용, 총 캐시, 메인 사용, 메인 캐시) 및 모달 stat-card / "사용 합" / "캐시 합" 컬럼은 `X.XXM` 소수점 M 단위로 통일한다. 예: `1.23M`, `0.05M`, `12.50M`. KPI 카드(`fmtKMB`) 는 적용 대상 외.
+
 **UX**:
 - 헤더의 기간/비교 토글 영향을 받지 않음 — 항상 전체 데이터 표시.
 - 30개씩 페이지네이션. 1페이지 = 최신, 상단 = 가장 최신.
