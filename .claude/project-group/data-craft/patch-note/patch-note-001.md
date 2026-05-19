@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.244.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 9)
+> HOTFIX 8 까지 폼 그룹의 isForm 마킹은 정상이었으나 폼 탭 UI 가 hardcoded "폼 그룹 없음" placeholder 만 렌더해서 실제 데이터 무시. HOTFIX 4 시점의 빈상태 가정이 잔존했던 점.
+
+### 핫픽스 결과 — 1 phase (`10908ed`)
+
+`RowLinkConfigDialog.tsx` 그룹 탭 본문:
+- 기존: `activeGroupTab === 'form'` 분기에서 "폼 그룹 없음" 만 hardcoded 표시. filteredGroups 무시.
+- 변경: 폼 탭도 `filteredGroups.map(...)` 정상 렌더. filteredGroups 가 0일 때만 "폼 그룹 없음" 메시지. 다른 탭은 "연결 가능한 그룹이 없습니다".
+- 검색 input 도 폼 탭에서 표시 (기존엔 `activeGroupTab !== 'form'` 가드로 숨겨져 있던 것 해제).
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (+12 / -14)
+
+### 검증
+
+- typecheck + lint PASS.
+
 ## v001.243.0
 
 > 통합일: 2026-05-19
