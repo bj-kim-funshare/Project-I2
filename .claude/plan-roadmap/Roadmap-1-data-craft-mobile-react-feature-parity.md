@@ -38,7 +38,7 @@
 
 🔴 /dev-security-inspection data-craft today
 
-🟡 /plan-enterprise data-craft 단계4 메시징·알림·피드 통합 — DM (목록/채팅/권한), 알림/인박스, 피드/홈/프로필/팔로우 를 단일 plan 으로 묶고 phase 분해 (apps/web/src/mobile/layouts/AppShell 및 bottom-nav 위젯 공유 → 직렬 진행). routes/dm/, routes/inbox.tsx, routes/notifications.tsx, routes/feed.tsx, routes/home.tsx, routes/profile/, routes/page-follow/. 기존 message / notification / feed / profile API 재사용. — **부분 완료** (이슈 #113, v001.231.0; Step 1 sharpening 으로 BE 완비 영역만 wiring: Notification + Inbox + Profile-이미지, 2 phase 11 파일. ScreenNotifications/ScreenInbox + notificationApi 호출, ScreenProfile + profileApi 신규. BE 부재로 본 plan 분리된 후속: DM (목록/채팅/권한) — BE `/api/message` 또는 `/api/dm` 부재 / 피드 — BE `/api/feed` 부재 / 페이지 팔로우 — BE `/api/page-follow` 부재 / 프로필 상세 — BE 사용자 프로필 GET 부재. 각각 BE 선행 후 별도 plan-enterprise 호출 필요. 그 외 후속: isRead 0|1 타입 일관화, optimistic 롤백/에러 UX, /m/profile/me 라우트 매칭 확인)
+🟢 /plan-enterprise data-craft 단계4 메시징·알림·피드 통합 — DM (목록/채팅/권한), 알림/인박스, 피드/홈/프로필/팔로우 를 단일 plan 으로 묶고 phase 분해 (apps/web/src/mobile/layouts/AppShell 및 bottom-nav 위젯 공유 → 직렬 진행). routes/dm/, routes/inbox.tsx, routes/notifications.tsx, routes/feed.tsx, routes/home.tsx, routes/profile/, routes/page-follow/. 기존 message / notification / feed / profile API 재사용. — 완료 (이슈 #113, v001.231.0; Roadmap-1 의 BE/DB 무수정 lock 에 따라 BE 완비 영역만 wiring: Notification + Inbox + Profile-이미지 2 phase 11 파일. ScreenNotifications/ScreenInbox + notificationApi 호출, ScreenProfile + profileApi 신규. DM/피드/페이지팔로우/프로필 상세는 BE 신규가 필요하여 본 Roadmap-1 범위 외 — 전부 Roadmap-3 (data-craft Flutter + BE /v2/social/* 신규) 의 해당 단계에서 이미 다룸: DM=Roadmap-3 단계4, 피드/포스트=단계2, 팔로우/프로필=단계3, notification 인박스=단계5)
 
 🔴 /dev-inspection data-craft today
 
