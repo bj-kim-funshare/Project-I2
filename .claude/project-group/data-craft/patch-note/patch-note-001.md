@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.214.0
+
+> 통합일: 2026-05-18
+> 플랜 이슈: #86 (HOTFIX 15)
+
+### 개요
+
+마스터 보고: "전에도 말했지만 집계가 내용 대비 비정상적으로 쓸데없이 공간을 많이 차지한다니까? 여백이 90%가 넘어". HOTFIX 13 의 메인 요약 표 + distribution 부속 표 구조가 분포 컬럼 N개 시 (1 + N) 개 표가 sparse 하게 stack 되어 여전히 여백 과다. advisor 권고로 옵션 A (인라인 통합) 채택 — 부속 표 완전 제거 + 메인 표의 부가 정보 셀에 분포 인라인.
+
+### 페이즈 결과
+
+- **Phase 23 (HOTFIX 15)** (`e459098`): 단일 표 한 페이지 완결.
+  - **printHtmlBuilder.ts**: `buildAggregationSummaryPage` 의 distribution 부속 표 빌더 (`aggregation-distribution-section` 등) 완전 제거. distribution 행의 "부가 정보" 셀에 상위 5개 라벨·카운트를 `라벨 N · 라벨 N · ... · 외 M개` 형식으로 인라인 통합. numeric 행은 기존 `합계 N · 평균 M` 그대로. ServerNumericAggResult/ServerDistributionAggResult import 도 더이상 필요 없어 제거 (유니온 자체 내로잉으로 처리).
+  - **printStyleGenerator.ts**: distribution 부속 표 CSS 블록 7개 (`aggregation-distribution-section/title/table/more` 등) 전부 제거. 메인 표 압축 — 페이지 padding 12mm → 8mm, title margin 4px → 2px, subtitle margin 12px → 8px, table padding 6px 8px → 4px 8px, `white-space: normal` (부가 정보 wrap 허용) + `line-height: 1.3`, `agg-value` 는 `white-space: nowrap` (값은 한 줄). margin-bottom 제거.
+
+### 영향 파일
+
+- data-craft (fs-data-viewer):
+  - `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+  - `packages/fs-data-viewer/src/features/print/lib/printStyleGenerator.ts`
+
+2 파일 / +37 / -131 / 단일 커밋 (순 -94 라인).
+
+### 컴팩트 효과
+
+이전 (HOTFIX 13): 페이지 = h2 + 메인 4열 표 (N행) + distribution 컬럼당 부속 표 (5행) + 표간 margin 16px. 분포 5개면 표 6개 stack.
+
+이후 (HOTFIX 15): 페이지 = h2 + 메인 4열 표 (N행, 부가 정보 셀에 인라인 분포). **단일 표 = 1페이지 완결**. 정보 밀도 최대화.
+
+### 버전 비트 (v001.214.0 사유)
+
+v001.213.0 발행 시도 시 동시 머지된 별 플랜 (#91 hotfix 7) 에 선점 — v001.214.0 으로 재발행. 코드/머지 사실 변동 없음.
+
+### advisor 검증
+
+- **advisor (계획 사전)**: PASS — 옵션 A (인라인) 채택 + bullet separator + line-height + wrap 처리 + 추가 압축 권고 반영.
+- **lint**: PASS (0 errors, 17 warnings — 신규 위반 없음).
+
 ## v001.213.0
 
 > 통합일: 2026-05-19
