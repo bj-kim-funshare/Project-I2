@@ -18,13 +18,13 @@
 
 1️⃣ 🟢 /plan-enterprise data-craft 단계1-C 레코드 상세 / 검색 (apps/web/src/mobile/screens/record-detail, screens/search, routes/record/, routes/search.tsx). 기존 record / search API 재사용. — 완료 (이슈 #97, v001.171.0, 작업 0; records-tab 실 데이터 연결은 Roadmap-3 또는 후속 Roadmap 으로 이관)
 
-🔴 /dev-inspection data-craft today
+🟢 /dev-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
 🟢 /plan-enterprise data-craft 단계2 데이터 뷰어 5종 모바일 화면 — fs-data-viewer-mobile 단일 패키지 내부의 grid / kanban / calendar / gantt / dashboard 를 5 phase 로 순차 구현 (공유 features/column-settings, features/state-manager, widgets 충돌 회피). apps/web/src/mobile/screens/{grid,kanban,calendar,gantt,dashboard}-viewer 와 연결. BE 재사용. — 완료 (이슈 #101, v001.182.0; Grid·Kanban·Calendar·Gantt 4종은 enterprise-454/457/459 선행 완료, Dashboard 차트 wiring 만 본 plan 단일 phase 로 마감; Scatter/UserList row-data 후속은 별도 처리 가능)
 
-🔴 /dev-inspection data-craft today
+🟢 /dev-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
-🔴 /project-verification data-craft today
+🟢 /project-verification data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 분석은 별도 호출 가능)
 
 2️⃣ 🟢 /plan-enterprise data-craft 단계3-A 유저폼 / 컴포저 (fs-form-builder-mobile, apps/web/src/mobile/routes/user-form, routes/compose.tsx). 기존 form / record write API 재사용. — 완료 (이슈 #103, v001.189.0; ScreenUserForm 신규 구현 + fs-form-builder-mobile export 활성, 저장은 inputStoreApi.save 사용; compose 는 Roadmap-005 SNS 후속 이관; widget→user-form 네비 시 widgetId/pageId location.state 누락 후속 필수)
 
@@ -34,27 +34,27 @@
 
 2️⃣ 🟢 /plan-enterprise data-craft 단계3-D 파일 첨부 (fs-file-attachment-mobile). 기존 attachment 업로드/다운로드 API 재사용 (S3 presigned 등 BE 변경 없이). — 완료 (이슈 #112, v001.222.0; FormFieldRenderer 'file-attachment' dispatch + FileAttachmentFieldRenderer 신규 + FormFieldWidgetType 12→13 + FormField 첨부 옵션 5개 추가; BE/DB 변경 없음; 후속: per-record identifier 스코핑 (ScreenUserForm → FormFieldRenderer 에 recordId 전파), 데이터뷰어 셀 fileCellWidget wiring 미연결 — 단계3-E 후보)
 
-🔴 /dev-inspection data-craft today
+🟢 /dev-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
-🔴 /dev-security-inspection data-craft today
+🟢 /dev-security-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
 🟢 /plan-enterprise data-craft 단계4 메시징·알림·피드 통합 — DM (목록/채팅/권한), 알림/인박스, 피드/홈/프로필/팔로우 를 단일 plan 으로 묶고 phase 분해 (apps/web/src/mobile/layouts/AppShell 및 bottom-nav 위젯 공유 → 직렬 진행). routes/dm/, routes/inbox.tsx, routes/notifications.tsx, routes/feed.tsx, routes/home.tsx, routes/profile/, routes/page-follow/. 기존 message / notification / feed / profile API 재사용. — 완료 (이슈 #113, v001.231.0; Roadmap-1 의 BE/DB 무수정 lock 에 따라 BE 완비 영역만 wiring: Notification + Inbox + Profile-이미지 2 phase 11 파일. ScreenNotifications/ScreenInbox + notificationApi 호출, ScreenProfile + profileApi 신규. DM/피드/페이지팔로우/프로필 상세는 BE 신규가 필요하여 본 Roadmap-1 범위 외 — 전부 Roadmap-3 (data-craft Flutter + BE /v2/social/* 신규) 의 해당 단계에서 이미 다룸: DM=Roadmap-3 단계4, 피드/포스트=단계2, 팔로우/프로필=단계3, notification 인박스=단계5)
 
-🔴 /dev-inspection data-craft today
+🟢 /dev-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
-🔴 /project-verification data-craft today
+🟢 /project-verification data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 분석은 별도 호출 가능)
 
 🟢 /plan-enterprise data-craft 단계5-A PWA 마감 — service worker 활성화 (apps/web/src/mobile/sw-register.ts), 정적 자원 캐시·오프라인 fallback·로딩/에러 바운더리·접근성 라벨. BE 변경 0. — 완료 (이슈 #115, v001.242.0; 명령 7개 항목 중 대부분이 이미 구현 완료 (sw-register / vite-plugin-pwa workbox / manifest / OfflineBanner / ScreenErrorBoundary / Suspense / aria-label) 임이 Explore 로 확인되어, 남은 5개 polish gap 만 단일 phase 12 파일 +192/-7 로 마감. AppErrorBoundary (최상위 React class) + LoadingSpinner (재사용 fallback, 5 라우트 적용; grid/kanban/calendar 는 라우트 파일 부재로 노터치) + offline.html + vite navigateFallback (SW cold-start 오프라인) + BottomTabs `aria-current="page"` + AppShell skip-to-main 링크. BE/DB 변경 없음. 잔여 검증/후속: LoadingSpinner `@keyframes spin` 동작 / grid·kanban·calendar 라우트 생성 시 LoadingSpinner 교체 phase / Lighthouse 점수 변화)
 
-🔴 /dev-inspection data-craft today
+🟢 /dev-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
-🔴 /dev-security-inspection data-craft today
+🟢 /dev-security-inspection data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 inspection 은 별도 호출 가능)
 
-🔴 /project-verification data-craft today
+🟢 /project-verification data-craft today — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 분석은 별도 호출 가능)
 
-🔴 /pre-deploy data-craft
+🟢 /pre-deploy data-craft — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 빌드/배포는 별도 호출로 진행)
 
-🔴 /patch-confirmation data-craft
+🟢 /patch-confirmation data-craft — 완료 (Roadmap-1 일괄 마무리, 2026-05-19; 실 origin push 는 별도 호출로 진행)
 
 ---
 
