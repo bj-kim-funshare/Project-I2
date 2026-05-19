@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.210.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 1)
+> 데이터 뷰어 → 디자인 모드 → 열 추가 → 유용한 기능 탭에 "행 연결" 항목이 노출되지 않는 현상 보완. 원 플랜 (Phase 2) 은 `fs-data-viewer` 패키지에만 `rowLink` 를 등록했는데, 형제 패키지 `fs-sub-data-viewer` / `fs-external-data-viewer` 도 자체 column-type registry 사본을 가진 구조여서, 서브-그리드 또는 external-viewer 컨텍스트에서 열어진 모달은 rowLink 를 못 본다. 본 HOTFIX 는 두 형제 패키지에 type 등록만 추가하여 가시성을 일치시킨다.
+
+### 핫픽스 결과 — 1 phase (`11062a9`)
+
+- **`packages/fs-sub-data-viewer/src/entities/column-types/other-types.ts`** 에 `rowLink` 항목 추가 (`connection` 옆, Phase 2 와 동일 shape: useful 카테고리, icon Link, defaultWidth 180, defaultColor purple500, minWidth 120, hasUnitEdit true).
+- **`packages/fs-external-data-viewer/src/entities/column-types/other-types.ts`** 동일 추가.
+- 두 패키지의 `composition.ts` 는 이미 `...usefulColumnTypes` 로 spread 하므로 추가 변경 없이 registry 에 자동 포함.
+
+### 알려진 한계 (후속 플랜 대상)
+
+- 두 형제 패키지에 **`RowLinkConfigDialog` / `addRowLinkColumns` / `useRowLinkCell` / `RowLinkGroup*Dialog` wiring 은 부재** 하므로, 서브-그리드 또는 external-viewer 컨텍스트에서 "행 연결" 클릭 시 설정 다이얼로그가 마운트되지 않아 no-op. 후속 플랜에서 sub/external 양쪽에 완전 wiring 이전 (또는 fs-data-viewer 의 모듈 공유) 필요.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-sub-data-viewer/src/entities/column-types/other-types.ts`
+  - `packages/fs-external-data-viewer/src/entities/column-types/other-types.ts`
+
+### 회귀 검증
+
+- WIP `plan-enterprise-98-rowlink-핫픽스1` 의 `pnpm typecheck:all && pnpm lint` PASS (0 errors, 17 pre-existing warnings).
+- advisor (완료 시점) — sub/external 클릭 no-op 한계 경고 후 진행 결정 (master 가시성 우선).
+
+### 마스터 수동 확인 가이드
+
+원 보고 "유용한 기능 탭에 행 연결 미노출" 의 가능한 원인은 본 핫픽스로 커버한 sub/external 컨텍스트 외에, **dev server 의 Vite dep 캐시 잔존** 도 가능. 본 핫픽스 머지 후 마스터 측에서 다음 조치 권장:
+
+1. `data-craft` 메인 워크트리에서 dev server 종료.
+2. `rm -rf node_modules/.vite` (또는 `.vite/deps`) 로 Vite 캐시 초기화.
+3. `pnpm dev` 재시작.
+
+위 조치 후에도 fs_data_viewer 컨텍스트 (vite.config 의 source alias) 에서 미노출이 지속되면 또 다른 캐시 경로 (브라우저 service worker / hard cache) 점검 필요.
+
 ## v001.209.0
 
 > 통합일: 2026-05-19
