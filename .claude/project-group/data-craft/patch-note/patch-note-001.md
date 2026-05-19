@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.213.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 7)
+
+### 핫픽스 결과 — 카드 등록 → 비밀번호 순서 복원 (hotfix 1/3 흐름 역전 되돌림)
+
+마스터 보고: "결제 비밀번호 설정은 카드를 등록하고 난 후에 하는거야 지금 카드 등록 하기도 전에 뜨고 있어".
+
+이전 hotfix 1 (`eb5269a`) 와 hotfix 3 (`be145eb`) 에서 orphan 카드 우려로 카드 등록/변경 클릭 시 setup 모달 우선 → 토스 redirect 순서로 흐름 역전했으나, 이는 요구사항 6 "카드 추가/변경 시 **마지막 추가 스탭**으로 결제 비밀번호 설정" 의 마스터 의도 오해. 원래 Phase 12 흐름 (카드 등록 → 토스 redirect → BillingSuccessPage 에서 setup) 으로 복원.
+
+### Phase 24 (FE, `03de632`)
+
+- **`CardInfoSection.tsx`**: `handleChangeCard` 가 즉시 토스 redirect (loadTossPayments + requestBillingAuth) 로 직행. PaymentPasswordSetupStep import / 마운트 / passwordSetupOpen state 전부 제거.
+- **`RegisterCardSection.tsx`**: 동일 — `handleRegisterCard` 즉시 토스 redirect.
+- **`BillingSuccessPage.tsx`**: card-change 분기에서 결제 API 완료 후 PaymentPasswordSetupStep 모달 마운트 복원. card-register 분기는 hotfix 1 이전부터 setup 모달 마운트 유지. pendingNavigate 타겟은 `/?openSettings=plan` 으로 보존 → 카드 변경 후 플랜 설정 화면 복귀 UX 유지.
+
+### 영향 파일
+
+**data-craft**:
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+- `src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 검증
+
+- FE lint PASS (0 errors).
+
+### 잔여 / 마스터 결정 필요
+
+카드 등록 후 setup 모달에서 사용자가 X·오버레이로 취소/이탈 시 orphan 카드 (카드 등록 + 비밀번호 미설정) 발생 가능. 마스터 결정:
+- **옵션 1**: setup 모달 dismiss 불가 (X·오버레이 차단) 처리 — 가장 단순.
+- **옵션 2**: BE 측 모든 결제 라우트가 비밀번호 미설정자 차단 (`PAYMENT_PASSWORD_NOT_SET` 코드 활용) → 다음 결제 시도 시 자동 setup 강제. 라우트 미들웨어가 이미 있어 자연 동작.
+- **옵션 3**: 카드 등록 후 setup 미완료 24h 경과 시 BE 가 카드 자동 정리.
+
 ## v001.212.0
 
 > 통합일: 2026-05-19
