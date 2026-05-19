@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.252.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #116
+
+### 개요
+
+마스터 명령: data-craft-mobile FE 가 반드시 5174 포트를 사용하도록 수정. 루트 `package.json` `"dev": "vite"` 가 루트 `vite.config.ts` (vitest 전용 — `server.port` 없음) 를 사용해 vite default 5173 으로 떨어져 리더 (`data-craft`) 와 포트 충돌 — `apps/web/vite.config.ts` 의 `port: 5174` 는 실질적으로 무효였다. 루트 `dev` 를 `apps/web` 위임으로 바꾸고, `apps/web/vite.config.ts` `server` 에 `strictPort: true` 를 추가해 점유 시 사일런트 시프트 차단.
+
+### 페이즈 결과
+
+- **Phase 1** (`216635e`):
+  - 루트 `package.json` `"dev": "vite"` → `"dev": "pnpm --filter ./apps/web dev"` (기존 `"build"` 스크립트와 동일 위임 패턴).
+  - `apps/web/vite.config.ts` `server` 블록에 `strictPort: true` 추가 — 5174 점유 시 다른 포트로의 사일런트 시프트 차단.
+  - 결합 효과: 루트 `pnpm dev` 호출이 반드시 5174 에서 listen 하거나 명시적 실패.
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `package.json`
+  - `apps/web/vite.config.ts`
+
+2 파일 / +2 / -1 / 단일 커밋.
+
+### lint
+
+- PASS (pnpm typecheck, 0 errors).
+
 ## v001.251.0
 
 > 통합일: 2026-05-19
