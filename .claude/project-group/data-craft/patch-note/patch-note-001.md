@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.208.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #109
+
+### 개요
+
+데이터 뷰어 그리드 뷰에서 마우스 클릭-드래그로 가로 스크롤할 때 열 제목 영역이 본문보다 약 1 컬럼 폭만큼 더 앞서 스크롤되며 정렬이 깨지던 증상 수정. 트랙패드 가로 스크롤은 native onScroll → handleBodyScroll 단일 동기화 경로를 거쳐 정렬이 유지되던 반면, 마우스 드래그 경로는 `useDragScroll.handleDragScrollMouseMove` 가 header / body 두 컨테이너에 raw scrollLeft 를 각각 직접 대입하여 두 컨테이너의 max scrollLeft / onScroll 발화 타이밍 차이로 인한 분기를 만들고 있었다.
+
+### 페이즈 결과
+
+- **Phase 1** (`ec55262`): `useDragScroll` 의 가로 스크롤 경로를 body 단일 소스로 통합. `handleDragScrollMouseMove` 의 `headerScrollRef.current.scrollLeft = newScrollLeft` 대입을 제거하여 body 한 곳에만 scrollLeft 를 쓰고, body 의 `onScroll` → `useScrollSync.handleBodyScroll` 가 header / aggregation / groupHeader 를 body 의 post-clamp scrollLeft 로 동기화하도록 일임. `handleDragScrollMouseDown` 의 시작 scrollLeft 캡처도 `bodyScrollRef.current?.scrollLeft` 로 통일하고, mouseDown / mouseMove deps 배열에서 더 이상 사용하지 않는 `headerScrollRef` 의존성 제거. 텍스트 선택 방지 (`userSelect = 'none'`), 5px 드래그 threshold, 셀 포커싱 / 편집 분기, 다이얼로그 / draggable / 서브그리드 가드 등 기존 가드는 모두 보존. lint gate PASS (0 errors, 17 warnings).
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/features/grid/hooks/useDragScroll.ts`
+
+1개 파일 / +3 / -7 / 단일 페이즈.
+
+### advisor 검증
+
+- 계획 시점 PASS — 5관점 (Intent / Logic / Group Policy / Evidence / Command Fulfillment) 통과. Context 의 원인 추정에 대해 "clamp 차이 vs. onScroll race 둘 다 본 해법으로 함께 해소" 표현으로 soften 권고 반영.
+- 완료 시점 PASS — 최종 diff 가 계획과 정확 일치, lint gate exit 0.
+
+### 수동 점검 권장
+
+1. `pnpm dev` (port 5173) 으로 그리드 뷰 진입.
+2. 트랙패드 가로 스크롤 — header / body / aggregation / groupHeader 정렬 유지 (회귀 없음).
+3. 마우스 클릭-드래그 가로 스크롤 — 좌/우 양방향 끝까지 끌었을 때 header 가 body 보다 앞서 나가지 않음 확인 (스크린샷 재현 케이스).
+4. 가로 드래그 도중 5px threshold 미만 클릭은 셀 포커싱 / 편집 정상 동작.
+5. groupHeader / aggregation row 가 있는 뷰에서도 동일 시나리오 통과.
+
 ## v001.207.0
 
 > 통합일: 2026-05-19
