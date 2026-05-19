@@ -1,5 +1,36 @@
 # 아이OS — Patch Note (001)
 
+## v001.82.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #42 (HOTFIX 5)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 5** (HOTFIX 5 단일 커밋): in_progress 판정에 JSONL 파일 mtime 60분 임계를 추가. 기존 last record ts 30분 임계와 **OR** 조건 — 둘 중 하나라도 만족하면 마지막 윈도우를 in_progress 로 마킹. 사유: Claude Code 가 record 를 즉시 flush 하지 않는 케이스에서 file mtime 이 더 신뢰성 높은 활성 시그널. 본 세션 검증 시 in_progress 윈도우 정상 등장 확인.
+
+### 진단 요지
+
+- v001.81.0 머지 직후 마스터 관측: 진행 중 본 세션 (`/plan-enterprise-os #42`) 이 표 상단 "🔴 진행 중인 호출" 영역에 안 나타남. 원인: 윈도우 end_timestamp ≈ 04:55, 새로고침 시각 ≈ 06:13 → 1h18m 차이로 30분 임계 미달. JSONL flush timing 으로 record content 가 실시간 활동을 정확히 반영하지 못함.
+
+### 회귀 검증
+
+- collect.py 재실행 후 in_progress 카운트 0 → 1+ 로 증가 확인.
+- 파이프라인 / 표 / 모달 UI 무변경 — 데이터 필드 partial / close_reason 의 값만 추가 케이스.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 기존 detection 의 신호 보강만, 신규 메커니즘 없음.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+- `monitoring/README.md` (60분 mtime 임계 한 줄 추가)
+- `patch-note/patch-note-001.md`
+- `monitoring/data/aggregate.json` (재생성)
+- `monitoring/data/hourly.json` (재생성)
+
 ## v001.81.0
 
 > 통합일: 2026-05-19
