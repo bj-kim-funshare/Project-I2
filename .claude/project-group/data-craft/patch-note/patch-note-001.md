@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.235.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #98 (HOTFIX 5)
+> HOTFIX 4 에서 신설한 `CustomColumnDropdown` 패널이 Step 4 에서 클릭해도 노출되지 않던 현상 픽스. 원인: `Dialog.Content` 의 `transform: translate(-50%, -50%)` 가 CSS 컨테이닝 블록을 생성해 fixed 포지셔닝된 panel 의 좌표 기준이 viewport 가 아닌 Dialog 내부로 바뀜 + `overflow-hidden` 으로 클리핑. 패널을 `createPortal(panel, document.body)` 로 body 에 포털 렌더하여 회피. 외부 클릭 핸들러도 `panelRef` 추가로 포털된 패널 내부 클릭은 무시하도록 보정.
+
+### 핫픽스 결과 — 1 phase (`5147265`)
+
+- `RowLinkConfigDialog.tsx`:
+  - `react-dom` 의 `createPortal` import.
+  - 패널 렌더를 `createPortal(<div>...</div>, document.body)` 로 변경.
+  - 패널에 `panelRef` 추가.
+  - 외부 클릭 핸들러가 trigger 또는 panel 안의 클릭은 무시하도록 보정.
+
+### 영향 파일
+
+- data-craft:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (+9 / -3)
+
+### 회귀 검증
+
+- typecheck + lint PASS (0 errors).
+- 마스터 dev server 갱신 후 Step 4 의 컬럼 선택 버튼 클릭 시 옵션 패널이 viewport 기준 fixed 위치에 정상 노출 기대.
+
 ## v001.234.0
 
 > 통합일: 2026-05-19
