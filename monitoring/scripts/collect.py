@@ -23,8 +23,11 @@ from typing import Any
 # Hardcoded for I2 — the Claude Code per-project session directory.
 SESSION_DIR = Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I2"
 
-# Sessions whose last record is within this many seconds of now() are considered still ongoing.
+# Sessions whose last record timestamp is within this many seconds of now() are considered ongoing.
 _IN_PROGRESS_THRESHOLD_SEC = 1800
+# Sessions whose JSONL file mtime is within this many seconds of now() are also considered ongoing.
+# Covers cases where Claude Code batches JSONL writes and record content lags behind real activity.
+_IN_PROGRESS_FILE_MTIME_THRESHOLD_SEC = 3600
 
 # Pricing per million tokens (approximate, USD). Adjust as needed.
 # Source: Anthropic pricing pages; cached and uncached input differ.
@@ -435,6 +438,7 @@ def _parse_dt(ts: str | None) -> datetime | None:
 def build_by_skill_invocation(
     records: list[dict[str, Any]],
     session_id: str,
+    jsonl_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Build skill-invocation windows for one session's records.
 
@@ -652,7 +656,13 @@ def build_by_skill_invocation(
         ts = rec.get("timestamp")
 
         # Check for explicit closure signal (rule 1, gated skills only)
-        if active_window is not None and active_is_gated:
+        # Skip the invocation record itself AND any same-timestamp records: Claude Code
+        # injects the skill body as a separate role=user record sharing the exact same
+        # timestamp as the <command-args> record. Both can contain "플랜 완료" as
+        # documentation text. The real closure signal always comes in a later master
+        # prompt (different timestamp, different conversation turn).
+        active_start_ts = active_window["start_timestamp"] if active_window is not None else None
+        if active_window is not None and active_is_gated and i != active_start_idx and ts != active_start_ts:
             if "플랜 완료" in text or "핫픽스 완료" in text:
                 # Include records up to (but not including) the next master prompt.
                 # Find the next master prompt after index i.
@@ -702,9 +712,12 @@ def build_by_skill_invocation(
         _finalize_window(len(records), "session_end")
 
     # Post-process: detect in-progress sessions.
-    # A session is in_progress if its last record timestamp is within
-    # _IN_PROGRESS_THRESHOLD_SEC of now. For such sessions, the last
-    # session_end window becomes in_progress (partial=True).
+    # A session is in_progress if EITHER:
+    #   (a) its last record timestamp is within _IN_PROGRESS_THRESHOLD_SEC (30 min) of now, OR
+    #   (b) its JSONL file mtime is within _IN_PROGRESS_FILE_MTIME_THRESHOLD_SEC (60 min) of now.
+    # Condition (b) covers cases where Claude Code batches JSONL writes and the last
+    # record timestamp lags behind real wall-clock activity.
+    # For in-progress sessions, the last session_end window becomes in_progress (partial=True).
     if windows:
         session_last_ts: str | None = None
         for rec in reversed(records):
@@ -713,23 +726,36 @@ def build_by_skill_invocation(
                 session_last_ts = ts
                 break
 
+        now_dt = datetime.now(timezone.utc)
+
+        is_in_progress_by_records = False
         if session_last_ts is not None:
             last_dt = _parse_dt(session_last_ts)
-            now_dt = datetime.now(timezone.utc)
-            if last_dt is not None and (now_dt - last_dt).total_seconds() <= _IN_PROGRESS_THRESHOLD_SEC:
-                # Find the window with the latest start_timestamp that has close_reason == "session_end"
-                candidate_idx: int | None = None
-                candidate_ts: str = ""
-                for wi, w in enumerate(windows):
-                    if w.get("close_reason") == "session_end":
-                        wts = w.get("start_timestamp", "")
-                        if wts >= candidate_ts:
-                            candidate_ts = wts
-                            candidate_idx = wi
-                if candidate_idx is not None:
-                    windows[candidate_idx]["close_reason"] = "in_progress"
-                    windows[candidate_idx]["partial"] = True
-                    windows[candidate_idx]["last_seen_timestamp"] = session_last_ts
+            if last_dt is not None:
+                is_in_progress_by_records = (now_dt - last_dt).total_seconds() <= _IN_PROGRESS_THRESHOLD_SEC
+
+        is_in_progress_by_mtime = False
+        if jsonl_path is not None:
+            try:
+                file_mtime_dt = datetime.fromtimestamp(jsonl_path.stat().st_mtime, tz=timezone.utc)
+                is_in_progress_by_mtime = (now_dt - file_mtime_dt).total_seconds() <= _IN_PROGRESS_FILE_MTIME_THRESHOLD_SEC
+            except OSError:
+                pass
+
+        if is_in_progress_by_records or is_in_progress_by_mtime:
+            # Find the window with the latest start_timestamp that has close_reason == "session_end"
+            candidate_idx: int | None = None
+            candidate_ts: str = ""
+            for wi, w in enumerate(windows):
+                if w.get("close_reason") == "session_end":
+                    wts = w.get("start_timestamp", "")
+                    if wts >= candidate_ts:
+                        candidate_ts = wts
+                        candidate_idx = wi
+            if candidate_idx is not None:
+                windows[candidate_idx]["close_reason"] = "in_progress"
+                windows[candidate_idx]["partial"] = True
+                windows[candidate_idx]["last_seen_timestamp"] = session_last_ts
 
     return windows
 
@@ -1193,7 +1219,7 @@ def collect() -> dict[str, Any]:
         all_prompt_items.extend(session_prompt_items)
 
         # Build skill-invocation windows for this session (independent of sticky_skill logic)
-        session_skill_windows = build_by_skill_invocation(records, session_id)
+        session_skill_windows = build_by_skill_invocation(records, session_id, jsonl_path)
         all_skill_invocations.extend(session_skill_windows)
 
         # Distribute prompt items into period buckets by master prompt timestamp

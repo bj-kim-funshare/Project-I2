@@ -96,7 +96,7 @@ input + output 은 신규 토큰(사용량)이고 cache_creation_5m + cache_crea
 **중첩 처리**: v1은 새 `/Y` 도착 시 이전 `/X`를 즉시 닫는 단순 분할(비-overlap). 향후 마스터 요청 시 외곽 누적 방식 옵션 추가 가능.
 
 **진행 중인 호출 (in_progress)**:
-collect.py 가 실행되는 시점에 마지막 레코드 timestamp 가 현재 시각 기준 30분 이내인 세션은 "진행 중" 으로 판정된다. 해당 세션의 마지막 `session_end` 윈도우는 `close_reason: in_progress`, `partial: true`, `last_seen_timestamp` 가 설정된다 (부분 집계임을 의미). 이 윈도우들은 메인 표/페이지네이션과 분리되어 상단 별도 "🔴 진행 중인 호출 (실시간 부분 집계)" 영역에 표시된다.
+collect.py 가 실행되는 시점에 마지막 레코드 timestamp 가 현재 시각 기준 30분 이내인 세션은 "진행 중" 으로 판정된다. 해당 세션의 마지막 `session_end` 윈도우는 `close_reason: in_progress`, `partial: true`, `last_seen_timestamp` 가 설정된다 (부분 집계임을 의미). 이 윈도우들은 메인 표/페이지네이션과 분리되어 상단 별도 "🔴 진행 중인 호출 (실시간 부분 집계)" 영역에 표시된다. 또는 해당 세션 JSONL 파일 mtime 이 60분 이내면 동일 마킹 (Claude Code 의 batch flush 지연 대비).
 
 **모달 시각 강화 (HOTFIX 3)**:
 행 클릭 시 열리는 모달에 다음 레이어가 추가되었다:
