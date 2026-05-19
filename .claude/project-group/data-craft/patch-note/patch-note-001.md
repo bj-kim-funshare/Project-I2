@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.237.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 12)
+> 버전 양보 메모: 병렬 세션이 v236 선점하여 v001.237.0 으로 양보.
+
+### 핫픽스 결과 — 결제 수단 케밥 메뉴 + 결제 이력 항상 노출
+
+마스터: "결제 수단의 변경, 삭제 버튼을 하나로 통합하고 누르면 팝업 메뉴로 결제 수단 변경, 결제 수단 삭제, 결제 비밀번호 변경 나오게 구현해, 그리고 결제 수단 없어도 결제 이력은 계속 보여지게 해".
+
+### Phase 29 (FE, `22be705`)
+
+**A. CardInfoSection 케밥 메뉴 통합**
+- 기존 카드 변경 (RefreshCw) + 삭제 (Trash2) 두 아이콘 버튼 → 단일 MoreVertical 케밥.
+- DropdownMenu 3 옵션:
+  1. **결제 수단 변경** — 기존 handleChangeCard (토스 redirect → BillingSuccessPage setup).
+  2. **결제 수단 삭제** — deleteCard + 확인.
+  3. **결제 비밀번호 변경** — PaymentPasswordSetupStep 직접 마운트 (덮어쓰기 모드, 카드 등록 흐름 무관, 완료 시 toast).
+
+**B. PaymentHistory 항상 노출**
+- `PlanTabContent.tsx` 에서 PaymentHistorySection 의 hasBillingKey 조건부 가드 제거. 카드 없어도 결제 이력 렌더링.
+- upcomingPayment 계산은 기존대로 hasBillingKey 거짓 시 undefined → 빈 상태 안내 자연 노출.
+
+### 영향 파일
+
+**data-craft**:
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 검증
+
+- typecheck + lint PASS.
 ## v001.236.0
 
 > 통합일: 2026-05-19
