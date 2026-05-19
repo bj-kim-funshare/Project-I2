@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import sys
 from collections import defaultdict
 from datetime import date, datetime, timezone
@@ -132,6 +133,91 @@ SHORT_TRIGGER_KEYWORDS = {
     "푸시", "네", "응", "ok", "yes", "y", "예", "확인",
     "진행", "계속", "stop", "n", "no", "아니",
 }
+
+# ---------------------------------------------------------------------------
+# Skill classification for skill-invocation window detection
+# ---------------------------------------------------------------------------
+
+# Hardcoded fallback sets used when SKILL.md auto-extraction fails.
+# Gated skills wait for an explicit "플랜 완료" / "핫픽스 완료" closure signal.
+_FALLBACK_GATED_SKILLS: frozenset[str] = frozenset({
+    "plan-enterprise",
+    "plan-enterprise-os",
+    "plan-roadmap",
+    "task-db-structure",
+    "task-db-data",
+    "new-project-group",
+    "create-custom-project-skill",
+    "dev-merge",
+    "pre-deploy",
+    "dev-inspection",
+    "dev-security-inspection",
+    "db-security-inspection",
+    "project-verification",
+    "group-policy",
+})
+
+_FALLBACK_NON_GATED_SKILLS: frozenset[str] = frozenset({
+    "dev-start",
+    "dev-build",
+    "patch-update",
+    "patch-confirmation",
+    "update-config",
+    "keybindings-help",
+    "simplify",
+    "fewer-permission-prompts",
+    "loop",
+    "schedule",
+    "claude-api",
+    "init",
+    "review",
+    "security-review",
+})
+
+
+def _load_known_skills() -> tuple[frozenset[str], frozenset[str]]:
+    """Return (gated_skills, all_known_skills) by scanning .claude/skills/*/SKILL.md.
+
+    Auto-extracts skill names from directory names under .claude/skills/.
+    Classifies as gated if the SKILL.md body contains "PENDING gate" or
+    "completion-gate" substrings.
+
+    Falls back to the hardcoded sets on any extraction error (OSError,
+    empty result, etc.) — this is intentional so callers always get a usable set.
+    """
+    try:
+        skills_root = Path(__file__).resolve().parents[2] / ".claude" / "skills"
+        if not skills_root.is_dir():
+            raise FileNotFoundError(f"skills root not found: {skills_root}")
+
+        gated: set[str] = set()
+        all_skills: set[str] = set()
+
+        for skill_dir in skills_root.iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_name = skill_dir.name
+            all_skills.add(skill_name)
+
+            skill_md = skill_dir / "SKILL.md"
+            if skill_md.is_file():
+                body = skill_md.read_text(encoding="utf-8", errors="ignore")
+                if "PENDING gate" in body or "completion-gate" in body:
+                    gated.add(skill_name)
+
+        if not all_skills:
+            raise ValueError("no skills found — falling back to hardcoded set")
+
+        return frozenset(gated), frozenset(all_skills)
+
+    except Exception:
+        # Any failure: fall back to hardcoded sets
+        all_fallback = _FALLBACK_GATED_SKILLS | _FALLBACK_NON_GATED_SKILLS
+        return _FALLBACK_GATED_SKILLS, all_fallback
+
+
+# Module-level load (once per process)
+_GATED_SKILLS, _KNOWN_SKILLS = _load_known_skills()
 
 BY_PROMPT_TOP_N = 100
 
@@ -287,6 +373,308 @@ def build_by_prompt(
         del item["_rec"], item["_text"], item["_merge_into"], item["_model_counts"]
 
     return body_items
+
+
+def _parse_skill_command(text: str) -> tuple[str | None, str | None]:
+    """Extract (skill_name, raw_args) from a master prompt text.
+
+    Looks for <command-name>/X</command-name> and <command-args>...</command-args>
+    tags. Returns (skill_name, args) if X (without leading slash) is a known skill,
+    otherwise (None, None).
+
+    The command-name tag value includes the leading slash (e.g. "/plan-enterprise");
+    we strip it before checking membership in _KNOWN_SKILLS.
+    """
+    name_match = re.search(r"<command-name>(/?\S+?)</command-name>", text)
+    if not name_match:
+        return None, None
+    raw_name = name_match.group(1)
+    skill_name = raw_name.lstrip("/")
+    if skill_name not in _KNOWN_SKILLS:
+        return None, None
+    args_match = re.search(r"<command-args>(.*?)</command-args>", text, re.DOTALL)
+    raw_args = args_match.group(1).strip() if args_match else ""
+    return skill_name, raw_args
+
+
+def _make_token_record_with_cost(model: str, record: dict[str, int]) -> dict[str, Any]:
+    """Return a copy of record with cost_usd added."""
+    out = dict(record)
+    out["cost_usd"] = round(cost_of(model, record), 6)
+    return out
+
+
+def _add_cost_to_token_record(record: dict[str, int], model: str, cost: float) -> None:
+    """Attach accumulated cost_usd to a token record in place (call after all add_usage)."""
+    record["cost_usd"] = round(cost, 6)  # type: ignore[assignment]
+
+
+def _parse_dt(ts: str | None) -> datetime | None:
+    """Parse ISO 8601 timestamp to timezone-aware datetime. Returns None on failure."""
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+
+
+def build_by_skill_invocation(
+    records: list[dict[str, Any]],
+    session_id: str,
+) -> list[dict[str, Any]]:
+    """Build skill-invocation windows for one session's records.
+
+    Each window spans from a master prompt containing a known <command-name>/X</command-name>
+    tag to its closure (determined by a four-priority rule).
+
+    Close priorities (whichever fires first):
+      1. For gated skills only: a subsequent master prompt containing "플랜 완료" or
+         "핫픽스 완료" — that prompt's records are included in the closing window.
+      2. A subsequent master prompt with a recognized <command-name>/Y</command-name>
+         (any known skill, including same skill re-invoked) — the new prompt opens a
+         new window; the old window closes just before this new master prompt's position.
+      3. For non-gated skills: the last record where attributionSkill equals the window's
+         skill, i.e., when attribution changes to a different value, the window closes.
+      4. End of session records.
+
+    Nested skill handling (v1 simplification): when /Y opens during an active /X window,
+    /X is closed immediately (rule 2). The windows are therefore non-overlapping within a
+    session. A more nuanced partitioning approach (where /X stays open and tokens are
+    shared) may be added in a later version if master requests it.
+
+    Returns a list of window dicts (see issue #42 Phase 1 spec for full shape).
+    """
+    # Build an index of record positions by UUID for fast lookup
+    rec_by_uuid: dict[str, int] = {}
+    for i, rec in enumerate(records):
+        uid = rec.get("uuid", "")
+        if uid:
+            rec_by_uuid[uid] = i
+
+    windows: list[dict[str, Any]] = []
+    active_window: dict[str, Any] | None = None
+    active_start_idx: int = 0
+    active_skill: str = ""
+    active_is_gated: bool = False
+
+    def _finalize_window(end_idx: int, close_reason: str) -> None:
+        """Accumulate tokens for the active window over records[active_start_idx:end_idx]."""
+        nonlocal active_window
+        if active_window is None:
+            return
+
+        main_session = empty_token_record()
+        main_session_cost: float = 0.0
+        by_agent: dict[str, dict[str, int]] = {}
+        by_agent_cost: dict[str, float] = {}
+
+        artifact_kind = "none"
+        artifact_id = "-"
+        # Priority order: issue > patch-note > roadmap
+        _ARTIFACT_PRIORITY = {"issue": 3, "patch-note": 2, "roadmap": 1, "none": 0}
+
+        # Build a UUID -> tool_result record map for artifact gh issue resolution
+        # (tool_results are type=user records with message.content[0].type == "tool_result")
+        tool_result_by_tool_use_id: dict[str, dict[str, Any]] = {}
+        for rec in records[active_start_idx:end_idx]:
+            if rec.get("type") != "user":
+                continue
+            msg = rec.get("message") or {}
+            content = msg.get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "tool_result":
+                    tuid = block.get("tool_use_id", "")
+                    if tuid:
+                        tool_result_by_tool_use_id[tuid] = block
+
+        for rec in records[active_start_idx:end_idx]:
+            rec_type = rec.get("type")
+
+            if rec_type == "assistant":
+                msg = rec.get("message") or {}
+                usage = msg.get("usage") or {}
+                if usage:
+                    raw_model = msg.get("model") or "unknown"
+                    if raw_model == "<synthetic>":
+                        model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
+                    else:
+                        model = raw_model
+                    add_usage(main_session, usage)
+                    rec_tok = empty_token_record()
+                    add_usage(rec_tok, usage)
+                    main_session_cost += cost_of(model, rec_tok)
+
+                # Artifact capture from tool_use blocks
+                content = msg.get("content")
+                if isinstance(content, list):
+                    for block in content:
+                        if not isinstance(block, dict) or block.get("type") != "tool_use":
+                            continue
+                        tool_name = block.get("name", "")
+                        tool_use_id = block.get("id", "")
+                        inp = block.get("input") or {}
+
+                        if tool_name == "Bash":
+                            cmd = inp.get("command", "")
+                            if "gh issue create" in cmd:
+                                # Find the matching tool_result and extract /issues/N
+                                tr = tool_result_by_tool_use_id.get(tool_use_id)
+                                if tr is not None:
+                                    tr_content = tr.get("content", "")
+                                    if isinstance(tr_content, list):
+                                        tr_content = " ".join(
+                                            b.get("text", "") if isinstance(b, dict) else str(b)
+                                            for b in tr_content
+                                        )
+                                    m = re.search(r"/issues/(\d+)", str(tr_content))
+                                    if m and _ARTIFACT_PRIORITY["issue"] > _ARTIFACT_PRIORITY.get(artifact_kind, 0):
+                                        artifact_kind = "issue"
+                                        artifact_id = f"#{m.group(1)}"
+
+                        elif tool_name in ("Write", "Edit"):
+                            fp = inp.get("file_path", "")
+                            # patch-note pattern
+                            pn_match = re.search(r"patch-note/patch-note-(\d{3})\.md", fp)
+                            if pn_match and _ARTIFACT_PRIORITY["patch-note"] > _ARTIFACT_PRIORITY.get(artifact_kind, 0):
+                                artifact_kind = "patch-note"
+                                artifact_id = f"patch-note-{pn_match.group(1)}"
+                            # roadmap pattern
+                            rm_match = re.search(r"\.claude/plan-roadmap/Roadmap-(\d+)-", fp)
+                            if rm_match and _ARTIFACT_PRIORITY["roadmap"] > _ARTIFACT_PRIORITY.get(artifact_kind, 0):
+                                artifact_kind = "roadmap"
+                                artifact_id = f"Roadmap-{rm_match.group(1)}"
+
+            elif rec_type == "user":
+                tur = rec.get("toolUseResult")
+                if not isinstance(tur, dict):
+                    continue
+                agent_type = tur.get("agentType")
+                if not agent_type:
+                    continue
+                agent_usage = tur.get("usage")
+                if not agent_usage:
+                    continue
+                agent_model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                if agent_type not in by_agent:
+                    by_agent[agent_type] = empty_token_record()
+                    by_agent_cost[agent_type] = 0.0
+                add_usage(by_agent[agent_type], agent_usage)
+                rec_tok = empty_token_record()
+                add_usage(rec_tok, agent_usage)
+                by_agent_cost[agent_type] += cost_of(agent_model, rec_tok)
+
+        # Attach costs
+        main_session["cost_usd"] = round(main_session_cost, 6)  # type: ignore[assignment]
+
+        by_agent_out: dict[str, dict[str, Any]] = {}
+        for ag, ag_rec in by_agent.items():
+            ag_rec_out = dict(ag_rec)
+            ag_rec_out["cost_usd"] = round(by_agent_cost[ag], 6)
+            by_agent_out[ag] = ag_rec_out
+
+        # Compute totals
+        total_record = empty_token_record()
+        for field in ("input", "output", "cache_creation_5m", "cache_creation_1h", "cache_read", "messages"):
+            total_record[field] = main_session[field]  # type: ignore[literal-required]
+            for ag_rec in by_agent.values():
+                total_record[field] += ag_rec[field]  # type: ignore[literal-required]
+        total_cost = main_session_cost + sum(by_agent_cost.values())
+        total_record["cost_usd"] = round(total_cost, 6)  # type: ignore[assignment]
+
+        # Duration
+        start_ts = active_window["start_timestamp"]
+        # Find the actual last timestamp within the window
+        end_ts: str | None = None
+        for rec in reversed(records[active_start_idx:end_idx]):
+            ts = rec.get("timestamp")
+            if ts:
+                end_ts = ts
+                break
+        if end_ts is None:
+            end_ts = start_ts
+        start_dt = _parse_dt(start_ts)
+        end_dt = _parse_dt(end_ts)
+        if start_dt is not None and end_dt is not None:
+            duration_sec = max(0, int((end_dt - start_dt).total_seconds()))
+        else:
+            duration_sec = 0
+
+        active_window.update({
+            "end_timestamp": end_ts,
+            "duration_sec": duration_sec,
+            "artifact_kind": artifact_kind,
+            "artifact_id": artifact_id,
+            "close_reason": close_reason,
+            "total": total_record,
+            "main_session": dict(main_session),
+            "by_agent": by_agent_out,
+        })
+        windows.append(active_window)
+        active_window = None
+
+    # Main scan
+    for i, rec in enumerate(records):
+        if not _is_master_prompt(rec):
+            # For non-gated attribution-drop closure: track attribution changes
+            if active_window is not None and not active_is_gated and rec.get("type") == "assistant":
+                attr = rec.get("attributionSkill")
+                if attr and attr != active_skill:
+                    # Attribution changed: close window at the previous record
+                    _finalize_window(i, "attribution_drop")
+                    active_window = None
+            continue
+
+        msg = rec.get("message") or {}
+        content = msg.get("content")
+        text = _extract_content_text(content)
+        ts = rec.get("timestamp")
+
+        # Check for explicit closure signal (rule 1, gated skills only)
+        if active_window is not None and active_is_gated:
+            if "플랜 완료" in text or "핫픽스 완료" in text:
+                # Include records up to (but not including) the next master prompt.
+                # Find the next master prompt after index i.
+                next_master_idx = len(records)
+                for j in range(i + 1, len(records)):
+                    if _is_master_prompt(records[j]):
+                        next_master_idx = j
+                        break
+                _finalize_window(next_master_idx, "explicit")
+                active_window = None
+                # This record does NOT start a new window; continue scanning.
+                continue
+
+        # Check for new skill invocation (rule 2: new /Y opens → old window closes before this prompt)
+        skill_name, raw_args = _parse_skill_command(text)
+
+        if active_window is not None and skill_name is not None:
+            # Close old window just before this record (index i)
+            _finalize_window(i, "next_skill")
+            active_window = None
+
+        if skill_name is not None:
+            # Open new window
+            title_prompt = f"/{skill_name} {raw_args}".rstrip()
+            active_window = {
+                "skill": skill_name,
+                "session_id": session_id,
+                "start_timestamp": ts or "",
+                "title_prompt": title_prompt,
+                # end_timestamp, duration_sec, artifact_kind, artifact_id, close_reason,
+                # total, main_session, by_agent — filled by _finalize_window
+            }
+            active_start_idx = i
+            active_skill = skill_name
+            active_is_gated = skill_name in _GATED_SKILLS
+
+    # Rule 4: close any still-open window at session end
+    if active_window is not None:
+        _finalize_window(len(records), "session_end")
+
+    return windows
 
 
 def finalize_by_prompt(
@@ -501,6 +889,7 @@ def collect() -> dict[str, Any]:
     period_agg: dict[str, dict[str, Any]] = {pt: defaultdict(new_period_state) for pt in period_types}
 
     all_prompt_items: list[dict[str, Any]] = []
+    all_skill_invocations: list[dict[str, Any]] = []
 
     hourly_agg: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     hourly_cost: dict[str, float] = defaultdict(float)
@@ -746,6 +1135,10 @@ def collect() -> dict[str, Any]:
         session_prompt_items = build_by_prompt(records, session_id)
         all_prompt_items.extend(session_prompt_items)
 
+        # Build skill-invocation windows for this session (independent of sticky_skill logic)
+        session_skill_windows = build_by_skill_invocation(records, session_id)
+        all_skill_invocations.extend(session_skill_windows)
+
         # Distribute prompt items into period buckets by master prompt timestamp
         for item in session_prompt_items:
             prompt_date = parse_ts(item.get("timestamp"))
@@ -839,6 +1232,13 @@ def collect() -> dict[str, Any]:
         "_hourly_messages": hourly_messages,
         "_hourly_by_model": hourly_by_model,
         "_hourly_by_skill": hourly_by_skill,
+        # Phase 2 will serialize this as "by_skill_invocation" in aggregate.json.
+        # Sorted start_timestamp desc so Phase 2 can slice pages from the head.
+        "_all_skill_invocations": sorted(
+            all_skill_invocations,
+            key=lambda w: w.get("start_timestamp", ""),
+            reverse=True,
+        ),
     }
 
 
@@ -934,6 +1334,8 @@ def main() -> int:
     hourly_messages = result.pop("_hourly_messages", {})
     hourly_by_model = result.pop("_hourly_by_model", {})
     hourly_by_skill = result.pop("_hourly_by_skill", {})
+    # Phase 2 will stop popping this and expose it as "by_skill_invocation" in aggregate.json.
+    result.pop("_all_skill_invocations", [])
 
     output_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {output_path}", file=sys.stderr)
