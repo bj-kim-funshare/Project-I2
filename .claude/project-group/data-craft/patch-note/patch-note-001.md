@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.217.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 8)
+
+### 핫픽스 결과 — FE paymentPassword 필드명 정합 (BE 400 해소)
+
+마스터 보고: 결제 비밀번호 설정 실패 — `[ERROR] PAYMENT_PASSWORD_REQUIRED (POST /api/user/payment-password/set, status=400)`. BE 컨트롤러는 `req.body.paymentPassword` 를 기대하지만 FE 가 `{ password: ... }` 로 송신 — 필드명 mismatch.
+
+### Phase 25 (FE, `9bbc563`)
+
+- `paymentPassword.api.ts`: `PaymentPasswordSetRequest` / `PaymentPasswordVerifyRequest` 의 필드명 `password` → `paymentPassword` 로 변경 (BE 컨트롤러 인터페이스 정합).
+- `PaymentPasswordSetupStep.tsx` / `PaymentPasswordInputDialog.tsx`: 호출 시 인자 키 동일 교체.
+
+### 영향 파일
+
+**data-craft**:
+- `src/features/subscription/api/paymentPassword.api.ts`
+- `src/features/subscription/ui/PaymentPasswordSetupStep.tsx`
+- `src/features/subscription/ui/PaymentPasswordInputDialog.tsx`
+
+### 검증
+
+- FE typecheck + lint PASS (0 errors).
+
 ## v001.216.0
 
 > 통합일: 2026-05-19
