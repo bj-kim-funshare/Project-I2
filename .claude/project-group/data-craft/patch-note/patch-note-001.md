@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.262.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #119
+
+### 개요
+
+마스터 보고: 데이터 뷰어 → 캘린더 뷰에서 인쇄 진입 시, 화면에 일정 카드가 보이는 월이라도 "행 선택" 단계에 행이 0개로 표시. HOTFIX 28 (월 필터)·HOTFIX 29 (`publishCalendarMonth`)·HOTFIX 30 (PrintDialog optional context) 까지 적용되어 `targetMonth` 자체는 캘린더 현재 월로 올바르게 전달되고 있었으나, 행 데이터 소스가 여전히 `viewerModel.rowModelList` 였다. `FsCalendarChart` 는 Enterprise 123-1 (`FsCalendarChart.tsx:431` 주석: "viewerModel.rowModelList 필터링 제거 — 서버 페이징 모드에서 rowModelList 가 비어있어 데이터 소실 방지") 이래 자체 `serverRows` (monthCacheRef) 로 카드를 렌더링하므로, 서버 페이징 모드에서 인쇄 3 소비처(행 선택 스텝 / HTML 생성기 / PDF 어댑터) 가 빈 `rowModelList` 를 읽어 0건. 캘린더 본체와 동일 데이터 소스 정합화로 해소.
+
+### 페이즈 결과
+
+- **Phase 1** (`d1515d2`): PrintContext publish/subscribe 채널 + 옵션 주입.
+  - `features/print/types.ts`: `PrintCalendarOptions.rowsOverride?: E.FsGridRowModel[]` 옵셔널 필드 + `PrintContextValue.publishCalendarRows(rows)` + `DEFAULT_PRINT_OPTIONS.calendar.rowsOverride: undefined`.
+  - `features/print/context/PrintContext.tsx`: `publishedCalendarRows` state + callback, `openPrintDialog` 의 calendar 분기에서 `rowsOverride: publishedCalendarRows` 주입, useCallback 의존성 배열 + value 노출, `E` import 추가.
+  - `widgets/calendar/FsCalendarChart.tsx`: 기존 HOTFIX 29 useEffect 옆에 `serverRows` publish useEffect 추가 (`serverRows === null` 가드로 초기 마운트 페치 전 폴백 보존).
+- **Phase 2** (`45d39c8`): 3 소비처 데이터 소스 전환 (`rowsOverride` 우선).
+  - `features/print/ui/steps/CalendarRowSelectStep.tsx`: `dateGroups` useMemo 의 forEach 데이터 소스를 `options.calendar?.rowsOverride ?? viewerModel.rowModelList` 로 전환 + 의존성 배열 갱신.
+  - `features/print/views/calendar/useCalendarPrint.ts`: `collectEvents` 시그니처에 옵셔널 `rowsOverride?` 추가, `generateCalendarPrintHtml` 호출처 + `buildSelectedRowsAppendix` 의 filter 데이터 소스 동일 패턴 전환.
+  - `features/print/adapters/CalendarPdfAdapter.ts`: PDF 어댑터 line 40 forEach 데이터 소스 동일 패턴 전환.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/types.ts`
+- `packages/fs-data-viewer/src/features/print/context/PrintContext.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+- `packages/fs-data-viewer/src/features/print/ui/steps/CalendarRowSelectStep.tsx`
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.ts`
+- `packages/fs-data-viewer/src/features/print/adapters/CalendarPdfAdapter.ts`
+
+총 6 파일 / +37 / -8 / 2 커밋.
+
+### lint / test
+
+- lint gate (`pnpm typecheck:all && pnpm lint`) 양 페이즈 PASS (0 errors, 19 pre-existing warnings).
+- 테스트 회귀 0건: WIP `70 fail / 1989 pass`, i-dev 베이스라인 `70 fail / 1989 pass` — 완전 동일 (기존 사전 실패와 동일 집합, 본 변경 무영향). `rowsOverride` 가 옵셔널 + `??` 폴백이므로 기존 테스트(viewerModel.rowModelList 주입 경로) 는 그대로 통과.
+
+### 미해결 / 의도된 carve-out
+
+- **초기 마운트 직후 인쇄**: `serverRows === null` (첫 페치 완료 전) 인 순간 publish 가 스킵되어 폴백(rowModelList) 사용. 이 순간은 캘린더 본체도 빈 상태이므로 회귀 아님 — 의도된 동작.
+- **비-서버-페이징 모드**: 실측 상 `FsCalendarChart` 가 모드 관계없이 `serverRows` 를 set 하므로 publish 가 항상 fire. "캘린더 본체와 동일 데이터 소스" 라는 의도된 결과지만 비-서버-페이징 케이스 회귀 가능성은 dev 서버 수동 검증 필요.
+
 ## v001.261.0
 
 > 통합일: 2026-05-19
