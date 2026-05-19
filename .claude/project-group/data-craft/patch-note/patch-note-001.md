@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.232.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #114
+
+### 개요
+
+마스터 명령: data-craft FE UI 3종 보정 — (1) 설정 모달 X 버튼이 본문 확장 토글과 겹쳐 좌측으로 이동, (2) 뷰어 셀-기원 모달의 백드롭이 배경과 구분 모호 → 어둡게, (3) 레이아웃 빌더의 "빈 입력 위젯 4종" 명칭에서 "빈" 용어 제거하여 "컨테이너 위젯" 패턴으로 일괄 재명명. 내부 enum 키 (`empty-*`) 와 파일/컴포넌트 이름은 저장 호환 위해 보존.
+
+### 페이즈 결과
+
+- **Phase 1** (`e06bde6`): `SettingsDialog` 의 `DialogContent` 에 `showCloseButton={false}` 지정하고 자식 트리 끝에 커스텀 `DialogClose` 를 `absolute top-4 right-9` 위치로 직접 렌더. 본문 확장 토글 (`w-6`, 24px) 과의 시각/클릭 겹침 해소. shadcn 기본 X 스타일 토큰 (focus-ring / hover-opacity / sr-only Close) 유지, `right-4` → `right-9` 만 치환. `isCustomSettingsActive` 노출/비노출과 무관하게 항상 동일 위치.
+
+- **Phase 2** (`553191e`): 공용 `DialogOverlay` (shadcn 표준) 의 `bg-black/50` → `bg-black/70` 단일 토큰 치환. 모든 shadcn Dialog 백드롭이 70% 농도로 일관 — 뷰어 셀-기원 모달도 동일 표준이라는 가정 하에 단일 지점 조정. 셀-특정 모달 컴포넌트의 정확한 식별은 grep 무성과로 미수행이므로 마스터 시각 검증 후 hotfix 여지 보존.
+
+- **Phase 3** (`7ea5694`): 6개 파일에서 사용자 가시 텍스트의 위젯 명칭 "빈" 일괄 제거. 마스터 매핑 — 그룹 `'빈 위젯'` → `'컨테이너 위젯'`, 4종 `'빈 입력폼'`/`'빈 데이터뷰어'`/`'빈 서브 데이터뷰어'`/`'빈 외부 데이터뷰어'` → `'입력폼 컨테이너'`/`'데이터 뷰어 컨테이너'`/`'서브 데이터 뷰어 컨테이너'`/`'외부 데이터 뷰어 컨테이너'`. description / LoadDataActionSection 안내 6 문장 / EmptyDataPlaceholder 의 `defaultValue` 도 동일 매핑으로 다듬음. `'미지정 (빈 화면)'` (분류명 아님) + 주석/JSDoc + 내부 enum (`empty-*`) + 파일/컴포넌트 이름은 모두 보존.
+
+### 영향 파일
+
+data-craft:
+- `src/widgets/settings-dialog/ui/SettingsDialog.tsx`
+- `src/shared/ui/shadcn/dialog.tsx`
+- `src/widgets/property-drawer/ui/widgetTypeConfig.ts`
+- `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx`
+- `src/widgets/property-drawer/ui/property-editors/button-editor/LoadDataActionSection.tsx`
+- `src/features/widget-placement/ui/AddWidgetButton.tsx`
+- `src/widgets/property-drawer/ui/property-editors/EmptyDataWidgetPropertiesEditor.tsx`
+- `src/widgets/empty-data-widget/ui/EmptyDataPlaceholder.tsx`
+
 ## v001.231.0
 
 > 통합일: 2026-05-19
