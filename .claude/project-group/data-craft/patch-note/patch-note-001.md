@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.209.0
+
+> 통합일: 2026-05-19
+> 플랜 이슈: #91 (hotfix 5)
+
+### 핫픽스 결과 — quote 에러 진단 가시화
+
+마스터 보고 (hotfix 4 후): 인원 관리 → 다음 결제일 결제 탭에서 "결제 견적을 불러오지 못했습니다. 잠시 후 다시 시도하세요." 표시. 일반 안내문만 노출되어 BE 의 실제 원인 불명.
+
+### Phase 21 (BE, `f37d2c3`) — getSeatChangeQuote 진단 로그
+
+- `seatChange.service.ts:getSeatChangeQuote` 의 진입 / 각 guard 통과 또는 throw 직전 / 정상 반환 직전 총 7개 지점에 `logger.info/warn` 추가.
+- `seatChange.controller.ts:getSeatChangeQuoteController` 진입 시 `userId / isOwner / companyId / rawDelta` 로그.
+- OWNER_ONLY / COMPANY_ID_REQUIRED 에러 메시지를 한국어로 명시화.
+
+### Phase 22 (FE, `3e9298c`) — quote 에러 메시지 surface
+
+- `seatChange.api.ts:getSeatChangeQuote` catch 블록에서 axios-style `error.response.data` 파싱 → BE 의 `{ callId, message, error }` 를 새 Error 의 message 로 throw.
+- `console.warn` 에 status / beMessage / beError / callId 명시.
+- `SeatManageDialog.tsx` 두 탭 모두 quoteError 표시를 "결제 견적을 불러오지 못했습니다." + 작은 글씨 "(원인: <BE message>)" 구조로 변경. 긴 메시지 truncate.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/services/seatChange.service.ts`
+- `src/controllers/seatChange.controller.ts`
+
+**data-craft**:
+- `src/features/subscription/api/seatChange.api.ts`
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+
+### 검증
+
+- BE / FE lint 모두 PASS.
+
+### 다음 단계 (마스터)
+
+본 hotfix 가 진단 모드 — 마스터가 모달 한 번 더 열면:
+1. 모달에 BE 실제 메시지 노출됨 (예: PLAN_NOT_ALLOWED / OWNER_ONLY / SEAT_CHANGE_BLOCKED_NO_EXPIRY_DATE / CLIENT_NOT_FOUND / SEAT_CHANGE_NOT_APPLICABLE_FOR_PLAN 중 하나).
+2. BE 콘솔에 `[seatChangeQuote]` / `[seatChangeQuoteCtrl]` 접두사 로그 출력.
+3. 두 정보로 다음 hotfix 에서 근본 원인 픽스.
+
 ## v001.208.0
 
 > 통합일: 2026-05-19
