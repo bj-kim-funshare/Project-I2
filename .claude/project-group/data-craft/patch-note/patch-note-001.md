@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.349.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 21 — longText 가로세로 중앙 + picker 확장 버튼 단방향 + 툴팁 정정)
+
+### 변경 (3 파일, +60/-30)
+
+#### 1. longText 가로세로 중앙 정렬 + 말줄임 (`9c016955`)
+- **`FsGridRowLinkCellRenderer.tsx`**: ResizeObserver 기반 maxLines 측정 로직 추가 (`FsGridLongTextCellRenderer` 와 동일). RowLinkDelegateRenderer 에 maxLines prop 전달.
+- **`rowLinkDelegateDispatcher.tsx`** longText/code 분기: `whitespace-pre-wrap` + `textStyles.body` 제거 + 원본 `FsGridLongTextCellRenderer` 의 inner span 과 완전 일치하는 `className="text-center"` + `style(webkit-box / WebkitLineClamp / overflow:hidden / wordBreak)` 적용. unit decoration 도 원본 우측 고정 패턴으로 통일.
+- 결과: single-line / multi-line 모두 셀 박스 안 가로세로 중앙 + overflow 시 `...` 말줄임.
+
+#### 2. picker 확장 버튼 조건부 단방향 (`c993f35b`)
+- **`ConnectionEditOverlay.tsx`** 확장 버튼 렌더 조건: `baseWidth < 490 && !isExpanded`. 이미 500px 의 ±10px 범위 (≥490) 면 버튼 미표시. 클릭 → `setIsExpanded(true)` 단방향. **확장 후 버튼 자체 unmount** (축소 기능 제거). `Minimize2` import + isExpanded 분기 title 도 제거.
+
+#### 3. 옵션 hover 툴팁 정상 동작 (`c993f35b`)
+- 이전 HOTFIX 20 의 `title` 은 inner `<span class="truncate">` 에 부착되어 padding / 체크박스 영역 hover 시 닿지 않았음 — **행 최외곽 `<div>` (onClick row) 로 이동**하여 hover target 전체에서 동작. 빈 라벨 guard 제거 — 항상 full / 500자 truncated 값 부착.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 20 longText 분기 (이제 본 HOTFIX 가 그 위에 완전 정렬), HOTFIX 19 picker 검색/정렬/높이 모두 그대로.
+
 ## v001.348.0
 
 > 통합일: 2026-05-20
