@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.359.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 26 — 행연결 picker 항목 앞 행 번호 prefix)
+
+### 개요
+
+마스터 결정 (HOTFIX 24/25 양극 진동 해소): 같은 displayValue 의 target row 가 여러 개 있을 때 사용자가 어느 row 인지 식별 가능하도록 — **picker dropdown 의 모든 항목 앞에 행 번호 prefix 표시**. 타입 무관 (text/longText/number/singleSelect/multiSelect/user/document/image/file 등 전부). selected matching 자체는 변경 없이 시각적 row 식별만 강화.
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`ca6329fe`, +4/-1):
+  - `filteredItems.map` 콜백에 `idx` 파라미터 추가 (sort 후 filter 의 final index).
+  - 각 항목 라디오/체크박스 우측·label 좌측에 번호 span 삽입.
+  - **번호 = 1-based zero-padded 2자리** (`String(idx+1).padStart(2,'0')`) — `RowLinkGroupManageDialog` 사이드바 패턴 (01, 02 …) 과 일관성.
+  - 적용 클래스: `font-mono text-xs text-gray-400 w-6 text-right shrink-0`.
+  - "선택안함" 고정 행은 별도 div 라서 prefix 미표시 상태 유지.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 25 의 row identity 복원 (`item.valueId` React key) + HOTFIX 24 의 image/file 연동 + document JSON 가공 모두 그대로 유지.
+
 ## v001.358.0
 
 > 통합일: 2026-05-20
