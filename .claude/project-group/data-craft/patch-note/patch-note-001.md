@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.301.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #131
+
+### 페이즈 결과
+- **Phase 1 (`f1f4d81`)**: 데이터 뷰어 문서 타입 셀 모달(`DocumentEditDialog`) 의 키보드 핸들러를 React `onKeyDown` prop 방식에서 document-level capture-phase listener 방식으로 전환. `useDocumentKeyboardHandlers` 를 `useEffect` 기반으로 재작성하여 `document.addEventListener('keydown', ..., true)` 등록 + unmount cleanup 구조화, `e.isComposing` 가드로 한글 IME 합성 중 false-positive 차단, Shift+Enter / Escape 양쪽 모두 `preventDefault + stopPropagation + stopImmediatePropagation` 3종 세트 적용. `DocumentEditDialog.tsx` 는 backdrop div 의 `onKeyDown` prop 및 분해 할당 제거. 모달 mount 직후 BlockNote(ProseMirror) 키보드 라우팅 race 와 무관하게 capture-phase 가 항상 먼저 onSave 를 트리거하므로 "최초 1회 Shift+Enter 미동작" 증상 해소. `long-text-cell/EditDialog.tsx` 의 동일 검증 선례 패턴 재사용.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/useDocumentKeyboardHandlers.ts`
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx`
+
 ## v001.300.0
 
 > 통합일: 2026-05-20
