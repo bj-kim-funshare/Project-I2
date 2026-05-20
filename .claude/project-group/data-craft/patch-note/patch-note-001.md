@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.290.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 9 — 좌측 사이드바 배경 베이지 톤다운)
+
+### 개요
+
+마스터 보고: HOTFIX 8 의 좌측 사이드바 베이지 배경 (`#F5F1EB`) 이 시안 대비 진해서 훨씬 더 연하게 톤다운 요청.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`** (`4a8905d`): 좌측 사이드바 컨테이너 배경색 `bg-[#F5F1EB]` → `bg-[#FAF8F5]` (거의 흰색에 가까운 연한 크림). active 항목 `bg-white` 와 hover `bg-white/50` 와의 시각 대비는 유지.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 20 warnings).
+- 회귀: 다른 색상/spacing/동작 모두 무변경.
+
 ## v001.289.0
 
 > 통합일: 2026-05-20
