@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.356.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 24 — user dedupe + image/file 연동 복원 + document JSON 가공)
+
+### 변경 (4 파일, +86/-10)
+
+#### 1. user 타입 target picker — 다중 선택 표시 버그 (`ad4fe2d3`)
+- **`ConnectionEditOverlay.tsx`**: `filteredItems` 가 dedup 없이 정렬된 items 그대로 사용 → copy 모드에서 동일 value 문자열의 여러 row 가 모두 `selectedIds.includes(itemId) = true` 평가. **`deduplicatedItems` useMemo** 신규 — sort 후 첫 occurrence 만 남김.
+
+#### 2. image / file 타입 — 빈값 표시 복원 (`ad4fe2d3`)
+- **`FsGridRowLinkCellRenderer.tsx` / `RowLinkRenderer.tsx`**: `!cellValue` 조기 반환 분기가 file/image 타입에서 cellValue 비어 있을 때 delegate 경로 전체 skip 했음. `isFileLike` 플래그로 조기 반환 우회.
+- **`rowLinkDelegateDispatcher.tsx`**: `params.columnModel.columnField` 가 rowLink 컬럼 자체 field 였어서 `onFileLoad` 가 엉뚱한 컬럼 조회. image/file 전용 분기 추가 — `rowLinkConfig.mappedTargetColumnId` 를 columnField 로 override.
+- Blocker: source row 기준 rowField 전달 — target group 이 다른 viewer 인 경우 빈 결과 가능. 호스트 `onFileLoad` 가 동일 viewer 내 target column field 조회하는 경우만 완전 복원.
+
+#### 3. document 타입 target picker option label 친화 가공 (`023e4fe4`)
+- **`ConnectionEditOverlay.tsx`**: `getDocumentAwareLabel` 헬퍼 신규. JSON parse 성공 + `title` / `content` / `options` 세 필드 동시 존재 시 document 타입 판정 → `parseDocumentFromCellValue` 로 title 추출. 비어 있으면 `(제목 없음)`. label + 검색 필터 모두 헬퍼 사용 — 제목 기준 검색도 정상.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 23 tooltip 정정 / HOTFIX 22 Tooltip 컴포넌트 / HOTFIX 21 longText 중앙 + 확장 단방향 모두 그대로.
+
 ## v001.355.0
 
 > 통합일: 2026-05-20
