@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.346.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 11 — 플랜 관리 사용자 한도 중복 제거 + 인원 관리 버튼 이동)
+
+### 개요
+
+플랜 관리 화면 정리:
+- CurrentPlanBadge (v280) 의 2×2 UsageBar 그리드와 BillingInfoSection 의 사용자 한도 카드가 중복 노출 → BillingInfoSection 측 제거.
+- 인원 관리 버튼을 결제 정보 영역(BillingInfoSection)에서 액션 영역(SubscriptionActionSection)으로 이동, 결제주기 변경 예약 버튼 우측에 동일 크기/디자인으로 배치.
+- 양 버튼 좌측에 아이콘 (Calendar / Users) 추가.
+
+### 변경 — data-craft (`868147dd`)
+
+**`src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx`**:
+- 사용자 한도 블록 전체 제거 (헤더 / UsageBar / progress bar / 경고 텍스트 / pendingSeatChange 안내 / 인원 관리 버튼).
+- 정리된 imports: `useState`, `Users`, `AlertTriangle`, `Button`, `cn`, `SeatManageDialog`.
+- props 슬림화: `seats` / `userCount` / `pendingSeatChanges` 제거.
+- 결제 수단 카드 등 기존 결제 정보 UI 는 보존.
+
+**`src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`**:
+- props 에 `planType` 추가.
+- 협업 플랜 (`standard` / `premium`) 일 때만 "인원 관리" 버튼 추가 렌더 — 결제주기 변경 예약 버튼 우측 배치.
+- 크기 / variant / padding 결제주기 버튼과 일관 (className 카피).
+- `seatManageOpen` state + `<SeatManageDialog>` 마운트 이전.
+- `hasActivePromotion` 시 disabled (다른 결제 액션 차단 정책 일관).
+- 좌측 아이콘: 결제주기 변경 = `Calendar` (lucide-react), 인원 관리 = `Users`. `h-4 w-4 mr-2` shadcn 표준.
+
+**`src/widgets/settings-dialog/ui/PlanTabContent.tsx`**: 두 섹션 props 정합 (BillingInfoSection 슬림화 + SubscriptionActionSection planType 전달).
+
+### 영향 파일
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/plan/BillingInfoSection.tsx`
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 테스트 시나리오
+
+1. 협업 플랜 (standard / premium) — 플랜 관리 진입 → CurrentPlanBadge 의 2×2 그리드 안에 사용자 한도 표시 (보존). BillingInfoSection 결제 수단 카드 아래에 별도 사용자 한도 카드 **없음**.
+2. SubscriptionActionSection: "연간으로 변경 예약" + "인원 관리" 버튼 한 줄 정렬, 동일 크기. 양쪽 좌측 아이콘 (Calendar / Users) 표시.
+3. 인원 관리 버튼 클릭 → SeatManageDialog 정상 오픈.
+4. 프로모션 활성 client → 인원 관리 버튼 disabled.
+5. 개인 플랜 (free / basic) — 인원 관리 버튼 렌더 X (협업 플랜 한정).
+
 ## v001.345.0
 
 > 통합일: 2026-05-20
