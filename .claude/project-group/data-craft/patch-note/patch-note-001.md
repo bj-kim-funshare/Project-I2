@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.360.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 20 — chargedAmount=0 분기 + UpgradeStepPayment quote 통합)
+
+### 개요
+
+마스터 보고: 차액 결제 금액이 0원일 때 안내 박스에 가격 표기가 안 나오고 "잔여 요금제가 차감된 비용입니다" 만 보임. 0원 전용 안내 + UpgradeStepPayment 가 사전 quote 미보유였던 한계 함께 해소.
+
+### 변경
+
+**data-craft-server (HOTFIX 20 BE — `f597a7cf`)**
+- `billingSubscription.service.ts` `getUpgradeQuote({ companyId, targetPlan, targetSeats })` 신설 — `calculateProrationDiff` 호출하여 `chargedAmount` 만 반환 (DB 변경 / charge 호출 X).
+- `billing.controller.ts` `getUpgradeQuoteController` (CALL_ID `BILLING-R-018`).
+- `subscription.ts` `GET /api/subscription/billing/upgrade-quote?targetPlan=&targetSeats=` (authMiddleware 만, requirePaymentPassword / permissionMiddleware 미적용).
+
+**data-craft (HOTFIX 20 FE — `1f127804`)**
+- `billingApi.getUpgradeQuote` 신설 + `useGetUpgradeQuote` hook.
+- `UpgradeStepPayment.tsx`: seats / selectedPlan 변경 시 400ms 디바운스 후 quote 조회. 분기: loading → "계산 중...", chargedAmount===0 → "추가 결제 금액이 없습니다.", chargedAmount>0 → "결제 금액 N원" + "잔여 요금제가 차감된 비용입니다." 2줄.
+- `SeatManageDialog.tsx` / `PromotionPurchaseDialog.tsx` (협업/비협업 양 분기) 도 chargedAmount===0 분기 적용.
+- ko.ts / en.ts: `billing.noAdditionalCharge`, `billing.quoteLoading`, `billing.proratedAmount` 키 신설.
+
+### 영향 파일
+
+**data-craft-server**: `services/billingSubscription.service.ts`, `controllers/billing.controller.ts`, `routes/subscription.ts`.
+
+**data-craft**: `features/subscription/api/billingApi.ts`, `features/subscription/model/subscriptionQueries.ts`, `features/subscription/ui/UpgradeStepPayment.tsx`, `features/subscription/ui/SeatManageDialog.tsx`, `features/subscription/ui/PromotionPurchaseDialog.tsx`, `shared/i18n/locales/{ko,en}.ts`.
+
+### 배포 선행 조건
+BE + FE 동시 배포 필수.
+
+### 진단 메모
+
+본 hotfix 머지 직전 마스터 보고: "프리미엄 프로모션에서 프리미엄으로 인원 43명 추가해서 변경해도 결제 금액이 안 나옴" (사진 첨부). 원인 = 본 hotfix(quote 통합) 머지 전 빌드. 머지 후 새 빌드에서는 chargedAmount > 0 / === 0 둘 중 하나로 정확히 표시. 마스터 재확인 권장.
+
 ## v001.359.0
 
 > 통합일: 2026-05-20
