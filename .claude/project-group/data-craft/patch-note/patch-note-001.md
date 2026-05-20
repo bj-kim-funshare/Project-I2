@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.286.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 8 — '연결 그룹 삭제' 동적 라벨 복원 + 좌측 사이드바 시안 매칭 + 다이얼로그 여백 확대)
+
+### 개요
+
+마스터 정정 + 추가 시안:
+1. HOTFIX 7 의 정적 라벨 `선택 연결 열 제거` 갱신 → 전체 선택 시 **`연결 그룹 삭제`** 동적 전환 (HOTFIX 2 동적 텍스트 복원, 단 라벨은 시안 갱신 — `행 연결 그룹 제거` → `연결 그룹 삭제`). 클릭 시 모달 즉시 닫기 + 그룹 전체 컬럼 완전 삭제.
+2. 좌측 사이드바 두 번째 시안 정확 매칭 — 베이지 컨테이너 + 번호 prefix + 보라 active 바 + 보라 primary 추가 버튼.
+3. 다이얼로그 전체 좌우 여백 확대.
+
+### 변경
+
+#### 1. footer 좌측 버튼 동적 라벨 + 그룹 완전 삭제 (`599ffd48` + lint hotfix `b2154d1c`)
+
+- 라벨: `selected.size === groupCols.length` (전체 선택) → **`연결 그룹 삭제`**. 그 외 → `🗑 선택 연결 열 제거`.
+- 클릭 핸들러 `handleDeleteGroup` 신규 분리. 실행 순서:
+  1. 모든 `groupCols` 순회.
+  2. `saveChange(createColumnDeletedChange(cf), { immediate: true })` 호출 (각 컬럼 삭제 change 전파).
+  3. `onRefresh()` 호출.
+  4. `onClose()` 호출 — 삭제 완료 후 모달 닫음 (unmount 전 상태 불일치 방지).
+- lint hotfix: 직접 `viewerModel.columnModelList` / `row.cellModelList` mutation 은 ESLint 규칙 위반 → `saveChange immediate` 만으로 전파 (store 가 viewerModel 갱신).
+
+#### 2. 좌측 사이드바 시안 매칭 (`fc158e42`)
+
+- **컨테이너**: 흰색 → 베이지 (`bg-[#F5F1EB]`, `rounded-2xl`, `p-3`).
+- **검색 input**: placeholder `🔍 열 검색` (단축), `bg-white` + `rounded-lg`.
+- **헤더 행**: `ChevronDown` (14px) + 전체 선택 체크박스 + `연결 열` (font-bold) + 카운터 pill (`bg-gray-200/70`, `rounded-full`, `0 / 7` 공백 포함).
+- **항목 행**: 2자리 번호 prefix (`font-mono text-gray-400`) + 체크박스 + 컬럼명 + 리더 pill (`bg-orange-50 text-orange-700 rounded-full`). active 시 `border-l-4 border-violet-500 bg-white`, 비선택은 `border-transparent hover:bg-white/50`.
+- **추가 버튼**: outline → `bg-violet-600 text-white hover:bg-violet-700` 채움 primary.
+
+#### 3. 다이얼로그 여백 확대 (`fc158e42`)
+
+- `Dialog.Content` 에 `mx-10` 추가.
+- 헤더/푸터 `px-6` → `px-8`.
+
+### 이전 핫픽스 갱신 정리 (시안/마스터 정정)
+
+- **HOTFIX 7 정적 라벨** (`선택 연결 열 제거`) → **갱신**: 전체 선택 시 동적 `연결 그룹 삭제`. HOTFIX 2 의 동적 텍스트 복원이지만 라벨 자체는 마스터 정정으로 `행 연결 그룹 제거` → `연결 그룹 삭제`.
+- HOTFIX 7 의 모달 전체 layout / 우측 hero + 4 섹션 카드 / 3-버튼 segment / append 모드 — 그대로 유지.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (3 commits — `599ffd48` 라벨 + 삭제 / `b2154d1c` lint hotfix / `fc158e42` 사이드바 시안 + 여백)
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 20 warnings).
+- 회귀: 부분 선택 / 리더 + 일부 부하 / 리더 단독 / 비 rowLink 컬럼 / 비리더 chevron 차단 / 리더 chevron 직접 모달 모두 무변경.
+
 ## v001.285.0
 
 > 통합일: 2026-05-20
