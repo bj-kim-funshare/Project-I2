@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.280.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #124
+
+### 개요
+
+설정 → 플랜 관리 탭의 현재 플랜 배지 안 2×2 사용량 그리드(페이지 / 데이터 그룹 / 스토리지) 의 마지막 빈 셀(스토리지 우측) 에 **사용자 한도** UsageBar 를 추가. 협업 플랜(`standard` / `premium`) 에서만 표시되며 개인 플랜(`free` / `basic`) 에서는 슬롯이 비워진다.
+
+### 변경
+
+- **`src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`** (`d045b75`): `CurrentPlanBadgeProps` 에 옵셔널 `userCount?: number`, `seats?: number` 두 필드 추가. 2×2 그리드 내 스토리지 UsageBar 다음 위치에 `planType === 'standard' || planType === 'premium'` 조건부 `<UsageBar label="사용자" current={userCount ?? 0} limit={seats ?? 0} formatLimitFn={(l) => \`${l}명\`} />` 추가.
+- **`src/widgets/settings-dialog/ui/PlanTabContent.tsx`** (`d045b75`): `<CurrentPlanBadge>` 호출에 `userCount={status?.userCount}`, `seats={status?.seats}` 두 prop 전달.
+
+### 데이터 소스
+
+`SubscriptionStatus.userCount` (현재 인당 과금 사용자 수) / `SubscriptionStatus.seats` (협업 플랜 결제 정원). 양쪽 모두 `/api/subscription/status` 응답에 이미 존재하므로 BE 변경 없음.
+
+### 표시 양식
+
+| 항목 | 표시 |
+|---|---|
+| 레이블 | 사용자 (i18n key `settings.userLimit`, fallback "사용자") |
+| 본문 | `{userCount} / {seats}명` |
+| 막대 | UsageBar 표준 색상 규칙 (≥90% red, ≥70% amber, else primary) |
+| 조건 | 협업 플랜 (`standard` / `premium`) 만 렌더 — 개인 플랜은 슬롯 빈 상태 유지 |
+
+### 기존 사용자 한도 표시와의 관계
+
+`BillingInfoSection.tsx` 가 별도 카드(사용자 아이콘 + `N/M명` + 막대) 로 동일 데이터를 이미 노출하고 있다. 이번 작업은 그것을 대체/제거하지 않고, **현재 플랜 배지 안의 한눈에 보는 2×2 사용량 그리드** 에 동일 양식으로 함께 노출하는 보완 추가 — 마스터 명시 "스토리지 우측에" 요청에 부합.
+
+### 영향 파일
+
+- data-craft:
+  - `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`
+  - `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+---
+
 ## v001.279.0
 
 > 통합일: 2026-05-20
