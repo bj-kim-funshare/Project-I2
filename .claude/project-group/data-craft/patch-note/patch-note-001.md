@@ -1,5 +1,69 @@
 # data-craft — Patch Note (001)
 
+## v001.336.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 9 (간트 인쇄 timeline 페이지 폭 segment 분할 — 막대/격자/일별 헤더 종이 폭 안 fit)
+
+### 개요
+
+HOTFIX 8 의 화면 디자인 미러링 적용 후 마스터 보고:
+- A4 가로 인쇄 시 timeline 본체가 종이 폭을 초과해 약 33일분만 출력되고 나머지가 잘림.
+- 격자가 중간 이후 안 그려짐.
+- 막대도 우측이 잘림 (테스트3 막대 일부, 테스트2 막대 잘림).
+
+advisor 가 HOTFIX 8 시점에 이미 예고했던 문제 (DAY_WIDTH 40px × 최대 183 일 + 라벨 200 = 7520 px ≫ A4 가로 ≈ 1123 px @96dpi). 본 hotfix 에서 정공법 (segment 분할) 채택.
+
+### 해법
+
+`buildGanttHorizontalHtml` 을 timeline segment 분할 방식으로 재작성:
+
+**A. 동적 segmentDayCount 계산**
+- options.paperSize (A4/A3/Letter/Legal) + orientation (portrait/landscape) → 종이 mm.
+- options.margins → 좌우 여백 mm.
+- mm → px 환산 (× 96/25.4).
+- 가용 timeline 폭 = (paperWidth - left margin - right margin) × 96/25.4 - labelWidth.
+- segmentDayCount = floor(가용 timeline 폭 / DAY_WIDTH).
+
+**B. timeline segment 분할**
+- 전체 dayList 를 segmentDayCount 단위로 slice.
+- segment 마다 별도 `<div class="gantt-print-chart">` 출력.
+- CSS `.gantt-print-chart + .gantt-print-chart { page-break-before: always }` 로 segment 간 페이지 분할.
+
+**C. segment 내 month grouping**
+- 각 segment 의 days 를 month 별 다시 grouping → 해당 segment 의 month header (한 segment 가 두 달 걸치면 두 cell).
+
+**D. 막대 (bar) 3-way clipping**
+- visibleStart = max(rowStart, effectiveStart, segment.start).
+- visibleEnd = min(rowEnd, effectiveEnd, segment.end).
+- visibleEnd < visibleStart → 이 segment 에서 막대 미렌더 (빈 row 만 출력).
+- offset 은 segment.start 기준 재계산: `left = (visibleStart - segment.start).days × DAY_WIDTH`, `width = (visibleEnd - visibleStart + 1) × DAY_WIDTH`.
+- segment 경계 잘림 시 해당 측 border-radius 0 (좌측 잘림 → border-radius left=0, 우측 잘림 → right=0).
+
+**E. 격자 정확 부여**
+- 각 segment 의 `gantt-print-row-canvas` 에 `width: segment.days.length × DAY_WIDTH` 명시 → `repeating-linear-gradient` 격자가 segment 폭에 정확히 매칭.
+
+**F. label 영역 반복**
+- segment chart 마다 좌측 라벨 영역 + 각 row 의 label cell 반복 출력 → 모든 페이지에서 행 식별 가능.
+
+### 페이즈 결과
+
+- **Phase 10 / HOTFIX 9** (fix): `buildGanttHorizontalHtml` segment 분할 재작성. options.paperSize/orientation/margins → mm→px → 가용 폭 → segmentDayCount 동적 계산. segment 마다 month 그룹핑, label 영역 반복, 막대 3-way clipping + 경계 border-radius 보정. `gantt-print-row-canvas` width 명시로 격자 정확화. `generateGanttStyles` 에 `.gantt-print-chart + .gantt-print-chart { page-break-before: always }` 추가. (`c1d6e33f` → `27ad5003` lint hotfix — unused `ganttEpochDaysToStr` 제거)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- HOTFIX 8 의 본체 화면 디자인 (DAY_WIDTH 40, weekend 색, 둥근 막대, BAR_COLORS 정합) 모두 보존 — 본 hotfix 는 timeline 의 수평 페이지 분할 + 막대 clipping 만.
+- HOTFIX 6/7/8 의 부록 카드 (제목 강조, 노션 토큰, 3열) 무관 — 본 hotfix 미수정.
+- 부록 카드는 segment 분할 적용 안 함 — 카드 단위 `page-break-inside: avoid` (HOTFIX 6) 가 이미 적절.
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+- `buildCalendarAppendixTable` 무수정 (캘린더 인쇄와 공유).
+
 ## v001.335.0
 
 > 통합일: 2026-05-20
