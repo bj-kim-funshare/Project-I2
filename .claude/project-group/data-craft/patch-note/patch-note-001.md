@@ -1,5 +1,75 @@
 # data-craft — Patch Note (001)
 
+## v001.294.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126
+
+### 개요
+
+결제 시스템 업그레이드 흐름을 잔여기간·잔여인원 비례 즉시 차액 결제 단일 방식으로 통합. 폐기 대상은 업그레이드 / 인원 증가의 "즉시 만액 결제 / 다음 결제일 결제 / 예약" 3가지 모드. 다운그레이드와 월간→연간 전환은 기존 예약 흐름을 그대로 유지. 결제 사이클 단위를 캘린더 월에서 +31일 (월간) / +365일 (연간) strict 로 표준화. 사용자에게는 차액 계산식을 노출하지 않고 "잔여 요금제가 차감된 비용입니다" 단일 메시지로 안내.
+
+### 정책 (마스터 확정, 2026-05-20)
+
+- 결제 사이클 = **월간 +31일 / 연간 +365일 strict**. 첫 결제부터 갱신까지 일관 적용.
+- 잔여일수 = **당일 제외, 익일부터 다음 결제일 직전까지의 실제 일수**. 분모 = 사이클 일수.
+- flat 플랜 (`basic` / `pro` / `enterprise`) 은 차액 계산 시 seats=1 강제. flat ↔ per-seat 업그레이드도 동일 규칙.
+- 환불 절대 없음 (기존 정책 유지).
+- 다운그레이드 흐름 (`scheduleDowngrade`) 변경 없음.
+- 월간→연간 전환은 업그레이드 모달에 미노출 — 별도 "플랜 관리 → 연간 예약" 진입점 (`SubscriptionActionSection` `useScheduleBillingCycleChange`) 에서만 처리.
+
+### 변경
+
+**data-craft-server (BE)**
+
+- **`src/services/billingRenewal.service.ts`** (`f463707`, `4a24b8e`): 갱신 사이클 `setMonth(+1)+말일보정` / `setFullYear(+1)` → `setDate(+31)` / `setDate(+365)` 로 교체. 보완 커밋에서 첫 결제 `calculateExpiresAt` (`billingSubscription.service.ts`) 및 yearly promotion 만료일 (`subscription.service.ts`) 도 동일 규칙으로 정렬.
+- **`src/services/billingSubscription.service.ts`** (`54eef7a`, `da3b487`, `4a24b8e`): 순수 함수 `calculateProrationDiff` 신규 — 잔여일수·인원 비례 차액 산출, 프로모션 스냅샷 단가 우선, flat 플랜 seats=1 강제, `remainingDays==0` / `now ≥ nextBillingAt` max 가드. `executeUpgradeWithDiff` 신규 — SELECT FOR UPDATE → `charge()` → `payment_history` INSERT (`status='DONE'`, `billing_cycle`=구독 기존 cycle, `seats_at_payment`=신규인원) → `client` plan/seats UPDATE 트랜잭션. **`plan_expires_at` 은 변경하지 않음** — 결제일 유지 보장. `scheduleUpgrade()` 함수 폐기.
+- **`src/routes/subscription.ts`** (`da3b487`): `POST /billing/schedule-upgrade` 라우트 제거, `POST /billing/upgrade` 신설.
+- **`src/services/seatChange.service.ts`** (`da3b487`): 증가 (`delta>0`) 케이스를 만액 즉시 결제 → `executeUpgradeWithDiff` 위임으로 교체. 감소 (`delta<0`) 흐름은 기존 pending 보존. 응답 형상 `chargedAmount`/`paymentId` 로 갱신.
+- **`src/types/charge.types.ts`** (`da3b487`): `ChargeMetadata.source` 유니온에 `'upgrade-proration'` 추가.
+- **`src/controllers/billing.controller.ts`** (`da3b487`, `f1419bf`): `scheduleUpgradeController` 제거, `executeUpgradeWithDiffController` 신설. CALL_ID 정렬.
+- **`src/config/constant.ts`** (`f1419bf`): `CALL_ID.subscription.scheduleUpgrade` 항목을 `executeUpgradeWithDiff` 로 rename (BILLING-U-010 코드 유지).
+- **`src/models/promotion.model.ts`** (`54eef7a`): `getClientPromotionSnapshotPrice` 헬퍼 export.
+- **`scripts/migrations/2026-05-cancel-upgrade-pending.ts`** (`f28c5ee`): 일회성 정리 스크립트 — PLAN_LEVEL 기준 상향 `pending_plan_type` 만 NULL, `client_seat_change_requests delta>0 pending` 일괄 cancelled. 다운그레이드 pending / 월→연 `pending_billing_cycle` / seat 감소 예약 보존.
+- **테스트**: `billingRenewal.test.ts` (5 케이스), `billingSubscription.proration.test.ts` (8 시나리오 — 예시1/2, flat↔per-seat, 프로모션, 엣지, yearly 분모), `billingSubscription.upgrade.test.ts` (5 케이스), `billingSubscription.seatChange.test.ts` (6 케이스). 폐기 테스트 (`scheduleUpgrade` / 구 seatChange 만액 결제) 삭제.
+
+**data-craft (FE)**
+
+- **`src/features/subscription/api/billingApi.ts`** (`daae5ab`, `3fc2684`): `scheduleUpgrade` 폐기, `upgrade` (`POST billing/upgrade`) 신설. `SeatChangeRequest`/`Response` 인라인 타입 신설 — `mode`/`applyAt` 제거, 응답 `chargedAmount`/`paymentId`.
+- **`src/features/subscription/model/subscriptionQueries.ts`** (`daae5ab`, `3fc2684`): `useScheduleUpgrade` 제거, `useUpgrade` 신설. seatChange 응답 분기 `'chargedAmount' in data` 로 정합.
+- **`src/features/subscription/ui/UpgradeDialog.tsx`** / **`UpgradeStepPayment.tsx`** (`daae5ab`): `upgradeMode` state 제거, 즉시/예약 분기 UI 삭제, 월/연 토글 + `BillingCycleComparison` 업그레이드 흐름 비노출. 단일 메시지 "잔여 요금제가 차감된 비용입니다" + 인원수 입력만 유지. 다운그레이드 흐름 보존.
+- **`src/features/subscription/ui/PlanLimitExceededDialog.tsx`** (`daae5ab`): plan-limit 초과 시 업그레이드 액션도 즉시 차액 결제 (`useUpgrade`) 로 교체.
+- **`src/features/subscription/ui/SeatAddDialog.tsx`** (`3fc2684`): 인원 추가 탭의 "다음 결제일 / 즉시 결제" 모드 라디오 제거. 항상 즉시 차액 결제 단일 흐름. 감소 흐름 보존.
+- **`src/features/subscription/index.ts`** (`daae5ab`): re-export 정렬.
+
+### 결제일 처리 보장
+
+- **업그레이드 / 인원 증가** (즉시 차액 결제): `plan_expires_at` 변경 없음 → 다음 결제일 그대로.
+- **다운그레이드** (`scheduleDowngrade`): 기존 흐름 유지 → 다음 결제일에 변경 적용.
+- **월간→연간** (`scheduleBillingCycleChange`): 기존 흐름 유지 → 현재 월간 사이클 종료 시점에 연간 결제 시작 (그 시점부터 365일 사이클 anchor).
+- **첫 결제**: `calculateExpiresAt` 도 +31일/+365일 strict → 사이클 단위 일관성 보장.
+
+### 사용자 노출 메시지
+
+- 업그레이드 / 인원 증가: "잔여 요금제가 차감된 비용입니다" (계산 과정 노출 X).
+- 다운그레이드: 기존 안내 그대로.
+- 월간→연간 (별도 진입점): "다음 결제일부터 연간 결제가 시작됩니다. 연간 결제는 10% 할인이 적용됩니다." — `SubscriptionActionSection` 진입점에 반영 여부 후속 확인 권장.
+
+### 배포 선행 조건
+
+- **마이그레이션 스크립트 실행 필수**: BE 배포 시점에 `scripts/migrations/2026-05-cancel-upgrade-pending.ts` 를 BE 코드 배포 전 또는 동시에 실행해야 함. 미실행 시 구 예약 시스템으로 생성된 pending 레코드를 새 코드의 갱신 cron 이 폐기된 가정으로 처리할 위험 → **stale pending 적용 후 사용자 손해 발생 가능**. `task-db-data` 로 실행하거나 마스터가 직접 실행.
+
+### 후속 권장 (본 플랜 범위 외)
+
+- `src/features/subscription/types.ts` 의 dead export (`ScheduleUpgradeRequest` / `Response`, 구 `SeatChangeRequest` / `Response`) 정리.
+- `SubscriptionActionSection.tsx` 연간 예약 진입점에 "연간 결제는 10% 할인 적용" 안내 문구 반영 여부 점검.
+- `promotion.service.ts:305` JSDoc 의 `billingSubscription.scheduleUpgrade` 잔존 참조 (무해 주석) 정리.
+
+### 회귀 위험
+
+- 구 사이클 (캘린더 월) 로 잡혀 있던 기존 구독의 `plan_expires_at` 은 그대로 두고 다음 갱신 시점부터 +31일 규칙 적용 — 한 사이클 동안 짧은 편차 발생 (마스터 의도 부합).
+- `payment_history` 의 차액 결제 행이 회계/집계 쿼리에 기존 만액 행과 혼재 — `seats_at_payment` 와 `amount` 의 의미가 "차액" 임을 유의 (필요 시 집계 보정).
+
 ## v001.293.0
 
 > 통합일: 2026-05-20
