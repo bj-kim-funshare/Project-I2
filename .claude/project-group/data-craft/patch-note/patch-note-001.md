@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.310.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 4 (HOTFIX 1 + HOTFIX 3 revert → focusout 기반 close 로 교체)
+
+### 개요
+
+v001.303.0 (#129 HOTFIX 3) 적용 후 마스터 보고: "캘린더에서 월 이동(chevron)이나 날짜 선택 전부 누르면 선택 안되고 닫혀". 마스터 추가 확인: 캘린더만 닫힘, 인쇄 모달은 그대로.
+
+이 표현이 결정적 — chevron 클릭 시 월이 안 바뀌고 (React onClick 미발화), 날짜 클릭 시 날짜도 안 선택되고 (React onClick 미발화). HOTFIX 2/3 의 진단 (Radix DismissableLayer) 은 폐기. 진짜 회귀 = React onClick 자체가 발화 안 함 + 캘린더 닫힘.
+
+HOTFIX 3 의 element 레벨 native `pointerdown` stopPropagation 이 의도와 무관하게 React 의 portal-event delegation 또는 브라우저의 click 생성 경로를 깨고 있을 가능성이 가장 유력. HOTFIX 1 의 document mousedown 리스너도 `containerRef.contains` 가 어떤 이유로 false 반환하여 잘못 닫고 있을 가능성.
+
+해법: HOTFIX 1 (document mousedown click-outside) + HOTFIX 3 (element native stopPropagation) 둘 다 완전 revert. native 이벤트 전파를 일절 건드리지 않는 **focusout 기반 close** 패턴으로 교체. 컨테이너 div 에 `tabIndex={-1}` + `outline-none` 부여, position 설정 시점에 `el.focus()` 수행, `focusout` 이벤트에서 `relatedTarget` 이 캘린더 내부 또는 anchor 내부인지 확인해 외부일 때만 `onClose` 호출.
+
+native event 미간섭 → React onClick (chevron / 날짜 / X / 초기화) 정상 발화. Radix 와도 무관 (focus 만 사용).
+
+### 페이즈 결과
+
+- **Phase 5 / HOTFIX 4** (fix): HOTFIX 1 의 document mousedown 리스너 useEffect 제거, HOTFIX 3 의 element native pointerdown/mousedown stopPropagation useLayoutEffect 제거. `useEffect` import 도 제거 (다른 곳 미사용). 새 useLayoutEffect 추가 (deps `[position, onClose, anchorRef]`): position 설정 후 `el.focus()` + `el.addEventListener('focusout', ...)` 등록. relatedTarget 이 `el` 또는 `anchorRef.current` 내부면 skip, 외부면 onClose. JSX 컨테이너 div 에 `tabIndex={-1}` + `outline-none` 추가. (`17dbbbc6`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+
+### 비고 (정직 보고)
+
+- 본 hotfix 는 listener **경로 자체를 바꾸는** 시도. 마스터 보고가 정확히 어느 listener 로 닫히고 있는지 확인되지 않은 채 가설을 정리해 진행.
+- 만약 본 hotfix 적용 후에도 동일 증상 (chevron / 날짜 클릭 시 onClick 미발화 + 캘린더 닫힘) 이 재현되면 **원인 가설이 통째로 잘못된 신호**. 그 경우 listener 가 아닌 다른 메커니즘 (remount / Radix focus-trap 간섭 / event delegation 문제) 일 가능성. 추가 hotfix 전에 dev server 콘솔 로그 + React DevTools 로 실제 close 호출 stack 을 잡는 것이 정확.
+- 잠재 부작용 후보: Radix Dialog 의 modal focus-trap 이 portal 된 캘린더로의 `el.focus()` 를 거부하고 focus 를 DialogContent 로 되돌리면 focusout 이 즉시 발화 → 캘린더가 열리자마자 닫힘. 이 경우 focus 패턴 자체 폐기 필요.
+- `fs-sub-data-viewer` / `fs-external-data-viewer` 사본은 본 plan 범위 외.
+
 ## v001.309.0
 
 > 통합일: 2026-05-20
