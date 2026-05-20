@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.327.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 7 (간트 인쇄 부록 — 노션 스타일 + 2열 구조 재디자인)
+
+### 개요
+
+HOTFIX 6 의 부록 카드 UI 가 마스터 기준 미흡. 칸반/간트가 공용 사용하는 노션 스타일 상세 정보 드로어 (`FsRightDetailDrawer` + `GanttDetailDrawerBody`/`KanbanDetailDrawerBody`) 의 디자인을 미러링하여 동일 톤으로 통일하되, 인쇄 화면 가로 폭을 활용해 **2열 구조** 로 재구성.
+
+### 해법
+
+`packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts` 의 `buildGanttAppendixCards` 와 `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts` 의 print stylesheet 를 다음 디자인 토큰 기반으로 전면 재작성:
+
+**디자인 토큰 (드로어 `drawerTokens.ts` 미러링)**
+- Label: `font-size: 12px`, `font-weight: 500`, `color: #8a7f73` (ink3).
+- Value: `font-size: 13px`, `line-height: 1.55`, `color: #1c1814` (ink).
+- Card: `border-radius: 12px`, `border: 1px solid rgba(40,30,20,0.07)`, Clay shadow `0 1px 0 rgba(40,30,20,0.04), 0 8px 24px rgba(40,30,20,0.06)`.
+- Title: `font-size: 15px`, `font-weight: 600`.
+- 색상 스워치 14×14 px, `border-radius: 4px`, BAR_COLORS[colorIndex] 적용 (HOTFIX 6 의 막대 색 정합 유지).
+
+**2열 구조**
+각 카드의 컬럼 목록을 2개씩 묶어 `gantt-appendix-row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px }` 로 배치. 한 cell 은 `gantt-appendix-cell { display: grid; grid-template-columns: 160px 1fr; column-gap: 16px }` — 드로어의 단일 label-value 행 패턴 그대로. 홀수 개 컬럼이면 마지막 row 두 번째 cell 은 빈 div.
+
+**클래스 명명 분리**
+부록 제목 클래스를 `calendar-appendix-title` → `gantt-appendix-title` 로 변경하여 캘린더 부록 (별도 함수, 무수정 보존) 과 시각적/CSS 분리.
+
+### 페이즈 결과
+
+- **Phase 8 / HOTFIX 7** (fix): `buildGanttAppendixCards` 의 마크업을 `gantt-appendix-card / -card-header / -card-color / -card-title / -card-body / -row / -cell / -label / -value` 클래스 트리로 재작성, 컬럼 pair 단위 row 생성 로직 (홀수 보정 포함). `useGanttPrint.ts` 의 `generateGanttStyles` 에서 구 `gantt-card-*` CSS 제거 + 노션 토큰 기반 CSS 교체. `page-break-inside: avoid` 카드 단위 유지. (`1a86a9a0`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- 부록 제목 "일정 상세 (총 N개)" (HOTFIX 6) 와 막대 색 동적 반영 (HOTFIX 6) 모두 보존.
+- 캘린더 인쇄 부록 (`buildCalendarAppendixTable`) 무수정 — 칸반/간트와 캘린더는 사용 패턴이 다르므로 디자인 정합은 추후 별도 결정.
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+- 칸반 인쇄가 별도 부록 흐름을 가진다면 동일 노션 토큰 패턴으로 통일 권고 — 본 plan 범위 외.
+
 ## v001.326.0
 
 > 통합일: 2026-05-20
