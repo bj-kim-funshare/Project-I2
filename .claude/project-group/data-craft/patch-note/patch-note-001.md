@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.338.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 18 — rowLink 셀 내용 중앙 정렬)
+
+### 개요
+
+마스터 보고: rowLink 셀의 내용이 좌측 정렬로 나옴 — 다른 일반 셀 (text/number/singleSelect 등) 과 동일하게 중앙 정렬로 변경.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx`** (`c1f7a7c`): 셀 외곽 div 의 `flex items-center px-2` → `flex items-center justify-center px-2`. `justify-center` 토큰 추가 → 그리드뷰 rowLink 셀 내용 중앙 정렬로 교정. `FsGridTextCellRenderer / FsGridNumberCellRenderer / FsGridSingleSelectCellRenderer` 등 모든 peer 그리드 셀 렌더러와 정렬 일치.
+
+비그리드 경로 (`RowLinkRenderer` — 칸반/캘린더/갤러리/간트) 는 `TextRenderer` 와 동일하게 bare `<span>` 반환 구조 → 별도 수정 불필요, 이미 peer 와 정렬 정책 동일.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 17 의 singleSelect pill + cellRendererModelList fallback, HOTFIX 16 picker 통일, HOTFIX 15 delegate + onClick 모두 그대로 작동.
+
 ## v001.337.0
 
 > 통합일: 2026-05-20
