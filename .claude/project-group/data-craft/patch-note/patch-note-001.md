@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.294.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 10 — 좌측 사이드바 체크박스 + 세로 간격 확대)
+
+### 개요
+
+마스터 보고: 좌측 사이드바 체크박스 크기 키우기 + 항목 간 세로 간격 확대.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`** (`4e9f4f0`):
+  - 헤더 전체 선택 체크박스 + 각 항목 행 체크박스 → `h-5 w-5` 명시 확대 (기본 브라우저 크기 → 한 단계 위).
+  - 항목 행 wrapper 수직 패딩 `py-2` → `py-2.5` (클릭 영역 확보 + 세로 간격 증가).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 20 warnings).
+- 회귀: 검색 input / 헤더 layout / 추가 버튼 / 보라 세로 바 / 주황 리더 pill / 번호 prefix / 동작 로직 모두 무변경.
+
 ## v001.293.0
 
 > 통합일: 2026-05-20
