@@ -1,5 +1,61 @@
 # data-craft — Patch Note (001)
 
+## v001.277.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #120 (HOTFIX 1 — dev 모드 자동 mock + 바텀 nav 5탭 비주얼 활성)
+
+### 마스터 보고
+
+"여전히 홈 화면부터 시작해서, 바텀 네비게이션의 5개 페이지 모두 비어있는데? 디자인팀 시안대로 구축해, DB, BE는 건드리지 말고"
+
+### 원인
+
+v001.274.0 (#120) Phase 11 회귀 fix 에서 mock fallback 활성 조건을 **`VITE_USE_MOBILE_MOCKS=true` env 명시** 로 축소. BE 미실행 + env 미설정 dev 시연 상태에서 → 5탭 (Home/Pages/Inbox/DM/Profile) 의 BE 의존 hook 들이 빈 응답 → empty state. 회귀 테스트 보존이 의도였으나 dev 시연 활성화는 부수 누락.
+
+### 변경
+
+#### 1. `mocks/flags.ts` — 3축 OR 활성 + test 환경 우선 제외
+
+```ts
+export function useMobileMocks(): boolean {
+  // 1) test 환경 우선 제외 (회귀 보존)
+  if (import.meta.env.MODE === 'test' || process.env.VITEST === 'true') return false;
+  // 2) env 명시 활성
+  if (import.meta.env.VITE_USE_MOBILE_MOCKS === 'true') return true;
+  // 3) DEV 런타임 자동 활성 (브라우저 dev 시연)
+  return import.meta.env.DEV === true;
+}
+```
+
+#### 2. `ScreenProfile.tsx` — mockMode 분기 3 추가
+
+- `fetchProfile()`: useMobileMocks() true 시 profileApi 호출 생략, mocks/profile 시드 즉시 반환.
+- `handleFileSelected()`: mockMode 시 업로드 API 호출 생략, 낙관적 상태 갱신.
+- `handleDelete()`: mockMode 시 삭제 API 호출 생략, 낙관적 제거.
+
+#### 3. 무수정 확인 (회고)
+
+`usePageTree.ts` / `ScreenInbox.tsx` 는 Phase 11 시점에 이미 `useMobileMocks()` 분기 완비 — 본 핫픽스 영향 없음. 위 1번 flags.ts 수정만으로 자동 활성. DM (`ScreenDmList`/`ScreenDmThread`) 은 in-memory mock 이라 항상 populate.
+
+### 시연
+
+```
+pnpm --filter @data-craft-mobile/web dev  # env 없이도 mock 자동 활성
+```
+
+브라우저 5174 → 5탭 전부 populated 표시 확인.
+
+### 검증
+
+- `pnpm typecheck`: PASS.
+- `pnpm test --run`: 674 passed / 5 skipped / 1 pre-existing infra failure (tailwind-build.test.ts dist 부재 — 본 핫픽스 무관).
+
+### 영향 파일 (work repo = `data-craft-mobile`)
+
+- `apps/web/src/mobile/mocks/flags.ts`
+- `apps/web/src/mobile/screens/profile/ScreenProfile.tsx`
+
 ## v001.276.0
 
 > 통합일: 2026-05-20
