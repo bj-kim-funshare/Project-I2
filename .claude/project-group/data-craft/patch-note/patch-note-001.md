@@ -1,5 +1,101 @@
 # data-craft — Patch Note (001)
 
+## v001.347.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 12 (부록 페이지 수직 중앙 통일 + MONTH chart 외곽/격자 + 막대 우측 누적 오차 보정)
+
+### 개요
+
+마스터 보고 (스크린샷 4 장 첨부):
+1. 부록 카드들이 페이지마다 정렬 다름 — 어떤 페이지는 상단, 어떤 페이지는 중앙. 통일 요청.
+2. MONTH mode chart 외곽 테두리 없음, 세로 격자 (month boundary) 없음.
+3. 일부 막대가 chart 우측 영역을 뚫고 나감 (테스트3 막대 등).
+
+### 해법
+
+#### A. 부록 카드 페이지 수직 중앙 통일
+
+`buildGanttAppendixCards` 의 기존 `.calendar-appendix` 래퍼 제거. 각 카드 (첫 카드는 부록 제목 포함) 를 `.gantt-appendix-page` 로 감쌈:
+
+```html
+<div class="gantt-appendix-page">
+  <div class="gantt-appendix-page-inner">
+    <div class="gantt-appendix-title">일정 상세 (총 N개)</div>  <!-- 첫 카드만 -->
+    <div class="gantt-appendix-card">...</div>
+  </div>
+</div>
+```
+
+CSS:
+```css
+.gantt-appendix-page {
+  page-break-before: always;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gantt-appendix-page-inner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+```
+
+모든 페이지에서 카드가 페이지 수직 중앙. 가로는 720px max-width + auto (HOTFIX 11 의 가로 중앙 유지).
+
+#### B. MONTH mode chart 외곽 + 세로 격자
+
+`.gantt-print-chart-bordered` 클래스 추가 (MONTH mode chart 에만 적용):
+```css
+.gantt-print-chart-bordered {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+```
+
+`renderMonthMode` 의 chart body 안에 month boundary 세로 격자선 추가 — `runningLeft` 기준 absolute positioned `.gantt-print-month-divider` (`width:1px; height:100%; background:#e5e7eb; pointer-events:none`).
+
+#### C. 막대 우측 누적 오차 보정
+
+month cell 너비 계산이 `Math.round((monthDays / totalDays) × usablePx)` 으로 정수 반올림 → 누적 오차로 chart body width 와 막대 width 미세 어긋남.
+
+수정: `consumed` 누적 + 마지막 cell `usablePx - consumed` 로 정확히 합 보장.
+
+```ts
+let consumed = 0;
+months.forEach((m, i) => {
+  const isLast = i === months.length - 1;
+  const w = isLast ? usablePx - consumed : Math.round((m.effectiveDays / totalDays) * usablePx);
+  consumed += w;
+  m.width = w;
+  m.left = consumed - w;
+});
+```
+
+막대 좌표도 같은 base (totalDays 비율) → chart body 와 정확 매칭. `overflow:hidden` (변경 B) 와 함께 막대가 chart 박스 밖으로 못 나감.
+
+### 페이즈 결과
+
+- **Phase 13 / HOTFIX 12** (fix): `buildGanttAppendixCards` 가 `.calendar-appendix` wrapper 제거 후 각 카드를 `.gantt-appendix-page` (flex center + page-break-before) 로 감쌈. `renderMonthMode` 의 consumed 누적 보정 + month boundary divider. `.gantt-print-chart-bordered` MONTH mode chart 외곽 border + overflow hidden. (`560d435a`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- HOTFIX 11 의 DAY mode 동적 stretch + MONTH mode 기본 구조 (월 cell 폭 일수 비례 + 막대 일 비율 좌표) 유지.
+- HOTFIX 11 의 부록 카드 가로 중앙 정렬 + 720px max-width 는 `.gantt-appendix-page-inner` 로 이전 — 동일 효과.
+- HOTFIX 6/7/8 의 부록 노션 토큰 + 3열 + 큰 타이틀 무관 (외부 wrapper 만 변경).
+- HOTFIX 5 (pointer-events) 무관.
+- 캘린더 인쇄 무관.
+- BE/DB 무수정.
+
 ## v001.346.0
 
 > 통합일: 2026-05-20
