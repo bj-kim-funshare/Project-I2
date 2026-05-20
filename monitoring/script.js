@@ -373,46 +373,44 @@ const pieLabelsPlugin = {
   },
 };
 
-const dayTokensSkillCountPlugin = {
-  id: 'dayTokensSkillCount',
-  afterDatasetsDraw(chart, args, options) {
-    const countsByDay = (options && options.countsByDay) || null;
-    if (!countsByDay || !Object.keys(countsByDay).length) return;
+function makeDayTokensSkillCountPlugin(countsByDay) {
+  return {
+    id: 'dayTokensSkillCount',
+    afterDatasetsDraw(chart) {
+      if (!countsByDay || !Object.keys(countsByDay).length) return;
 
-    const { ctx } = chart;
-    const labels = chart.data.labels || [];
-    const datasets = chart.data.datasets || [];
+      const { ctx } = chart;
+      const labels = chart.data.labels || [];
+      const datasets = chart.data.datasets || [];
 
-    labels.forEach((label, i) => {
-      const count = countsByDay[label];
-      if (!count) return;
+      labels.forEach((label, i) => {
+        const count = countsByDay[label];
+        if (!count) return;
 
-      // Find the topmost stack 's' dataset index (last one in array order)
-      let topIdx = -1;
-      for (let di = 0; di < datasets.length; di++) {
-        if (datasets[di].stack === 's') topIdx = di;
-      }
-      if (topIdx === -1) return;
+        // Find the topmost stack 's' dataset index (last one in array order)
+        let topIdx = -1;
+        for (let di = 0; di < datasets.length; di++) {
+          if (datasets[di].stack === 's') topIdx = di;
+        }
+        if (topIdx === -1) return;
 
-      const meta = chart.getDatasetMeta(topIdx);
-      const pt = meta.data && meta.data[i];
-      if (!pt) return;
+        const meta = chart.getDatasetMeta(topIdx);
+        const pt = meta.data && meta.data[i];
+        if (!pt) return;
 
-      const x = pt.x;
-      const y = pt.y;
-
-      ctx.save();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 3;
-      ctx.fillText(String(count), x, y - 8);
-      ctx.restore();
-    });
-  },
-};
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 3;
+        ctx.fillText(String(count), pt.x, pt.y - 8);
+        ctx.restore();
+      });
+    },
+  };
+}
 
 // ---------- Charts ----------
 
@@ -452,10 +450,7 @@ function renderChartDayTokens(data, opts) {
       legend: { position: 'bottom' },
     },
   };
-  if (skillCountsByDay) {
-    chartOptions.plugins.dayTokensSkillCount = { countsByDay: skillCountsByDay };
-  }
-  const chartPlugins = skillCountsByDay ? [dayTokensSkillCountPlugin] : [];
+  const chartPlugins = skillCountsByDay ? [makeDayTokensSkillCountPlugin(skillCountsByDay)] : [];
   charts[chartKey] = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },

@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.90.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #47 (HOTFIX 2)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 2) — 플러그인 옵션 매핑 우회: countsByDay 클로저 캡처로 교체** (commit `d8dada6`): HOTFIX 1 (datasetMeta 좌표 + 표준 hook 인자) 머지 후에도 라벨이 여전히 안 보이는 증상 발생. 원인 가설: Chart.js inline plugin (`new Chart(ctx, { plugins: [...] })`) 등록 시 `options.plugins[plugin.id]` 슬롯이 일부 빌드에서 undefined 로 전달되어 `afterDatasetsDraw(chart, args, options)` 의 `options` 가 비어 early-return. 옵션 슬롯 의존을 완전히 제거하고 `dayTokensSkillCountPlugin` 을 factory 함수 `makeDayTokensSkillCountPlugin(countsByDay)` 로 변경하여 클로저로 `countsByDay` 를 직접 보유. `renderChartDayTokens` 에서는 옵션 슬롯 세팅 제거 + factory 호출 결과를 `plugins` 배열에 등록. `computeSkillCountByDay` 헬퍼와 `renderAll` 호출 미변경.
+
+### 영향 파일
+
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. v001.89.0 의 잔존 라벨 미표시 버그 추가 수정.
+
+### 운영 메모
+
+본 핫픽스는 spec Step 11 HOTFIX 의 "code + patch-note 동일 hotfix WIP 단일 머지" 룰을 정확히 준수 — HOTFIX 1 의 분리 머지 결함을 본 핫픽스부터 복원.
+
 ## v001.89.0
 
 > 통합일: 2026-05-20
