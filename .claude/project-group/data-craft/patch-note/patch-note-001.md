@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.300.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #127 (HOTFIX 3 — fs-data-viewer 패키지 포팅, 실제 사용 패키지에 즉시 반영 적용)
+
+### 개요 — 결정적 진단
+
+본 플랜의 v001.288.0 (Phase 1), v001.293.0 (HOTFIX 1), v001.296.0 (HOTFIX 2) 가 모두 **틀린 패키지** 에 적용됐다는 사실이 마스터의 3차 재테스트 보고 후 advisor 검증 grep 으로 확정:
+
+```
+src/widgets/viewer-widget/ui/Viewer.widget.tsx:16: from 'fs_data_viewer'
+src/widgets/sub-viewer-widget/ui/SubViewer.widget.tsx:14: from 'fs_data_viewer'
+src/widgets/external-viewer-widget/ui/ExternalViewer.widget.tsx:15: from 'fs_data_viewer'
+```
+
+메인 / 서브 / 외부 viewer widget 셋 모두 **`fs_data_viewer`** (= `packages/fs-data-viewer/`) 패키지를 import. 이전 4회 수정 (Phase 1, 2, HOTFIX 1, 2) 은 모두 `packages/fs-sub-data-viewer/` 에 적용되었고, 이 패키지는 메인 앱 번들에 포함되지 않는 별도 워크스페이스 패키지. 사용자가 화면에서 보는 코드는 `fs-data-viewer` 의 것이므로 이전 수정들은 도달하지 않음.
+
+### 해법 (Phase 5, HOTFIX 3)
+
+`fs-data-viewer` 의 동일 경로 파일들에 HOTFIX 2 와 동일한 `setViewerModel` functional update 정공법 패턴을 포팅:
+
+1. **`74f21825`** (포팅): `packages/fs-data-viewer/src/features/grid/lib/button-actions/types.ts` 에 `setViewerModel` 필드 추가, `deleteRowAction.ts` 를 `setViewerModel(prev => ({...prev, rowModelList: filter(...).map(seq normalize)}))` 단일 경로로 재작성 (기존 `boolean` 반환 시그니처 + `pruneStateForRowField` 호출 보존), `useButtonAction.ts` 에 `useGridContext().setViewerModel` 비구조화 + 주입.
+2. **`67fde587`** (타입 에러 해소 wiring): `setViewerModel` 을 optional (?) 로 변경하여 5개 기존 callsite (테스트 4개 + `ButtonRenderer.tsx`) 의 type 에러 일괄 해소. `deleteRowAction` 에 `if (setViewerModel) { 정공법 } else { 레거시 fallback }` 분기 추가. `ButtonRenderer.tsx` 는 `useGridContextOptional().setViewerModel` 로 정공법 경로 보장.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/lib/button-actions/types.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/button-actions/deleteRowAction.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+- `packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/ButtonRenderer.tsx`
+
+### 페이즈 결과
+
+- **Phase 5 / HOTFIX 3 시도** (fix): setViewerModel 패턴 포팅. (`74f21825`)
+- **Phase 5 / HOTFIX 3 타입 해소** (fix): optional 화 + 5개 callsite 호환 + ButtonRenderer 주입. (`67fde587`)
+
+### 잔존 후속 (본 hotfix scope 외)
+
+- **자매 액션 가드 미적용**: Phase 2 의 `toastAlreadyInState` + complete/incomplete/reset 액션 사전 판정 가드는 `fs-sub-data-viewer` 에만 존재. 마스터 명시 보고가 delete 한정이라 본 hotfix 도 delete 한정. 필요 시 별도 플랜에서 fs-data-viewer 에 동일 가드 포팅.
+- **fs-external-data-viewer 패키지**: 외부 viewer widget 도 fs_data_viewer 에서 import 하므로 fs-external-data-viewer 패키지 자체는 본 hotfix 의 직접 영향 외. 별도 사본으로 잔존 — 사용 시 별도 포팅.
+- **seq 서버 동기 / reorderRowByIndex / 서브그리드 orphan / notifyRowDeleted** 누락은 이전 hotfix 와 동일하게 잔존.
+- **구조적 결함 followup**: 동일 기능의 사본이 3개 패키지에 존재해 fix 가 한 사본에만 적용되면 사용자에게 도달하지 못하는 구조. 향후 별도 플랜에서 단일 source 화 또는 cross-package 일괄 적용 메커니즘 도입 권고.
+
 ## v001.299.0
 
 > 통합일: 2026-05-20
