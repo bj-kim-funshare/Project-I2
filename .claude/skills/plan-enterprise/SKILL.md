@@ -151,6 +151,22 @@ Slug is a short Latin/Hangul-phonetic transliteration of the plan title (max 50 
 
 If `--codex` is set and N > 1, halt before creating WIP branches: codex variant + multi-repo is out of v1 scope.
 
+### Step 6 사전 가드 — local-vs-origin 정합성 검사
+
+work repo 의 cwd 에서 수행. N==1 케이스는 즉시 1회, N>1 케이스는 각 work_repo 의 WIP A_x 를 lazy 생성하는 시점에 1회 수행:
+
+```text
+a. git fetch origin <integration>
+b. ahead=$(git rev-list --count origin/<integration>..<integration>)
+c. behind=$(git rev-list --count <integration>..origin/<integration>)
+d. ahead==0 && behind==0 → 정상, 진행
+e. ahead>0 && behind==0  → 메인 세션이 한 줄 보고
+   "<repo> local <integration> 가 origin 보다 N 커밋 앞섭니다 — local 기준으로 WIP 분기합니다."
+   진행 (운영 규칙상 push 강요 안 함).
+f. behind>0              → halt + 마스터 보고
+   "<repo> origin/<integration> 가 local 보다 M 커밋 앞섭니다 — 외부 commit 발생, fast-forward 또는 마스터 결정 필요."
+```
+
 ### N == 1 (단일-repo 케이스 — 기존 동작)
 
 ```bash
@@ -164,19 +180,19 @@ wip_a="plan-enterprise-<N>-<slug>-작업"
 # if --codex is set:
 wip_a="plan-enterprise-<N>-<slug>-작업-codex"
 wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
-git worktree add -b "${wip_a}" "${wt_a}" i-dev
+git worktree add -b "${wip_a}" "${wt_a}" i-dev  # base = local ref, origin/i-dev 사용 금지
 git -C "${wt_a}" push -u origin "${wip_a}"
 ```
 
 ### N > 1 (멀티-repo 케이스)
 
-WIP A 를 work repo 별 lazy 생성. 첫 페이즈의 work_repo X 에 대해 즉시 생성:
+WIP A 를 work repo 별 lazy 생성. 첫 페이즈의 work_repo X 에 대해 즉시 생성. 각 work_repo 의 WIP A_x 를 lazy 생성하기 전에 위 Step 6 사전 가드를 해당 repo cwd 에서 1회 수행:
 
 ```bash
 git worktree prune
 wip_a_x="plan-enterprise-<N>-<slug>-작업-<repo-slug>"   # repo-slug = dev.md targets[].name (해당 work repo)
 wt_a_x="../<repo-dir-name>-worktrees/${wip_a_x}"        # <repo-dir-name> = work repo 의 디렉토리명 (leader cwd 의 sibling 가정)
-git -C <repo-dir-path> worktree add -b "${wip_a_x}" "${wt_a_x}" i-dev
+git -C <repo-dir-path> worktree add -b "${wip_a_x}" "${wt_a_x}" i-dev  # base = local ref, origin/i-dev 사용 금지
 git -C "${wt_a_x}" push -u origin "${wip_a_x}"
 ```
 
@@ -358,6 +374,8 @@ After the final advisor passes:
 
 ### 9.1 — 각 work_repo 의 WIP A 머지 (페이즈 첫 등장 순)
 
+머지 직전, 각 repo X 에 대해 1회 안전망 확인: `git -C <X-repo-dir> fetch origin i-dev` 후 `behind=$(git -C <X-repo-dir> rev-list --count i-dev..origin/i-dev)`. `behind>0` 이면 halt + 마스터 보고 (Step 6 가드와 동일 메시지 형식). `ahead>0` 는 정상 (phase 커밋 존재) — 진행.
+
 work_repos 의 각 repo X 에 대해 (페이즈 첫 등장 순):
 
 ```bash
@@ -385,7 +403,7 @@ git branch -d "${wip_a}"
    ```bash
    wip_b="plan-enterprise-<N>-<slug>-문서"
    wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
-   git worktree add -b "${wip_b}" "${wt_b}" i-dev
+   git worktree add -b "${wip_b}" "${wt_b}" i-dev  # base = local ref, origin/i-dev 사용 금지
    ```
 2. Resolve target patch-note path: `.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md` where `NNN` is the highest existing number. Parse the file for max `K` in `## v{NNN}.K.0` headers; new entry is `v{NNN}.K+1.0`.
 3. Author the patch-note entry inline (main session, Write/Edit to `<wt_b>/.claude/project-group/<leader>/patch-note/patch-note-{NNN}.md`). Source: the plan issue's body + phase comments. Entry shape:
@@ -450,12 +468,25 @@ When master types `핫픽스 <description>`:
    - From `<description>` semantically.
    - If unclear, ask master one sharpening question (text, no card).
 2. The new phase number = `prior_max_phase + 1` (cumulative across the plan; first hotfix on a 5-phase plan = phase 6).
-3. **Create hotfix WIP** as a worktree from `i-dev`:
+3. **Create hotfix WIP** as a worktree from `i-dev`. HOTFIX 는 임의 시점 재진입이므로 worktree 생성 직전 사전 가드를 독립 1회 수행:
+
+   ```text
+   a. git fetch origin i-dev
+   b. ahead=$(git rev-list --count origin/i-dev..i-dev)
+   c. behind=$(git rev-list --count i-dev..origin/i-dev)
+   d. ahead==0 && behind==0 → 정상, 진행
+   e. ahead>0 && behind==0  → 메인 세션이 한 줄 보고
+      "<repo> local i-dev 가 origin 보다 N 커밋 앞섭니다 — local 기준으로 WIP 분기합니다."
+      진행 (운영 규칙상 push 강요 안 함).
+   f. behind>0              → halt + 마스터 보고
+      "<repo> origin/i-dev 가 local 보다 M 커밋 앞섭니다 — 외부 commit 발생, fast-forward 또는 마스터 결정 필요."
+   ```
+
    ```bash
    wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>"          # default; M = cumulative hotfix count, from 1
    wip_h="plan-enterprise-<N>-<slug>-핫픽스<M>-codex"    # when the original invocation used --codex
    wt_h="../$(basename "$(pwd)")-worktrees/${wip_h}"
-   git worktree add -b "${wip_h}" "${wt_h}" i-dev
+   git worktree add -b "${wip_h}" "${wt_h}" i-dev  # base = local ref, origin/i-dev 사용 금지
    git -C "${wt_h}" push -u origin "${wip_h}"
    ```
 4. Re-enter Step 7 against this hotfix WIP (phase-executor's WIP-branch argument = hotfix WIP, `worktree_cwd` = `<wt_h>` resolved):
