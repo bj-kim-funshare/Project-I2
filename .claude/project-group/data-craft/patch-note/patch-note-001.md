@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.348.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 12 — 맞춤 견적 텍스트 그라데이션)
+
+### 개요
+
+플랜 업그레이드 모달의 "맞춤 견적" 텍스트 (Enterprise 플랜의 priceKrw === -1 분기) 가 기존 `text-muted-foreground` 회색 단색 → 마스터 명시 그라데이션 적용.
+
+### 변경 — data-craft (`4dc010f7`)
+
+**`src/features/subscription/ui/PlanComparisonPrice.tsx`**:
+- L27 의 className 교체: `text-muted-foreground` → `bg-gradient-to-r from-indigo-500 to-sky-400 bg-clip-text text-transparent`.
+- Tailwind 표준 그라데이션 패턴 — left indigo-500 (보라/짙은남보라) → right sky-400 (밝은 푸른색).
+- 다른 가격 분기 (priceKrw === 0 "무료", 일반 가격) 는 변경 없음.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/PlanComparisonPrice.tsx`
+
+### 테스트 시나리오
+
+1. 플랜 업그레이드 모달 진입 → Enterprise 플랜 카드의 가격 영역에 "맞춤 견적" 이 보라→푸른 그라데이션 텍스트로 표시.
+2. 다른 플랜 (free / basic / standard / premium) 의 가격 표시는 그대로.
+
 ## v001.347.0
 
 > 통합일: 2026-05-20
