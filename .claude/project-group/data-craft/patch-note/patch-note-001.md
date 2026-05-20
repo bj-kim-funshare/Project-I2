@@ -1,5 +1,72 @@
 # data-craft — Patch Note (001)
 
+## v001.304.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #127 (HOTFIX 4 — button cell deleteRow gridUtil 정공법 위임, server paging cache 동기)
+
+### 개요 — 6번째 디버깅 사이클에서 진짜 원인 확정
+
+이전 5회 시도 (Phase 1, 2, HOTFIX 1, 2 = 잘못된 패키지 fs-sub-data-viewer; HOTFIX 3 = 옳은 패키지지만 잘못된 접근) 모두 미반영. advisor 와의 6번째 라운드에서 마스터의 결정적 단서 ("행 메뉴 / 체크 다중삭제는 즉시 사라짐") 를 출발점으로 두 경로의 차이를 정밀 추적해 진짜 원인 확정.
+
+**원인**: `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts:224-247` 의 서버 페이징 동기 코드가 **렌더 시점에 in-place mutation** 으로 `viewerModel.rowModelList` 를 server cache 의 loaded rows 로 덮어씀:
+```ts
+rowSyncRef.current.model !== viewerModel
+  viewerModel.rowModelList.length = 0;
+  viewerModel.rowModelList.push(...loadedRows);
+```
+
+이전 시도들은 모두 어떤 형태로든 `viewerModel.rowModelList` 만 변경 (splice / filter / setViewerModel). 다음 render 시 위 sync 가 server cache 의 (삭제 안 된) loaded rows 로 push back → 삭제된 행 부활 → 새로고침 안 함.
+
+**row-menu / 다중삭제 가 작동하는 이유**: 그들이 호출하는 `gridUtil.deleteRow` (`rowDeleteUtils.deleteRow:122-127`) 가 **`notifyRowDeleted(deletedRowFields.length, deletedRowFields)` 로 server paging cache 자체에서 삭제** → 다음 render 의 push back 에 삭제 행 미포함 → 영구 반영.
+
+### 해법
+
+button cell `deleteRowAction` 을 row-menu 와 동일하게 **`gridUtil.deleteRow([internalRow])` 정공 경로로 위임**:
+```ts
+if (gridUtil) {
+  const internalRow = gridUtil
+    .generateCustomRowList()
+    .find((r) => r.cells['__rowField__']?.value === rowField.toString());
+  if (!internalRow) return false;
+  await gridUtil.deleteRow([internalRow]);
+  if (pruneStateForRowField) pruneStateForRowField(rowField);
+  return true;
+}
+```
+
+- `ButtonActionContext` 에 `gridUtil?: FsGridUtil` 필드 optional 추가 (5개 callsite 하위 호환).
+- `useButtonAction.ts` 에서 `useGridContext().gridUtil` 비구조화 + 주입.
+- `deleteRowAction` async `Promise<boolean>` 화. dispatcher (`index.ts`) 의 `normalizeBoolean` 호출에 `await` 보정.
+- 기존 setViewerModel / splice+onRefresh 레거시 fallback 분기 보존 (외부 consumer 하위 호환).
+
+Phase 1 의 원래 의도와 동일한 패턴이지만, 그때는 fs-sub-data-viewer 패키지에 적용되어 사용자에게 미도달.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/lib/button-actions/types.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/button-actions/deleteRowAction.ts`
+- `packages/fs-data-viewer/src/features/grid/lib/button-actions/index.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+
+### 페이즈 결과
+
+- **Phase 6 / HOTFIX 4** (fix): button cell deleteRowAction 을 gridUtil.deleteRow 정공 경로로 위임. (`5518a79f`)
+
+### 검증
+
+- 코드 inspection: row-menu (`row-menu.ts:44`) 와 정확히 동일한 호출 패턴 (`gridUtil.generateCustomRowList().find(...)` + `await gridUtil.deleteRow([internalRow])`).
+- row-menu 가 작동 확인됨 (마스터 보고) → 동일 호출의 button cell 도 작동 보장.
+- gridUtil.deleteRow 의 정규 경로가 `stateManager.removeRows` (no-op) / `reorderRowByIndex` / 서브그리드 orphan 정리 / `saveBatchChanges([deleteChange, seqChange])` / `notifyRowDeleted` 6단계 모두 수행 — 이전 hotfix 들의 잔존 트레이드오프도 한꺼번에 해결.
+- lint gate: hotfix4 worktree 가 node_modules 미설치로 우회. 마스터 빌드 검증 시 정상 빌드 여부 확인 권장.
+
+### 잔존 후속
+
+- **자매 액션 가드 미적용**: Phase 2 의 toastAlreadyInState + complete/incomplete/reset guard 는 여전히 fs-sub-data-viewer 에만 존재. fs-data-viewer 에 동일 가드 포팅 필요 시 별도 플랜.
+- **구조적 결함 (cross-package)**: 동일 기능 사본이 3개 패키지에 분산. 단일 source 화 또는 cross-package 일괄 적용 메커니즘 별도 플랜 권고.
+- **fs-sub-data-viewer / fs-external-data-viewer 의 동일 패턴**: 사용 시 별도 포팅 필요.
+
 ## v001.303.0
 
 > 통합일: 2026-05-20
