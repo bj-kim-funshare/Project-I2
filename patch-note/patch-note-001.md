@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.88.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #47
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — 일자별 스킬 처리 카운트를 라인 차트 점 위에 정수 라벨로 표기** (commit `dc31ebf`): `monitoring/script.js` 단일 파일 수정. (1) `computeSkillCountByDay(invocations)` 헬퍼 신설 — `by_skill_invocation` 에서 `(no-skill)` 제외 후 `new Date(start_timestamp)` + 로컬 `getFullYear/Month/Date` 로 `YYYY-MM-DD` 키 생성 (`collect.py:867` `parse_ts_hour` 가 로컬 시간 키이므로 UTC slice 사용 금지). (2) `dayTokensSkillCountPlugin` Chart.js 커스텀 플러그인 신설 — `afterDatasetsDraw` 훅, `options.plugins.dayTokensSkillCount.countsByDay` 에서 맵 읽음, stack `'s'` (현재 기간) Y 합 좌표 위 8px 에 정수 표기, 비교 stack `'c'` 제외, 카운트 0/없음은 라벨 생략. (3) `renderChartDayTokens` (script.js:358) 통합 — 시그니처 무변경, `opts.skillCountsByDay` 있을 때만 플러그인 등록 (미전달 시 기존 동작 보존). (4) `renderAll` 메인 카드 호출 1곳에서 `aggData.by_skill_invocation` 으로 카운트 맵 계산 후 전달, 실시간 비교 뷰 호출은 미변경 (v1 범위 외).
+
+### 영향 파일
+
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 기존 모니터링 시각화에 점별 정수 라벨 1개 추가뿐.
+
 ## v001.87.0
 
 > 통합일: 2026-05-20
