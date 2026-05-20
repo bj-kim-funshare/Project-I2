@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.302.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #130
+
+### 마스터 보고 현상
+서비스 테마를 오션에서 라이트 모드로 변경하고 새로고침하면 이전 (서버) 값으로 회귀. 마스터 원문은 "다시 라이트 모드로" 였으나 "오션→라이트→라이트" 는 정상 동작이라 "다시 **오션**으로 되돌아간다" (영속화/일관성 실패) 로 해석하여 진행.
+
+### 결정 분기 — 플랜 진행 중 방향 전환
+- Phase 1-3: 초기 분석은 race condition 으로 진단 — `setTheme()` 의 server PUT 이 fire-and-forget 이라 새로고침이 PUT 보다 빨리 일어나면 bundle API 가 서버의 옛 값을 반환해 `seedBundleData` 가 로컬을 덮어쓰는 패턴. localStorage 기반 `dc_theme_dirty` flag + seedBundleData 가드 + 권한 일관화로 해결.
+- **마스터 신규 지침 (실행 중 inline)**: "테마 관련 로컬 저장 모든 로직 제거, DB 데이터 기반만 (로그인/회원가입/기업 로그인/기업 회원가입 페이지 예외)." 아키텍처 전환 요구.
+- Phase 4: Phase 1-3 도입 분을 포함해 테마 관련 모든 로컬 저장 로직 제거 (Zustand `persist` 미들웨어, `dc_theme_{companyId}` 캐시, `DC_THEME_DIRTY_KEY` flag). `preAuthTheme` (`dc_preauth_theme`) 은 master 예외 범위로 보존.
+- Phase 5: DB-only 모델에서도 race 가 그대로 존재함을 advisor #2 직전에 식별 — fire-and-forget PUT 을 await PUT 패턴으로 재설계. `setTheme()` 을 async + Promise<void> 시그니처로 전환, PUT 200 OK 이후에만 Zustand state + DOM commit. race 근본 차단.
+
+### 페이즈 결과
+- **Phase 1 (`bb7542e3`)**: themeStore 에 `DC_THEME_DIRTY_KEY` 도입 + `ThemeSwitcher` 인증 사용자 경로를 `setTheme()` 로 통일.
+- **Phase 2 (`a72179b4`)**: `seedBundleData` 에 4분기 dirty flag 가드 추가 (dirty≠server 시 로컬 우선 + 재 PUT, 일치 시 flag clear).
+- **Phase 3 (`cfac0845`)**: 권한 가드 일관화 (`setTheme` 의 dirty 기록을 권한 체크 안쪽으로 이동), `seedBundleData` branch (a) 조건 확장 + 재 PUT 권한 가드.
+- **Phase 4 (`08600a6c`)**: **방향 전환**. Zustand `persist` 제거 (`dc_theme` 키 소실), `saveCompanyTheme`/`loadCompanyTheme`/`getCompanyThemeKey` 삭제, `setTheme()` 내 dirty flag + 기업별 캐시 저장 블록 제거, `themeServerSync` 의 dirty-clear `.then()` 체인 삭제, `seedBundleData` 4분기 가드 → `serverTheme` 존재 시 단일 시딩으로 단순화, theme barrel export 정리. `preAuthTheme` 예외 보존.
+- **Phase 5 (`b2d5ecaf`)**: `syncThemeToServer` async + throw 전환, `setTheme()` async/await PUT 후 commit 으로 재작성 — PUT 200 OK 이전에는 Zustand state·DOM 미반영, 새로고침 시점부터는 서버와 일치 보장. 호출처 (`ThemeSection`, `ThemeSwitcher`) 는 `void …catch` 패턴으로 동기 핸들러 시그니처 호환 유지.
+
+### 영향 파일
+
+data-craft:
+- `src/entities/theme/model/themeStore.ts`
+- `src/entities/theme/model/themeServerSync.ts`
+- `src/entities/theme/index.ts`
+- `src/app/lib/seedBundleData.ts`
+- `src/widgets/settings-dialog/ui/ThemeSection.tsx`
+- `src/features/theme-switcher/ui/ThemeSwitcher.tsx`
+
+### 위험 / 후속 권고
+- 드롭다운 선택 → PUT 완료까지 100~500ms 시각적 피드백 없음 (로딩 스피너 미구현).
+- 권한 미보유 시 `setTheme()` silent no-op — UI 단 사전 비활성화 (버튼/셀렉터 disabled + 권한 안내 토스트) 미구현.
+- `persist` 제거 부작용: 초기 페이지 로드 시 default `'light'` → 서버 테마 적용까지 짧은 flash (수십~수백 ms). 인증된 사용자가 매 새로고침마다 경험.
+- `AuthProvider.tsx:194-199` 의 guest-route USER_THEMES 강제 리셋 로직은 별개 경로로 본 플랜에서 미관여.
+- 머지 커밋 메시지 (`merge[plan-enterprise #130]: ... v001.297.0`) 의 버전 라벨은 본 패치노트 작성 시점에 v001.302.0 으로 확정되어 라벨이 어긋남 — 정사 기록은 본 항목.
+
 ## v001.301.0
 
 > 통합일: 2026-05-20
