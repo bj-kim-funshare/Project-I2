@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.89.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #47 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1) — 일자별 토큰 그래프 라벨 미표시 수정** (commits `22bc019` + `53467dd`): v001.88.0 의 `dayTokensSkillCountPlugin` 이 점 위에 라벨을 그리지 못하는 증상에 대해 두 가지 후보 원인을 한 핫픽스 WIP 에 묶어 동시 처리. (1) 좌표 계산 — `chart.scales.x.getPixelForValue(label)` (category 문자열 lookup 실패 가능) 과 `chart.scales.y.getPixelForValue(sumY)` (stacked line 의 실제 렌더 좌표와 불일치) 제거, stack `'s'` 마지막 dataset 의 `chart.getDatasetMeta(topIdx).data[i]` 에서 `.x` / `.y` 를 그대로 사용하도록 교체 + meta/pt 부재 시 skip 가드. (2) 옵션 접근 경로 — 훅 시그니처를 `afterDatasetsDraw(chart)` 에서 Chart.js 3+ 표준 `afterDatasetsDraw(chart, args, options)` 로 교체, `chart.config.options.plugins.dayTokensSkillCount` 경로 탐색을 제거하고 세 번째 인자 `options.countsByDay` 직접 접근으로 변경. `computeSkillCountByDay` 헬퍼와 `renderChartDayTokens` 통합 / `renderAll` 호출은 미변경.
+
+### 영향 파일
+
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. v001.88.0 의 시각화 라벨 버그 수정.
+
+### 운영 메모
+
+핫픽스 머지 시 spec (`plan-enterprise-os` SKILL.md Step 11 HOTFIX) 의 "patch-note 도 같은 hotfix WIP 에 함께" 룰을 누락하여 patch-note 가 별도 doc-only WIP (`핫픽스1-문서`) 로 분리 머지됨. 다음 핫픽스부터 hotfix WIP 단일 머지로 정합 복원.
+
 ## v001.88.0
 
 > 통합일: 2026-05-20
