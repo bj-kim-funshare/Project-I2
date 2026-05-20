@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.295.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 1 (캘린더 backdrop overlay 제거 — 인쇄 모달 상호작용 차단 회귀 해소)
+
+### 개요
+
+v001.292.0 (#129 본 플랜) 적용 후, 캘린더는 인쇄 모달 위로 정상 표출되지만 인쇄 모달 본문의 클릭/스크롤 등 모든 상호작용이 차단되는 회귀 발생. 원인: portal+`fixed inset-0` backdrop 이 `z-12099` 로 viewport 전체를 덮어 인쇄 모달(z-12000) 위에 깔리면서 이벤트 가로채는 진짜 overlay 가 됨. 기존 `useBackdropClickClose` 패턴은 같은 stacking 컨텍스트 내부에 머무를 때만 무해했음.
+
+해법: backdrop 엘리먼트와 `useBackdropClickClose` 호출을 완전 제거하고 `document.addEventListener('mousedown', handler)` 기반 click-outside 감지로 교체. 캘린더 컨테이너 `containerRef.contains(target)` 와 트리거 버튼 `anchorRef.current.contains(target)` 양쪽을 확인해 내부/트리거 클릭은 무시, 외부 클릭만 `onClose`. viewport 점유 overlay 가 없으니 모달 본문 스크롤/클릭 정상 복원, `toggleOpen` flip 동작과 충돌 없음.
+
+### 페이즈 결과
+
+- **Phase 2 / HOTFIX 1** (fix): `DatePickerDropdown` 에서 backdrop `<div fixed inset-0 z-12099>` 제거, `useBackdropClickClose` import/호출 제거. `containerRef` 추가 + `useEffect` 내 `document.addEventListener('mousedown', handler)` 로 외부 클릭 감지, cleanup 으로 리스너 해제. 컨테이너 div 의 `onClick stopPropagation` 도 제거 (이벤트 위임이 backdrop 이 아니라 document 라 불필요). Phase 1 의 portal + `position:fixed` + `useLayoutEffect` rect 계산 로직은 변경 없이 유지. (`156b5181`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+
+### 비고
+
+- `useBackdropClickClose` 훅의 다른 호출처에는 영향 없음 (본 파일에서만 import 해제).
+- 본 hotfix 패턴(backdrop 엘리먼트 없이 document 리스너) 은 viewport 점유가 부담스러운 portal+fixed 팝오버 일반에 적용 가능. `fs-sub-data-viewer`, `fs-external-data-viewer` 패키지에 동일 사본이 있고 해당 패키지에서 동 클리핑 증상 보고 시 본 패치 패턴을 동일 적용 권고.
+
 ## v001.294.0
 
 > 통합일: 2026-05-20
