@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.337.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #139 (플랜 업그레이드 다이얼로그 카드 UI 정비)
+
+### 개요
+
+설정 → 플랜 관리 → "플랜 업그레이드" 다이얼로그의 5개 플랜 카드 UI 를 마스터 요청대로 정비. 카드 디자인 차별화, 선택 테두리 색, 기능 목록 보강, 엔터프라이즈 표기/구성 재편의 7개 항목을 5 phase 로 직렬 처리.
+
+### 페이즈 결과
+
+- **Phase 1** (`67647a3b`): `getPlanCardStyle()` 유틸 신설(planUtils.ts) — basic(sky 톤) / standard(indigo→purple 그라데이션) / premium(amber→orange 그라데이션) / enterprise(slate 그라데이션) 4종 헤더 띠. `PlanComparisonCard` 헤더를 색상 띠로 분리하고 `isSelected` 테두리를 파스텔 하늘(`border-sky-300 ring-2 ring-sky-200 bg-sky-50/40`)로 교체. `isCurrent` 표시와 free 카드 디자인은 변경 없음.
+- **Phase 2** (`6704c0ac`): `PlanComparisonCard` 상단 한도 4개(pages / dataGroups / storageLimit / maxFileSize) 출력에서 엔터프라이즈일 때 `t('settings.unlimited', '무제한')` 분기 적용. 글로벌 `formatLimit`/`formatStorageSize` 미변경 (타 화면 의존 보존).
+- **Phase 3** (`9c549a11`): 엔터프라이즈 가격 문구 "가격 문의" → "맞춤 견적". 결제 단계가 사용하는 `settings.contactForPricing` 키는 값 보존하고, 신규 키 `settings.customQuote` 를 추가하여 `PlanComparisonPrice` 의 `priceKrw === -1` 분기에서만 사용.
+- **Phase 4** (`53df30cf`): 스탠다드 items 에 `technicalSupport` (Headphones, "기술 지원") 추가, 프리미엄 items 에 `aiExtensionSupport` (Wand2, "AI Extension 지원") 추가. ko/en i18n 키 동시 신설.
+- **Phase 5** (`6a9ea658`): 엔터프라이즈 하단 기능 목록 재구성 — `PlanFeatureListSection` 의 "커스텀" 라인 블록 제거(미사용 import 정리), `UPGRADE_PLAN_FEATURES.enterprise` 를 `inheritI18nKey: '프리미엄 플랜의 모든 기능들'` + 3 items 로 교체: dedicatedSystem(ServerCog, "전용 시스템 구축") / enhancedSecurity(ShieldCheck, "보안 강화") / dedicatedSupport(Headset, "전담 기술 지원"). ko/en `enterprise.custom` 키 삭제, 신규 4개 키 추가. 별개 키 `settings.enterpriseCustom` (플랜 관리 탭) 은 손대지 않음.
+
+### 영향 파일
+
+data-craft:
+- `src/features/subscription/lib/planUtils.ts`
+- `src/features/subscription/lib/upgradePlanFeatures.ts`
+- `src/features/subscription/ui/PlanComparisonCard.tsx`
+- `src/features/subscription/ui/PlanComparisonPrice.tsx`
+- `src/features/subscription/ui/PlanFeatureListSection.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.336.0
 
 > 통합일: 2026-05-20
