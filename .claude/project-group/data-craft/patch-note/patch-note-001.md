@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.320.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #134
+
+### 페이즈 결과
+- **Phase 1** (`0240fbdf`): text/number/percent 셀 렌더러의 비편집 `<span>` 에 `truncate min-w-0 max-w-full` 클래스 추가 + 외곽 flex `<div>` 에 `min-w-0` 보강. 열 너비가 minWidth(100px) 일 때 CSS ellipsis(`…`) 가 트리거되도록.
+- **Phase 2** (`ecf1928b`): file/document 셀의 내부 wrapper `<div>` 와 표시 `<span>` 에 `min-w-0`/`max-w-full` 보강. `<span>` 에 이미 있던 `truncate` 가 실효되도록 shrink 경로 확보.
+- **Phase 3** (`bffb1cd5`): advisor 사전 점검 발견 — file 셀의 부모 외곽 `FsGridFileCellRenderer.tsx` 의 두 외곽 div (disabled/active 경로) 에 `min-w-0` 추가. Phase 2 가 자식만 손대 외곽 flex 에서 shrink 가 막힐 위험 해소.
+- **Phase 4** (`306f2527`): Phase 3 의 대칭 — document 셀 외곽 `FsGridDocumentCellRenderer.tsx` div 에 `min-w-0` 추가.
+- **Phase 5** (`623e59d4`): cross-package 점검 발견 — data-craft monorepo 는 `fs-data-viewer` / `fs-sub-data-viewer` / `fs-external-data-viewer` 세 패키지에 동일 셀 렌더러 사본을 보유하고 메인 앱(`data_craft`) 이 세 패키지를 모두 import. `fs-sub-data-viewer` 의 5종 셀 렌더러에 Phase 1~4 와 동일 패턴 적용.
+- **Phase 6** (`18d68847`): Phase 5 의 거울 — `fs-external-data-viewer` 의 5종 셀 렌더러에 동일 패턴 적용.
+
+### 영향 파일
+- `data-craft`:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridTextCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridNumberCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridPercentCellRenderer/FsGridPercentCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FsGridFileCellRenderer.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FileList.tsx`
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/FsGridDocumentCellRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridTextCellRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridNumberCellRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridPercentCellRenderer/FsGridPercentCellRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FsGridFileCellRenderer.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FileList.tsx`
+  - `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/FsGridDocumentCellRenderer.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridTextCellRenderer.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridNumberCellRenderer.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridPercentCellRenderer/FsGridPercentCellRenderer.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FsGridFileCellRenderer.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/FileList.tsx`
+  - `packages/fs-external-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/FsGridDocumentCellRenderer.tsx`
+
+### 해석 노트 (사용자 명령문의 `[...]`)
+- 마스터 명령문의 `[...]` 표기는 "잘림 표시" 의 일반적 묘사로 해석하여 CSS 표준 ellipsis (`…` 한 글자) 로 구현. JS 측 문자열 측정/대괄호 리터럴 부착 방식은 채택하지 않음 (비표준 + 재계산 비용). 마스터가 이 해석을 거부하면 핫픽스로 전환.
+
 ## v001.319.0
 
 > 통합일: 2026-05-20
