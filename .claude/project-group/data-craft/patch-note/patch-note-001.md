@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.321.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 14 — 좌측 사이드바 active 항목 보라 세로 바 제거)
+
+### 개요
+
+마스터 보고: 연결 그룹 관리 모달의 좌측 사이드바에서 현재 선택된 항목 왼쪽에 표시되는 추가 색상 (보라 세로 바) 제거.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`** (`02936aa`): 항목 `<li>` 의 active/inactive 양쪽에 있던 `border-l-4 border-violet-500` / `border-l-4 border-transparent` 클래스 완전 제거. 보더 폭 4px 손실 보정으로 `px-2` → `px-3`. active 의 `bg-white` 배경은 그대로 보존 — 선택 상태 식별성 유지.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: 다른 디자인/동작 무변경.
+
 ## v001.320.0
 
 > 통합일: 2026-05-20
