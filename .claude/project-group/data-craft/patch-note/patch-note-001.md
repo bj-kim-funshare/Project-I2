@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.313.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #135
+
+### 페이즈 결과
+- **Phase 1** (`817e859`): `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts` 의 `formatDiagnosticDetail` 위에 `formatBeforeValue(typeId, beforeValue)` 헬퍼를 신설하고, 진단 entries map 내부의 raw `${e.beforeValue}` 삽입을 헬퍼 호출로 교체. deadline 타입은 `{` 로 시작 시 `JSON.parse` 후 `date`(없으면 `(미지정)`) + `completed`(true→`완료` / false→`미완료`) 조합으로 `"YYYY-MM-DD (완료|미완료)"` 반환, 파싱 실패 시 raw 폴백으로 legacy plain-date 호환. 그 외 typeId 는 `{`/`[` 로 시작 + JSON.parse 성공 시 `(객체)`/`(배열)` 단축 라벨, 그렇지 않으면 raw 그대로. null/undefined/빈 문자열은 `(빈값)` 통일. PHASE-13 의 `all-already-target` 진단 surface (셀 종류 + 현재 상태 확인 편의) 는 보존하면서 deadline 셀의 `JSON.stringify({date, completed})` 결과가 토스트에 raw 노출되던 표면이 사라짐.
+
+### 영향 파일
+- `data-craft`:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+
+### 후속 확장 여지
+- 신규 JSON-저장 셀 타입 추가 시 `formatBeforeValue` 의 `if (typeId === ...)` 분기에 사람-친화 라벨 한 줄씩 추가. 무처리 시에는 일반 안전망 (`(객체)`/`(배열)` short 라벨) 으로 raw 노출은 차단.
+
 ## v001.312.0
 
 > 통합일: 2026-05-20
