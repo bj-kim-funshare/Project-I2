@@ -1,5 +1,66 @@
 # data-craft — Patch Note (001)
 
+## v001.358.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 17 + 18 + 19 — 프로모션 표기 통일 + 예정 금액 표시 정정)
+
+### 개요
+
+3건 통합:
+- **HOTFIX 17**: 플랜 관리 현재 플랜 배지의 프로모션 표기를 다른 유료 플랜과 동일 배지 스타일로 통일 + 업그레이드 모달에서 프로모션 활성 client 의 현재 프로모션 표시 (구매 버튼 제외).
+- **HOTFIX 18 (BE)**: 마스터 보고 "59,600원 예정" 결제 금액 의문 진단 — BE 청구 로직 정상, FE 표시 버그 식별.
+- **HOTFIX 19 (FE)**: 진단된 표시 버그 1줄 정정.
+
+### 변경
+
+**data-craft (HOTFIX 17 — `4a83433b`)**
+
+- **`src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`**: 프로모션 활성 시 `italic text-orange-600` 단순 텍스트 → `inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-sky-400 text-white` + `Sparkles` 아이콘. 다른 유료 플랜 배지 패턴(BADGE_BASE) 과 시각적 통일.
+- **`src/features/subscription/ui/PromotionRow.tsx`**: `isCurrent?: boolean` prop 신설. true 시 indigo 테두리 + "현재 적용 중" 라벨 + 가격/규격/아코디언 숨김 + 구매 버튼 비노출.
+- **`src/features/subscription/ui/UpgradeStepSelect.tsx`**: `activePromotion` prop 추가. 활성 시 PromotionRow 를 `isCurrent=true` 로 렌더.
+- **`src/features/subscription/ui/UpgradeDialog.tsx`**: `useSubscriptionStatus` 활용해 `isPromotionActive` 판별 → `resolvedCurrentPlan=null` 전달 (프로모션 활성 시 어떤 PlanComparisonCard 도 isCurrent 강조 X). activePromotion prop 전달.
+- **`src/features/subscription/ui/PlanLimitExceededDialog.tsx`**: 동일 prop 정합.
+
+**data-craft-server (HOTFIX 18 — `9d2d7297`)**
+
+- **`src/__tests__/billingSubscription.seatsVsUserCount.test.ts`** (신규): `calculateAmount` 가 `client.seats` (계약 정원, 12) 기준 동작하고 활성 사용자 수(4) 와 무관함을 검증 (12→178,800 / 4→59,600 재현). BE 청구 로직 정상 확정.
+- 진단 결과: BE 의 `billingRenewal.service.ts` / `billingSubscription.service.ts` / `renewPromotionClient` 모두 정원 기반으로 정상 동작. 실제 청구액에는 오류 없음.
+
+**data-craft (HOTFIX 19 — `d0f7d049`)**
+
+- **`src/widgets/settings-dialog/ui/PlanTabContent.tsx:49`**: `upcomingPayment` useMemo 내 `const userCount = status?.userCount ?? 1;` → `const seats = status?.seats ?? 1;`. BE 청구 정책 (계약 정원 기준) 과 정합. 14,900 × 4(활성) = 59,600원 잘못 표시 → 14,900 × 12(정원) = 178,800원 으로 정정.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/__tests__/billingSubscription.seatsVsUserCount.test.ts` (신규)
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+- `src/features/subscription/ui/PromotionRow.tsx`
+- `src/features/subscription/ui/UpgradeStepSelect.tsx`
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+- `src/features/subscription/ui/PlanLimitExceededDialog.tsx`
+
+### 효과
+
+- **시각 일관성**: 프로모션 배지가 다른 유료 플랜 배지와 동일 형태 + 그라데이션으로 특별감.
+- **현재 프로모션 표시**: 업그레이드 모달 진입 시 프로모션 활성 client 가 자기 프로모션을 "현재 적용 중" 으로 인식. 다른 유료 플랜 카드 어디에도 "현재 플랜" 강조 없음.
+- **결제 예정 금액**: 표시 = 실 청구 금액 일치 (이전: 표시만 잘못, 실 청구는 정상 178,800원이었음 → 사용자 혼란 해소).
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client 의 플랜 관리 → 현재 플랜 배지가 indigo→sky 그라데이션 + Sparkles 아이콘.
+2. 결제 이력의 "예정" 행 = 정원 × 단가 (예: 12 × 14,900 = 178,800원).
+3. 프로모션 활성 client 가 업그레이드 모달 열면 어떤 PlanComparisonCard 도 isCurrent 강조 안 됨 + PromotionRow 가 "현재 적용 중" 라벨로 표시 + 구매 버튼 없음.
+
+### 잔존 후속 (참고)
+
+- PromotionRow isCurrent=true 시 가격/규격 숨김 처리 — eligibility API 가 using-promotion client 에게 PromotionSummary 반환하도록 BE 확장하면 전체 규격 표시 가능 (별도 후속).
+- UpgradeDialog 의 결제/다운그레이드 판별 로직이 accountInfo.planType(raw) 사용 — 프로모션 활성 상태에서 다운그레이드 흐름 검토 필요.
+
 ## v001.357.0
 
 > 통합일: 2026-05-20
