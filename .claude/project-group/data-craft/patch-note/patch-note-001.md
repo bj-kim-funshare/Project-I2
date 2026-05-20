@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.287.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #125 (BillingSuccessPage 신규 구독 분기 PAYMENT_PASSWORD_REQUIRED 차단 수정)
+
+### 개요
+
+플랜 한도 초과 후 업그레이드 시도가 `POST /api/subscription/billing/payment` 에서 `400 PAYMENT_PASSWORD_REQUIRED` (data-craft-server `requirePaymentPassword` 미들웨어) 로 차단되는 회귀 수정.
+
+원인: 카드 미등록 사용자가 "카드 등록 및 결제" → 토스 결제창 → `/billing/success` 복귀 시, `BillingSuccessPage` 의 신규 구독 분기가 `issueBillingKey` 직후 `executePayment.mutateAsync` 를 **`paymentPassword` 없이** 호출하고, 결제 비밀번호 설정 모달은 결제 **이후** 띄우는 순서 모순. BE 는 모든 `/billing/payment` 호출에 비밀번호 필수이므로 첫 결제가 항상 차단.
+
+해법: 신규 구독 분기에 `usePaymentPasswordGate` 도입 — `issueBillingKey` 성공 → 재진입 세마포어 동기 해제 → `gate({ onSuccess })` → `onSuccess(password)` 콜백 내부에서 `executePayment.mutateAsync({ ..., paymentPassword })` 호출. 사후 setup 모달 (`setShowPasswordSetup`) 은 신규 구독 분기에서만 제거. `card-change` / `promotion-purchase` 분기는 기존 상태 머신 그대로 보존 (해당 분기는 `/billing/payment` 미사용 → 회귀 위험 없음).
+
+### 페이즈 결과
+
+- **Phase 1** (fix): `BillingSuccessPage.tsx` 신규 구독 분기에 결제 비밀번호 게이트 도입. `usePaymentPasswordGate` import + 컴포넌트 본체 초기화, `executePayment` 직접 호출 제거 후 `gate.onSuccess` 콜백 내부로 이동 (paymentPassword 포함). billingKey 발급 후 `clearPendingPayment` / `isCompleted` / `isProcessing` / sessionStorage 정리는 gate 호출 직전 동기 수행 (gate 콜백 비동기로 인한 finally 의존 불가 — 재진입 방지). 성공 시 toast + `navigate('/')`, 실패 시 `navigate('/?openSettings=plan')`. JSX 트리에 `{gateElement}` mount. (`bd87e2c`)
+- **Phase 2** (test): `tests/pages/billing-callback/BillingSuccessPage.test.tsx` 에 vitest 회귀 테스트 4개 추가. (a) gate onSuccess 발사 시 `executePayment` 가 paymentPassword 포함 호출, (b) onSuccess 미발사 시 executePayment 미호출, (c) targetPlan/billingCycle/seats/paymentPassword 전체 필드 전달 확인, (d) card-change 분기 회귀 가드. 전체 14 tests 통과 (10 기존 + 4 신규). (`24267fd`)
+- **클린업**: 신규 구독 분기의 dead write `pendingNavigate.current = '/?openSettings=plan'` 1줄 제거 — gate 도입 후 해당 ref 의 유일한 consumer 였던 `setShowPasswordSetup` dismiss 핸들러가 본 분기에서 사라져 무용. (`0fe8efc`)
+
+### 영향 파일
+
+data-craft:
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+- `tests/pages/billing-callback/BillingSuccessPage.test.tsx`
+
 ## v001.286.0
 
 > 통합일: 2026-05-20
