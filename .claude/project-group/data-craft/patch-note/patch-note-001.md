@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.293.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #127 (HOTFIX 1 — 버튼 셀 행 삭제 즉시 반영 보정)
+
+### 개요
+
+v001.288.0 (Phase 1) 의 `await gridUtil.deleteRow([row])` 위임 방식이 실사용 환경에서 즉시 반영을 트리거하지 못한다는 마스터 보고 (#127 hotfix 1). 디버깅 과정에서 두 가지 사실 확인:
+
+1. `packages/.../createDefaultStateManager.ts:20` 의 `removeRows: () => {}` — **현 코드베이스에서 no-op 으로 정의됨**. 즉 `stateManager.removeRows(...)` 호출은 어디서 하든 효과 없음.
+2. 실제 그리드 재렌더 트리거는 `packages/.../grid-table/hooks/useTableView.ts:215-219` 의 `useMemo(..., [viewerModel.rowModelList])` 가 **배열 참조 변경** 을 감지하는 경로. 즉 `viewerModel.rowModelList = ...filter(...)` 처럼 새 참조 할당이 필요.
+
+Phase 1 의 gridUtil 위임은 내부적으로 정규 `rowDeleteUtils.deleteRow:66` 의 `= filter(...)` 로 참조 교체를 수행하지만, 그 외 호출 경로 (특히 dialog 닫힘 → 비동기 await → 다음 microtask 실행) 의 React 배치/타이밍 차이로 부모 컴포넌트 재렌더가 트리거되지 않는 케이스가 잔존. Phase 0 패턴에 있던 `onRefresh()` 강제 rerender 가 Phase 1 위임 과정에서 제거된 것이 결정적 원인.
+
+### 해법 (Phase 3, HOTFIX 1)
+
+`deleteRowAction.ts` 재작성:
+1. `splice(rowIndex, 1)` 폐기 → `viewerModel.rowModelList = viewerModel.rowModelList.filter(r => r.rowField !== rowField)` 로 **새 배열 참조 할당** (useMemo dep 트리거).
+2. `stateManager.removeRows([...])` 폐기 — no-op 호출이라 효과 없음, 코드 단순화.
+3. `onRefresh()` **복구** — Phase 0 에 있던 강제 rerender 안전망. useMemo dep 변경만으로 부족한 호출 경로 (await 후 microtask 등) 대비 이중 보장.
+4. seq 정규화 (남은 행) 유지.
+5. `saveChange(createRowDeletedChange(rowField))` 로 서버 동기 유지.
+6. `gridUtil` 의존 완전 제거.
+
+### 페이즈 결과
+
+- **Phase 3 시도** (fix): nested context stateManager 가설로 cell 로컬 stateManager 직접 갱신 + splice 유지. (`320fc822`)
+- **Phase 3 보정** (fix): 가설 검증 실패 (stateManager.removeRows 가 no-op). splice → filter (참조 교체) + stateManager 호출 제거 + onRefresh 복구. (`193bb674`)
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/deleteRowAction.ts`
+
+### 잔존 트레이드오프 (본 hotfix scope 외)
+
+- 남은 행들의 seq 재정규화는 클라이언트 model 에만 반영, 서버 동기 (`createRowSeqChange` 배치) 미수행.
+- 서브그리드 orphan 정리 / `reorderRowByIndex` (행번호 셀 cellValue 갱신) / `notifyRowDeleted` (서버 페이징 totalRows 동기) 누락.
+- 향후 별도 플랜에서 `cellRendererChildModel` 에 정식 `GridUtilContext` 노출 또는 `rowDeleteUtils.deleteRow` 호출용 어댑터 도입 권고.
+
+### 비고
+
+본 entry 의 버전 번호는 머지 충돌 양측 보존 (CLAUDE.md §5) 규칙에 따라 v001.292.0 → v001.293.0 으로 이동 (#129 의 v001.292.0 보존).
+
 ## v001.292.0
 
 > 통합일: 2026-05-20
