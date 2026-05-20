@@ -671,7 +671,12 @@ def build_by_skill_invocation(
         # prompt (different timestamp, different conversation turn).
         active_start_ts = active_window["start_timestamp"] if active_window is not None else None
         if active_window is not None and active_is_gated and i != active_start_idx and ts != active_start_ts:
-            if "플랜 완료" in text or "핫픽스 완료" in text:
+            # Strict prefix match — substring match falsely closed on master prompts like
+            # "...플랜 완료 시점 아니면 보고하지마" where "플랜 완료" is referenced as a
+            # noun phrase, not the closure signal. The actual closure is always typed
+            # at the start of the prompt (optionally followed by a comma + additional ask).
+            text_stripped = text.lstrip()
+            if text_stripped.startswith("플랜 완료") or text_stripped.startswith("핫픽스 완료"):
                 # Include records up to (but not including) the next master prompt.
                 # Find the next master prompt after index i.
                 next_master_idx = len(records)
@@ -1025,6 +1030,15 @@ def collect() -> dict[str, Any]:
         # heavily under-attributing skills. Carry the last seen attributionSkill
         # forward within a session until another non-null attributionSkill appears.
         sticky_skill: str = "메인 세션"
+        # Master-declared skill = the most recent skill explicitly invoked by master
+        # via /X. Tracked separately from sticky_skill so that inner-skill drift
+        # (e.g. runtime tagging dev-start during an internal Skill tool call inside
+        # a plan-enterprise window) doesn't permanently change the outer attribution.
+        # On the next plain master prompt during a gated outer skill (PENDING gate),
+        # sticky_skill reverts to master_declared_skill — the runtime stops tagging
+        # raw=attributionSkill after the first few turns, so without this revert,
+        # post-inner-skill assistant turns continue carrying the inner skill name.
+        master_declared_skill: str = "메인 세션"
         # Timestamp of the record that opened the current sticky_skill window.
         # Used as a same-ts guard so that a SKILL.md body injected by the runtime
         # at the same timestamp as its /X command cannot accidentally close the window
@@ -1043,19 +1057,32 @@ def collect() -> dict[str, Any]:
                 if skill_name is not None:
                     # case A: new skill command — open window
                     sticky_skill = skill_name
+                    master_declared_skill = skill_name
                     active_skill_start_ts = ts
                 else:
-                    # case B: plain master prompt — evaluate closure
+                    # case B: plain master prompt — evaluate closure / revert
                     # same-ts guard: skip closure if this record shares ts with the
                     # skill-open record (SKILL.md body injected at the same instant)
                     if ts != active_skill_start_ts:
-                        if sticky_skill in _GATED_SKILLS:
-                            if "플랜 완료" in text or "핫픽스 완료" in text:
+                        if master_declared_skill in _GATED_SKILLS:
+                            # Strict prefix match — substring match falsely closes on
+                            # prompts like "...플랜 완료 시점 아니면 보고하지마" where
+                            # "플랜 완료" appears as a noun phrase, not the closure signal.
+                            text_stripped = text.lstrip()
+                            if text_stripped.startswith("플랜 완료") or text_stripped.startswith("핫픽스 완료"):
                                 sticky_skill = "메인 세션"
-                        elif sticky_skill in _KNOWN_SKILLS:
-                            # non-gated known skill: any subsequent plain prompt closes it
+                                master_declared_skill = "메인 세션"
+                            else:
+                                # PENDING gate: revert sticky to outer master-declared
+                                # skill in case it drifted via inner raw attribution.
+                                sticky_skill = master_declared_skill
+                        elif master_declared_skill in _KNOWN_SKILLS:
+                            # non-gated outer skill: next plain prompt closes it
                             sticky_skill = "메인 세션"
-                        # else: "메인 세션" or unknown historical value → keep as-is
+                            master_declared_skill = "메인 세션"
+                        else:
+                            # outer is "메인 세션" — any inner drift also reverts to main
+                            sticky_skill = master_declared_skill
                 continue
 
             if rec_type == "assistant":
