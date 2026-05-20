@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.273.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 3 — 세부 패널 UI 그리드뷰 열 메뉴 정렬)
+
+### 개요
+
+마스터 보고: HOTFIX 2 의 행 연결 그룹 관리 세부 패널 안 **고정 / 이동 / 본문 스타일 UI 가 그리드뷰 열 메뉴와 어긋났고 글자 크기도 불일치**. 본 핫픽스는 세부 패널의 해당 항목들을 그리드뷰 열 메뉴 (`ColumnMenuDropdown`) 와 동일한 동작/디자인/글자 크기로 정렬.
+
+### 변경
+
+#### 1. 고정 — 동적 분기 (마스터 명확화)
+
+- 기존: 단순 buttonGroup (없음/좌측/우측).
+- 변경: **미설정 상태** → "왼쪽 고정" + "오른쪽 고정" 두 action 항목 / **설정 상태** → 두 항목 사라지고 "고정 해제" 단일 action 으로 동적 전환. 그리드뷰 열 메뉴와 동일 패턴. frozen in-place mutation + onRefresh + saveChange 호출 순서도 그리드 열 메뉴와 정확히 정렬.
+
+#### 2. 이동
+
+- 기존 "맨 앞 / 맨 뒤" action 유지하되 disabled tooltip 추가 + `newColumnList` 뮤테이션 누락 버그 함께 수정 (그리드 열 메뉴와 정합).
+
+#### 3. 본문 스타일
+
+- `hasArrow: true` 추가 + 그리드 메뉴와 동일한 label ("열 본문 스타일 편집") 로 통일.
+
+#### 4. 글자 크기 정렬
+
+- `ColumnDetailPanel.tsx` 에 optional `isInPanel` prop 추가 (기본 `true` — 기존 소비자 동작 보존).
+- `RowLinkGroupManageDialog.tsx` 에서만 `isInPanel={false}` 전달 → MenuItemRenderer 가 그리드 열 메뉴와 동일한 글자 크기로 렌더. `ViewColumnManagerDialog` 등 기존 다른 소비자는 무영향.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (`8552ee82`: 고정/이동/스타일 빌더 정렬, `9dab3c14`: lint hotfix — 미사용 `FsGridColumnFrozen` import 제거)
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ColumnDetailPanel.tsx` (`8552ee82`: `isInPanel` optional prop 추가)
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 19 warnings).
+- 회귀: rowLink 외 컬럼 타입의 detail panel 동작 무변경 (`isInPanel` 기본 `true` 로 기존 소비자 보존).
+
+### 후속 트레이드오프
+
+`createColumnMenuItems` 직접 재사용은 `scrollToStart/End` / column menu 상태 / 번역 컨텍스트 / aggregation ref 등 그리드 전용 의존성 때문에 scope expansion 불가 → 동일 패턴을 detail panel 빌더 안에 인라인 미러링. 향후 두 빌더가 drift 할 위험은 있으나 본 핫픽스에선 정렬 완료.
+
 ## v001.272.0
 
 > 통합일: 2026-05-20
