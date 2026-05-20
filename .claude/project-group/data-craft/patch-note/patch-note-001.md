@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.351.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 22 — picker 옵션 hover 툴팁 강제 동작)
+
+### 개요
+
+마스터 보고: HOTFIX 21 가 picker 옵션 행 최외곽 div 에 `title` attr 부착했으나 여전히 hover 시 native tooltip 미표시. 원인 진단 — flex 레이아웃의 자식 요소 (radio indicator, truncate span 등) 가 실제 hover 대상이 되어 부모 div 의 `title` 이 브라우저에 발화 안 됨.
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`c5a40d80`): native `title` attr 제거 + 각 동적 옵션 행을 공용 **`Tooltip`** 컴포넌트 (Radix 기반, `TooltipTrigger asChild`) 로 감쌈. delay 300ms, `side='right'`. label > 500자 → `slice(0,500) + '...'`. '선택안함' 고정 행은 툴팁 미적용. 빈 label 은 Tooltip 의 `disabled || !content` 분기로 자동 비활성화.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 21 longText 가로세로 중앙 + 확장 단방향 / HOTFIX 20 hover 툴팁 의도 / HOTFIX 19 picker 검색/정렬/높이 모두 그대로.
+
 ## v001.350.0
 
 > 통합일: 2026-05-20
