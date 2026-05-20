@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.330.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 16 — picker dropdown 통일 + delegate renderer singleSelect 태그 pill 복원)
+
+### 개요
+
+마스터 보고 2건:
+1. **picker dropdown 디자인 문제**: rowLink 셀 클릭 시 띄우는 dropdown 스타일이 표준 "단일 선택 상자" (singleSelect) dropdown 과 다름 — 통일 필요.
+2. **타입 대응 누락**: 설정 정보 (배경색 등) 는 가져오는데 표시는 여전히 텍스트 + dot 로만 노출. target 이 singleSelect 인데 rowLink 셀에 본래 태그형 pill 디자인이 누락 (Image #3 vs #4 비교).
+
+### 변경 (2 파일, +83/-31)
+
+#### 1. picker dropdown 통일 (`aa2ef6d`)
+- **`ConnectionEditOverlay.tsx`** — 버튼 행 스타일을 기존 `bg-white / border-gray-200 / 빨강 선택 표시` → `bg-background / border / muted-foreground` 토큰 + `SelectMode.tsx` 와 동일한 `rounded-lg / hover:bg-blue-100 / bg-primary/10` + 라디오 원형 (single) / 체크박스 사각 (multi) 구조로 교체. 표준 singleSelect dropdown 과 디자인 정합.
+
+#### 2. delegate renderer singleSelect 태그 pill (`aa2ef6d`)
+- **`rowLinkDelegateDispatcher.tsx`** — singleSelect 전용 read-only 렌더링 분기 신규. SingleSelectRenderer 의 edit-mode button chrome 우회 + `FsGridSingleSelectCellRenderer` 와 동일한 `componentColors.select.rangeBackground` 배경 pill + `option.color` dot 직접 렌더 → Image #3 의 본래 태그 pill 디자인 복원.
+
+### 타입 커버리지 진단 결과
+
+`cellRendererRegistry` 의 등록 (38개 타입) 으로 모든 타입의 delegate Component 는 이미 매핑됨. 실제 시각 불일치 원인은 **singleSelect 의 read-only 표시 경로** 에 국한된 것으로 진단 — SingleSelectRenderer 가 edit-mode 가정 button chrome 으로 항상 렌더하던 게 문제. 본 HOTFIX 가 디스패처 수준 read-only 분기로 보정.
+
+multiSelect 등 다른 타입은 본래 Renderer 가 이미 color pill 로 정상 렌더 (`option.color` 기반) — 시각적 불일치 없음으로 확인.
+
+### Blockers (마스터 확인 권장)
+
+- **ConnectionEditOverlay 디자인 변경의 connection 셀 picker 영향**: ConnectionEditOverlay 는 rowLink picker 뿐 아니라 connection 타입 셀 picker 에서도 사용. 디자인 토큰 교체가 connection 셀 컨텍스트에서도 의도한 결과인지 확인 필요.
+- **multiSelect button wrapper 시각 차이**: minHeight 구조로 rowLink 셀 내 공간 활용 차이 가능 — 시안 확인 시 추가 조정 가능.
+- **columnModel.optionList 출처**: singleSelect pill 렌더링 시 columnModel 의 optionList 에서 label 로 option 조회. rowLink 컬럼 모델이 target 컬럼의 optionList 를 보유한 상태인지 런타임 확인 필요 (HOTFIX 13 의 1회 복사가 cellRendererModelList 만 deep copy 했고 optionList 도 동일 패턴인지 검증).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 12 universal-trigger / HOTFIX 13 4개 속성 복사 / HOTFIX 14 보라 바 제거 / HOTFIX 15 delegate + onClick 모두 무변경.
+
 ## v001.329.0
 
 > 통합일: 2026-05-20
