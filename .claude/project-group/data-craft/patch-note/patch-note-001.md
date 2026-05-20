@@ -1,5 +1,75 @@
 # data-craft — Patch Note (001)
 
+## v001.328.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #133 (HOTFIX 4 — 측정 기반 확정 진단)
+
+### 개요 — GridHeader 구조 변경으로 header/group/body maxScrollLeft 정렬
+
+3사이클의 추측 기반 핫픽스(HOTFIX 1: clamp 추가, HOTFIX 2: minWidth+overscroll 정공법 실패, HOTFIX 3: HOTFIX 2 revert) 끝에 마스터의 실제 픽셀 측정값을 받아 진단 확정. 측정값(디자인/뷰 모드 동일):
+
+| 항목 | 값 |
+|------|-----|
+| `header.scrollWidth` | 2385 |
+| `body.scrollWidth` | 2385 |
+| `header.clientWidth` | **490** |
+| `body.clientWidth` | **530** |
+
+**scrollWidth 동일 / clientWidth 40px 차이** = 구조 비대칭 (메커니즘 A 변종, 이전에 못 짚은 부분). `header.maxScrollLeft = 1895 > body.maxScrollLeft = 1855`. 트랙패드로 헤더를 끝까지 끌면 헤더는 1895 까지 갈 수 있고 본문은 1855 에서 hard stop. HOTFIX 1 의 source-self clamp 가 헤더를 1855 로 끌어내리는 게 마스터가 보던 "끌려나왔다 되돌아감" 의 실체.
+
+### 근본 원인 — ColumnAddButton 의 외부 sibling 위치
+
+기존 GridHeader 구조:
+```
+outer flex (row) [
+  inner column wrapper [
+    GroupHeaderRow (옵션),
+    headerScrollRef (flex-1)
+  ],
+  ColumnAddButton (40px, 외부 sibling)
+]
+```
+
+ColumnAddButton 이 headerScrollRef 의 형제로 outer flex row 의 우측에 위치 → headerScrollRef.clientWidth = parent − 40. body 측엔 동일 위치에 sibling 없음(RowMenuColumn 은 bodyScrollRef 안의 자식) → body.clientWidth = parent.
+
+### 페이즈 결과
+
+- **Phase 5 / HOTFIX 4** (`72103525` + `65cff576`): `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx` 구조 변경.
+  - outer flex direction `row → column`.
+  - 기존 inner column wrapper 제거 (outer 가 column 이라 불필요).
+  - GroupHeaderRow 가 outer 의 직접 자식 → parent full width 자동 할당 (`group.clientWidth = body.clientWidth`).
+  - 컬럼 헤더 + ColumnAddButton 을 새 inner flex row 안에 함께 배치.
+  - 컬럼 헤더 inner div 끝 40px spacer 제거 (`column header.scrollWidth = Σcols`).
+  - 미사용 `FIXED_COLUMN_WIDTH` import 정리 (`65cff576`).
+
+### maxScrollLeft 검산
+
+| 컨테이너 | scrollWidth | clientWidth | maxScrollLeft |
+|----------|-------------|-------------|---------------|
+| column header | Σcols | parent − 40 | **Σcols + 40 − parent** |
+| group header (활성 시) | Σcols + 40 (spacer 유지) | parent | **Σcols + 40 − parent** |
+| body | Σcols + 40 (RowMenuColumn) | parent | **Σcols + 40 − parent** |
+
+→ 셋 다 maxScrollLeft 일치. 트랙패드로 헤더 끝까지 끌어도 본문과 동일 지점에서 hard stop. clamp 의 사후 끌어내림 동작 자체가 발생하지 않음.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0.
+- advisor (hotfix4 시점, 5-perspective): 5/5 PASS.
+- 마스터 수동 검증은 PENDING 게이트에서.
+
+### 절차 노트 — 진단 부재의 교훈
+
+3사이클 추측 후 측정으로 한 번에 잡힘. `useScrollSync` 의 source-self clamp (HOTFIX 1) 는 안전망으로 유지 — 이 fix 가 적용된 후엔 clamp 가 작동할 일이 없지만(maxScroll 동일이므로) 다른 잠재적 비대칭에 대비. 별도 정리는 차후 사이클에서.
+
+UX 회귀 검증 포인트: group header 활성 시 GroupHeaderRow 가 parent full width 가 되어 ColumnAddButton 위로 가로 확장됨. 이전엔 GroupHeaderRow 가 ColumnAddButton 좌측까지만 차지. 시각적 차이가 의도되었는지 마스터 확인 필요.
+
 ## v001.327.0
 
 > 통합일: 2026-05-20
