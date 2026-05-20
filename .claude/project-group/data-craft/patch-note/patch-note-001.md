@@ -1,5 +1,64 @@
 # data-craft — Patch Note (001)
 
+## v001.283.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 7 — 디자인 시안 정확 매칭 모달 재구축)
+
+### 개요
+
+디자인 팀 시안 적용 — `RowLinkGroupManageDialog` 모달을 시안 디자인에 정확히 매칭하도록 전면 재구축. 본 핫픽스는 이전 일부 핫픽스 결정 (HOTFIX 2 결정 B / HOTFIX 2 동적 텍스트 / HOTFIX 3 고정 동적 분기) 을 시안 권위로 명시 갱신.
+
+### 변경
+
+#### 1. 상단 헤더
+- 좌측: `SETTINGS` 작은 라벨 + 큰 제목 `행 연결 그룹 관리`.
+- 우측: `● 모드 · {참조|복사}` 보라 점 둥근 사각 배지 + 닫기 X.
+
+#### 2. 좌측 사이드바
+- 검색 input (`연결 열 검색` placeholder, 둥근 회색).
+- sticky 헤더: 전체 선택 체크박스 + `연결 열` 라벨 + `N/M` 카운터.
+- 항목: 체크박스 + 컬럼명 + (리더 시) `★ 리더` 주황 배지. 현재 선택 항목 → 보라 active 테두리 + 연한 배경.
+- 하단: `+ 연결 열 추가` full-width outline 버튼 (HOTFIX 2 결정 B 갱신 — 재도입).
+
+#### 3. 우측 영역
+- **Hero**: 별 아이콘 (보라 둥근 사각 배경) + 컬럼명 + (리더 시) 리더 배지 + 보조 텍스트 `ID · {columnField}`.
+- **섹션 카드 4개** (둥근 모서리 + 연한 border):
+  - **01 기본 속성**: 열 제목 / 단위 (+ 보조 텍스트 `셀에 표시되는 단위`, placeholder `예: 시간, %, 원`) / 열 너비 + `px` suffix.
+  - **02 동작** (우측 `4 옵션`): 정렬 허용 / 행 그룹 (리더 시 disabled + 보조 텍스트 `리더 열에서는 사용할 수 없습니다`) / 칸반 기준열 / 연결 그룹 리더 (+ 보조 텍스트 `그룹당 1개의 리더만 지정`).
+  - **03 위치 고정**: 3-버튼 segment `왼쪽 고정` / `고정 안 함` / `오른쪽 고정` (HOTFIX 3 갱신 — 동적 분기 폐기, 3-버튼 segment 복귀).
+  - **04 기타 작업**: `열 본문 스타일 편집` 버튼.
+- ColumnDetailPanel 재사용 대신 `MenuItemRenderer` 를 카드 내부에서 직접 렌더 (시안의 카드 그룹 디자인 매칭).
+
+#### 4. 하단 footer
+- 좌측: `🗑 선택 연결 열 제거` (HOTFIX 2 동적 텍스트 갱신 — 정적 라벨. 동작 로직 — 리더 자동 제외 / 그룹 전체 선택 시 모든 컬럼 삭제 — 유지).
+- 우측: `취소` (outline) + `닫기` (보라 primary).
+
+#### 5. "연결 열 추가" 흐름 (신규 — append 모드)
+- `RowLinkConfigDialog.tsx` 에 `AppendModeProps` 추가 → 기존 그룹의 `linkGroupId / targetGroupId / targetGroupType / mode / leaderTargetColumnId` 를 pre-fill 하여 Step 4 (매핑) 부터 시작. 새 열은 `isLeader=false` 고정.
+- `FsGridTableView.tsx` 에 `useGridContextOptional()` 로 콜백을 읽고 `addRowLinkColumns` 를 사용한 `handleRowLinkConfigConfirm` 를 `RowLinkGroupManageDialog` 에 전달.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (`815b1448`: 대수술 / `5d1c7879`: lint hotfix — 미사용 isRowGroupingEnabled 제거)
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (`815b1448`: AppendModeProps 추가)
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx` (`815b1448`: 콜백 props 전달 / `bfa3d3d6`: typecheck hotfix — ColumnGeneratorStateManager 캐스팅)
+
+총 +700 / -353 (3 commits + 2 lint hotfix).
+
+### 이전 핫픽스 갱신 정리 (시안 권위)
+
+- **HOTFIX 2 결정 B** (그룹에 새 열 추가 제거) → **갱신**: 재도입 (RowLinkConfigDialog append 모드).
+- **HOTFIX 2 동적 텍스트** (선택 = 전체 시 "행 연결 그룹 제거") → **갱신**: 정적 라벨 `선택 연결 열 제거`. 동작 로직은 유지.
+- **HOTFIX 3 고정 동적 분기** (왼쪽/오른쪽 ↔ 고정 해제) → **갱신**: 3-버튼 segment 복귀.
+- HOTFIX 5 sticky 헤더 / 글자 크기 / 전체 선택 → 유지 + 검색 input 위로 추가.
+- HOTFIX 6 리더 chevron 메뉴 우회 → 그대로 유지 (직접 모달 오픈).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 20 warnings).
+
 ## v001.282.0
 
 > 통합일: 2026-05-20
