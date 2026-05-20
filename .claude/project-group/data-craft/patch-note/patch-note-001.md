@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.355.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 15 — 프로모션 안내 아이콘 + 결제 비밀번호 게이트 + quote 경로 정정)
+
+### 개요
+
+마스터 보고 3건 통합:
+1. PromotionEndingNotice 노란 박스 좌측에 아이콘 추가.
+2. 프로모션 결제 시 `POST /api/promotion/purchase` 400 `PAYMENT_PASSWORD_REQUIRED` — FE 가 비밀번호 미전송.
+3. 프로모션 quote 호출 시 `GET /api/subscription/promotion/quote` 403 `PLAN_NOT_ALLOWED` — FE 호출 경로가 BE 등록 경로와 prefix 불일치.
+
+### 변경 — data-craft (`03baf5a7` + 보완 `96e6e7f3`)
+
+**`src/features/subscription/ui/PromotionEndingNotice.tsx`**:
+- 단일 `<p>` 를 `<div flex items-start gap-2>` 로 감싸고 좌측에 `AlertTriangle` (lucide-react, `h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-700`) 아이콘 추가.
+- 노란 박스 스타일 (`bg-yellow-50 border-yellow-300 text-yellow-900`) 유지.
+
+**`src/features/subscription/api/promotionApi.ts`**:
+- `purchase` 시그니처에 `paymentPassword?: string` 추가 — body 에 포함.
+- `getPromotionQuote` 호출 URL `/api/subscription/promotion/quote` → `/api/promotion/quote` 로 정정 (BE 등록 경로 정합).
+
+**`src/features/subscription/model/subscriptionQueries.ts`**:
+- `usePurchasePromotion` mutation 인자 타입에 paymentPassword 추가.
+
+**`src/features/subscription/ui/PromotionPurchaseDialog.tsx`**:
+- `handleSubmit` 의 hasBillingKey 분기 (실제 결제 경로) 에서 `usePaymentPasswordGate.gate()` 호출 — onSuccess 에서 paymentPassword 받아 mutation 호출. DeleteCardDialog (HOTFIX 4) 패턴 동일.
+- `gateElement` JSX 트리 끝에 마운트.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/PromotionEndingNotice.tsx`
+- `src/features/subscription/ui/PromotionPurchaseDialog.tsx`
+- `src/features/subscription/api/promotionApi.ts`
+- `src/features/subscription/model/subscriptionQueries.ts`
+
+### 진단 결과 — HOTFIX 16 폐기
+
+당초 BE 측 `/promotion/quote` 라우트의 permissionMiddleware 우회 hotfix (HOTFIX 16) 로 진행하려 했으나, BE 진단 결과:
+- promotion.routes.ts 의 `/quote` 라우트는 **이미 permissionMiddleware 없음** (authMiddleware 만).
+- 403 의 진짜 원인: FE 호출 경로가 BE 등록 경로와 prefix 불일치 → app.ts 의 global catchall `permissionMiddleware` 도달 → 차단.
+- 해결은 FE 측 경로 정정 1줄로 충분 — HOTFIX 15 에 통합. HOTFIX 16 폐기.
+
+### 테스트 시나리오
+
+1. PromotionPurchaseDialog 진입 → 노란 박스 좌측에 `AlertTriangle` 아이콘 + 문구 표시.
+2. seats 변경 → 400ms 후 `/api/promotion/quote` 호출 → **200 응답** + chargedAmount 표시 (이전: 403).
+3. 결제 버튼 클릭 → 비밀번호 게이트 노출 → 입력 후 결제 진행 → **200 응답** (이전: 400 PAYMENT_PASSWORD_REQUIRED).
+
+### 잔존 후속 (본 hotfix 범위 외)
+
+- `BillingSuccessPage.tsx` 의 promotion-purchase 경로 (카드 등록 직후 자동 프로모션 적용) 는 비밀번호 설정 직후라 paymentPassword 미보유 → BE 가 PAYMENT_PASSWORD_REQUIRED 반환 가능. mutation 시그니처를 optional 로 두어 컴파일은 OK 이나, 실 동작 시 사용자가 카드 등록 후 비밀번호 설정 + promotion 자동 적용을 동일 흐름에서 끝내고 싶다면 BillingSuccessPage 가 비밀번호 설정 콜백에서 password 를 받아 promotion mutation 에 전달하도록 별도 후속.
+- HOTFIX 13 의 `billingRenewal.service.ts:47-77` cron pending_promotion 자동 적용 경로 (chargeAmount=0 무료 취득 위험) — 여전히 미해소, 별도 hotfix 후보.
+
 ## v001.354.0
 
 > 통합일: 2026-05-20
