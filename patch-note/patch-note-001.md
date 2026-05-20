@@ -1,5 +1,41 @@
 # 아이OS — Patch Note (001)
 
+## v001.83.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #44
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1** (collect.py sticky_skill 누수 수정 + 데이터 재생성): `monitoring/scripts/collect.py` 의 메인 집계 루프 (`collect()` 함수, 세션별 records 루프) 상단에 master prompt 처리 분기를 추가. `_is_master_prompt(rec)` True 일 때 `_parse_skill_command(text)` 로 새 스킬 명령(`/X`)이면 `sticky_skill = X` 로 갱신하고 해당 record 의 timestamp 를 `active_skill_start_ts` 로 저장; 일반 프롬프트면 same-ts 가드 통과 시에만 sticky 가 `_GATED_SKILLS` 면 "플랜 완료"/"핫픽스 완료" 텍스트에서 메인 세션으로 리셋, sticky 가 non-gated 일 때 무조건 메인 세션으로 리셋. 이미 `build_by_skill_invocation` 가 사용 중인 분류 셋 (`_GATED_SKILLS` / `_FALLBACK_NON_GATED_SKILLS` / `_parse_skill_command`) 을 재사용해 두 분석 경로의 의미를 정렬. 수정 후 `python3 monitoring/scripts/collect.py` 실행으로 `aggregate.json` / `hourly.json` / `periods/**` 재생성.
+
+### 진단 요지
+
+- 마스터 관측: 모니터링 대시보드 "최근 24h" 도넛 차트에서 dev-start 가 35% 표시. dev-start 는 프론트 dev 서버 재시작 (포트 kill + 명령 background 실행 + listen 대기) 의 1~2 턴짜리 짧은 스킬이므로 비정상.
+- 원인 추적: 가장 큰 기여 세션 `7304211a-255f-435f-a9a1-77bd6f8ea3ae.jsonl` 분석 결과 실제 `attributionSkill == "dev-start"` 어시스턴트 레코드는 34건 11.3M tokens, sticky 로직 적용 후 dev-start 귀속은 682건 378M tokens (**33배 과다**). dev-start → 다른 스킬 attribution 전이는 0 회 — Claude Code 런타임이 dev-start 종료 후 attributionSkill 을 None 으로만 떨어뜨리고 새 값을 부여하지 않아 sticky 가 dev-start 를 무한히 유지.
+- 근본 원인: `collect.py` 내 두 분석 경로가 "어느 스킬 호출에 속한 레코드인가" 판단에 다른 규칙 사용. `build_by_skill_invocation` 는 gated/non-gated 분류로 정확히 닫지만, 메인 집계 루프는 단일 sticky 변수만 fill-in 하고 마스터 프롬프트 인식이 없어 non-gated 스킬을 영원히 닫지 못함.
+- advisor #1 차단성 피드백 수용: 같은-timestamp 가드 (`ts != active_skill_start_ts`) 를 case B 닫힘 평가 진입 조건에 명시. 이 가드 없이 닫힘 평가만 추가하면 SKILL.md 본문이 invocation 과 같은 ts 로 주입될 때 본문 안의 "플랜 완료" 문서 텍스트가 모든 gated 스킬을 즉시 거짓 닫힘 시키는 더 큰 회귀 발생.
+
+### 회귀 검증
+
+- 최근 24h dev-start 귀속 비중: **34.8% → 0.4%** (정상 범위 복귀).
+- dev-start 가 잃은 분량은 메인 세션으로 정확히 재귀속 (0.1% → 37.9%, +37.8% ≈ dev-start 가 잃은 분량 +sticky 가 가렸던 기타 메인 활동).
+- gated 스킬 무회귀: plan-enterprise 56.8% → 53.2% (±수 % 이내), plan-enterprise-os 4.7% → 5.2%, group-policy 2.7% → 2.6%, dev-merge 0.6% → 0.6%, patch-confirmation 0.2% → 0.2%. same-ts 가드 정상 작동 확인.
+- collect.py 실행 정상: processed 289 files, 29813 assistant messages, total ~$14461.56.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 기존 분류 셋 (`_GATED_SKILLS` / `_FALLBACK_NON_GATED_SKILLS`) 과 기존 파서 (`_parse_skill_command`) 를 메인 집계 루프에서도 재사용하도록 정렬했을 뿐.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py` (+29 lines)
+- `monitoring/data/hourly.json` (재생성)
+- (gitignored, 재생성 대상이지만 커밋 외) `monitoring/data/aggregate.json`, `monitoring/data/periods/**/*.json`
+
+---
+
 ## v001.82.0
 
 > 통합일: 2026-05-19
