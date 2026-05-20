@@ -158,3 +158,14 @@ monitoring/
 ```
 monitoring/data/aggregate.json
 ```
+
+## 구버전 (Project-I) 데이터 백필
+
+본 patch-note 버전부터 구버전 아이OS (Project-I) 의 세션 JSONL 이 `collect.py` 의 `SESSION_DIRS` 다중 디렉토리 확장으로 자동 통합되어, **2026-04-19 부터** 의 토큰·비용·모델·세션 축 데이터가 본 대시보드의 일자 단위 시각화 (`aggregate.json` 의 `by_day`) 에 표시된다.
+
+- **표시되는 축**: 토큰 5종, 비용 (USD), 모델 (`claude-opus-4-6` / `claude-sonnet-4-6` 포함), 일/세션.
+- **시간 단위 (`hourly.json`) 는 의도된 14일 롤링 윈도우** — 14일 이전 시간 버킷은 표시되지 않음. 일자 단위 시각화로 과거 이력 조회.
+- **해석 주의**: 2026-05-10 이전 구간의 `by_skill` 라벨은 구버전 어휘 (페르소나명, 구 스킬명) 이다. 현재 I2 17 스킬 집합에 없는 라벨이 나타나는 것은 정상.
+- **폐기된 축**: 구버전의 페르소나·프로젝트그룹 별도 축은 현재 모델에서 폐지되어 본 대시보드에 표시되지 않는다. 해당 분포가 필요하면 구버전 집계 파일 `/Users/starbox/Documents/GitHub/Project-I/monitoring/data/aggregate.json` 을 직접 참조.
+
+자세한 호환성 분석은 `monitoring/docs/legacy-backfill-analysis.md` 참조.
