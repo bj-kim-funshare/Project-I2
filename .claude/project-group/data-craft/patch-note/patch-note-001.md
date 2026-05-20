@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.315.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 5 (캘린더 pointer-events:auto 추가 — 4 라운드 헛수정의 진짜 원인)
+
+### 개요
+
+v001.310.0 (#129 HOTFIX 4) 적용 후 마스터 보고: "캘린더 모달이 닫히지는 않지만 상호작용 안되는건 여전해, 특히 캘린더 모달을 클릭하다보면 **뒤에 있는 인쇄 모달의 텍스트가 선택되는데** 이걸 보니 상호 작용 자체가 인쇄 모달로 전달되는게 확실해". 결정적 단서.
+
+**진짜 원인 확정**: Radix Dialog modal 모드는 내부적으로 `react-remove-scroll` 의 `.block-interactivity-{id}` 클래스를 body 에 부여하며, 이 클래스는 `{pointer-events: none}` 을 적용한다 (`node_modules/react-remove-scroll/dist/es5/SideEffect.js:20`). DialogContent 와 그 React subtree 만 `.allow-interactivity-{id}` (`{pointer-events: all}`) 를 명시 받는다. portal 로 `document.body` 의 직접 자식으로 떠 있는 캘린더는 DialogContent subtree 외부라서 `pointer-events: none` 을 **inherit**. 결과: 캘린더가 시각적으로는 떠 있지만 hit-testing 에서 무시되어 클릭이 통과해 뒤의 DialogContent (인쇄 모달) 로 도달.
+
+이로써 HOTFIX 1~4 의 모든 관찰이 일관 설명됨:
+- HOTFIX 1 (document mousedown click-outside): listener 자체는 정상이었으나 `e.target` 이 진짜 DialogContent 였고 `containerRef.contains(DialogContent)` = false → onClose 발화 → 캘린더 닫힘. 정확한 contains 가드가 잘못 닫는 것처럼 보였던 이유.
+- HOTFIX 2 (React synthetic stopPropagation): 캘린더에 React 이벤트 도달조차 안 함 (pointer-events:none).
+- HOTFIX 3 (element native stopPropagation): 캘린더에 native 이벤트 도달조차 안 함.
+- HOTFIX 4 (focusout): 클릭이 캘린더에 도달 안 함 → focus 변화 없음 → 닫히지도 상호작용도 못 함.
+
+### 해법
+
+**한 줄 fix**: 캘린더 컨테이너 inline style 에 `pointerEvents: 'auto'` 추가. body inherit 을 명시 override 하여 캘린더가 직접 hit-test 대상이 됨.
+
+부수 정리:
+- HOTFIX 4 의 focusout 패턴 (useLayoutEffect, tabIndex={-1}, outline-none, el.focus()) 모두 revert.
+- HOTFIX 1 의 document mousedown click-outside useEffect **복원** — 이번엔 진짜로 작동 (target 이 캘린더 내부 element 라 contains 가 정확히 true 반환).
+
+### 페이즈 결과
+
+- **Phase 6 / HOTFIX 5** (fix): `DatePickerDropdown` 컨테이너 div inline style 에 `pointerEvents: 'auto'` 한 줄 추가. HOTFIX 4 의 focusout useLayoutEffect + tabIndex + outline-none + el.focus() 제거. HOTFIX 1 의 document mousedown useEffect 복원 (`useEffect` import 복귀). 기존 Phase 1 portal + position useLayoutEffect rect 계산 로직 유지. (`6d7a9b20`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+
+### 비고 — 4 라운드 헛수정 회고 (메모리 갱신 권고)
+
+본 사건은 portal + Radix Dialog modal + react-remove-scroll 조합의 **숨겨진 pointer-events inherit 함정** 의 명백한 사례. 향후 portal-out popover 추가 시 표준 체크리스트:
+
+1. **포터블 popover 가 Radix Dialog (또는 다른 modal-trap library) 내부에서 사용되면 반드시 `pointer-events: auto` 를 명시**. RemoveScroll 류가 body 에 `pointer-events: none` 을 거는 패턴은 popover library 마다 공통.
+2. 마스터의 "뒤의 element 가 선택됨" 같은 표현은 hit-test 가 popover 를 통과한다는 결정적 단서 — 즉시 pointer-events 의심.
+3. 4 라운드 동안 가설 → 실패 → 새 가설 패턴을 반복하지 말고, 첫 회귀 시점에 마스터의 **정확한 표현** ("닫혀" vs "선택 안됨" vs "뒤의 element 가 선택됨") 을 dimension 별로 확인.
+
+`fs-sub-data-viewer` / `fs-external-data-viewer` 사본은 본 plan 범위 외이나 동일 패키지 동일 컴포넌트 — 별도 hotfix 시 본 fix 동일 적용.
+
 ## v001.314.0
 
 > 통합일: 2026-05-20
