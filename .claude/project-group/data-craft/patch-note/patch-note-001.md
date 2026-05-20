@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.343.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 10 — 인원 관리 / 다운그레이드 UX 5건)
+
+### 개요
+
+마스터 보고 5건을 한 HOTFIX 로 통합 처리. SeatManageDialog 인원 증가 안내 색/문구 + 빈 값 입력 허용 + 완료 토스트 undefined 정합 + UpgradeStepPayment 다운그레이드 안내 단순화.
+
+### 변경 — data-craft
+
+**`src/features/subscription/ui/SeatManageDialog.tsx`** (`39ea80e4`, `d1ae0658`, `0e405e60`):
+
+1. **색상**: 인원 증가 분기 안내 박스 amber → blue 계열 (감소 분기와 일관). `border-blue-200 bg-blue-50 text-blue-800` + dark variant.
+2. **2줄 문구**: 기존 "잔여 요금제가 차감된 비용입니다." 단일 → 2줄:
+   - 첫 줄 (강조): `결제 금액 {chargedAmount}원` (font-semibold).
+   - 둘째 줄: `현재 플랜의 잔여일 수가 차감된 가격입니다.`
+3. **인원수 빈 값 허용**: `targetSeats` state 타입을 `number | null` 로 확장. 빈 값 표시 가능. 결제/예약 버튼 클릭 시 빈 값이면 mutation 차단 + 입력 필드 아래 빨강색 인라인 안내 (`text-red-500`): "인원수를 입력해 주세요." 사용자가 다시 입력하면 안내 자동 해제. `NumberInputWithReturn` 은 UpgradeStepPayment 에서도 사용되므로 건드리지 않고 인라인 입력으로 대체.
+4. **토스트 undefined 해소**: HOTFIX 6 의 응답 형상 변경 (`amount`/`paymentKey` → `chargedAmount`/`paymentId`) 후 토스트 보간이 깨졌던 부분을 정합. `chargedAmount`/`previousSeats`/`newSeats` 에 `?? 0` fallback 적용으로 undefined / NaN 노출 차단.
+5. **lint 룰 해소**: 삼항 연산자 statement 위치 → if/else 변환 (`@typescript-eslint/no-unused-expressions`).
+
+**`src/features/subscription/ui/UpgradeStepPayment.tsx`** (`30364e04`):
+
+6. **다운그레이드 안내 단순화**: "다운그레이드는 현재 결제 주기가 끝난 후 적용됩니다. 지금 예약해 두시면 다음 결제일에 자동으로 변경됩니다." → "해당 변경사항이 {nextBillingDate}부터 적용됩니다." 두 번째 문장 삭제 + 다음 결제일 변수 표시. `status.planExpiresAt.slice(0, 10)` 으로 nextBillingDate interpolation 변수 전달.
+
+**`src/shared/i18n/locales/ko.ts` / `en.ts`**: `seatManage.*` 키 블록 + `billing.downgradeNotice` 신규 추가 (interpolation 포함).
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+### 테스트 시나리오
+
+1. **색상**: SeatManageDialog 증가 분기 안내 박스가 푸른 톤 (amber 아님) 으로 렌더.
+2. **2줄 문구**: 결제 금액과 안내 문구가 별도 줄로 표시, 금액 줄이 강조됨.
+3. **빈 값**: 인원수 필드 모두 지움 → 입력 비어있음 → "결제" 클릭 → mutation 호출 X + 필드 아래 빨강 "인원수를 입력해 주세요." 표시. 다시 숫자 입력 → 안내 사라짐.
+4. **완료 토스트**: 인원 증가 즉시 결제 성공 → 토스트에 `결제 N원 ` 정확히 표시 (undefined 없음). 감소 예약 성공 → 다음 결제일 표시 정확.
+5. **다운그레이드**: PREMIUM → STANDARD 등 다운그레이드 선택 → 한 줄 안내 "해당 변경사항이 YYYY-MM-DD 부터 적용됩니다." 만 표시 (기존 두 번째 문장 사라짐).
+
+### 회귀 위험
+
+- 빈 값 허용으로 인해 외부 컴포넌트가 `targetSeats` 를 number 로 강제 가정하던 호출 사이트가 있으면 null 처리 누락 가능 — grep 결과 SeatManageDialog 내부 한정. 외부 영향 없음.
+
 ## v001.342.0
 
 > 통합일: 2026-05-20
