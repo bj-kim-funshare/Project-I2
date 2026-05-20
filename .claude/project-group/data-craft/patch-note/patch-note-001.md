@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.276.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 5 — 그룹 관리 좌측 사이드바 개선)
+
+### 개요
+
+마스터 보고: 행 연결 그룹 관리 dialog 의 좌측 사이드바 (컬럼 체크박스 + 이름 목록) 가 컴팩트하지 않고 헤더가 없으며 전체 선택/해제 기능이 없음. 글자 크기도 약간 작음. 본 핫픽스는 4가지 개선.
+
+### 변경
+
+#### 1. 컴팩트화
+- 항목 padding `px-3 py-2` → `px-2 py-1`.
+- 항목 wrapper 의 외부 spacing 축소.
+
+#### 2. sticky 헤더 신규 추가
+- 좌측 사이드바 상단에 `sticky top-0 z-10 bg-white border-b` 헤더 행 추가.
+- 헤더 안: 전체 선택 체크박스 + "연결 열" 라벨 + 우측 "N/M" 선택 카운터.
+
+#### 3. 전체 선택/해제 + indeterminate
+- 헤더 체크박스 상태:
+  - 전체 선택 → `checked=true`.
+  - 0개 선택 → `checked=false`.
+  - 일부 선택 → `indeterminate=true`.
+- 클릭 핸들러: 전체 선택 상태면 `setSelected(new Set())`, 그 외는 `setSelected(new Set(allColumnFields))`.
+- Radix 미사용 환경에 맞게 useRef + useEffect 로 DOM `.indeterminate` 속성 직접 제어.
+
+#### 4. 글자 크기 확대
+- 컬럼명 `text-xs` → `text-sm` (한 단계 위).
+- 리더 배지는 `text-[10px]` 유지 — 계층 구분 보존.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (`fb39b542`: +64/-32)
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 19 warnings).
+- 회귀: 우측 세부 패널 (HOTFIX 3 정렬 결과), 하단 "선택 연결 열 제거" 동적 텍스트 (HOTFIX 2), 리더 토글 (HOTFIX 2) 모두 무변경.
+
 ## v001.275.0
 
 > 통합일: 2026-05-20
