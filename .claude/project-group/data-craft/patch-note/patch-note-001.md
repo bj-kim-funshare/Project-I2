@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.318.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #135 (HOTFIX 1)
+
+### 페이즈 결과
+- **HOTFIX 1** (`330206e`): Phase 1 (v001.313.0) 의 사람-친화 포맷팅(`deadline='YYYY-MM-DD (미완료)'`) 도 여전히 "이미 모두 해당 상태입니다" 뒤 괄호 안에 사용자 친화적이지 않은 안내가 보인다는 마스터 보고에 따라, no-change 분기의 진단 detail 자체를 사용자 토스트에서 완전 제거. `useButtonAction.ts` 의 else 분기는 `showToast(getNoChangeReasonMessage(result.reason))` 한 줄로 정리됐고, Phase 1 에서 도입했던 `formatBeforeValue` / `formatDiagnosticDetail` 헬퍼 함수와 PHASE-12 / PHASE-13 관련 주석 블록, 사용처가 사라진 `ButtonActionDiagnostic` import 까지 모두 정리. fs-data-viewer 기준 사용자 토스트는 이제 reason 코드 기반 베이스 메시지만 표시 — fs-sub-data-viewer 의 동작과 정합.
+
+### 영향 파일
+- `data-craft`:
+  - `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+
+### 관찰성 트레이드오프 (명시)
+- PHASE-13 의 진단 첨부는 원래 `all-already-target` 분기 오발화를 마스터가 즉시 식별하는 가드레일 surface 로 도입됐었음. 본 HOTFIX 로 사용자 토스트에서 사라지면서, 향후 같은 케이스가 재발할 경우 dev 콘솔 / 로그 채널을 별도로 둬야 하는지 여부는 본 플랜 범위 밖 후속.
+
 ## v001.317.0
 
 > 통합일: 2026-05-20
