@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.322.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 3 + HOTFIX 4 — 결제 수단 삭제 비밀번호 게이트 BE+FE atomic + 빈 결제수단 안내 개행)
+
+### 개요
+
+HOTFIX 2 의 후속 권장 (BE delete-card 미들웨어 적용) + 그에 따른 FE 정합 + 마스터 추가 (안내 문구 개행) 을 한 묶음으로 처리. BE 와 FE 가 **동시 배포되어야 정상 동작** — BE 만 배포 시 카드 삭제 실패, FE 만 배포 시 비밀번호 검증 우회.
+
+### 변경
+
+**data-craft-server (HOTFIX 3 — `2abf521d`)**
+
+- **`src/routes/subscription.ts:62`** `/billing/delete-card` 라우트에 `requirePaymentPassword` 미들웨어 추가. 다른 결제 액션 (`payment` / `reactivate` / `schedule-downgrade` / `upgrade` / `schedule-cycle-change` / `seats/change`) 과 동일한 보안 수준 확보.
+
+**data-craft (HOTFIX 4 — `0bf96b33`, `c40e8d06`)**
+
+- **`src/features/subscription/api/cardApi.ts`**: `deleteCard(paymentPassword?: string)` 시그니처 — body 에 `{ paymentPassword }` 전달. optional 처리로 `BillingSuccessPage` best-effort 호출 호환.
+- **`src/features/subscription/ui/DeleteCardDialog.tsx`**: `usePaymentPasswordGate` 의 onSuccess 에서 password 받아 `onConfirm(paymentPassword)` 호출.
+- **`src/features/subscription/model/subscriptionQueries.ts`**: `useDeleteCard` mutation 시그니처 string 인자 받아 cardApi 호출.
+- **`src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`**: `handleDeleteCard(password)` 가 mutation 으로 전달.
+- **`src/shared/i18n/locales/ko.ts`** / **`en.ts`**: `noCardRegisteredDetailed` 키 첫 문장 직후 `\n` 삽입.
+- **`src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx`**: 해당 안내 문구 렌더 `<p>` 에 `whitespace-pre-line` 클래스 추가 — 개행 실제 렌더.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/routes/subscription.ts`
+
+**data-craft**
+- `src/features/subscription/api/cardApi.ts`
+- `src/features/subscription/ui/DeleteCardDialog.tsx`
+- `src/features/subscription/model/subscriptionQueries.ts`
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+- `src/widgets/settings-dialog/ui/plan/RegisterCardSection.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+### 배포 선행 조건
+
+**BE + FE 동시 배포 필수.** 한쪽만 배포 시 카드 삭제 기능 깨짐.
+
+### 테스트 시나리오
+
+1. 설정 → 플랜 관리 → 결제 수단 케밥 메뉴 → 삭제 → 비밀번호 게이트 통과 → BE 가 비밀번호 검증 후 카드 삭제. 200 응답.
+2. FE 게이트 우회 시도 (개발자 도구로 직접 cardApi.deleteCard('') 호출) → BE 가 `PAYMENT_PASSWORD_REQUIRED` 응답 (401/403).
+3. 결제 수단 미등록 상태 화면 → 안내 문구 "등록된 결제 수단이 없습니다." **개행 후** "자동 갱신이 불가합니다 ..." 형태로 렌더.
+
+### 회귀 위험 (blockers)
+
+- `BillingSuccessPage.tsx:125` `void deleteCard().catch(...)`: 사용자가 비밀번호 설정 모달을 X 닫고 카드 삭제 confirm 으로 진입한 경우 — 비밀번호 미설정 client 이므로 password 부재. HOTFIX 3 미들웨어가 빈 비밀번호로 401 응답 → catch 가 best-effort silent 무시. **카드 leak 잠재** (toss 측 customerKey 잔존). **후속 BE hotfix 필요**: 비밀번호 미설정 client 에 한해 미들웨어 우회 (예: client.paymentPasswordHash IS NULL 일 때 통과) 또는 별도 no-password 엔드포인트.
+- `BillingSuccessPage.tsx:150` `navigator.sendBeacon('/api/subscription/billing/delete-card')`: sendBeacon 은 인증 헤더 미포함 + body 도 제한적 → BE 미들웨어 검증 자체가 인증 단계에서 실패. 본 경로는 사실상 동작 안 함. 별도 BE 처리 (예: 페이지 이탈 시점 카드 정리 cron) 후속.
+
 ## v001.321.0
 
 > 통합일: 2026-05-20
