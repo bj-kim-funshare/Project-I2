@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.91.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #47 (HOTFIX 3)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 4 (HOTFIX 3) — monitoring/index.html cache-bust 쿼리 갱신** (commit `9bec99b`): HOTFIX 1·2 머지 후에도 라벨 미표시 증상이 계속되어 정적 진단 수행. `monitoring/data/aggregate.json` 의 `by_skill_invocation` 370 건과 `computeSkillCountByDay` Python 시뮬레이션 결과 25 일자 카운트 모두 정상 (예: `2026-05-15: 89`), `by_day` 라벨 30 개 중 25 개가 카운트 맵 키와 정확히 매칭 — 코드와 데이터 모두 정상. **근본 원인은 `monitoring/index.html` 의 `<script src="script.js?v=20260519-21">` 캐시 무효화 쿼리스트링이 5 월 19 일 21 번 버전에 고정되어 있어, 우리의 v001.88.0 / v001.89.0 / v001.90.0 머지본을 브라우저가 fetch 하지 않은 것**. 동일 URL 의 하드 리프레시도 환경에 따라 캐시를 깨지 못함. `?v=20260519-21` (styles.css 와 script.js 두 줄 모두) 을 `?v=20260520-01` 로 갱신.
+
+### 영향 파일
+
+- `monitoring/index.html`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음.
+
+### 운영 메모
+
+3 사이클 헛수정 사례. 메모리 `feedback_cross_package_bundle_target.md` (헛수정 사이클 회피) 와 같은 클래스 — 가설 기반 핫픽스 대신 정적 증거 (aggregate.json 의 invocation 수 + by_day 라벨 매칭률) 와 `index.html` 의 cache-bust 쿼리를 처음에 1 회 확인했다면 1 사이클에 종결됐을 사안. 차후 monitoring 변경 시 cache-bust 쿼리 갱신을 처음부터 함께 변경하는 것을 운영적 습관으로 권고 (단, 신규 규칙·훅·체크리스트 추가는 `feedback_no_prevention_treadmill.md` 의 3 질문 통과 필요).
+
 ## v001.90.0
 
 > 통합일: 2026-05-20
