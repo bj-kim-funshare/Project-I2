@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.288.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #127 (버튼 셀 행 액션 즉시 반영 + 동일상태 재클릭 가드)
+
+### 개요
+
+데이터 뷰어→버튼 타입 셀의 "행 삭제 / 행 즉시 삭제" 가 새로고침 없이는 화면에 반영되지 않던 버그 수정 + 같은 버튼을 재클릭했을 때 이미 목표 상태인데도 success 토스트가 뜨고 (deadline 등) 객체 raw JSON 이 표면화될 가능성을 차단하는 가드 도입.
+
+원인:
+- 행 삭제: 정규 경로 `gridUtil.deleteRow([row])` (rowDeleteUtils.deleteRow — `stateManager.removeRows` / `reorderRowByIndex` / 서브그리드 orphan 정리 / `saveBatchChanges` / `notifyRowDeleted` 6단계) 가 있는데, 버튼 셀의 `deleteRowAction` 만 정규 경로를 우회해 `viewerModel.rowModelList.splice` + `saveChange(deleteChange)` + `onRefresh()` 만 수행 → 그리드 렌더링 source-of-truth 인 `stateManager.rows` 미갱신.
+- 재클릭 가드 부재: complete/incomplete/reset 액션이 사전 판정 없이 무조건 cell 값을 덮어쓰고 success 토스트 표시. 이미 incomplete 상태의 deadline cell 에 동일 JSON 을 재기록하는 과정에서 raw 객체 직렬화 문자열이 표면화될 여지.
+
+해법:
+- Phase 1: `ButtonActionContext` 에 `gridUtil` + `stateManager` 노출, `deleteRowAction` 을 `await gridUtil.deleteRow([internalRow])` 단일 호출로 위임 (`row-menu.ts:44` 등 다른 호출처와 동일 패턴). 디스패처 / 호출부 async 전파.
+- Phase 2: `ButtonActionResult = { status: 'executed' | 'no_change' }` 신설, complete/incomplete/reset 각각에 `isAllAlready*` guard 도입 — 모든 target cell 이 이미 목표 상태면 `saveChange` / `cell.cellValue` 재기록 / `onRefresh` 일절 호출 안 함 (raw 표면화 트리거 차단) + `no_change` 반환. `useButtonAction.doExecute` 가 status 분기해 `toastAlreadyInState` ("이미 모두 해당 상태입니다") 표시. i18n ko/en/zh/ja 4언어 동기.
+
+### 페이즈 결과
+
+- **Phase 1** (fix): `ButtonActionContext` 에 `gridUtil`/`stateManager` 필드 추가, `deleteRowAction` 재작성 (`gridUtil.generateCustomRowList()` → `await gridUtil.deleteRow([internalRow])` 위임, 자체 splice/saveChange/onRefresh 제거), `executeButtonAction` async/Promise<void>, `useButtonAction` 에서 `useGridContext().gridUtil` 주입 + pendingAction Promise 타입 정합. (`10d716bf`)
+- **Phase 2** (fix): `ButtonActionResult` 타입 도입, `complete/incomplete/resetRowAction` 에 모듈 스코프 guard 함수 (`isAllAlreadyCompleted` / `isAllAlreadyIncomplete` / `isAllAlreadyReset`) 추가 — boolean/checkbox/deadline 모두 이미 목표 상태면 즉시 `no_change` 반환 (cell 재기록 금지). `deleteRowAction` 항상 `executed` 반환. 디스패처 반환 `Promise<ButtonActionResult>` 통일. `useButtonAction.doExecute` 가 result.status 분기해 `toastAlreadyInState` 토스트. ko/en/zh/ja 4언어에 `button.toastAlreadyInState` 신규 키 + `TranslationKeys` 동기. (`b61f93cc`)
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/types.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/deleteRowAction.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/completeRowAction.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/incompleteRowAction.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/resetRowAction.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/index.ts`
+- `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/translations/ko.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/translations/en.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/translations/zh.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/translations/ja.ts`
+- `packages/fs-sub-data-viewer/src/shared/config/i18n/types.ts`
+
 ## v001.287.0
 
 > 통합일: 2026-05-20
