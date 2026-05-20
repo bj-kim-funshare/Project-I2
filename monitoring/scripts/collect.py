@@ -48,6 +48,20 @@ PRICING = {
 }
 
 
+_SENTINEL_MODELS: frozenset[str] = frozenset({"unknown", "<synthetic>", "API 에러", "시스템 합성"})
+_DATED_SUFFIX_RE = re.compile(r"-\d{8}$")
+
+
+def _normalize_model_key(raw: str) -> str:
+    """Strip a dated suffix (-YYYYMMDD) from a model key so it matches PRICING keys.
+
+    Sentinel model names are returned unchanged.
+    """
+    if raw in _SENTINEL_MODELS:
+        return raw
+    return _DATED_SUFFIX_RE.sub("", raw)
+
+
 def empty_token_record() -> dict[str, int]:
     return {
         "input": 0,
@@ -375,7 +389,7 @@ def build_by_prompt(
             if raw_model == "<synthetic>":
                 model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
             else:
-                model = raw_model
+                model = _normalize_model_key(raw_model)
             target["input_tokens"] += usage.get("input_tokens", 0) or 0
             target["output_tokens"] += usage.get("output_tokens", 0) or 0
             target["cache_read"] += usage.get("cache_read_input_tokens", 0) or 0
@@ -531,7 +545,7 @@ def build_by_skill_invocation(
                     if raw_model == "<synthetic>":
                         model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
                     else:
-                        model = raw_model
+                        model = _normalize_model_key(raw_model)
                     add_usage(main_session, usage)
                     rec_tok = empty_token_record()
                     add_usage(rec_tok, usage)
@@ -587,7 +601,7 @@ def build_by_skill_invocation(
                 agent_usage = tur.get("usage")
                 if not agent_usage:
                     continue
-                agent_model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                agent_model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
                 if agent_type not in by_agent:
                     by_agent[agent_type] = empty_token_record()
                     by_agent_cost[agent_type] = 0.0
@@ -1095,7 +1109,7 @@ def collect() -> dict[str, Any]:
                 if raw_model == "<synthetic>":
                     model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
                 else:
-                    model = raw_model
+                    model = _normalize_model_key(raw_model)
                 raw_skill = rec.get("attributionSkill")
                 if raw_skill:
                     sticky_skill = raw_skill
@@ -1192,7 +1206,7 @@ def collect() -> dict[str, Any]:
                 agent_usage = tur.get("usage")
                 if not agent_usage:
                     continue
-                model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
                 ts = rec.get("timestamp")
                 cwd = rec.get("cwd")
                 branch = rec.get("gitBranch")
