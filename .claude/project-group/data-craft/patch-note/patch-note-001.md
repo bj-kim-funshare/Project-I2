@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.311.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #133 (HOTFIX 1)
+
+### 개요 — 트랙패드 horizontal 스크롤 시 헤더 +40px drift containment
+
+v001.305.0 (Phase 1, useScrollSync 3d82b92a 회귀 revert) 이후에도 마스터 보고: 트랙패드로 그리드 뷰 열 헤더 영역을 horizontal 스크롤하면 디자인 / 뷰 모드 모두에서 헤더만 "+ 행추가버튼 너비" 만큼 더 스크롤됨. 마우스로는 차단됨(=정상). 트랙패드 전용 트리거.
+
+### 근본 원인 (1차 진단)
+
+- 헤더 inner flex (`GridHeader.tsx` L116-118): `style={{ minWidth: 'max(fit-content, 100%)' }}` + trailing 40px spacer (L157-160).
+- 본문 inner div (`GridBody.tsx` L263): `<div className="flex-1">` — **minWidth 부재**. RowMenuColumn(40px) sibling.
+- 구조적 너비 비대칭으로 `header.scrollWidth > body.scrollWidth` 가 되어, 트랙패드 horizontal 제스처가 헤더 컨테이너를 source 로 만들면 본문은 max 에서 clamp 되고 헤더만 더 멀리 스크롤됨. 마우스 휠은 native 가 horizontal 을 직접 일으키지 않아 트리거되지 않음 (마스터 단서와 정합).
+
+### 페이즈 결과
+
+- **Phase 2 / HOTFIX 1** (`079ae623`): `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts` 의 `createScrollHandler` 에 **source-self clamp** 추가. 각 타겟에 `scrollLeft` 를 쓴 직후 브라우저가 실제로 적용한 값(clamp 결과)을 읽어 최솟값 측정. source 의 scrollLeft 가 그 최솟값을 초과했으면 source 도 동일 값으로 끌어내림. 이로써 트랙패드 horizontal 제스처가 헤더를 source 로 삼을 때 본문보다 더 멀리 가는 시각적 drift 가 sync 레이어에서 차단됨. JSDoc 도 보강 (clamp 동작 명시).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 17 warnings).
+- advisor (hotfix 시점, 5-perspective): 5/5 PASS.
+- 마스터 수동 검증은 PENDING 게이트에서.
+
+### 절차 노트 — containment 성격 명시
+
+본 HOTFIX 1 은 **sync 레이어 containment** 다 (advisor 권고: "containment of asymmetry pending structural diagnosis"). 구조적 비대칭(`GridBody.tsx` L263 inner div 의 `minWidth: 'max(fit-content, 100%)'` 부재) 자체는 해소되지 않았다. 마스터 검증 후 정상 동작 확인되면 그대로 두고, 다음 그리드 layout 변경 사이클에서 헤더-본문 inner 구조 정렬을 별도 작업으로 권장.
+
+부수 효과 — source.scrollLeft 재할당이 일부 브라우저에서 비동기 scroll event 를 한 번 더 발화시킬 수 있으나, Phase 1 의 가드 윈도우(한 프레임)와 결합되어 두 번째 사이클은 no-op 으로 수렴 (무한 루프 아님, 1프레임 노이즈 가능성).
+
 ## v001.310.0
 
 > 통합일: 2026-05-20
