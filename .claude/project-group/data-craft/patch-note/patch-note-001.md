@@ -1,5 +1,77 @@
 # data-craft — Patch Note (001)
 
+## v001.285.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #120 (HOTFIX 4 — 콘솔 경고 2건 해소: HydrateFallback + aria-hidden focus)
+
+### 마스터 보고 (스크린샷)
+
+5탭 시연 정상 확인. ScreenHome populated. 콘솔에 노이즈:
+- 빨강 5건: `FrameDoesNotExistError` / `Unchecked runtime.lastError` — 브라우저 확장 (background.js) 노이즈, **우리 코드 외**.
+- 노랑: `No HydrateFallback element provided to render during initial hydration` (main.tsx:16) — React Router v7 lazy 라우트 경고.
+- 노랑: `Blocked aria-hidden on an element because its descendant retained focus` — root `<div>` 에 aria-hidden 이 적용된 상태에서 login input 이 focus 유지.
+
+### 원인
+
+1. **HydrateFallback 누락**: React Router v7 가 lazy 라우트의 초기 hydration 동안 보여줄 fallback element 를 router 정의 시점에 요구. 미정의 시 경고.
+2. **aria-hidden focus 충돌**: `vaul` 의 `Drawer.Root` 가 modal 모드 (기본값) 에서 portal 형제 element 에 aria-hidden 을 적용해 포커스 트랩 구현. IOSInstallHint 가 AppShell 안에 mount 되어 있어 (open=false 일 때도) 초기 hydration / focus 이벤트 시점에 root 에 aria-hidden 이 잠시 걸리는 케이스 발생.
+
+### 변경
+
+#### 1. `apps/web/src/mobile/router.tsx` — HydrateFallback 추가
+
+```tsx
+import { LoadingSpinner } from './components/LoadingSpinner';
+
+function RouteHydrateFallback() {
+  return <LoadingSpinner label="로딩 중" />;
+}
+
+export const router = createBrowserRouter([
+  { path: '/', element: ..., HydrateFallback: RouteHydrateFallback },
+  { path: '/m', element: <AppShell />, HydrateFallback: RouteHydrateFallback, children: [...] },
+]);
+```
+
+#### 2. `apps/web/src/mobile/components/IOSInstallHint.tsx` — vaul `modal={false}`
+
+```tsx
+<Drawer.Root open={open} modal={false} onOpenChange={...}>
+```
+
+modal=false 모드는 focus trap + 형제 element aria-hidden 적용을 비활성. iOS 설치 힌트는 모달성 강제가 필요 없는 카드형 안내이므로 안전한 trade-off.
+
+### 시연
+
+브라우저 새로고침 → 콘솔에서 빨강 0 (확장 노이즈는 외부) / 노랑 0 확인. HydrateFallback 의 LoadingSpinner 가 lazy 라우트 전환 시 잠시 표시.
+
+### 검증
+
+- `pnpm typecheck`: PASS.
+- `pnpm test --run`: 674 passed / 5 skipped / 0 failed (679).
+
+### 브라우저 확장 노이즈 (참고)
+
+```
+Uncaught (in promise) FrameDoesNotExistError: Frame XXX does not exist in tab YYY (background.js:1:49254)
+Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.
+Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache, ...
+```
+
+이 3종 빨강은 마스터 Chrome 설치 확장 (e.g. password manager, AI tool) 의 `background.js` 가 발신한 메시지가 자기 페이지를 못 찾아서 발생. 본 앱과 무관 — 시크릿 창에서 확장 비활성 후 재현 안 됨 확인.
+
+### Deferred (누적)
+
+- `pnpm build` (vite production) 실패: fs-form-builder-mobile / fs-data-viewer-mobile broken `@/` alias (lazy 라우트).
+- packages 4종 부분 복사 본체 정리.
+- PHASE 0.1 잔재 (`src/app/`, `src/pages/`, `src/main.tsx`) 삭제.
+
+### 영향 파일
+
+- `apps/web/src/mobile/router.tsx` (+9)
+- `apps/web/src/mobile/components/IOSInstallHint.tsx` (+1)
+
 ## v001.284.0
 
 > 통합일: 2026-05-20
