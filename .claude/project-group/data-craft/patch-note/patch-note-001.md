@@ -1,5 +1,66 @@
 # data-craft — Patch Note (001)
 
+## v001.281.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #123 (HOTFIX 1 — file/image 셀 reset 후 UI 즉시 갱신)
+
+### 마스터 보고
+
+"이제 삭제는 되는데 UI에 즉시 반영 안되서 새로고침해야 사라져있어"
+
+### 원인
+
+v001.278.0 (#123) Phase 1 의 BE 삭제 정상화 이후 두 결합 결함이 표면화:
+
+1. **재로드 미트리거**: `useFileCell.ts:115` / `useImageCell.ts:108` 의 `useEffect` 가 `[loadFiles, cellValue]` 의존. file/image 셀의 `cellValue` 는 자연적으로 `''` (실제 파일 데이터는 별도 BE 테이블) — `resetRowAction` 의 `cell.cellValue = ''` mutation 이 no-op 으로 useEffect 미발화.
+2. **캐시 적중**: `BatchFileLoader.FileResultCache` 가 reset 직전 결과를 캐싱. 설사 useEffect 가 발화돼도 default 로드 (`forceRefresh: false`) 는 stale 결과 반환.
+
+`onRefresh()` (= `triggerRerender`) 은 grid 리렌더만 트리거 — 셀 hook 의 useEffect 의존이 변하지 않아 무효.
+
+### 변경
+
+#### Phase 2 (HOTFIX 1): per-cell 리프레시 레지스트리 (`15eab0b` + `86dda27`)
+
+**1. `packages/fs-data-viewer/src/shared/lib/file-cell-refresh-registry.ts`** (신규)
+
+```ts
+// Map<key, Set<RefreshFn>>, key = `${dvf}-${cf}-${rf}-${cellType}`
+registerFileCellRefresh(dvf, cf, rf, cellType, refresh)  // returns deregister
+triggerFileCellRefresh(dvf, cf, rf, cellType)            // Promise.allSettled-wrapped
+```
+
+**2. `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/useFileCell.ts`**
+
+마운트 시 `refreshFiles` (기존 `forceRefresh: true` 호출자) 를 레지스트리에 등록, 언마운트 시 cleanup return 으로 해제.
+
+**3. `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridImageCellRenderer/useImageCell.ts`**
+
+`handleDialogClose` 내 인라인 갱신 블록을 `refreshImages` useCallback 으로 추출 → handleDialogClose 가 이를 호출 (DRY) + 레지스트리에 등록.
+
+**4. `packages/fs-data-viewer/src/features/grid/lib/button-actions/resetRowAction.ts`**
+
+file/image 삭제 + `saveChange` 직후 `triggerFileCellRefresh(dataViewerField, item.columnField, rowField, item.typeId as 'file' | 'image')` 발화. `dataViewerField !== undefined` 가드 (`ButtonActionContext.dataViewerField` 가 optional).
+
+### 효과
+
+- 행 초기화 → BE 삭제 (Phase 1 효과) → 영향 셀의 forceRefresh 로드 (HOTFIX 1 효과) → 캐시 무효화 + fresh setItems → **새로고침 없이 UI 즉시 반영**.
+- virtualization 으로 unmount 된 셀은 `trigger` no-op 이지만 캐시 무효화는 셀 재마운트 후 forceRefresh 호출에 의해 동일 효과 — 커버리지 동일.
+
+### 검증
+
+1. `pnpm typecheck:all && pnpm lint` 통과 (0 errors, 19 warnings).
+2. 수동 e2e (마스터): 이미지/파일 셀이 있는 행에 파일 업로드 → 행 초기화 → **새로고침 없이** 셀이 비어 있음 확인.
+
+### 영향 파일
+
+```
+data-craft/packages/fs-data-viewer/src/shared/lib/file-cell-refresh-registry.ts   (NEW)
+data-craft/packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFileCellRenderer/useFileCell.ts
+data-craft/packages/fs-data-viewer/src/widgets/cell-renderers/FsGridImageCellRenderer/useImageCell.ts
+data-craft/packages/fs-data-viewer/src/features/grid/lib/button-actions/resetRowAction.ts
+```
+
 ## v001.280.0
 
 > 통합일: 2026-05-20
