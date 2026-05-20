@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.299.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 11 — 그룹 전체 삭제 즉시 반영 버그 수정)
+
+### 개요
+
+마스터 보고: HOTFIX 8 의 `연결 그룹 삭제` (전체 선택) 가 동작하지만 본문 viewer grid 에 **즉시 반영 안 되고 새로고침해야 사라짐**. 부분 삭제 (`선택 연결 열 제거`) 는 정상.
+
+### 원인
+
+HOTFIX 8 lint hotfix (`b2154d1c`) 가 react-hooks/immutability 규칙 위반으로 `handleDeleteGroup` 의 viewerModel 직접 mutation 을 제거하고 `saveChange(immediate)` 만으로 단일화. saveChange 는 스토어 큐 경유이므로 onClose 로 dialog unmount 시점에 grid 는 stale columnModelList 를 참조 → 새로고침 전까지 삭제된 열 그대로 노출.
+
+부분 삭제 (`handleRemove`) 는 mutation 코드가 `showAlert` 콜백 내부 (deferred callback) 에 위치하여 react-hooks/immutability 가 추적하지 않으므로 직접 viewerModel mutation 가능 → 즉시 반영.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`** (`cdce8cf9`): `handleDeleteGroup` 의 루프 + saveChange + onRefresh + onClose 를 `showAlert` 콜백 내부로 이동. 부분 삭제와 정확히 동일 구조로 맞춤. mutation 이 deferred callback 안에 들어가면서 lint 규칙 회피 + viewerModel 직접 갱신 가능 → 즉시 반영 달성.
+
+### 부수 효과
+
+그룹 전체 삭제 시 **확인 대화상자** 추가됨 (showAlert 가 갖는 자연스러운 부수 효과). 부분 삭제와 UX 일관성 + 그룹 전체 삭제는 destructive 동작이라 confirm step 이 정당화됨.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (`cdce8cf9`: +20/-13). 이전 진단 commit `cddf16ee` 는 lint 차단 → 본 fixup 이 보강.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 20 warnings).
+- 회귀: 부분 삭제 / 리더 + 일부 부하 / 리더 단독 / 비 rowLink / 비리더 chevron / 리더 chevron 직접 모달 모두 무변경.
+
 ## v001.298.0
 
 > 통합일: 2026-05-20
