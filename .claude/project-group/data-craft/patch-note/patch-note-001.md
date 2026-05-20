@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.357.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 25 — HOTFIX 24 dedupe 롤백, 행연결 row identity 복원)
+
+### 개요
+
+마스터 정정: HOTFIX 24 의 `deduplicatedItems` 가 **행연결 핵심인 row identity 자체를 부수었음**. target group 의 복수 row 가 같은 display value 일 때 picker 에 1개만 노출 → 사용자 선택 불가, 다른 연결 열 동기화도 깨짐.
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`a25ef81f`, +4/-15):
+  - HOTFIX 24 의 `deduplicatedItems` useMemo **완전 제거**.
+  - `filteredItems` 가 sort 된 items 배열 직접 소비.
+  - React key 를 copy 모드에서 중복 가능했던 itemId (value 문자열) → 항상 BE row-unique 인 **`item.valueId`** 로 교체.
+  - reference 모드 selected matching (`getItemId = String(item.valueId)`) 는 이미 row-unique 였으므로 무변경.
+  - copy 모드 selected matching 은 값 문자열 기준 — 동일 값의 복수 row 가 모두 selected 표시되는 것은 copy 모드 의미론상 정상 동작 ("어떤 row 인지 불문하고 '이 값'을 선택").
+
+### Blocker (후속 후보)
+
+`ConnectionValueItem` 타입에 rowId 필드 없음 — BE 가 반환하는 row 식별자는 valueId 로, reference 모드에서는 row-unique. **copy 모드** 의 진정한 row-unique 선택 지원이 필요하다면 ConnectionValueItem 에 rowId (또는 sourceRowId) 추가 + 셀 저장 포맷 변경 필요 — 별도 플랜 범위.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 24 의 image/file 연동 복원 + document JSON 가공 그대로 유지 (본 핫픽스는 dedupe 만 롤백).
+
 ## v001.356.0
 
 > 통합일: 2026-05-20
