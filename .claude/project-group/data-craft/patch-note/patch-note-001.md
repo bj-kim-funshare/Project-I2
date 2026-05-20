@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.350.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 13 (빈 페이지 / 막대 우측 진행률 / month 중앙 격자 / DAY 외곽 border)
+
+### 개요
+
+마스터 보고 4 건 (모두 같은 hotfix 묶음):
+1. 브라우저 인쇄창에서 마지막에 **빈 페이지** 하나 생김.
+2. 월 단위(MONTH) 인쇄에서 **가장 긴 막대의 끝 % 진행률 잘림**.
+3. 월 단위 출력 시 각 월 cell 의 **중앙에 세로 격자선** 하나 더 추가.
+4. **일 단위(DAY) 인쇄에서 chart 외곽 테두리** 가 없음 (MONTH 만 있고 DAY 누락).
+
+### 해법
+
+**A. 빈 페이지 제거** (`useGanttPrint.ts` CSS):
+- `.gantt-appendix-page` 에 `page-break-after: avoid` + `break-after: avoid` (모던 alias) 추가.
+- `min-height: 100vh` → `calc(100vh - 24mm)` 미세 축소로 trailing overflow 차단.
+- `@media print` 블록 내 동일 규칙도 일관 추가.
+
+**B. 막대 우측 진행률 잘림 해소** (`printHtmlBuilder.ts`):
+- `computeUsablePx` 함수 반환 직전 **safety margin 8px 차감**.
+- MONTH mode 의 가장 긴 막대 (전체 기간 차지) 가 chart 우측 border 와 8px 떨어져 표시 → progress text 잘림 차단.
+- DAY mode 도 동일 보정된 usablePx 사용 → 자동 적용.
+
+**C. MONTH 각 월 중앙 격자선** (`printHtmlBuilder.ts`):
+- `renderMonthMode` 의 divider 루프에 각 month cell 의 **중앙** (`m.left + Math.round(m.width / 2)`) 에 `gantt-print-month-divider gantt-print-month-mid-divider` 클래스 div 추가.
+- month boundary divider 는 기존 위치 그대로 유지.
+- 시각은 boundary 와 동일 (1px / #e5e7eb / pointer-events:none). 추후 dashed/opacity 차등 미세 보정 가능하도록 mid-divider 별도 클래스 stub.
+
+**D. DAY mode 외곽 border** (`useGanttPrint.ts` CSS):
+- `.gantt-print-chart` 자체에 `border: 1px solid #e5e7eb` + `border-radius: 6px` + `overflow: hidden` 통합.
+- DAY/MONTH 양쪽 mode 자동 적용. MONTH mode 의 기존 `.gantt-print-chart-bordered` 는 빈 stub 으로 남김 (중복이지만 무해).
+
+### 페이즈 결과
+
+- **Phase 14 / HOTFIX 13** (fix · 3 commits):
+  - 46543ef5: 빈 페이지 + 진행률 잘림 (A + B).
+  - 3aeab2d4: MONTH 중앙 격자 (C).
+  - fbae06d7: DAY mode chart 외곽 통합 (D).
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- HOTFIX 11/12 의 듀얼 모드 + 부록 카드 중앙 정렬 + month boundary divider 등 모두 보존.
+- HOTFIX 6/7/8 부록 노션 토큰 / 3열 / 큰 타이틀 무관.
+- 캘린더 인쇄 무관 / BE/DB 무수정 (Roadmap-1 lock).
+- 향후 mid-divider 시각 차등 (dashed / opacity) 이 필요하면 `.gantt-print-month-mid-divider` stub 활용 가능.
+
 ## v001.349.0
 
 > 통합일: 2026-05-20
