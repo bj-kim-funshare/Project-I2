@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.275.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 4 — 리더 컬럼 메뉴 단일 항목 축소)
+
+### 개요
+
+마스터 보고: 행 연결 리더 컬럼의 열 메뉴에 일반 메뉴 항목 (제목/너비/단위/단위 위치/기본값/본문 스타일/정렬/행 그룹/칸반 기준/고정/이동/삭제 등) 이 그대로 노출되는데, HOTFIX 2 의 "행 연결 그룹 관리" 모달 안 세부 패널에서 모두 편집 가능 → **완전 중복**. 본 핫픽스는 리더 컬럼 메뉴를 "행 연결 그룹 관리" 단일 항목으로 축소.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`** (`8cd7bbd`): `createColumnMenuItems` 진입점에 `columnModel.type.id === 'rowLink' && parseRowLinkConfig(...).isLeader === true` 조건 early-return 분기 도입 — 매칭 시 `t.columnMenu.rowLinkManage` 액션 단일 항목 배열 반환 + 빌더 잔여 로직 전체 skip. HOTFIX 1 이 빌더 말미에 추가했던 "행 연결 그룹 관리" 항목 로직을 진입점으로 이동 + 원위치 dead code 제거.
+
+### 동작 표
+
+| 컬럼 종류 | 열 메뉴 |
+|---|---|
+| 일반 컬럼 (비 rowLink) | 기존 그대로 (제목/너비/단위/스타일/고정/이동/삭제 등 일반 항목) |
+| rowLink + isLeader=true (리더) | **"행 연결 그룹 관리" 단일 항목만** |
+| rowLink + isLeader=false (비리더) | HOTFIX 1 의 chevron 차단 — 메뉴 진입 자체 불가 |
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 19 warnings).
+- 회귀: 비 rowLink 컬럼 메뉴 + 비리더 chevron 차단 (HOTFIX 1) + 리더 dialog 자체 (HOTFIX 2/3) 모두 무변경.
+
 ## v001.274.0
 
 > 통합일: 2026-05-20
