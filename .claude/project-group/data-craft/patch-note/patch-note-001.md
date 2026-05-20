@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.326.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 15 — rowLink delegate renderer 복원 + target column width 복사 미작동 수정)
+
+### 개요
+
+마스터 보고 2건:
+1. **연결로 가져온 셀들의 동작**: target column 타입과 동일하게 동작해야 하는데 현재 모든 셀이 클릭 시 dropdown picker 만 노출. 긴 텍스트 / 단일 선택상자 / 체크박스 등 타입별 표시 전혀 안 됨 — delegate renderer 무력화.
+2. **target column width 복사 미작동**: HOTFIX 13 이 width 1회 복사 도입했으나 다른 너비의 target 으로 테스트 시 모든 연결 열이 같은 너비 (defaultWidth) 로 들어감.
+
+### 원인 진단
+
+**결함 1 (delegate renderer 무력화)**: `RowLinkRenderer.tsx` 의 delegate 분기가 early return 으로 구현 → `config + value + columnModel + viewerModel` 조건 만족 시 click handler 없이 delegate renderer 만 반환. 칸반/캘린더 카드 드로어의 rowLink 셀에서 picker 진입 불가 + 표시는 정상 위임. **HOTFIX 12 의 universal-trigger 도입 시 leader=true 분기 제거하면서 delegate 분기의 click handler 부착 경로가 끊긴 것**.
+
+**결함 2 (width 복사 미작동)**: `RowLinkConfigDialog.handleConfirm` 의 displayProps 빌더 (append / normal 두 모드 모두) 가 **width 필드를 누락**. ConnectionColumnItem 의 width 매핑 (HOTFIX 13 의 connectionCallbacks 4개 파일 + addRowLinkColumns 의 inherited.width 사용) 은 정상 작동했으나, 중간 displayProps 객체가 width 를 누락하여 항상 `undefined → defaultWidth` 로 귀결.
+
+### 변경 (2 파일, +51/-28)
+
+#### 1. RowLinkRenderer.tsx (결함 1)
+- delegate 분기를 early return 에서 **span 래퍼 + onClick handler** 안으로 이동.
+- 표시는 `RowLinkDelegateRenderer` (target 타입 component) 가 담당, 클릭은 기존 picker 경로 그대로 트리거.
+- 결과: 표시 = target 타입 (긴 텍스트 / select / 체크박스 등 타입별 정확 렌더링), 클릭 = picker dropdown → target row 선택. 두 동작 공존.
+
+#### 2. RowLinkConfigDialog.tsx (결함 2)
+- `handleConfirm` 의 displayProps 빌더 양쪽 분기 (append / normal) 에 `width: target?.width` 추가.
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkRenderer.tsx` (`b5050100`: delegate + onClick 결합)
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx` (`b5050100`: displayProps width 누락 보강)
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 12 universal-trigger / HOTFIX 13 4개 속성 복사 (unit/unitPosition/cellRendererModelList) / HOTFIX 14 보라 바 제거 모두 무변경. 두 결함 수정 독립 (서로 다른 파일).
+
+### 후속 (확인 필요)
+
+마스터 manual 테스트:
+- 긴 텍스트 / 단일 선택상자 / 체크박스 / 날짜 / 숫자 등 다양한 타입을 target column 으로 매핑한 rowLink 셀이 본래 타입의 표시 양태로 렌더되는지 확인.
+- target column 너비 변경한 뒤 그것을 매핑한 새 rowLink 컬럼 추가 → 새 컬럼의 너비가 target 너비와 동일하게 1회 복사되는지 확인 (이후 target 변경되어도 source 무변경 — 1회 복사 원칙 유지).
+
 ## v001.325.0
 
 > 통합일: 2026-05-20
