@@ -1,5 +1,61 @@
 # data-craft — Patch Note (001)
 
+## v001.331.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 8 (간트 인쇄 — 타이틀 강조 + 3열 부록 + 본체 화면 디자인 미러링)
+
+### 개요
+
+HOTFIX 7 노션 스타일 적용 통과 후 마스터 추가 요구 3건:
+1. "일정 상세" 부록 타이틀이 타이틀답게 크고 굵게.
+2. 부록 카드 본문 2열 → 3열.
+3. 간트 인쇄 본체를 화면 간트 뷰와 거의 동일 디자인으로 (격자, 일별 헤더, 월 헤더, 색칠된 둥근 막대, 좌측 라벨 영역).
+
+### 해법
+
+**A. 부록 타이틀 강조**: `.gantt-appendix-title` 14px/600 → **20px/700**, letter-spacing -0.02em, margin `32px 0 16px`.
+
+**B. 부록 3열**: `.gantt-appendix-row { grid-template-columns: 1fr 1fr 1fr; column-gap: 20px }`, cell label 폭 160px → **100px** 축소 (3열 폭 보정). `buildGanttAppendixCards` 의 컬럼 묶음 로직 2 → 3, 부족분 빈 cell.
+
+**C. 본체 화면 미러링** (`buildGanttHorizontalHtml` 전면 재작성):
+- 디자인 토큰: DAY_WIDTH 40px / ROW_HEIGHT 48px / 월 헤더 32px / 일별 헤더 36px / 라벨 영역 200px.
+- 월 그룹핑 후 월 헤더 row (예: "2026년 5월", width = group.dayCount × 40px).
+- 일별 헤더 row: 일 번호 + 한글 요일 stacked, 토요일 배경 `rgba(59,130,246,0.1)`/파란 텍스트, 일요일 배경 `rgba(239,68,68,0.1)`/빨간 텍스트.
+- 본문 row: 좌측 라벨 cell + 우측 canvas (px 기반 absolute 막대). 세로 격자 `repeating-linear-gradient(to right, transparent 0..39px, #e5e7eb 39..40px)`. 가로 격자는 row border-bottom 으로 일원화.
+- 막대: `border-radius: 8px`, `BAR_COLORS[colorIndex]` background (HOTFIX 6 색 정합 유지), 흰색 텍스트 라벨 + 진행률 우측 정렬, 약한 box-shadow.
+- 인쇄 색 보존: 컨테이너 / 막대 / weekend cell 에 `print-color-adjust: exact` + `-webkit-print-color-adjust: exact`.
+- 기존 inline `<style>` 블록을 제거하고 모든 CSS 를 `generateGanttStyles()` 에 일원화.
+
+### 페이즈 결과
+
+- **Phase 9 / HOTFIX 8** (fix): `buildGanttHorizontalHtml` 전면 재작성 (월 헤더 그룹핑 + 일별 헤더 + repeating-linear-gradient 격자 + px 기반 absolute 막대 + print-color-adjust). `buildGanttAppendixCards` 3열 컬럼 묶음. `.gantt-appendix-title` 14/600 → 20/700, label 폭 100px 로 축소, CSS 일원화. (`47f45b44`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고 — 알려진 제약 (advisor 권고로 명시)
+
+**페이지 폭 초과 가능성**: 화면 간트와 디자인 정합을 위해 DAY_WIDTH=40px 고정. timeline 최대 6 개월(183 일) 범위 × 40 = 7320 px + 라벨 200 px = 7520 px. A4 가로 ≈ 1123 px @96dpi. 인쇄 종이 폭을 한참 초과 — landscape 출력이나 시간 범위가 좁은 경우는 fit, 큰 범위는 잘림 가능. row 가 단일 flex element 라 브라우저 자동 줄바꿈 안 됨.
+
+대안 분기 (마스터 PDF 확인 후 후속 hotfix 검토):
+1. **그대로 유지** — landscape + 좁은 범위 가정.
+2. **DAY_WIDTH 동적 축소** — 페이지 폭에 맞춰 자동. 화면 정합 강도 약화.
+3. **페이지별 timeline 분할** — 행은 페이지마다 반복, 날짜 segment 만 다름. 본격 작업.
+
+본 hotfix 는 디자인 미러링 강도 우선 — 폭 보정은 후속.
+
+### 기타 보존
+
+- HOTFIX 6 의 막대 색 동적 반영 — BAR_COLORS[colorIndex] 그대로.
+- HOTFIX 7 의 부록 카드 노션 토큰 (Clay shadow, 라벨/값 색, border-radius 12px) — 3열화/라벨 축소 외 유지.
+- HOTFIX 6 의 부록 제목 "일정 상세 (총 N개)" — 텍스트 변경 없이 폰트만 강조.
+- `buildCalendarAppendixTable` — 무수정 (캘린더 인쇄와 공유).
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+
 ## v001.330.0
 
 > 통합일: 2026-05-20
