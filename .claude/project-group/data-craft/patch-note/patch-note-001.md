@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.274.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #120 (data-craft-mobile 전 화면 디자인 시안 정합 + FE-only 모크 충전)
+
+### 개요
+
+마스터 보고: data-craft-mobile 실행 시 모든 화면이 비어 보임. BE/DB 무수정 제약 아래 prototype 디자인팀 시안을 기준으로 login 부터 전 화면을 "보이는" 상태로 구현. 26 라우트 전부 prototype 비주얼 패턴으로 정합하고 7개 Placeholder 라우트를 FE-only mock 으로 신규 구현했다. (라우터 root errorElement 부재로 인한 진짜 blank-screen 은 #117 HOTFIX 1·2 에서 이미 해소되어 본 플랜과 무관.)
+
+### 페이즈 결과 (12 commit)
+
+- **Phase 1 (`d77cac4`)** — 디자인 토큰 & 공통 레이아웃: tokens.css 9개 신규 ds-* 색상 + nav/header/tab/input/CTA 표준 + shadow-brand. AppHeader/BottomTabs/AppShell/OfflineBanner 가 prototype 패턴 정합. tailwind.css `@theme` 전체 브리지.
+- **Phase 2 (`bf31164`)** — mock 인프라 + Home: `mocks/` 폴더 신설 + `useMobileMocks()` (env `VITE_USE_MOBILE_MOCKS=true`). 3 stub hook mock 분기. ScreenHome / HomeHero / WorkspaceSwitcher / QuickAccessSection 비주얼 정합.
+- **Phase 3 (`8ebd5e2`)** — 인증 화면군 (Login/Signup/Forgot/WorkspaceSelect): CSS 모듈 5개 + SignupForm 인라인 → 토큰 변수 전환. SSOButton 50/r10/0.5px.
+- **Phase 4 (`21e3a2a`)** — PageTree + PageViewer: sticky 검색바 + FAB. PageViewer 헤더 + WidgetBox 래퍼. mocks/page-tree + mocks/page-viewer.
+- **Phase 5a (`06cdaab`)** — Viewer Grid + Kanban (exemplar): 5종 모드 탭 + 필터 칩 + 상태 칩 5컬러맵 + 카드. mocks/viewer-grid (15행) + mocks/viewer-kanban (4컬럼·11카드). useServerPaging 로컬 래퍼.
+- **Phase 5b (`803ac8f`)** — Viewer Gantt + Calendar + Dashboard: 5a 패턴 적용. Calendar Month/Week/Day. Dashboard MockKpiGrid + MockBarChart + MockDonutChart SVG.
+- **Phase 6a (`2df635a`)** — Record Detail: prototype ScreenRecord 패턴 재작성. 3탭 brand underline. 4 stub 컴포넌트 → 인라인 mock 렌더 (댓글/반응/활동/공유 실표시). mocks/record (4 레코드).
+- **Phase 6b (`4cb1c98`)** — UserForm: 입력 토큰화, CTA shadow-brand. mocks/user-form (5필드 스키마).
+- **Phase 7 (`0b8d701`)** — Search/Notifications/Inbox/Profile: mocks 3 신설. useGlobalSearch 가 mocks/search 사용. Profile prototype 헤더 + 설정 메뉴 8.
+- **Phase 8 (`2cf00f3`)** — Feed + Compose 신규 (Placeholder 교체): mocks/feed (16 시드) + addFeedPost. ScreenFeed 4 필터 + 5종 활동 카드 + 반응 chip. ScreenCompose textarea + 게시 CTA.
+- **Phase 9 (`024600a`)** — DM List/Thread/Permission 신규: mocks/dm (7 대화) + 1.5초 자동응답. ScreenDmList/Thread/Permission. 권한 모달 7일 TTL.
+- **Phase 10 (`76e86ee`)** — PageFollow 신규: mocks/page-follow (7 시드). 팔로우 토글 + 페이지 목록 + 정보 카드.
+- **Phase 11 (`0f63ae4`)** — 회귀 테스트 fix: advisor #2 가 발견한 21 vitest 실패 전량 해소. 6개 훅/화면의 "BE 빈/에러 시 mock fallback" 분기 제거 (env flag 만 활성). ScreenGridViewer 로컬 래퍼 우회. DODIntegration DOD-03/04/06 을 stub 단위 테스트로 재작성. vite.config.ts (root + apps/web) 서브패스 alias 추가.
+
+### 시연 활성화 (마스터 안내)
+
+mock 시드는 **`VITE_USE_MOBILE_MOCKS=true` env 활성 시에만** 화면에 노출. BE 미실행 + env 미설정 시 기존 empty/error state 폴백 (회귀 테스트 보존).
+
+```
+VITE_USE_MOBILE_MOCKS=true pnpm --filter @data-craft-mobile/web dev
+```
+
+### 검증
+
+- `pnpm typecheck`: PASS (12 commit 전체).
+- `pnpm test --run`: 674 passed / 5 skipped / 0 failed (679). (5 skip = tailwind-build.test.ts dist/ 부재 — CI build 게이트 선행 사유.)
+- 수동 브라우저 시연: 본 플랜 자동 검증 범위 외 — master 별도 확인 권장.
+
+### Deferred (후속 권고)
+
+- **Search 화면 비주얼 잔존**: ScreenSearch.tsx / SearchTabs.tsx / SearchResultCard.tsx 가 Phase 7 affected_files 외였음. 비주얼 미정합.
+- **AppHeader 백드롭 블러 가시화**: AppShell 구조상 헤더 뒤로 콘텐츠가 흐르지 않아 블러 효과 미노출. 헤더 absolute/fixed 전환 후속.
+- **lib/mockSearch.ts 클린업**: mocks/search.ts 로 교체된 후 테스트 외 미사용.
+- **stub 4 컴포넌트 정리**: CommentThreadStub/RecordReactionStub/RecordActivityStub/ShareDMButtonStub 가 components/ 에 살아있으나 ScreenRecordDetail 미사용. RecordDetailStubs.test.tsx 동반 처리 필요.
+- **ScreenProfile 설정 메뉴 라우팅**: 8개가 정적 플레이스홀더.
+- **WorkspaceSwitcher / QuickAccessSection 인라인 → CSS Module 이전 권고.
+
+### 영향 파일 (work repo = `data-craft-mobile`)
+
+- styles: tokens.css, tailwind.css
+- layouts: AppShell.tsx
+- components: AppHeader, BottomTabs, OfflineBanner, HomeHero(+css), WorkspaceSwitcher, QuickAccessSection, SSOButton(+css)
+- hooks: useAssignedRecords, useRecentPages, useActivityFeed, usePageTree, usePageViewer, useServerPaging (신설), useKanbanBoard, useGanttBoard, useGlobalSearch
+- mocks (신설 18): index, flags, home, page-tree, page-viewer, viewer-grid, viewer-kanban, viewer-gantt, viewer-calendar, viewer-dashboard, record, user-form, search, notifications, profile, feed, dm, page-follow
+- screens: home, login (4), signup, forgot-password, workspace-select, page-tree, page-viewer, grid-viewer, kanban-viewer, gantt-viewer, calendar-viewer (+components 4), dashboard-viewer, record-detail (3), user-form, search, notifications, inbox, profile, **feed (신설 2)**, **compose (신설 2)**, **dm (신설 3)**, **dm-permission (신설 2)**, **page-follow (신설 2)**
+- routes: feed, compose, dm/index, dm/[id], dm-permission, page-follow/[id]
+- __tests__: Phase 11 회귀 fix 동반 수정
+- root: vite.config.ts + apps/web/vite.config.ts (서브패스 alias)
+
 ## v001.273.0
 
 > 통합일: 2026-05-20
