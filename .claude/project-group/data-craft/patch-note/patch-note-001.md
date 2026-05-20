@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.292.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 (간트 인쇄 모달 기간선택 캘린더 가려짐 수정)
+
+### 개요
+
+데이터 뷰어 → 간트 뷰의 "인쇄" 모달 1단계 "기간 선택" 에서 시작일/종료일 input 아래로 펼쳐지는 캘린더 팝오버가 인쇄 모달 본문(`StepShell` `overflow-y-auto`) 에 클리핑되어 모달 하단 영역에 가려지던 문제. 캘린더가 인쇄 모달 위로 떠올라 전체 표시되어야 함이 요구사항.
+
+근본 원인: `DatePickerDropdown` 이 `absolute z-20` 인라인 렌더라 부모 `overflow-y-auto` 의 클리핑 경계를 넘지 못함. 인쇄 모달(z-12000) 자체의 스택 컨텍스트도 인라인 z-20 으로 탈출 불가.
+
+해결: `createPortal` 로 `document.body` 에 렌더 + anchor 버튼의 `getBoundingClientRect()` 기반 `position: fixed` 좌표 + `Z_INDEX.NESTED_MODAL_DROPDOWN` (12100) 적용. ancestor overflow / stacking context 양쪽 동시 탈출. anchor 는 `RefObject` 로 전달받고 `useLayoutEffect` 로 mount 시 rect 일회 계산 (React 19 ref-during-render lint 규칙 회피).
+
+### 페이즈 결과
+
+- **Phase 1** (fix): `DatePickerDropdown` props 에 `anchorRef: React.RefObject<HTMLElement | null>` 추가, `createPortal(..., document.body)` 로 렌더 변경. `useLayoutEffect` 로 `anchorRef.current.getBoundingClientRect()` → `position {top: r.bottom+4, left: r.right-300}` state 업데이트, `position null` 동안 early-return null 로 backdrop flash 차단. `z-index` = `NESTED_MODAL_DROPDOWN` (12100) / backdrop = 12099. 호출처 `DatePicker.tsx` (DocumentEditDialog → OptionsPanel) 와 `GanttPeriodSelectStep.tsx` 의 `CustomDateField` 양쪽에서 `triggerRef` 부여 후 `anchorRef` prop 으로 전달. (`d937c199` → `39d8e323` lint hotfix)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePicker.tsx`
+- `packages/fs-data-viewer/src/features/print/ui/steps/GanttPeriodSelectStep.tsx`
+
+### 비고
+
+- portal 기본화로 `DocumentEditDialog → OptionsPanel → DatePicker` 호출처의 잠재 동일 클리핑 (있었다면) 도 함께 해소.
+- `fs-sub-data-viewer`, `fs-external-data-viewer` 패키지에도 `DatePickerDropdown` 사본 존재. 동일 ancestor overflow 클리핑 잠재. 본 plan 스코프 외 — 동 증상 보고 시 별도 hotfix / 후속 plan 필요.
+
 ## v001.291.0
 
 > 통합일: 2026-05-20
