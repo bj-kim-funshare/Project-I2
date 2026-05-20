@@ -27,6 +27,8 @@ SESSION_DIRS: tuple[Path, ...] = (
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I",
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-elastic-visvesvaraya-b7dda5",
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-sweet-mahavira-e1a1bf",
+    # pre-I-OS era — parent JSONLs lost, sub-agent JSONLs survive under */subagents/
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-data-craft",
 )
 # Alias for the primary (required) directory.
 PRIMARY_SESSION_DIR = SESSION_DIRS[0]
@@ -46,6 +48,20 @@ PRICING = {
     "claude-sonnet-4-5": {"input": 3.00, "output": 15.00, "cache_write_5m": 3.75, "cache_write_1h": 6.00, "cache_read": 0.30},
     "claude-haiku-4-5": {"input": 1.00, "output": 5.00, "cache_write_5m": 1.25, "cache_write_1h": 2.00, "cache_read": 0.10},
 }
+
+
+_SENTINEL_MODELS: frozenset[str] = frozenset({"unknown", "<synthetic>", "API 에러", "시스템 합성"})
+_DATED_SUFFIX_RE = re.compile(r"-\d{8}$")
+
+
+def _normalize_model_key(raw: str) -> str:
+    """Strip a dated suffix (-YYYYMMDD) from a model key so it matches PRICING keys.
+
+    Sentinel model names are returned unchanged.
+    """
+    if raw in _SENTINEL_MODELS:
+        return raw
+    return _DATED_SUFFIX_RE.sub("", raw)
 
 
 def empty_token_record() -> dict[str, int]:
@@ -375,7 +391,7 @@ def build_by_prompt(
             if raw_model == "<synthetic>":
                 model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
             else:
-                model = raw_model
+                model = _normalize_model_key(raw_model)
             target["input_tokens"] += usage.get("input_tokens", 0) or 0
             target["output_tokens"] += usage.get("output_tokens", 0) or 0
             target["cache_read"] += usage.get("cache_read_input_tokens", 0) or 0
@@ -531,7 +547,7 @@ def build_by_skill_invocation(
                     if raw_model == "<synthetic>":
                         model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
                     else:
-                        model = raw_model
+                        model = _normalize_model_key(raw_model)
                     add_usage(main_session, usage)
                     rec_tok = empty_token_record()
                     add_usage(rec_tok, usage)
@@ -587,7 +603,7 @@ def build_by_skill_invocation(
                 agent_usage = tur.get("usage")
                 if not agent_usage:
                     continue
-                agent_model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                agent_model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
                 if agent_type not in by_agent:
                     by_agent[agent_type] = empty_token_record()
                     by_agent_cost[agent_type] = 0.0
@@ -998,8 +1014,16 @@ def collect() -> dict[str, Any]:
 
     all_jsonls: list[Path] = []
     for _d in SESSION_DIRS:
-        if _d.exists():
-            all_jsonls.extend(_d.glob("*.jsonl"))
+        if not _d.exists():
+            continue
+        parent_jsonls = sorted(_d.glob("*.jsonl"))
+        if parent_jsonls:
+            all_jsonls.extend(parent_jsonls)
+        else:
+            # Parent JSONLs absent (e.g. data-craft) — fall back to surviving sub-agent JSONLs.
+            # Project-I-style directories never hit this branch because their parent JSONLs exist;
+            # therefore toolUseResult.usage-based sub-agent accounting is unaffected (no double count).
+            all_jsonls.extend(sorted(_d.glob("*/subagents/*.jsonl")))
     for jsonl_path in sorted(all_jsonls):
         records = parse_jsonl(jsonl_path)
         if not records:
@@ -1095,7 +1119,7 @@ def collect() -> dict[str, Any]:
                 if raw_model == "<synthetic>":
                     model = "API 에러" if rec.get("isApiErrorMessage") is True else "시스템 합성"
                 else:
-                    model = raw_model
+                    model = _normalize_model_key(raw_model)
                 raw_skill = rec.get("attributionSkill")
                 if raw_skill:
                     sticky_skill = raw_skill
@@ -1192,7 +1216,7 @@ def collect() -> dict[str, Any]:
                 agent_usage = tur.get("usage")
                 if not agent_usage:
                     continue
-                model = AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7")
+                model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
                 ts = rec.get("timestamp")
                 cwd = rec.get("cwd")
                 branch = rec.get("gitBranch")
