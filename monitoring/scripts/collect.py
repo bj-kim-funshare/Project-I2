@@ -20,8 +20,16 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# Hardcoded for I2 — the Claude Code per-project session directory.
-SESSION_DIR = Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I2"
+# Hardcoded session directories. Index 0 is primary (Project-I2, current).
+# Remaining entries are optional legacy dirs; silently skipped if absent.
+SESSION_DIRS: tuple[Path, ...] = (
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I2",
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I",
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-elastic-visvesvaraya-b7dda5",
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-sweet-mahavira-e1a1bf",
+)
+# Alias for the primary (required) directory.
+PRIMARY_SESSION_DIR = SESSION_DIRS[0]
 
 # Sessions whose last record timestamp is within this many seconds of now() are considered ongoing.
 _IN_PROGRESS_THRESHOLD_SEC = 1800
@@ -953,8 +961,8 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def collect() -> dict[str, Any]:
-    if not SESSION_DIR.exists():
-        return {"error": f"session dir not found: {SESSION_DIR}", "generated_at": datetime.now(timezone.utc).isoformat()}
+    if not SESSION_DIRS[0].exists():
+        return {"error": f"session dir not found: {SESSION_DIRS[0]}", "generated_at": datetime.now(timezone.utc).isoformat()}
 
     by_model: dict[str, dict[str, int]] = defaultdict(empty_token_record)
     by_skill: dict[str, dict[str, int]] = defaultdict(empty_token_record)
@@ -983,7 +991,11 @@ def collect() -> dict[str, Any]:
     files_processed = 0
     files_skipped = 0
 
-    for jsonl_path in sorted(SESSION_DIR.glob("*.jsonl")):
+    all_jsonls: list[Path] = []
+    for _d in SESSION_DIRS:
+        if _d.exists():
+            all_jsonls.extend(_d.glob("*.jsonl"))
+    for jsonl_path in sorted(all_jsonls):
         records = parse_jsonl(jsonl_path)
         if not records:
             files_skipped += 1
@@ -1296,7 +1308,7 @@ def collect() -> dict[str, Any]:
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "session_dir": str(SESSION_DIR),
+        "session_dirs": [str(d) for d in SESSION_DIRS if d.exists()],
         "files_processed": files_processed,
         "files_skipped": files_skipped,
         "total": {**total, "cost_usd": round(total_cost, 4), "cost_breakdown": total_breakdown},
