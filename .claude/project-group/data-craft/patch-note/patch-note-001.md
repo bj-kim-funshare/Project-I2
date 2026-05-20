@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.271.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #122 (테마 회사 단위 통일 — 서버 권위 전환)
+
+### 개요
+
+마스터 신고: "같은 회사 페이지를 다른 브라우저로 접속했는데 테마가 다르다." 설계 원칙은 "테마는 기업 단위 통일, 권한자만 변경, DB 저장값에서 불러옴". 탐색 결과 BE(`user_preference` 테이블의 `(company_id, pref_key)` UNIQUE), API(`PUT /user-preference` 의 `permissionCheckMiddleware('app_theme_change')` 가드), FE 권한 가드(`usePermission('app_theme_change')`), 서버 동기화 코드(`syncThemeToServer`) 모두 이미 구비됨. 그러나 시드 진입점인 `seedBundleData.ts` 의 분기가 **localStorage(`dc_theme_{companyId}`) 우선 → 서버값 폴백** 순으로 되어 있어 회사 단위 통일 원칙을 정면으로 역행. 더 나아가 권한자가 stale localStorage 를 보유한 브라우저로 접속하면 `syncThemeToServer(companyTheme)` 가 발화하여 **서버를 옛 localStorage 값으로 역덮어쓰기** 까지 하던 corrupting path 존재. 본 플랜은 시드 분기를 서버 권위(DB-SoT) 로 역전.
+
+### 변경
+
+- **`src/app/lib/seedBundleData.ts`** (`bea32e5f`): 테마 시딩 분기 재구성.
+  - 우선순위 역전: `serverTheme` 존재 시 무조건 `setThemeFromServer(serverTheme)` + `saveCompanyTheme(companyId, serverTheme)` 로 캐시 갱신.
+  - `loadCompanyTheme(companyId)` 의 localStorage 값은 `serverTheme` 가 null/undefined 일 때만 오프라인 폴백으로 적용.
+  - 둘 다 없을 때만 기존 기본값(`light`) 유지 + 캐시.
+  - **`syncThemeToServer(companyTheme)` 역덮어쓰기 분기 완전 삭제** — 시드 단계에서는 절대 PUT 호출하지 않음. 변경은 `setTheme` 경로(권한자가 UI 에서 직접 바꿀 때)에서만 발생.
+  - 미사용이 된 `syncThemeToServer` import 제거. `useAuthStore` 는 `!skipAuth` 블록의 `setAuth` 호출에서 여전히 사용되므로 보존.
+
+### 영향
+
+- ✅ 권한자가 Browser A 에서 정한 테마를 Browser B/C 가 즉시 동일하게 표시 (settled state 기준 회사 단위 통일).
+- ✅ 권한 없는 사용자가 자기 localStorage 를 임의 조작해도 서버값으로 강제 덮어쓰기 — 회사 단위 통일 원칙 보장.
+- ✅ `AuthProvider.initializeAuth()` 의 reload 경로 (`authApi.init → seedBundleData`) 도 동일하게 서버 권위 적용 — 새로고침/새 탭 진입 모두 동일 동작.
+- ✅ `AuthProvider:135` / `:197` 의 `setThemeFromServer('light')` 호출은 인증 실패/비인증 경로 한정으로 정상 회사 테마 적용을 덮어쓰지 않음.
+- ⚠️ 서버 fetch 실패 (네트워크 단절) 시에만 `companyTheme` 폴백 사용 — 회복 후 자동 정렬. 의도된 동작.
+- 🚧 별도 후속 (본 플랜 범위 외): Zustand `dc_theme` persist hydration 으로 인한 초기 paint flicker — UX 차원의 별도 작업으로 남김.
+
+### 정책 합치
+
+- data-craft FE-only (BE/DB 무수정 — 이미 회사 단위 격리 완비).
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 20 warnings pre-existing).
+- advisor #1 (계획 시점) / #2 (완료 시점) 5-perspective PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment.
+
+### 검증 시나리오 (수동)
+
+1. Browser A (권한자) → 앱 설정 → 테마 변경 → DB 반영 확인.
+2. Browser B (시크릿창, 동일 회사 / 동일 또는 다른 사용자) → 로그인 → A 가 정한 테마로 표시 확인.
+3. Browser C (다른 회사 시절의 stale `dc_theme_{companyId}` localStorage 보유) → 동일 회사 로그인 → 서버값으로 강제 표시 확인 (이전엔 stale localStorage 가 우선되어 실패하던 시나리오).
+4. 권한 없는 사용자: 테마 UI 비활성 + 표시는 서버값으로 강제 동기화 확인.
+
 ## v001.270.0
 
 > 통합일: 2026-05-20
