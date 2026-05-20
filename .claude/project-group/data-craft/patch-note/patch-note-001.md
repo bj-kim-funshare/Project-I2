@@ -1,5 +1,68 @@
 # data-craft — Patch Note (001)
 
+## v001.272.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 2 — 행 연결 그룹 관리 UX 재구성)
+
+### 개요
+
+마스터 요구 — 행 연결 그룹 관리 dialog (HOTFIX 1 통합본) 가 매핑 / 리더 지정 / 재동기화 / 매핑 적용 / 그룹 해제 / 그룹에 새 열 추가 / 열별 속성 표 7개 섹션의 거대 dialog 가 되어 사용성이 떨어진다는 판단으로 UX 재구성. 매핑 UI 는 행 연결 타입 열 추가 시 (RowLinkConfigDialog Step 4) 에만 두고, 그룹 관리 dialog 는 **열별 속성 관리만 담당** 하는 형태로 축소. 리더 변경은 매핑 섹션이 아닌 **열별 속성 패널 안 "연결 그룹 리더" 토글** 로 이동.
+
+### 변경
+
+#### 1. 매핑 UI 완전 제거 (req 1 + 결정 B)
+
+- `RowLinkGroupManageDialog.tsx` 의 매핑 섹션 (HOTFIX 1 통합본의 줄 331-395) 전체 삭제 — 컬럼 매핑 dropdown / "리더 지정" 라디오 / "전체 재동기화" 버튼 / "매핑 적용" 버튼 / "그룹 해제" 버튼 모두 제거.
+- **결정 B**: 통합본의 "그룹에 새 열 추가" 섹션 (줄 398-467) 도 그룹 관리 dialog 내 매핑 UI 의 일부이므로 마스터 req 1 literal 위반 — 완전 제거. 사후 행 연결 열 추가는 원 진입점 (열 추가 모달 → 행 연결 타입 선택 → RowLinkConfigDialog) 만 사용.
+
+#### 2. 리더 변경 → 열별 속성 패널 이동 (req 2)
+
+- 세부 패널 (`MenuItemRenderer` 기반) 의 `buildDetailMenuItems` 내부에 rowLink 컬럼 한정 **"연결 그룹 리더"** `toggle` 항목 인라인 추가. 토글 클릭 시 `updateLeaderInGroup` 즉시 호출.
+
+#### 3. 자동 propagation (req 3 + 결정 A)
+
+- "전체 재동기화" / "매핑 적용" 버튼 제거 → 변경 시 자동 트리거.
+- **결정 A — 리더 변경 시 비리더 cellValue 정책 = 보존**: 새 리더로 변경되어도 비리더 cellValue 는 기존값 유지. 새 리더가 다음에 값을 변경하면 기존 `useRowLinkCell.handleLeaderValueSave` 흐름으로 자동 propagation. `useRowLinkCell.ts` 무수정 (보존 정책이 무수정으로 자연 충족).
+
+#### 4. 그룹 해제 완전 제거 (req 4)
+
+- 1차 commit (`1ec947b2`) 에서 dialog 의 그룹 해제 버튼 + handler 제거.
+- 정리 commit (`8137666e`) 에서 `useRowLinkGroup.ts` 의 `dissolveGroup` 함수 본체 + `createColumnDeletedChange` import + `index.ts` re-export 까지 완전 제거. UI / API 양쪽에서 그룹 해제 표면 0.
+- `canDeleteRowLinkColumn` 의 "그룹 해제를 사용하세요" 안내 문구도 "그룹 전체 컬럼을 선택하여 행 연결 그룹 제거 사용" 으로 정정 (2곳).
+
+#### 5. 표 → 체크박스 목록 + 세부 패널 (req 5 + req 6)
+
+- HTML `<table>` (통합본 줄 470-720, 11 컬럼 표) 완전 폐기.
+- 좌측 미니 사이드바 — 체크박스 + 컬럼명 + 리더 배지 표시 (선택 가능 목록).
+- 우측 — 선택된 컬럼의 세부 설정 패널 (기존 `view-column-manager/ColumnDetailPanel` + `MenuItemRenderer` 패턴 그대로 차용 — 열 메뉴 동일 디자인).
+- 신규 컴포넌트 미생성 (기존 패턴 재사용).
+
+#### 6. "선택 연결 열 제거" 버튼 (req 7)
+
+- 하단 단일 버튼. 동적 텍스트/동작:
+  - 선택 = 그룹 전체 (리더 + 모든 부하) → **"행 연결 그룹 제거"** (그룹 컬럼 전체 삭제 — `dissolveGroup` 함수 없이 `handleRemove` 핸들러 인라인 루프).
+  - 리더 + 일부 부하 선택 (다른 부하 미선택) → 리더 자동 제외 후 선택된 부하만 삭제 + 안내 메시지.
+  - 리더 미포함 → 선택된 부하만 삭제.
+  - 리더 단독 (모든 부하 미선택) → 노옵 + 안내 ("리더 단독 삭제 불가").
+
+### 영향 파일
+
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx` (대수술 — `1ec947b2`: +341 / -563)
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkGroup.ts` (`1ec947b2` + `8137666e`: dissolveGroup 제거, canDeleteRowLinkColumn 메시지 정정)
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/index.ts` (`8137666e`: dissolveGroup re-export 제거)
+
+### 정책 합치
+
+- data-craft FE-only (BE/DB 무수정).
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 19 warnings).
+- advisor #2 (5-perspective) PASS — req 1~7 + 결정 A/B 명시 처리.
+
+### 사전 결정 (advisor 검증 후 명시 채택)
+
+- **결정 A**: 리더 변경 시 비리더 cellValue 정책 = **보존** (옵션 B). 클리어 / 재싱크 X. 새 리더가 다음 값 변경 시 자동 propagation 시작.
+- **결정 B**: "그룹에 새 열 추가" 섹션 = **완전 제거**. req 1 literal 일치 (그룹 관리 dialog 안 모든 매핑 UI 제거).
+
 ## v001.271.0
 
 > 통합일: 2026-05-20
