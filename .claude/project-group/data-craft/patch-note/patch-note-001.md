@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.341.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #139 HOTFIX 2 (basic 배지 아이콘 + 라벨 우측 배치)
+
+### 배경
+
+v001.339.0 (HOTFIX 1) 시각 확인 후 마스터 피드백 2건:
+- ① "왜 베이직은 아이콘 없어?" — `getPlanBadgeStyle()` basic 분기에 iconComponent 부재. 유료 4개 티어 중 basic 만 아이콘 없음.
+- ② "현재 플랜과 선택됨은 플랜명 우측에 나오게 해줘 지금 좌측이야" — 두 작은 Badge 가 플랜명 배지 *위* (수직 스택) 에 배치돼 있었음.
+
+### 해법
+
+- `planUtils.ts`: lucide-react import 에 `Zap` 추가, `getPlanBadgeStyle('basic')` 반환 객체에 `iconComponent: Zap` 추가. 이 변경은 `getPlanBadgeStyle` 의 모든 사용처(플랜 관리 탭 `CurrentPlanBadge` 포함) 에 적용 — 일관성 의도.
+- `PlanComparisonCard.tsx`: 헤더 컨테이너를 `space-y-1.5` 수직 스택 → `flex items-center gap-2 flex-wrap min-h-[40px]` 수평 배치로 교체. 플랜명 배지 먼저 렌더링하고 '현재 플랜'/'선택됨' 소형 Badge 를 우측에 inline 배치. 5-column 그리드의 좁은 카드 폭에 대비해 `flex-wrap` 으로 줄바꿈 허용.
+
+### 영향 파일
+
+data-craft:
+- `src/features/subscription/lib/planUtils.ts`
+- `src/features/subscription/ui/PlanComparisonCard.tsx`
+
 ## v001.340.0
 
 > 통합일: 2026-05-20
