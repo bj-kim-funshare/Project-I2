@@ -375,12 +375,8 @@ const pieLabelsPlugin = {
 
 const dayTokensSkillCountPlugin = {
   id: 'dayTokensSkillCount',
-  afterDatasetsDraw(chart) {
-    const pluginOpts = chart.config.options &&
-      chart.config.options.plugins &&
-      chart.config.options.plugins.dayTokensSkillCount;
-    if (!pluginOpts) return;
-    const countsByDay = pluginOpts.countsByDay;
+  afterDatasetsDraw(chart, args, options) {
+    const countsByDay = (options && options.countsByDay) || null;
     if (!countsByDay || !Object.keys(countsByDay).length) return;
 
     const { ctx } = chart;
@@ -391,15 +387,19 @@ const dayTokensSkillCountPlugin = {
       const count = countsByDay[label];
       if (!count) return;
 
-      // Sum only stack 's' datasets (skip comparison stack 'c')
-      let sumY = 0;
-      for (const ds of datasets) {
-        if (ds.stack !== 's') continue;
-        sumY += (ds.data[i] || 0);
+      // Find the topmost stack 's' dataset index (last one in array order)
+      let topIdx = -1;
+      for (let di = 0; di < datasets.length; di++) {
+        if (datasets[di].stack === 's') topIdx = di;
       }
+      if (topIdx === -1) return;
 
-      const x = chart.scales.x.getPixelForValue(label);
-      const y = chart.scales.y.getPixelForValue(sumY);
+      const meta = chart.getDatasetMeta(topIdx);
+      const pt = meta.data && meta.data[i];
+      if (!pt) return;
+
+      const x = pt.x;
+      const y = pt.y;
 
       ctx.save();
       ctx.fillStyle = '#fff';
