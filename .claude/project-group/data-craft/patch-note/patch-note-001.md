@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.353.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 23 — picker tooltip 위치/색/wrap/truncate 정정)
+
+### 변경
+
+**`ConnectionEditOverlay.tsx`** (`7c14d4c5`, +28/-8): 기존 Tooltip 래퍼 (`side='right'`, 다크 배경) → 하위 Radix 컴포넌트 (`TooltipProvider` / `TooltipRoot` / `TooltipTrigger` / `TooltipPortal` / `TooltipContent` / `TooltipArrow`) 로 교체하여 TooltipContent 에 직접 override:
+
+| 요건 | 적용 |
+|---|---|
+| 위치 (위/아래) | `side="top"` + `avoidCollisions` + `collisionPadding={8}` — 위 우선, viewport 충돌 시 아래 자동 전환 |
+| 화이트 모드 색상 | `bg-popover text-popover-foreground border border-border` (twMerge override) + `TooltipArrow fill-popover` |
+| 400px wrap | `max-w-[400px] whitespace-normal break-words` |
+| 500자 truncate | HOTFIX 22 의 `slice(0,500) + '...'` 유지 |
+
+tooltipContent 빈 문자열 시 TooltipPortal 자체 렌더 안 함 (불필요 DOM 차단).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 22 Tooltip 컴포넌트 적용 + HOTFIX 21 확장 단방향 + HOTFIX 19 picker 검색/정렬/높이 모두 그대로.
+
 ## v001.352.0
 
 > 통합일: 2026-05-20
