@@ -1,5 +1,39 @@
 # 아이OS — Patch Note (001)
 
+## v001.84.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #43
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 (호환성 분석 문서)**: `monitoring/docs/legacy-backfill-analysis.md` 신규 작성. 구버전 (Project-I) raw JSONL 706개가 살아있어 현재 `collect.py` 로 재집계 가능하다는 결론과 호환성 평가표, 백필 원천 인벤토리, 폐기 축 (페르소나·프로젝트그룹) 참조 안내, 영구 통합 성격 명시.
+- **Phase 2 (collect.py SESSION_DIRS 다중 디렉토리 확장)**: `monitoring/scripts/collect.py` 의 단일 `SESSION_DIR` 상수를 4개 디렉토리 튜플 `SESSION_DIRS` (Project-I2 primary + Project-I + worktrees 2 개) 로 확장. `if d.exists()` 가드로 구버전 디렉토리 부재 시 graceful skip. 출력 메타 키 `session_dir` → `session_dirs` (리스트) 로 변경. 4지점 (line 24, 956-957, 986, 1299 부근) 외 무수정.
+- **Phase 3 (실행 검증 + README 보강)**: 백필 적용된 `collect.py` 로 산출물 재생성. `monitoring/data/aggregate.json by_day` 가 2026-04-19 ~ 2026-05-20 의 29 일치로 확장됨을 확인. 모델 축에 구버전 전용 `claude-opus-4-6` 등장 (legacy 데이터 통합 확정). `monitoring/README.md` 에 "구버전 (Project-I) 데이터 백필" 절 추가 — 표시 축·해석 주의·폐기 축 참조·시간 단위 14일 롤링 한계 명시.
+
+### 진단 요지
+
+- 마스터 관측: 구버전 아이OS (Project-I, archived 실패 케이스) 의 모니터링 데이터가 약 1 개월치 (2026-04-19 ~ 2026-05-10) 사장. 현재 아이OS 모니터링 대시보드에서 과거 이력 조회 불가.
+- 핵심 발견: 구버전의 weekly aggregate 파일을 변환할 필요 없음. 구버전 raw JSONL (`~/.claude/projects/-Users-starbox-Documents-GitHub-Project-I*` 3 개 디렉토리, 706 개 파일) 이 그대로 살아있어 현재 `collect.py` 로 재집계 시 시간 단위까지 복원 가능. `collect.py:34-40` PRICING 에 구버전 모델 (`claude-opus-4-6`, `claude-sonnet-4-6`) 이 이미 등재되어 가격표 수정 없이 비용 계산 호환. `collect.py:646,1031` 의 `attributionSkill.get()` 안전 처리로 구버전 어휘 (페르소나명, 구 스킬명) 도 미지값 crash 없이 by_skill 라벨로 표시.
+- 설계 결정 (advisor 권고 반영): sidecar legacy 파일 + 머지 로직 대신 `SESSION_DIRS` 리스트 확장 (~5 라인 영구 변경) 채택. 옛 JSONL 과 새 JSONL 은 서로 다른 디렉토리에 다른 UUID 로 존재하므로 충돌 불가. 매번 `collect.py` 실행이 자동으로 구버전 데이터를 포함하는 영구 통합.
+
+### 회귀 검증
+
+- aggregate.json `by_day`: 2026-04-19 ~ 2026-05-20, 29 일치 (이전: ~10 일치).
+- `by_model`: `claude-opus-4-6`, `claude-sonnet-4-6` (구버전 전용), `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5` 모두 등장.
+- `files_processed`: 995 (이전 ~280 → 구버전 706 흡수 + 합산).
+- `session_dirs`: 4 개 경로 모두 출력 메타에 기록.
+- hourly.json: 의도된 14 일 롤링 윈도우 (171 시간 버킷) 유지 — 14 일 이전 시간 단위 표시 불가는 README 한계 명시.
+- 폐기 축 (페르소나·프로젝트그룹) 은 현재 데이터 모델에서 폐지되어 추출 불가 — 필요 시 구버전 `Project-I/monitoring/data/aggregate.json` 직접 참조 안내.
+- 머지 과정: 작업 머지 시 main 의 미커밋 hourly.json (preexisting runtime artifact) 과 3-way 충돌 발생. WIP 측 (legacy 포함 최신 collect.py 출력) 채택 후 post-merge 시점에 collect.py 재실행으로 freshest 상태 보장.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 사용자 향(向) 데이터 기능 확장 (모니터링 입력 소스의 정적 리스트 확장) 으로 예방 메커니즘 부류가 아님. 영구 변경은 `collect.py` 의 `SESSION_DIRS` 튜플 + `if d.exists()` 가드 도입 (~12 라인) 뿐.
+
+---
+
 ## v001.83.0
 
 > 통합일: 2026-05-20
