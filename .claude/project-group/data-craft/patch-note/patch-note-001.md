@@ -1,5 +1,55 @@
 # data-craft — Patch Note (001)
 
+## v001.308.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 1 — 결제 비밀번호 다이얼로그 UX 개선)
+
+### 개요
+
+v001.297.0 (#126 본 플랜) 적용 후 마스터 보고 결함 2건을 한 HOTFIX 로 묶어 해소:
+
+**결함 A** — 결제 수단 등록/변경(`card-change`) 흐름의 비밀번호 설정 모달에서 X / overlay / ESC 로 닫으려 할 때 브라우저 시스템 `window.confirm()` 노출. 추가로 "취소" 한 번 클릭으로 닫히지 않고 두 번 눌러야 닫히는 사이클 (confirm 취소 → PaymentPasswordSetupStep 복원 → 사용자가 다시 X → 다시 confirm 호출 → 또 취소).
+
+**결함 B** — 비밀번호 설정 완료 후 모달의 "완료" 상태 화면이 1초도 유지되지 못하고 즉시 닫혀 부자연스러움.
+
+### 해법 (HOTFIX 1)
+
+**`src/pages/billing-callback/ui/BillingSuccessPage.tsx`** (`ccf8ef18`):
+- `handlePasswordSetupDismiss` 에서 `window.confirm` 제거.
+- 신규 state `showDeleteConfirmDialog`. card-change 분기에서 dismiss 시 `setShowPasswordSetup(false); setShowDeleteConfirmDialog(true);` 호출 — 비밀번호 모달은 닫히고 shadcn AlertDialog 만 명확히 표시.
+- 취소 핸들러: `setShowDeleteConfirmDialog(false); setShowPasswordSetup(true);` — 1번 클릭으로 confirm 다이얼로그만 닫고 비밀번호 모달 복원. "취소 2번" 사이클 해소.
+- 확인 핸들러: 기존 `deleteCard()` + `navigate(target)` 로직 그대로 이식.
+- 신규/프로모션 결제 분기는 변경 없음 (기존 그대로 즉시 이동).
+
+**`src/features/subscription/ui/PaymentPasswordSetupStep.tsx`** (`ccf8ef18`, `f100648e`):
+- step 유니온 확장: `'enter' | 'confirm' | 'complete'`.
+- BE 저장 성공 시 `onPasswordSaved` 콜백으로 `passwordCompleted` 플래그 즉시 설정 → `beforeunload` beacon 레이스 차단.
+- `setStep('complete')` 로 전이 후 카운트다운 effect 시작.
+- `countdown` state 초기값 `COMPLETE_COUNTDOWN_SEC=3`. `setInterval(1000ms)` 로 3 → 2 → 1 → 0 감소, 0 도달 시 `onComplete()` 호출.
+- complete 단계 UI: 성공 표시 + "N초 뒤 창이 닫힙니다" 문구 (N 은 동적 countdown).
+- 사용자가 X 강제 닫으면 즉시 onComplete 호출 (interval cleanup 보장).
+- 보완 커밋: useEffect body 의 `setCountdown(remaining)` 직접 호출 제거 (`react-hooks/set-state-in-effect` 룰 해소). state 초기값이 이미 COMPLETE_COUNTDOWN_SEC 라서 불필요한 호출.
+
+### 영향 파일
+
+**data-craft**
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+- `src/features/subscription/ui/PaymentPasswordSetupStep.tsx`
+
+### 테스트 시나리오
+
+1. **card-change 흐름 X 클릭 → 커스텀 confirm 다이얼로그 노출** (window.confirm 아닌 모달 UI).
+2. **confirm "취소" 1회 클릭 → 비밀번호 모달 복원** (2번 눌러야 닫히는 사이클 사라짐).
+3. **confirm "확인" 1회 클릭 → 카드 삭제 + navigate** (기존 동작 보존).
+4. **비밀번호 설정 완료 → "3초 뒤 창이 닫힙니다" 표시 → 1초마다 감소 → 3초 후 자동 닫힘**.
+5. 완료 화면 중 X 강제 닫기 → 즉시 닫힘 (카운트다운 cleanup).
+
+### 회귀 위험
+
+- 신규/프로모션 결제 분기는 dismiss 시 카드 삭제 confirm 미노출 (기존 동작 그대로). 변경 없음 확인.
+- `beforeunload` beacon: passwordCompleted 가 onPasswordSaved 시점에 즉시 true 가 되므로, 완료 화면 카운트다운 중 페이지 이탈 시도 시 beacon 미발사 (정상 — 카드 삭제 X).
+
 ## v001.307.0
 
 > 통합일: 2026-05-20
