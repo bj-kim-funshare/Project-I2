@@ -1,5 +1,48 @@
 # 아이OS — Patch Note (001)
 
+## v001.85.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #44 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **HOTFIX 1 (단일 커밋)**: `monitoring/scripts/collect.py` 의 sticky 모델을 두 변수로 분리하여 `master_declared_skill` (case A 마스터 `/X` 호출에서만 갱신) 과 `sticky_skill` (raw `attributionSkill` drift) 의 역할을 명확히 함. plain 마스터 프롬프트 진입 시 sticky 를 outer master_declared 로 복귀시켜 inner-skill drift (e.g. plan-enterprise 내부 Skill 도구가 group-policy / dev-start 를 invoke 한 뒤 raw=None 으로 떨어진 후속 어시스턴트 턴들) 가 잘못 누적되는 회귀를 차단. 동시에 explicit close substring 매칭을 `text.lstrip().startswith("플랜 완료")` / `startswith("핫픽스 완료")` 의 strict prefix 로 강화하여 `"...플랜 완료 시점 아니면 보고하지마"` 같은 마스터 본문이 거짓 닫힘을 트리거하던 버그도 함께 해소. `build_by_skill_invocation` 의 explicit-close 검사도 같은 strict prefix 로 정렬.
+
+### 진단 요지
+
+- v001.83.0 (이 플랜의 Phase 1) 직후 마스터 관측: 모니터링 대시보드에서 "메인 세션" 이 24h 윈도우에서 37.9% 로 비정상적으로 큼. 마스터 직관: "스킬은 메인 세션에서 호출되니까 이론상 다 스킬로 잡혀야 하는데" → sticky 가 outer 스킬을 보존하지 못하고 있다는 시그널.
+- 1차 추적 (substring false closure): 마스터의 일반 발화 `"...플랜 완료 시점 아니면 보고하지마"` 에서 `"플랜 완료"` substring 매칭으로 plan-enterprise 가 거짓 닫힘. 이 부분만 strict prefix 로 고치면 ~2%p 회수 (37.9% → 35.9%) 정도. 단독 원인 아님.
+- 2차 추적 (inner-skill drift): 세션 `7304211a-255f-435f-a9a1-77bd6f8ea3ae` 분석 — `/plan-enterprise` 1회 호출 후 PENDING-gate 상태에서 진행되는데, 내부에서 sub-agent / Skill 도구가 `/group-policy` 등을 invoke 하면 runtime 이 그 어시스턴트 턴들에 `attributionSkill='group-policy'` 를 부여. 이후 raw=None 으로 떨어진 어시스턴트 턴들이 sticky 를 통해 계속 group-policy 로 누적 → 다음 plain master prompt 에서 v001.83.0 의 fix 는 이걸 `"메인 세션"` 으로 리셋 → 외부 plan-enterprise 가 PENDING 인데도 메인 세션으로 거짓 귀속. 24h 윈도우 단일 세션 7304211a 가 메인 세션 144M tokens 누적 (단일 hour 2026-05-19T15 KST 153M 중 거의 전부).
+- runtime attribution 메커니즘 확인: 첫 raw=group-policy record (rec#336) 직전 3개 record 가 `agent-name` / `agent-setting` / `permission-mode` 시스템 타입 — sub-agent / Skill 도구 디스패치의 context switch 시그널. → inner-skill 가설 확정.
+
+### 회귀 검증
+
+- 24h 윈도우 메인 세션 비중: **37.9% → 3.0%** (마스터 직관 부합).
+- plan-enterprise 비중: 53.2% → 88.5% (외부 declared 로 정상 회수).
+- plan-enterprise-os: 4.7% → 7.1% (정상 범위 유지).
+- dev-start: 0.4% 유지 (v001.83.0 의 fix 무회귀).
+- dev-merge / patch-confirmation: 변화 없음.
+- group-policy: 2.6% → 0.3% — 24h 윈도우 내 `/group-policy` 마스터 호출 0회, 모두 plan-enterprise 내부에서 Skill 도구로 invoke 된 inner-skill drift 분이었음. raw=group-policy 구간 자체는 정확히 잡힘 (0.3% ≈ 3M tokens, 16 raw records × 평균 200k = 정합).
+- collect.py 실행 정상: processed 995 files, 169921 assistant messages, total ~$128050.
+
+### Inner-skill trade-off (명시)
+
+본 v1 모델은 **outer 우선** 정책: inner skill (sub-agent / Skill 도구로 호출된 스킬) 은 runtime 이 raw attribution 을 부여한 어시스턴트 턴만 집계되고, 그 뒤로 raw=None 으로 떨어진 inner-skill 잔여 활동은 outer (master-declared) 로 귀속됨. 이는 inner skill 의 토큰 사용을 **최소 추정치** 로 만든다. 마스터 의도 ("스킬에서 호출하니 스킬로 잡혀야") 와 부합하는 outer-우선 모델이며, inner skill 의 정밀 stack 추적은 본 핫픽스 범위 밖.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증축 추가 없음. 기존 분류 셋과 `_parse_skill_command` 재사용 + sticky 모델만 정교화. v001.83.0 의 fix 도 본 핫픽스로 이어진 같은 분석 축의 정상화 — 별도 메커니즘 추가 아님.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py` (master_declared_skill 분리 + prefix 매칭 강화)
+- `monitoring/data/hourly.json` (재생성)
+- (gitignored, 재생성 대상이지만 커밋 외) `monitoring/data/aggregate.json`, `monitoring/data/periods/**/*.json`
+
+---
+
 ## v001.84.0
 
 > 통합일: 2026-05-20
