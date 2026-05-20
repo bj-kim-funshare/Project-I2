@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.315.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #137
+
+### 개요
+
+빌더 헤더의 사이드바 접기 토글 버튼 위치를 사이드바 상태에 따라 분기:
+- **펼침 상태**: 헤더 우측 영역 좌단 (사이드바 경계 직후, `leftActions`/`PeriodSelector` 컨테이너 가장 앞) 으로 이동.
+- **접힘 상태**: 현행 좌측 블록 (사이드바 영역) 그대로 유지.
+
+좌측 블록이 펼침 시 로고만 남으므로 `justify-between` → `justify-center` 로 정렬 조정. 핸들러 / 아이콘 / 툴팁 / a11y label 은 기존과 동일하게 보존.
+
+### 페이즈 결과
+
+- **Phase 1** (`a4683153`): `AppHeader.tsx` 의 토글 `<Tooltip>` 두 위치 조건부 렌더 — `isSidebarCollapsed === true` → 좌측 블록, `false` → 우측 블록 좌단. 좌측 컨테이너 `justify-between` → `justify-center`. 우측 블록 접힘-로고 (`CompanyLogo`) 재출력 블록 무수정 유지.
+
+### 영향 파일
+
+**data-craft**:
+- `src/widgets/header/ui/AppHeader.tsx`
+
+### advisor 검증
+
+- 계획 advisor (#1): Intent / Logic / Group Policy / Evidence / Command Fulfillment 5건 PASS.
+- 완료 advisor (#2): 5건 PASS. 디프 직접 검증, lint gate PASS (0 errors, 17 무관 warnings).
+
 ## v001.314.0
 
 > 통합일: 2026-05-20
