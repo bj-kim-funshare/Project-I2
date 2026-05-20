@@ -1,5 +1,66 @@
 # data-craft — Patch Note (001)
 
+## v001.334.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 9 — incomplete billing_info 정기 청소 cron)
+
+### 개요
+
+HOTFIX 7 (BE /status 마스킹) + HOTFIX 8 (FE sendBeacon 정리) 의 짝 — 누적된 incomplete 빌링키 (결제 비밀번호 미설정 user 의 billing_info) 를 시스템에서 자동 청소하는 cron 잡 추가. 별도 task-db-structure 세션이 audit 테이블 + 인덱스 + 백필 DDL 을 적용한 후 본 코드 머지.
+
+### 변경 — data-craft-server
+
+**`src/services/billingCleanup.service.ts`** (`492b0d30`, 보완 `f5fdd897`):
+- `cleanupIncompleteBillingKeys(graceHours: number = 1)` 신규.
+- SELECT: `billing_info` JOIN `client` — `bi.is_active=1` AND `bi.created_at < NOW() - INTERVAL N HOUR` AND `NOT EXISTS` (해당 company 에 `payment_password IS NOT NULL` 인 active user). `c.business_number` 를 audit log 용으로 함께 조달.
+- 각 행 처리:
+  1. envelope decrypt → 토스 `deleteBillingKey(plainBillingKey)` 호출 (HTTP IO, 트랜잭션 외).
+  2. 토스 실패 → audit log INSERT (`status='toss_api_failed'`, failure_reason=토스 응답 메시지). DB 상태 변경 X (다음 cron tick 에 retry).
+  3. 토스 성공 → 단건 트랜잭션으로 `UPDATE billing_info SET is_active=0 WHERE id=?` + audit log INSERT (`status='success'`).
+  4. DB UPDATE 실패 → audit log INSERT (`status='db_failed'`). 다음 tick retry.
+- 전체 중단 없이 client 단위 catch, logger 로 진입/종료/통계 (`처리: N건, success: K, failed: M`).
+
+**`src/models/billingCleanupLog.model.ts`** (`f5fdd897`):
+- `insertBillingCleanupLog({ businessNumber, customerKey, billingKey, status, failureReason?, gracePeriodHours })` 함수.
+- 실제 DB 컬럼 정합: `business_number` (CHAR(10), data-craft 규약), `customer_key`/`billing_key` (envelope 암호화 원문 그대로 저장 — PII 보호), `status` ENUM 4종 (`success` / `toss_api_failed` / `db_failed` / `skipped`), `failure_reason` (TEXT), `grace_period_hours` (UINT).
+- `attempt_at` 은 DB default `CURRENT_TIMESTAMP` 활용 (별도 INSERT 안 함).
+
+**`src/services/billingScheduler.service.ts`** + **`src/index.ts`**: 매시간 cron (`0 * * * *`) 등록. 기존 billingRenewal cron 과 동일한 `isCleanupRunning` guard 패턴 — 동시 실행 방지.
+
+### 영향 파일
+
+- `src/services/billingCleanup.service.ts` (신규)
+- `src/models/billingCleanupLog.model.ts` (신규)
+- `src/services/billingScheduler.service.ts`
+- `src/index.ts`
+
+### 의존 DDL (별도 task-db-structure 세션에서 적용 완료)
+
+- `billing_info`: `created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` 컬럼 + 기존 행 백필 + `idx_billing_cleanup (is_active, created_at)` 복합 인덱스.
+- `billing_cleanup_log` 신규 테이블: id + business_number + customer_key + billing_key + attempt_at + status ENUM(4) + failure_reason + grace_period_hours + 2 인덱스 (idx_business_attempt / idx_status_attempt).
+
+### 검증 (read-only DB 확인 완료, data_craft_test)
+
+- billing_info 10행 모두 created_at != NULL ✅
+- 현 시점 incomplete 대상 (grace 1h) = 0건 (legacy leak 없음) ✅
+- billing_cleanup_log 컬럼 8개 모두 코드 가정과 정합 ✅
+- 인덱스 idx_billing_cleanup / idx_business_attempt / idx_status_attempt 존재 ✅
+- audit log 0건 (신규) ✅
+
+### 동작 시나리오
+
+1. 사용자가 카드 등록 → 비밀번호 설정 미완료 → 페이지 이탈.
+2. billing_info 행 생성, payment_password 미설정.
+3. grace 1시간 경과.
+4. 매시간 cron 매칭 → 토스 customerKey 삭제 → billing_info.is_active=0 → audit log INSERT (success).
+5. user 가 재방문 → `/status` 응답에서 hasBillingKey=false (HOTFIX 7) → 재등록 흐름.
+
+### 회귀 위험
+
+- 토스 API 실패 (네트워크 / 토스 측 5xx) 시 audit log 누적 + 다음 tick retry. 무한 retry 위험은 토스 측 4xx 영구 실패 시 — 별도 monitoring 후속 검토.
+- 본 cron 머지 직후 첫 tick 까지 최대 1시간 대기. 즉시 1회 실행 필요 시 별도 수동 스크립트 후속.
+
 ## v001.333.0
 
 > 통합일: 2026-05-20
