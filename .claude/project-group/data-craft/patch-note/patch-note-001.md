@@ -1,5 +1,63 @@
 # data-craft — Patch Note (001)
 
+## v001.333.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #132 (data-craft 모바일 서비스급 재구축 — Roadmap-1 잔존 격차 봉합)
+> Work repo: data-craft-mobile · Leader repo: data-craft
+
+### 프레이밍
+
+13 phase 완료. 본 패치노트는 **코드-shape 격차 봉합** (디자인 토큰·기업 auth·설정·페이지 뷰어 fallback·뷰어 5종 시트 추가) 까지 마감. BE 미존재로 인한 23개 known blocker (요금 unavailable / 워크스페이스 초대 read-only / 다중 정렬 클라 측 / 컬럼 settings 비영속 / 테마 동기 미적용 / 칸반·캘린더 클라 필터 / 간트 dependency 데이터 부재 등) 는 **Roadmap-3 이관 대상**. 마스터 시각 검증 후 PENDING gate 의 1순위 핫픽스 후보: (a) 테마 즉시 적용 (`userPreferenceApi.set` ↔ `useTheme` 훅 동기), (b) `ScreenProfile.MOCK_SETTINGS_MENU` → `/m/settings` wiring.
+
+### 페이즈 결과 (13 phase, 13 commit)
+
+- **Phase 1** — 디자인 토큰 확장 + hex fallback 일소 (`e42ecd7`, +156/-88, 31 files). 디자인 팀 토큰 8종 추가 (--ds-success, --ds-on-brand, --ds-avatar-1..7, --ds-status-neutral 등), light/dark 양쪽. P1 한정 grep enumeration 으로 hex 사용 파일 전체 sweep. tokens.css 헤더의 "#132" 코멘트만 매칭으로 잔존.
+- **Phase 2** — 기업 로그인 `/m/login-enterprise` (`2fa78a2`, +504/0, 6 files). 2-step 위자드 (회사 ID → 이메일/비밀번호). `AuthClient.checkCompanyId` + `getTenantInfo` + `useSession.signin` 실 호출. login 스크린 푸터 진입 링크.
+- **Phase 3** — 기업 회원가입 `/m/signup-enterprise` (`bf37349`, +1062/0, 6 files). 3-step 위자드 (회사 / 관리자 / 서브도메인). `checkCompanyId` available 확인 후 `POST /api/auth/signup`. signup 스크린 진입 링크.
+- **Phase 4** — OAuth 버튼 제거 + 폼 정합 (`850c961`, +14/-64, 7 files). BE OAuth 라우트 부재 확인 후 "준비 중" SSO 버튼 일괄 제거. 로그인/회원가입/비밀번호찾기 폼 토큰 정합 + 마이크로카피.
+- **Phase 5** — 설정 허브 + 계정·보안 (`0757966`, +963/-1, 8 files). `/m/settings` 4섹션 카드 (계정만 활성, 나머지 '준비 중'). `/m/settings/account` 의 프로필/이메일/비밀번호 변경 — `userApi.getUserList`/`updateName`/`updateEmail`/`updatePassword`. AppShell FAB 진입.
+- **Phase 6** — 설정 워크스페이스·요금·환경설정 (`7fb22a0`, +1249/-3, 11 files). 워크스페이스 (`authApi.getApprovedUsers` + `roleApi.getRoles`), 요금 (조회 API 부재로 unavailable UI), 환경설정 (`userPreferenceApi.getAll`/`set`). ScreenSettings 의 '준비 중' 배지 3개 제거.
+- **Phase 7** — 페이지 트리 컨텍스트 메뉴·리오더 (`14f92d4`, +851/-64, 6 files). vaul Drawer 기반 `PageNodeActionSheet` (이름변경/삭제/이동/새 페이지). `usePageMutations` 가 `builderApi.updatePage`/`deletePage`/`createPage`/`reorderPages` 실 호출. pointer-event delegation 드래그 리오더 + 낙관적 업데이트.
+- **Phase 8** — 페이지 뷰어 responsive fallback (`cd1cf24`, +201/0, 3 files). 웹 빌더 다단 레이아웃 휴리스틱 감지 (`detectWebFallback`), 기존 `flattenLayoutForMobile` vertical-stack 변환 재사용, 헤더 `WebFallbackBadge` 표시.
+- **Phase 9** — Grid viewer 서비스급 (`0377a22`, +1501/-49, 6 files). `GridFilterSheet` (멀티 AND/OR) / `GridSortSheet` (다중 키) / `GridGroupSheet` / `GridColumnSettingsSheet` / `GridCellEditor`. `viewerApi.saveChanges` 실 호출.
+- **Phase 10** — Kanban viewer 서비스급 (`ff1b967`, +1623/-54, 5 files). Phase 9 패턴 이식: `KanbanFilterSheet`/`KanbanSortSheet`/`KanbanColumnSettingsSheet`/`KanbanCardEditor`. 카드 탭 → CardQuickActionSheet → 편집 2단.
+- **Phase 11** — Calendar viewer 서비스급 (`89324aa`, +1249/-137, 9 files). `getCalendarData(year/month)` 전환, `CalendarFilterSheet`/`CalendarSettingsSheet`/`CalendarQuickCreateSheet`, 월/주/일 뷰 (`DayAgenda`/`WeekAgenda`/`MonthGrid`), 색상 그룹화 + 레코드 진입.
+- **Phase 12** — Gantt viewer 서비스급 (`f31266e`, +1276/-72, 6 files). `GanttZoomSheet` (일/주/월) / `GanttFilterSheet` / `GanttSettingsSheet`. 로컬 `GanttTimeline` — 진행률 fill + 의존선 SVG 오버레이 + 드래그 핸들 (visual-only).
+- **Phase 13** — Dashboard viewer 서비스급 (`db322aa`, +392/-3, 2 files). `DashboardFilterSheet` (검색 + 컬럼 필터). `WIDGET_BODY_HEIGHT` 타입별 반응형 (bar/line/pie/scatter 240px, card/gauge 140px, user-list 200px).
+
+### 영향 파일 (work repo data-craft-mobile, 누적 +11041/-535)
+
+- `apps/web/src/mobile/styles/tokens.css`, `apps/web/src/mobile/styles/index.css` (P1)
+- `apps/web/src/mobile/router.tsx`, `apps/web/src/mobile/layouts/AppShell.tsx` (P2/3/5/6/8)
+- `apps/web/src/mobile/screens/login-enterprise/`, `routes/login-enterprise.tsx` (P2 — 신규)
+- `apps/web/src/mobile/screens/signup-enterprise/`, `routes/signup-enterprise.tsx` (P3 — 신규)
+- `apps/web/src/mobile/screens/login/`, `signup/`, `forgot-password/` (P4 — 정합)
+- `apps/web/src/mobile/screens/settings/`, `screens/settings/account/`, `routes/settings/` (P5 — 신규)
+- `apps/web/src/mobile/screens/settings/workspace/`, `billing/`, `preferences/` (P6 — 신규)
+- `apps/web/src/mobile/screens/page-tree/` (P7 — `PageNodeActionSheet`/`RenameSheet`/`MoveTargetSheet`/`usePageMutations`)
+- `apps/web/src/mobile/screens/page-viewer/` (P8 — `detectWebFallback`)
+- `apps/web/src/mobile/screens/grid-viewer/` (P9 — 5 시트 신규)
+- `apps/web/src/mobile/screens/kanban-viewer/` (P10 — 4 시트 신규)
+- `apps/web/src/mobile/screens/calendar-viewer/` (P11 — 3 시트 신규 + 컴포넌트 보강)
+- `apps/web/src/mobile/screens/gantt-viewer/` (P12 — 3 시트 + `GanttTimeline` 신규)
+- `apps/web/src/mobile/screens/dashboard-viewer/` (P13 — `DashboardFilterSheet`)
+- 컴포넌트 sweep (P1 hex 일소): `mobile/auth/components/`, `mobile/components/{AppHeader,AppErrorBoundary,BottomTabs,ConfirmDialog,LoadingSpinner,RecordEditSheet,Toast}.tsx`
+
+### 검증
+
+- Lint gate 13/13 PASS (`pnpm typecheck` exit 0).
+- advisor #1 (계획 단계, 5 perspective): PASS — Intent/Logic/Group Policy/Evidence/Command Fulfillment.
+- advisor #2 (완료 시점, 5 perspective): PASS with caveats — 4건 caveat (테마 동기, 테스트 미수행, Settings 진입점 FAB 단독, 클라-측 필터 누락 위험).
+- BE/DB 무수정 락 준수 — 신규 엔드포인트 도입 0건.
+
+### 후속
+
+- **1순위 핫픽스 후보** (PENDING gate 진입 후): 테마 즉시 적용, `ScreenProfile` 설정 wiring.
+- **Roadmap-3 이관 candidate** (BE 보강 필요): `accountApi` 빌링 GET 엔드포인트, 워크스페이스 초대 발송 API, 다중 정렬 서버 지원, 컬럼 settings 영속화, 간트 dependency 데이터, `viewerApi` 셀편집의 updateRecord 표준화, 칸반/캘린더 서버 필터.
+- **단기 정비 (cleanup)**: `components/SSOButton.tsx` orphan 제거 (P4), `components/PageContextMenu.tsx` 2-액션 잔존 제거 (P7), Calendar 의 quickCreate → user-form 쿼리 파라미터 자동 적용 검증 (P11).
+- **테스트**: `/dev-inspection data-craft today` 권장 — lint gate 가 typecheck 만이라 P4/P7/P9/P11 테스트 수정 영향 미검증.
+
 ## v001.332.0
 
 > 통합일: 2026-05-20
