@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.296.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #127 (HOTFIX 2 — 버튼 셀 행 삭제 setViewerModel 정공법)
+
+### 개요
+
+HOTFIX 1 (v001.293.0) 적용 후에도 잔존: 헤더 "저장중 → 저장완료" 는 정상 (saveChange 정상 동작) 인데 뷰어 본문 그리드에서 행이 새로고침해야 사라짐.
+
+근본 원인 (재추적):
+- `cellRendererChildModel.onRefresh` 의 본체 = `useGridDataLoader.ts:44` 의 `triggerRerender` = `setViewerModel(prev => ({...prev, rowModelList: [...prev.rowModelList], columnModelList: [...prev.columnModelList]}))`.
+- HOTFIX 1 패턴 (`viewerModel.rowModelList = filter(...)` + `onRefresh()`): 객체 속성 직접 변경 후 setter 콜백을 호출했지만, `prev` 가 stale 한 호출 경로에서는 `[...prev.rowModelList]` 가 변경 *전* 배열의 shallow copy → React state 미갱신 → useMemo dep 변경 미감지 → 그리드 미반영.
+- 헤더 저장중/저장완료 정상 = `saveChange` 가 별도 경로로 작동했음을 의미. 본문 미반영은 React state 갱신 누락 단일 문제.
+
+### 해법 (Phase 4, HOTFIX 2)
+
+`deleteRowAction` 을 정공법으로 재작성 — React state setter `setViewerModel` 직접 호출:
+```ts
+setViewerModel((prev) => ({
+  ...prev,
+  rowModelList: prev.rowModelList
+    .filter((r) => r.rowField !== rowField)
+    .map((row, idx) => ({ ...row, seq: idx })),
+}));
+```
+- `setViewerModel` 은 `GridContext` value 의 멤버 (React `useState` setter) — 다음 render 에서 새 viewerModel 참조를 제공하도록 React 가 보장.
+- `prev` 는 functional update 의 *가장 최신* state — stale 불가능.
+- 객체 mutation / `onRefresh` / `stateManager` / `gridUtil` 의존 모두 제거. 단일 정공 경로.
+- `ButtonActionContext` 에 `setViewerModel: Dispatch<SetStateAction<FsDataViewerModel>>` 필드 추가, `useButtonAction` 이 `useGridContext().setViewerModel` 주입.
+
+### 페이즈 결과
+
+- **Phase 4 / HOTFIX 2** (fix): deleteRowAction setViewerModel functional update 단일 경로로 재작성, ButtonActionContext + useButtonAction 에 setViewerModel wiring. (`27214e14`)
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/types.ts`
+- `packages/fs-sub-data-viewer/src/features/grid/lib/button-actions/deleteRowAction.ts`
+- `packages/fs-sub-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/useButtonAction.ts`
+
+### 잔존 트레이드오프 (본 hotfix scope 외, 이전 hotfix 와 동일)
+
+- 남은 행들의 seq 재정규화는 클라이언트 state 에만 반영, 서버 동기 (`createRowSeqChange` 배치) 미수행.
+- 서브그리드 orphan 정리 / `reorderRowByIndex` (행번호 셀 cellValue 갱신) / `notifyRowDeleted` (서버 페이징 totalRows 동기) 누락.
+- 향후 별도 플랜에서 `cellRendererChildModel` 에 정식 `GridUtilContext` 노출 또는 `rowDeleteUtils.deleteRow` 호출용 어댑터 도입 권고.
+
 ## v001.295.0
 
 > 통합일: 2026-05-20
