@@ -1,5 +1,87 @@
 # data-craft — Patch Note (001)
 
+## v001.353.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 13+14 — 프로모션 구매 잔존가치 통합 + UX 4건)
+
+### 개요
+
+HOTFIX 9 까지 일반 업그레이드 / seat 변경은 잔존가치 비례 즉시 차액 결제로 통합됐으나 **프로모션 구매**(`purchasePromotion`) 만 과거 `paymentSchedule: 'immediate' | 'deferred'` 분기 + 만액 결제로 남아 있었음. 본 HOTFIX 로 프로모션 구매도 동일 잔존가치 정책 통합 + 사용자 UX 4건 함께 정리.
+
+### 변경 — data-craft-server (HOTFIX 13 — `951e6dba`)
+
+**`src/services/promotion.service.ts`**:
+- `purchasePromotion` 잔존가치 비례 즉시 차액 결제로 재작성.
+- 잔여일수 / cycleDays / flat 플랜 seats=1 등 `calculateProrationDiff` 동일 산식 inline 적용 (프로모션 단가 = promotion snapshot price).
+- chargeAmount > 0 → `charge()` (source `'promotion-proration'`) + payment_history INSERT (status='DONE', billing_cycle=구독 cycle, seats_at_payment=신규 seats).
+- chargeAmount === 0 → 0원 payment_history 1건 (감사용).
+- `plan_expires_at` 변경 X (결제일 유지).
+- 응답 형상에 `chargedAmount`, `paymentId` additive 추가 (기존 `clientPromotionId` / `paymentKey` 보존).
+- `schedulePromotion` `@deprecated` 표시 + 보존 (cron 의존성).
+
+**`src/routes/promotion.routes.ts`**:
+- 신규 `GET /api/promotion/quote?promotionId=N&seats=M` 라우트. `requirePaymentPassword` 미적용 (조회 only).
+
+**`src/types/charge.types.ts`**:
+- `ChargeMetadata.source` 유니온에 `'promotion-proration'` 추가.
+
+**테스트**: `promotion.proration.test.ts` 신규 (잔존가치 산식 단위), `promotion.routes.purchase.test.ts` 갱신 (응답 형상).
+
+### 변경 — data-craft (HOTFIX 14 — `6b53b113`, 보완 `405015ad`)
+
+**`src/features/subscription/ui/PromotionPurchaseDialog.tsx`**:
+- **A**: 명수 입력 — `<Input type="number">` 의 위아래 스피너 제거, `type="text"` + `CornerDownLeft` 리턴 아이콘 (lucide-react). HOTFIX 10 의 SeatManageDialog 인라인 입력 패턴. 빈 값 허용 + 최소 미달 시 기존 빨강 안내 ("최소 N명 이상 입력해주세요.") 유지.
+- **B**: 결제 시점 토글(즉시 / 다음주기) UI + `paymentSchedule` state + 호출 인자 + 분기 분기 + 버튼 label 분기 모두 제거. 항상 즉시 차액 결제 단일 흐름.
+- **D**: 가격 표시를 BE `GET /promotion/quote` 응답의 `chargedAmount` 로 변경. 400ms 디바운스 (SeatManageDialog 패턴) 후 quote 조회. "₩{chargedAmount}원 (현재 플랜의 잔여일 수가 차감된 가격입니다.)". 비-협업 프로모션은 정가 fallback (BE 가 비-협업 quote 지원 시 후속).
+- 보완: useEffect 내 setDebouncedSeats(null) 즉시 호출을 onChange 핸들러로 이동 (`react-hooks/set-state-in-effect` 룰 해소).
+
+**`src/features/subscription/ui/PromotionEndingNotice.tsx`** (C):
+- "⚠️ 본 프로모션은 **{date}** 까지 진행되며, 그 이후 해지 시 재구독 불가합니다." → "본 프로모션은 **{date}** 이후 재구독 불가한 상품입니다." 이모지 + 부가 문구 제거.
+- 노란색 박스 (`bg-yellow-50 border-yellow-300 text-yellow-900`) 스타일 그대로 유지.
+
+**`src/features/subscription/api/promotionApi.ts`**:
+- `getPromotionQuote(promotionId, seats)` 신설.
+
+**`src/features/subscription/model/subscriptionQueries.ts`**:
+- `useGetPromotionQuote` (또는 직접 useQuery) 추가, `usePurchasePromotion` mutation 인자에서 paymentSchedule 정합.
+
+**`src/features/subscription/lib/pendingPayment.ts`**:
+- `paymentSchedule` 필드 deprecated optional 로 유지 (BillingSuccessPage 호환).
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/promotion.service.ts`
+- `src/routes/promotion.routes.ts`
+- `src/routes/promotion.routes.purchase.test.ts`
+- `src/types/charge.types.ts`
+- `src/services/promotion.proration.test.ts` (신규)
+
+**data-craft**
+- `src/features/subscription/ui/PromotionPurchaseDialog.tsx`
+- `src/features/subscription/ui/PromotionEndingNotice.tsx`
+- `src/features/subscription/api/promotionApi.ts`
+- `src/features/subscription/model/subscriptionQueries.ts`
+- `src/features/subscription/lib/pendingPayment.ts`
+
+### 배포 선행 조건
+
+**BE + FE 동시 배포 필수.** BE 만 배포 시 FE 가 paymentSchedule 인자 전송 (deprecated 인자 무시되나 응답 형상 호환 OK). FE 만 배포 시 quote 엔드포인트 부재로 가격 표시 fallback 정가.
+
+### 테스트 시나리오
+
+1. **명수 입력**: PromotionPurchaseDialog 진입 → 명수 필드에 위아래 화살표 **없음** + 우측에 리턴 아이콘. 빈 값 허용. minSeats 미달 시 빨강 안내.
+2. **즉시 결제 단일**: 결제 시점 토글 UI **사라짐**. 결제 버튼 클릭 → 즉시 차액 결제.
+3. **노란 박스 문구**: "본 프로모션은 YYYY-MM-DD 이후 재구독 불가한 상품입니다." (이모지 / "까지 진행되며" 부분 없음).
+4. **가격 표시**: seats 변경 시 400ms 후 BE 호출 → "₩{chargedAmount}원 (현재 플랜의 잔여일 수가 차감된 가격입니다.)" 표시.
+5. **회귀**: 일반 업그레이드 / seat 변경 / 다운그레이드 / 카드 등록 흐름 영향 없음.
+
+### 잔존 후속 (본 hotfix 범위 외)
+
+- **`billingRenewal.service.ts:47-77` cron 의 pending_promotion 자동 적용 경로**: 이 경로가 `purchasePromotion` 호출 시 plan_expires_at <= NOW() 시점이라 remainingDays=0 → chargeAmount=0 → **무료 프로모션 취득** 위험. `schedulePromotion` 은 @deprecated 처리됐으나 cron 경로는 폐기 또는 별도 fresh-cycle 경로 전환 필요. **별도 후속 hotfix**.
+- 비-협업 프로모션 quote 지원 (현재 협업 전용) — BE 스펙 결정 후 FE 추가.
+
 ## v001.352.0
 
 > 통합일: 2026-05-20
