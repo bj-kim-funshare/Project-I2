@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.335.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 17 — rowLink delegate render parity 완결)
+
+### 개요
+
+HOTFIX 16 의 singleSelect dot+label 분기에도 불구하고 마스터 보고 — rowLink 셀이 여전히 원본 target 컬럼과 시각적으로 다름. 옵션별 색상 미반영 + cellRendererModelList 조건부 배경 미적용 (Image #5 target vs #6 rowLink 비교).
+
+### 근본 원인 진단
+
+**결함 A (옵션 색상 미반영)**: HOTFIX 16 의 singleSelect 분기가 `● dot + label` 구조를 직접 렌더했으나, 원본 `FsGridSingleSelectCellRenderer` 는 **dot 없이 고정 `rangeBackground` pill + label** 만 사용. 셀별 색상 차이는 `option.color` 가 아니라 **`cellRendererModelList` equal 조건 + `isColorSwapped`** 로 외부 cell wrapper 배경을 swap 하는 방식으로 구현됨. HOTFIX 16 의 dot 발상 자체가 원본 chrome 과 별개 UI 였음.
+
+**결함 B (cellRendererModelList 미적용)**: `FsGridRenderer` 는 `columnModel.cellRendererModelList` 로 backgroundColor 계산. BE 가 rowLink 컬럼에 이 필드를 반환하지 않는 환경 → 항상 transparent → 흰 배경. HOTFIX 13 의 1회 복사 (structuredClone) + RowLinkConfig.targetColumnMetadata 저장은 있었으나, **그리드 렌더 단계에서 이를 fallback 으로 참조하는 경로가 없었음**.
+
+### 변경 (3 파일, +91/-36)
+
+#### 1. dispatcher singleSelect 분기 정정
+- **`rowLinkDelegateDispatcher.tsx`** (`21d306f`): dot 제거 + 원본 chrome 과 동일한 고정 rangeBackground pill + label 만. `textColor` (cellRendererModelList 평가 결과 기반) 를 pill 텍스트 색상으로 받아 원본과 동일 색상 swap.
+
+#### 2. cellRendererModelList fallback 경로
+- **`FsGridRowLinkCellRenderer.tsx`** (`21d306f`): `backgroundColor === transparent && cellRendererModelList === []` 케이스에서 `customDataList[0]` 에 직렬화된 `targetColumnMetadata.cellRendererModelList` 로 **재평가** 하여 backgroundColor 도출. BE 응답 누락 환경에서도 1회 복사된 메타데이터로 본문 조건부 서식 복원.
+
+#### 3. config 직렬화 보강
+- **`RowLinkConfigDialog.tsx`** (`21d306f`): handleConfirm 의 configs 생성 양쪽 분기 (append / normal) 에 `targetColumnMetadata` 를 포함시켜 fallback 경로의 데이터 소스 확보.
+
+### Blockers (마스터 확인 권장)
+
+- **reference mode + valueId 저장**: cellRendererModelList equal 조건이 label 기반인 경우 valueId 와 mismatch → 조건부 서식 미적용. 본 HOTFIX 는 copy mode 기준 검증.
+- **기존 rowLink 컬럼 (HOTFIX 17 이전 생성)**: customDataList[0] 에 `targetColumnMetadata` 미포함 → BE 가 columnModel.optionList / cellRendererModelList 반환할 때만 조건부 서식 적용. 신규 생성 컬럼은 config 직렬화 경로로 완전 복구.
+- **RowLinkRenderer (칸반/캘린더/간트)**: 외부 wrapper 없어 cellRendererModelList 조건부 셀 배경 적용 경로 없음. 그리드 외 뷰의 셀 본문 배경 동등성은 별도 처리 필요.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 12 universal-trigger / HOTFIX 13 4개 속성 복사 / HOTFIX 14 보라 바 / HOTFIX 15 delegate + onClick / HOTFIX 16 picker dropdown 통일 모두 무변경.
+
 ## v001.334.0
 
 > 통합일: 2026-05-20
