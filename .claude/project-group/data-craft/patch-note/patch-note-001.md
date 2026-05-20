@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.279.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 6 — 리더 chevron 메뉴 우회 + 모달 직접 오픈)
+
+### 개요
+
+마스터 보고: HOTFIX 4 로 리더 컬럼 메뉴가 "행 연결 그룹 관리" 단일 항목만 가지게 됐는데 — 단일 항목이면 메뉴 dropdown 자체가 redundant. chevron (열 메뉴 열기 버튼) 클릭 시 메뉴를 띄우지 말고 바로 `RowLinkGroupManageDialog` 모달이 열리게 함.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`** (`062ae7a`): `handleColumnMenuToggle` 함수에 분기 1곳 추가. `parseRowLinkConfig` 를 `entities/row-link` 에서 import 하여 `columnModel.type.id === 'rowLink' && isLeader === true` 조건 충족 시 `setRowLinkManageDialog({ open: true, columnField: cf })` 직접 호출 + return — 메뉴 dropdown 진입을 차단하고 모달만 띄움. 비매칭 시 기존 메뉴 흐름 그대로.
+
+### 동작 표
+
+| 컬럼 종류 | chevron 클릭 |
+|---|---|
+| 일반 컬럼 (비 rowLink) | 기존 메뉴 dropdown |
+| rowLink + 리더 | **바로 RowLinkGroupManageDialog 모달 오픈** |
+| rowLink + 비리더 | HOTFIX 1 chevron 차단 (클릭 불가) |
+
+### 안전망
+
+HOTFIX 4 의 `menuItems.ts` early-return 분기 (리더 메뉴 단일 항목 빌더) 는 본 HOTFIX 6 이 메뉴 진입 자체를 우회하므로 실질 dead code 가 됨. 그러나 안전망으로 유지 (chevron 핸들러가 어떤 경로로 메뉴를 호출하더라도 단일 항목으로 fallback).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 19 warnings).
+- 회귀: 비 rowLink 메뉴 dropdown (HOTFIX 0), 비리더 chevron 차단 (HOTFIX 1), dialog 자체 (HOTFIX 2/3/5) 모두 무변경.
+
 ## v001.278.0
 
 > 통합일: 2026-05-20
