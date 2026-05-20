@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.303.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 3 (컨테이너 native pointerdown 리스너 — React synthetic 으로는 Radix DismissableLayer 차단 불가)
+
+### 개요
+
+v001.298.0 (#129 HOTFIX 2) 적용 후에도 캘린더 내부 클릭이 인쇄 모달을 닫는 회귀 지속. HOTFIX 2 가 React `onPointerDown={(e) => e.stopPropagation()}` / `onMouseDown` 핸들러를 캘린더 컨테이너에 부착했음에도 효과가 없었던 이유:
+
+근본 원인 재진단:
+- React synthetic event 의 `e.stopPropagation()` 은 React event delegation (React 17+ 는 root container 에 capture-phase 리스너) 내부 전파만 멈춘다. native DOM 이벤트는 그대로 document 까지 bubble.
+- Radix `@radix-ui/react-dialog` 의 `DismissableLayer` 는 `document.addEventListener('pointerdown', ...)` 로 **native** 리스너를 직접 등록 (React 시스템 외부). React stopPropagation 으로는 차단 불가.
+
+해법:
+캘린더 컨테이너 element 에 **native** 리스너를 직접 부착하여 native pointerdown/mousedown 의 bubble 을 element 단계에서 중단. document Radix 리스너 도달 불가.
+
+추가: 부착 effect 를 `useEffect` 가 아닌 `useLayoutEffect` 로 작성 — paint 직전 동기 부착이므로 빠른 클릭 race 도 차단.
+
+React onClick (날짜/chevron/X/reset) 은 React root 의 capture-phase delegation 으로 처리되므로 native bubble stopPropagation 의 영향을 받지 않고 정상 동작.
+
+### 페이즈 결과
+
+- **Phase 4 / HOTFIX 3** (fix): HOTFIX 2 에서 부착한 React `onPointerDown` / `onMouseDown` 핸들러 제거. `useLayoutEffect(() => { containerRef.current.addEventListener('pointerdown', stop); containerRef.current.addEventListener('mousedown', stop); return cleanup; }, [position])` 추가 — deps `[position]` 으로 좌표 set 의 commit 직후 paint 전 동기 부착. cleanup 으로 unmount 시 리스너 해제. (`2b4d1d9e` → `667ad014` advisor 권고 반영 useEffect → useLayoutEffect 교체)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+
+### 비고
+
+- **포터블 패턴 일반화**: createPortal + Radix Dialog 호스트 조합에서 dismiss 회피는 React synthetic 레이어로는 불가. 컨테이너 element 에 native 리스너 직접 부착 + paint 전 동기 부착 (`useLayoutEffect`) 이 표준 해법.
+- React 17+ 의 root capture-phase delegation 덕에 native bubble stopPropagation 이 React onClick 을 막지 않음 — 이 사실에 의존.
+- `fs-sub-data-viewer` / `fs-external-data-viewer` 의 사본도 portal+Radix Dialog 조합에서 동일 회귀 가능 — 별도 hotfix 시 동 패턴 적용.
+
 ## v001.302.0
 
 > 통합일: 2026-05-20
