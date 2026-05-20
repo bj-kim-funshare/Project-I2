@@ -1,5 +1,69 @@
 # data-craft — Patch Note (001)
 
+## v001.284.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #120 (HOTFIX 3 — AppHeader broken 패키지 임포트 vite 오류 회피)
+
+### 마스터 보고
+
+vite overlay 오류:
+```
+[plugin:vite:import-analysis] Failed to resolve import "@/components/ui/dialog"
+from "packages/fs-relation-builder-mobile/src/widgets/designer-dialog/ui/DesignerDialog.tsx"
+```
+
+### 원인
+
+HOTFIX 2 가 index.html entry 를 `/apps/web/src/mobile/main.tsx` 로 직접 교체 → 5탭 시연 활성화 → AppShell → AppHeader 가 모듈 로드 시점에 두 broken 패키지를 임포트:
+
+- `@dcm/fs-data-link-mobile` → `DataLinkDialog`
+- `@dcm/fs-relation-builder-mobile` → `DesignerDialog`, `QueryProvider`
+
+이 두 패키지는 b5754df WIP "부분 복사" 상태로 패키지 내부 `@/` alias (자체 src 기준) 가 vite 루트 alias (`@` → `./src/`) 와 충돌. `@/components/ui/dialog`, `@/widgets/sidebar` 등 미존재 경로 다수.
+
+### 변경
+
+#### 1. `apps/web/src/mobile/components/AppHeader.tsx` — 패키지 임포트 → 인라인 stub 교체
+
+```tsx
+// 기존
+import { DataLinkDialog } from '@dcm/fs-data-link-mobile';
+import { DesignerDialog, QueryProvider } from '@dcm/fs-relation-builder-mobile';
+
+// 변경 (인라인 stub 함수 3개)
+function DataLinkDialog(props) { /* modal stub with "패키지 정리 후 복원 예정" 카피 */ }
+function QueryProvider({ children }) { return <>{children}</>; }
+function DesignerDialog(props) { /* 동일한 stub */ }
+```
+
+stub 들은 prototype 디자인 토큰 (--ds-paper / --ds-brand / --cta-height / --cta-radius) 을 사용. 실제 다이얼로그 기능은 향후 패키지 정리 후 복원. data-testid (`data-link-dialog` / `relation-builder-dialog`) 와 className 데이터 속성을 보존해 기존 테스트 어서션 호환.
+
+#### 2. `apps/web/src/mobile/components/__tests__/AppHeader.test.tsx` — vi.mock 제거
+
+vi.mock 이 패키지를 대상으로 했으나 import 자체가 사라져 더 이상 무의미. stub 가 직접 data-testid 노출하므로 테스트 통과.
+
+### 시연
+
+`pnpm dev` → 5174 → /m/home → 더 이상 vite overlay 오류 없음. AppHeader 의 데이터링크/관계빌더 버튼 클릭 시 "패키지 정리 후 복원 예정" 카피의 임시 모달 표시.
+
+### 검증
+
+- `pnpm typecheck`: PASS.
+- `pnpm test --run`: 674 passed / 5 skipped / 0 failed (679). (1 file fail = tailwind-build dist 부재 — pre-existing infra.)
+- `pnpm build` (vite production): 여전히 실패 — `@/shared/ui` from `fs-form-builder-mobile/.../BooleanFieldRenderer.tsx` 등 다른 broken 패키지가 lazy 라우트 (ScreenUserForm) 에서 참조됨. **dev 시연에는 영향 없음** (lazy 라우트는 진입 시에만 로드). 5탭 (Home/Pages/Inbox/DM/Profile) 모두 dev 에서 정상.
+
+### Deferred (후속 권고 — 누적)
+
+- **`src/app/` + `src/pages/` + `src/main.tsx` PHASE 0.1 잔재 삭제**.
+- **packages/fs-{relation-builder,form-builder,data-viewer,data-link}-mobile 부분 복사 정리**: 본 핫픽스로 fs-{relation,data-link} 두 패키지의 AppHeader 경로는 해결. fs-form-builder-mobile / fs-data-viewer-mobile 의 deep import 는 ScreenUserForm / WidgetFullscreenSheet / 뷰어 화면 등에서 여전히 broken. 향후 user-form 또는 deep widget 진입 시 동일 패턴의 vite 오버레이 가능 → 패키지 본체 정리 또는 동일 stub 패턴 확장 필요.
+- **vite production build 통과**: 위 패키지 정리 후속.
+
+### 영향 파일
+
+- `apps/web/src/mobile/components/AppHeader.tsx` (+86 lines for inline stubs)
+- `apps/web/src/mobile/components/__tests__/AppHeader.test.tsx` (vi.mock 제거)
+
 ## v001.283.0
 
 > 통합일: 2026-05-20
