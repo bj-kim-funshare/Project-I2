@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.318.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #133 (HOTFIX 2 — 임시방편 → 정공법)
+
+### 개요 — 헤더-본문 scrollWidth 구조 정렬 + overscroll-behavior contain + source-clamp 제거
+
+v001.311.0 (HOTFIX 1, source-self clamp 사후 보정) 이후 마스터 보고: "본문은 트랙패드로 끝에서 멈추는데 열 헤더는 트랙패드 스크롤하는 동안 더 넘어갔다가 돌아옴 — 임시방편 말고 확실히 해결" — 사후 보정이라 트랙패드 제스처 동안의 elastic bounce 가 그대로 보이는 한계 노출.
+
+### 근본 원인 (정밀화 — 두 메커니즘)
+
+advisor 와의 분석에서 두 후보 메커니즘이 식별됨:
+
+- **A — 구조적 scrollWidth 비대칭**: `GridHeader.tsx` inner flex (L116-118) 는 `style={{ minWidth: 'max(fit-content, 100%)' }}` 가 있으나 `GridBody.tsx` L263 inner div `<div className="flex-1">` 에는 minWidth 부재. RowMenuColumn(40px) 과의 결합으로 `header.scrollWidth > body.scrollWidth` 가 되는 케이스 존재.
+- **B — macOS 트랙패드 elastic overscroll**: 헤더가 직접 트랙패드 대상이므로 native bounce 효과가 시각적으로 보임 (본문은 sync 로만 받아 bounce 발생 안 함). HOTFIX 1 의 source-self clamp 는 bounce *이후* source 를 끌어내려서 "더 갔다 돌아오는" 동안의 시각이 그대로 노출.
+
+두 메커니즘 모두를 독립적으로 차단해야 확실한 해결.
+
+### 페이즈 결과
+
+- **Phase 3 / HOTFIX 2** (`5c017c16`): 5파일 정공법 fix.
+  - `GridBody.tsx`: bodyScrollRef div style 에 `overscrollBehaviorX: 'contain'` 추가 + inner `<div className="flex-1">` 에 `style={{ minWidth: 'max(fit-content, 100%)' }}` 추가 (헤더 inner flex 와 구조 일치, 메커니즘 A 차단).
+  - `GridHeader.tsx`: headerScrollRef div style 에 `overscrollBehaviorX: 'contain'` 추가 (메커니즘 B 차단).
+  - `GroupHeaderRow.tsx` · `AggregationRow.tsx`: groupHeaderScrollRef / aggregationScrollRef 컨테이너에도 동일한 `overscrollBehaviorX: 'contain'` 추가 (4개 sync 컨테이너 모두 일관).
+  - `useScrollSync.ts`: HOTFIX 1 의 source-self clamp 로직 (minApplied 측정 + 재기입) **전부 제거**. JSDoc 도 Phase 1 단순 표현으로 복원. index hash 5c705b5c — Phase 1 후 깨끗한 상태와 정확히 일치.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/GroupHeaderRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`
+- `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 17 warnings).
+- advisor (hotfix2 시점, 5-perspective): 5/5 PASS.
+- 마스터 수동 검증은 PENDING 게이트에서.
+
+### 절차 노트 — 임시방편 제거
+
+HOTFIX 1 의 source-self clamp 는 사후 보정으로 "containment pending structural diagnosis" 로 명시되었음. HOTFIX 2 에서 구조적 진단 (A) 과 native bounce 차단 (B) 이 모두 적용되어 clamp 가 불필요해졌고 제거됨. 마스터 요구 "임시방편 → 정공법" 충족.
+
+브라우저 호환성: `overscroll-behavior-x: contain` 은 Chrome / Firefox / Safari 16+ 지원. 구버전 Safari 환경에서는 (B) 차단이 누락될 수 있으나 메커니즘 (A) 의 구조 정렬은 여전히 작동.
+
 ## v001.317.0
 
 > 통합일: 2026-05-20
