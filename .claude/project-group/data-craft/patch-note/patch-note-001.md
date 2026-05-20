@@ -1,5 +1,66 @@
 # data-craft — Patch Note (001)
 
+## v001.329.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 7 + HOTFIX 8 — incomplete 결제수단 BE 응답 마스킹 + FE sendBeacon 정리)
+
+### 개요
+
+마스터 정책 확정: "결제 비밀번호 없는 결제 수단은 시스템에서 없는 것과 동일하게 응답."
+
+이를 위해:
+- **HOTFIX 7 (BE)** — `/api/subscription/status` 응답에서 `payment_password_hash IS NULL` 인 user 의 결제수단 정보 (`hasBillingKey`, `cardInfo`) 를 강제 마스킹. BE 가 진실의 단일 출처가 되어 FE 모든 결제 흐름 (UpgradeStepPayment, CardInfoSection, SeatManageDialog 등) 이 자동 정합.
+- **HOTFIX 8 (FE)** — `BillingSuccessPage` 의 sendBeacon useEffect + best-effort deleteCard 호출 전면 제거. 청소 책임은 BE cron (HOTFIX 9, 별도 머지) 으로 위임.
+
+### 변경
+
+**data-craft-server (HOTFIX 7 — `d94664d2`)**
+
+- **`src/controllers/subscription.controller.ts`** `getSubscriptionStatusController`: 서비스 호출 후 `req.userId` 로 `payment_password_hash` 별도 조회. `hash === null` 시 응답에 `hasBillingKey: false`, `cardInfo: null`, `isSubscriptionCancelled: false` 강제 덮어쓰기. 서비스 시그니처 변경 없이 컨트롤러 레이어만 수정 — 변경 범위 최소화.
+- 검토 완료 (마스킹 불필요):
+  - `/billing/history`: 응답에 카드 정보 미포함.
+  - `billingRenewal.service.ts cardLast4`: 오너 알림 내부 전송용, FE 노출 없음.
+  - `billingSubscription.service.ts cardCompany/cardNumber`: Toss 등록 흐름 내부 전용.
+
+**data-craft (HOTFIX 8 — `fd3d1192`)**
+
+- **`src/pages/billing-callback/ui/BillingSuccessPage.tsx`**:
+  - sendBeacon useEffect (L144-155) 전체 삭제 — `navigator.sendBeacon('/api/subscription/billing/delete-card')` 호출 제거. sendBeacon 은 인증 헤더 미포함 → `authMiddleware` 거부 → 무용 코드였음.
+  - `handleDeleteConfirmProceed` 에서 `deleteCard()` 호출 + catch/finally 체인 제거. navigate 즉시 실행으로 단순화.
+  - AlertDialog 타이틀: "카드를 삭제하시겠습니까?" → "카드 설정을 완료하지 않으셨습니다." (실제 동작 정합).
+  - 본문: "자동으로 제거됩니다" 문구 사용 (BE cron 청소 의미 반영).
+  - `deleteCard` import 정리 (본 파일에서 호출 사라짐).
+
+### 영향 파일
+
+**data-craft-server**
+- `src/controllers/subscription.controller.ts`
+
+**data-craft**
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 효과
+
+- 비밀번호 미설정 client 가 결제 시도 → FE 가 `hasBillingKey: false` 수신 → "카드 없음" UI → 재등록 흐름으로 자연 유도.
+- 이전: incomplete 카드가 결제 흐름에 노출되어 결제 시도 가능 → BE 미들웨어 단계에서 차단되면서 혼란.
+- sendBeacon 의 인증 한계로 인한 silent 실패 코드 제거 — 코드베이스 단순화.
+
+### 테스트 시나리오
+
+1. **incomplete 카드 마스킹**: 비밀번호 설정 안 한 user 가 플랜 관리 진입 → 결제 수단 영역 "등록된 결제 수단이 없습니다." 표시 (실제 billing_info 행은 존재해도).
+2. **정상 카드 노출**: 비밀번호 설정된 user → 결제 수단 정상 표시 + 결제 흐름 정상.
+3. **카드 등록 후 비밀번호 설정 도중 X**: confirm 다이얼로그 → "카드 설정을 완료하지 않으셨습니다." 본문 정확히 표시 → 확인 시 즉시 navigate (자동 deleteCard 시도 없음).
+4. **새 사이클**: 비밀번호 설정 미완료 client 의 빌링키는 BE cron (HOTFIX 9 머지 후) 이 grace 1시간 경과 시점에 정기 청소.
+
+### HOTFIX 9 보존 (별도 머지 예정)
+
+`plan-enterprise-126-billing-proration-핫픽스9` 브랜치 (`492b0d30`, +212/-1) 가 BE cron 잡 코드를 포함하여 origin push 보존됨. 머지는 `task-db-structure` 세션의 DDL 작업 (`billing_info.created_at` 추가, `billing_cleanup_log` 테이블 신설, `idx_billing_cleanup` 인덱스 추가) 완료 후 진행 예정.
+
+### 후속 권장 (HOTFIX 7+8 범위 외)
+
+- 본 hotfix 적용 시점에 이미 incomplete 빌링키를 보유한 client 가 있다면 BE cron 가동까지 청소되지 않음. cron 머지 후 첫 tick 에 일괄 정리됨 — 마스터 별도 통보 시 즉시 1회 수동 실행 가능 (`pnpm ts-node scripts/once-cleanup-incomplete-billing.ts` 등 별도 스크립트 후속).
+
 ## v001.328.0
 
 > 통합일: 2026-05-20
