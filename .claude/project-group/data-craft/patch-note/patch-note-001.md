@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.298.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 2 (캘린더 컨테이너 pointerdown stopPropagation — Radix DismissableLayer 외부 클릭 감지 회피)
+
+### 개요
+
+v001.295.0 (#129 HOTFIX 1) 적용 후, 캘린더 내부 (날짜 / 월 이동 chevron / 초기화 / X) 무엇을 누르든 캘린더가 즉시 닫히는 회귀 발생.
+
+근본 원인: 인쇄 모달은 `@radix-ui/react-dialog` (Radix Dialog Primitive) 기반. Radix `DialogContent` 내부의 `DismissableLayer` 가 document 레벨 `pointerdown` (bubble phase) 리스너를 갖고 있어, content ref 외부 pointerdown 시 `onPointerDownOutside` 발화 → Dialog dismiss. `createPortal(document.body)` 로 떠 있는 캘린더는 Dialog content ref 의 React subtree 밖에 있지만 DOM 상으로도 외부에 위치 — 캘린더 내부 클릭이 Dialog 외부 클릭으로 잘못 인식되어 인쇄 모달이 닫히고 캘린더도 함께 unmount.
+
+HOTFIX 1 의 `containerRef.contains` 가드는 본인의 document mousedown 리스너만 막을 뿐 Radix 의 별개 pointerdown 리스너에는 무영향.
+
+해법: 캘린더 컨테이너 div 에 `onPointerDown={(e) => e.stopPropagation()}` 와 `onMouseDown={(e) => e.stopPropagation()}` 두 핸들러 추가. Radix DismissableLayer 는 bubble phase 리스너라 컨테이너에서 propagation 을 멈추면 document 까지 전파되지 않아 외부 클릭으로 인식되지 않음. 우리 자체 document mousedown 리스너는 native event 직접 등록이라 React stopPropagation 영향 받지 않고, `containerRef.contains` 가드로 내부 클릭 무시 동작 그대로 유지.
+
+### 페이즈 결과
+
+- **Phase 3 / HOTFIX 2** (fix): `DatePickerDropdown` 캘린더 컨테이너 div 에 `onPointerDown` / `onMouseDown` stopPropagation 핸들러 2 줄 추가. Radix DismissableLayer 외부 클릭 감지 회피. 기존 portal / fixed / useLayoutEffect rect / document click-outside 로직은 변경 없이 유지. (`feea8385`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DatePickerDropdown.tsx`
+
+### 비고
+
+- 본 패턴 (portal-out 팝오버 + Radix Dialog 호스트) 의 일반 해법 — DismissableLayer 가 bubble phase 라 컨테이너 stopPropagation 으로 차단 가능.
+- `useBackdropClickClose` 훅의 다른 호출처는 영향 없음.
+- 캘린더 내부 React onClick 이벤트 (날짜 선택 등) 는 React synthetic 시스템 내 정상 동작 — stopPropagation 은 native pointerdown/mousedown 전파만 막음.
+
 ## v001.297.0
 
 > 통합일: 2026-05-20
