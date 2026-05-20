@@ -1,5 +1,78 @@
 # data-craft — Patch Note (001)
 
+## v001.307.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 12 — 리더 시스템 완전 제거 + universal-trigger 구조 재구축)
+
+### 개요
+
+마스터 명령: **리더(leader) 개념을 완전히 제거**하고 어느 rowLink 셀에서든 선택 시 그 target row 값으로 같은 source row 의 그룹 모든 컬럼 cellValue 를 일제히 재배치하는 universal-trigger 구조로 재구축. 본 핫픽스는 플랜 #118 의 핵심 모델을 근본적으로 단순화 — 비대칭 leader/follower 관계 → 평등한 그룹.
+
+### 변경 (15 파일, +96 / -459)
+
+#### 1. 데이터 모델
+- **`entities/row-link/types.ts`**: `RowLinkConfig` 에서 `isLeader` 와 `leaderTargetColumnId` 완전 제거.
+- **`entities/row-link/helpers.ts`**: `parseRowLinkConfig` 가 두 필드 없이 파싱 성공. 구버전 데이터 (isLeader 포함) 는 해당 필드 silent drop 으로 무시 — 기존 그룹은 universal-trigger 동작으로 자동 전환.
+
+#### 2. universal-trigger 동작
+- **`useRowLinkCell.ts`**: `handleLeaderValueSave` → `handleAnyCellSave` 일반화. 어느 셀이든 클릭 시 ConnectionEditOverlay 가 그 셀의 `mappedTargetColumnId` 를 기준으로 target group 행 목록 표시. 사용자가 target row 선택 시 — (a) 클릭 셀 즉시 저장 → (b) `requestRowLinkTargetRow` 로 target row 전체 데이터 조회 → (c) 같은 source row · linkGroupId 의 모든 다른 셀에 각자 `mappedTargetColumnId` 대응 값 자동 채움.
+- **`RowLinkRenderer.tsx` / `FsGridRowLinkCellRenderer.tsx`**: `config.isLeader === true` 분기 제거. 모든 rowLink 셀이 interactive.
+
+#### 3. 컬럼 메뉴 / chevron 통합
+- **`ColumnHeader.tsx`**: HOTFIX 1 의 비리더 chevron 차단 제거 — 모든 rowLink 컬럼은 chevron 노출.
+- **`menuItems.ts`**: HOTFIX 4 의 `isLeader=true` early-return 분기를 모든 rowLink 컬럼에 적용 (단일 "행 연결 그룹 관리" 항목).
+- **`useTableView.ts`**: HOTFIX 6 의 chevron → 모달 직접 오픈 동작을 모든 rowLink 컬럼에 적용.
+
+#### 4. RowLinkGroupManageDialog UI
+- 좌측 사이드바: "★ 리더" 주황 pill 배지 제거.
+- 우측 hero: "리더" 배지 제거.
+- 우측 02 동작 섹션: "연결 그룹 리더" 토글 + 보조 텍스트 제거. 옵션 카운터 자동 갱신.
+- 행 그룹 토글의 disabled / "리더 열에서는 사용할 수 없습니다" 분기 제거.
+- footer 하단 "선택 연결 열 제거" 의 "리더 자동 제외" 로직 제거. "그룹 전체 = 연결 그룹 삭제" 동적 라벨 (HOTFIX 8) + 즉시 반영 (HOTFIX 11) 유지.
+
+#### 5. column-restrictions / rowAddHelpers / rowPasteUtils
+- HOTFIX 1 의 `isRowLinkNonLeaderColumn` 참조 모두 제거 (3개 파일). 비리더 readonly 강제도 더 이상 leader 기준이 아닌 일반 rowLink 정책으로 단순화.
+
+#### 6. addRowLinkColumns / RowLinkConfigDialog / useRowLinkGroup
+- `addRowLinkColumns`: 새 컬럼 중 어느 것도 `isLeader=true` 로 지정 안 함.
+- `RowLinkConfigDialog`: 리더 지정 단계 + AppendModeProps 의 `leaderTargetColumnId` pre-fill 제거. Step 흐름 단축.
+- `useRowLinkGroup`: `updateLeaderInGroup` 함수 제거 + `index.ts` re-export 정리.
+
+### 영향 파일 (HOTFIX 사전 승인 — 마스터 "구조 재구축" 명시)
+
+```
+entities/row-link/{types.ts, helpers.ts}
+features/grid/hooks/column-menu/menuItems.ts
+features/grid/lib/helpers/column-restrictions.ts
+features/grid/lib/row-management/{rowAddHelpers.ts, rowPasteUtils.ts}
+widgets/cell-renderers/row-link/{FsGridRowLinkCellRenderer.tsx, RowLinkConfigDialog.tsx,
+  RowLinkGroupManageDialog.tsx, RowLinkRenderer.tsx, useRowLinkCell.ts,
+  useRowLinkGroup.ts, index.ts}
+widgets/grid-table/components/ColumnHeader.tsx
+widgets/grid-table/hooks/useTableView.ts
+```
+
+Commit `2e234b20`.
+
+### 이전 핫픽스 갱신 정리
+
+- HOTFIX 1 비리더 chevron 차단 → leader 개념 자체 소멸 → 모든 rowLink chevron 노출.
+- HOTFIX 4 리더 메뉴 단일 항목 → 모든 rowLink 메뉴 단일 항목.
+- HOTFIX 6 리더 chevron 직접 모달 → 모든 rowLink chevron 직접 모달.
+- HOTFIX 2 연결 그룹 리더 토글 → 제거.
+- HOTFIX 7 hero / 사이드바의 리더 배지 → 제거.
+
+### 후속 (현 핫픽스 범위 초과 — 명시 보고)
+
+**reference 모드 실시간 upstream 반영 손실**: 기존 reference 모드는 리더 값 → target row 조회 → 비리더 표시값 실시간 lookup. leader 기준점 제거 후 동일 lookup 재구현 불가 — 현재는 셀 클릭 시점 스냅샷 저장만. target table 데이터가 나중에 변경되어도 rowLink 셀 값 자동 갱신 안 됨. 별도 re-architecture 후속 후보.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 17 warnings).
+- 회귀: 기존 그룹 (HOTFIX 1~11 동안 생성된) 들도 isLeader 필드 무시 + universal-trigger 로 자연 전환.
+
 ## v001.306.0
 
 > 통합일: 2026-05-20
