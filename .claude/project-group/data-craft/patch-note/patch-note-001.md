@@ -1,5 +1,69 @@
 # data-craft — Patch Note (001)
 
+## v001.278.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #123 (행 초기화 — 이미지/파일 셀 실제 삭제 누락 수정)
+
+### 마스터 보고
+
+"data-craft, 데이터 뷰어의 버튼 타입 셀에서 "행 초기화" 기능을 사용할 때, 해당 행에 이미지, 파일 타입 셀이 있으면 해당 항목의 파일들을 초기화 경고 목록에 포함은 하는데 정작 초기화를 해도 해당 항목들이 삭제가 안돼"
+
+### 원인
+
+PHASE-17 (커밋 `3385b7cb`) 가 `resetRowAction.ts` 에 file/image 셀 백엔드 삭제 호출 `fileApi.deleteFile(f.id, f.uri)` 을 추가했으나, `f.uri = f.filePath` 매핑이 항상 빈 문자열. BE 라우터 (`data-craft-server/src/routes/file.ts:364-368`) 가 `if (!id || !uri) throw BadRequestError('MISSING_REQUIRED_FIELDS')` 로 400 거부 → FE 의 `Promise.allSettled` 가 거부를 삼킴 → 무성 실패. 경고 모달은 `fileName` 만 표시하므로 정상 동작하지만 실행 경로만 파괴된 비대칭 결함.
+
+핵심 사이트: `loadFileList.ts:60, :165` 두 매핑이 `FsGridCellFileModel.filePath` 를 `''` 로 하드코딩 — BE URI 가 모델에 전혀 흘러들지 않음.
+
+### 변경
+
+#### Phase 1: `FsGridCellFileModel.fileUri` 신설 + reset 경로 변경 (`1d388b6`)
+
+**1. `packages/fs-data-viewer/src/entities/cell-file.types.ts`** — optional `fileUri?: string` 필드 신설.
+
+```ts
+export type FsGridCellFileModel = {
+  fileIndex: number;
+  fileName: string;
+  filePath: string;
+  /** BE storage URI used for deletion calls. Separate from filePath, which is a rendering-only fallback. */
+  fileUri?: string;
+  fileData: ArrayBuffer | null;
+};
+```
+
+**2. `src/features/file/lib/loadFileList.ts`** — 단건/배치 두 매핑 사이트에 `fileUri: file.uri` 추가. 기존 `filePath: ''` 는 그대로 보존 (ImageList fallback 시맨틱 무회귀).
+
+**3. `packages/fs-data-viewer/src/features/grid/lib/button-actions/resetRowAction.ts:85`** — `uri: f.filePath` → `uri: f.fileUri ?? ''`. `fileApi.deleteFile(id, uri)` 가 BE 검증 통과 → 실제 DELETE → 물리 파일 unlink.
+
+### 시맨틱 분리
+
+| 필드 | 용도 | 값 형태 |
+|------|------|--------|
+| `filePath` | ImageList `<img src>` 렌더링 fallback (data-craft 에선 빈 문자열로 placeholder 분기) | `''` (유지) |
+| `fileUri` | `fileApi.deleteFile(id, uri)` BE 호출용 storage URI | `file.uri` (신규) |
+
+`filePath` 를 직접 `file.uri` 로 치환하면 `<img src="companies/.../uuid.ext">` 가 인증 없이 storage 경로를 직접 요청하여 broken-image 회귀 — 별도 필드로 분리하여 회피.
+
+### 비-범위
+
+- 다른 viewer 패키지 (`fs-sub-data-viewer`, `fs-external-data-viewer`) — 자체 reset 액션에 file/image 삭제 로직 부재.
+- `Promise.allSettled` 무성 실패 일반 개선 — 향후 별도 작업.
+- ImageList fallback 가드 변경 — placeholder 유지.
+
+### 검증
+
+1. `pnpm typecheck:all && pnpm lint` 통과 (0 errors, 19 warnings).
+2. 수동 e2e (마스터): dev 서버 (5173) → 이미지/파일 셀이 있는 행에 파일 업로드 → 행 초기화 → 새로고침 시 셀이 비어 있음 확인. BE DB `file` 행 및 storage 물리 파일 삭제 확인.
+
+### 영향 파일
+
+```
+data-craft/packages/fs-data-viewer/src/entities/cell-file.types.ts
+data-craft/packages/fs-data-viewer/src/features/grid/lib/button-actions/resetRowAction.ts
+data-craft/src/features/file/lib/loadFileList.ts
+```
+
 ## v001.277.0
 
 > 통합일: 2026-05-20
