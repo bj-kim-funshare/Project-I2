@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.305.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #133
+
+### 개요 — 그리드 뷰 스크롤 동기화 긴급 결함 (drift + 진동 크래시) 수정
+
+마스터 보고된 두 긴급 결함을 단일 파일 타겟 revert 로 해소.
+
+- **디자인 모드**: 그리드 뷰 열 헤더가 본문보다 더 가로 스크롤되어 세로 정렬이 어긋남.
+- **뷰 모드**: 동일 스크롤 동기화 깨짐 + 본문이 무한 진동(setState 루프)하다 페이지 크래시. 특히 가로 스크롤바 마우스 클릭 시 강하게 재현.
+
+### 근본 원인 — 커밋 3d82b92a 의 회귀
+
+`packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts` 의 `createScrollHandler` 가 커밋 `3d82b92a` (#111 Phase 2, 2026-05-19) 에서 **rAF 배치 sync** 로 전환된 것이 두 결함의 직접 원인:
+
+- **target scrollLeft 쓰기**: 동기 쓰기 → rAF 1프레임 지연 쓰기 → 1프레임 시각적 drift + 본문 폭 < 헤더 폭일 때 `scrollLeft` clamp 영구화 = "헤더만 더 스크롤".
+- **가드 해제 시점**: `requestAnimationFrame(() => guard=false)` (한 프레임 윈도우) → `flush()` 내 writes 직후 동기 해제 → `el.scrollLeft = next` assignment 가 유발하는 **비동기 onScroll** 이 가드=false 를 만나 재진입 허용 → clamp 된 값이 source 로 역기록 → 자기 발화 setState 루프 → 크래시.
+- 스크롤바 클릭은 단일 큰 폭 jump 를 만들어 clamp 빈도 ↑ → 진동 강하게 발산 (마스터 단서와 정합).
+
+### 페이즈 결과
+
+- **Phase 1** (`ab66d2b9`): `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts` 의 3d82b92a 변경분만 타겟 revert. `createScrollHandler` 의 `pendingScrollLeft` / `rafId` 클로저 변수 + `flush()` 내부 함수 제거하고, 동기 scrollLeft 읽기·쓰기 + `requestAnimationFrame(() => isScrollingSyncRef.current = false)` 지연 가드 해제 (가드 윈도우 = 한 프레임 전체) 시맨틱으로 복원. JSDoc 도 이전 단문 표현으로 복원. `useScrollSync` hook 시그니처 및 4 핸들러 export 구조 변경 없음 — 호출처(GridHeader / GridBody / GroupHeaderRow / Aggregation) 영향 없음. git diff 인덱스 해시가 3d82b92a 이전 상태(5c705b5c)와 정확히 일치함을 확인.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 20 warnings — 사전 존재 분).
+- advisor #1 (plan): 5/5 PASS (Intent / Logic / Group Policy / Evidence / Command Fulfillment).
+- advisor #2 (outcome): 5/5 PASS — index hash 정합으로 정확성 증거 명확.
+
+### 잔존 후속 (PENDING 게이트 시점 기준)
+
+revert 가 두 결함을 모두 해소할 가능성이 가장 높음. 만약 뷰 모드 진동이 잔존하면 (특히 body 스크롤바 클릭 시) 트리거가 `GridBody.tsx` L235~242 의 Enterprise 038 `dispatchEvent('scroll')` 경로 + 가상화 측정 사이클 쪽이라는 강한 시그널 — 핫픽스로 가드 안에서 dispatch 하도록 보강.
+
+### 절차 노트
+
+- 단일 페이즈 / 단일 파일 타겟 revert. `git revert 3d82b92a` 같은 커밋 단위 revert 가 아닌 해당 파일의 변경분만 역적용 (#111 Phase 2 의 다른 컨텍스트 보존을 위해).
+- 3d82b92a 의 rAF 배치가 의도한 **프레임당 DOM 쓰기 횟수 최소화** 성능 이득은 본 revert 로 사라짐. 현 단계 우선순위는 정확성 > 성능.
+
 ## v001.304.0
 
 > 통합일: 2026-05-20
