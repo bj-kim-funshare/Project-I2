@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.339.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #139 HOTFIX 1 (색 띠 → 플랜 관리 배지 pill 스타일)
+
+### 배경
+
+v001.337.0 의 Phase 1 결과를 본 마스터 피드백: "차별화하라는게 이렇게 플랜 관리 페이지처럼 하라는거야, 배경색 넣으라는게 아니라고." 플랜 관리 페이지(`PlanTabContent` / `CurrentPlanBadge`) 가 사용하는 `getPlanBadgeStyle()` 의 그라데이션 pill + 아이콘 패턴이 차별화 기준이며, 카드 전체 너비 색 띠가 아니었다.
+
+### 해법
+
+- `planUtils.ts` 의 `getPlanCardStyle()` / `PlanCardStyle` (v001.337.0 Phase 1 신설) 완전 제거.
+- `PlanComparisonCard` 의 헤더 영역에서 `getPlanBadgeStyle(planType)` 을 직접 호출하여 `containerClass` (그라데이션 배경 + 아이콘 색) + `iconComponent` 를 사용한 작은 배지 pill 로 플랜 이름 출력.
+- 카드 컨테이너는 단일 `p-6` 패딩으로 복원 (overflow-hidden + 내부 px-6 분리 구조 폐기). 본문은 흰/뉴트럴 배경 그대로.
+- 5종 카드 모두 같은 패턴으로 적용 — basic(sky), standard(indigo→purple+Sparkles), premium(amber→orange+Crown), enterprise(slate+Building2), free(muted). 마스터 명령 1번의 "4개 디자인 달라야함" 은 유료 4개의 4가지 톤으로 자동 충족.
+- `isSelected` 파스텔 하늘 테두리 / `isCurrent` 검정 테두리는 v001.337.0 결과 유지.
+
+### 영향 파일
+
+data-craft:
+- `src/features/subscription/lib/planUtils.ts`
+- `src/features/subscription/ui/PlanComparisonCard.tsx`
+
 ## v001.338.0
 
 > 통합일: 2026-05-20
