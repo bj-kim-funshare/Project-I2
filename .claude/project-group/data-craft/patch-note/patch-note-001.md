@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.342.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 19 — 모달 클릭 전파 + picker 4건 UX 확장)
+
+### 개요
+
+마스터 보고 + 추가 요구 4건 통합:
+1. 행 연결 그룹 관리 모달 클릭이 뒤로 전파되어 그리드 행/섹션 선택됨 — 차단.
+2. picker 드롭다운에 최신 데이터가 위로 정렬.
+3. picker 드롭다운 "선택 안함" 위에 검색창 + 엔터 검색 + 다 지우면 자동 리셋.
+4. 검색창 우측 확장 버튼 + 폭 +300px 확장 + 화면 안 벗어나게 위치 조정.
+5. 드롭다운 높이 — 클릭 셀 위/아래 가용 공간 내 최대 500px 자동 확장.
+
+### 변경 (2 파일, +87/-18)
+
+#### 1. 모달 클릭 전파 차단 (`3a97d84`)
+- **`RowLinkGroupManageDialog.tsx`** Dialog.Content 에 `onPointerDown / onMouseDown / onClick` 세 핸들러에 `e.stopPropagation()`. Radix Dialog.Portal 안에서 발생한 이벤트가 그리드 컨테이너 document-level 핸들러에 잡히던 문제 해소. `FsGridCellStyleDialog` 의 기존 패턴 참조.
+
+#### 2. picker 최신 정렬 + 검색 + 폭 확장 (`8502933`)
+- **`ConnectionEditOverlay.tsx`**:
+  - **정렬**: `valueId` DESC 클라이언트 측 sort (`ConnectionValueItem` 에 createdAt 필드 없어서 valueId 가 삽입 순서 반영).
+  - **검색**: `searchInput` (입력 즉시 반영) + `committedSearch` (엔터 후 적용) 두 state 분리 → 의도된 엔터 검색 UX. 빈 문자열 시 onChange 에서 `committedSearch` 자동 리셋. 필터 source = `item.value` (표시 라벨) 대소문자 무시 includes 매칭.
+  - **리턴 아이콘**: 검색 input 우측에 lucide `CornerDownLeft` 아이콘.
+  - **폭 확장 버튼**: 검색창 우측. 클릭 시 `baseWidth + 300px`. `overlayWidth` 가 이미 `useLayoutEffect` 의존성에 포함되어 기존 `adjustOverlayPosition` (viewport boundingClientRect 클램핑) 자동 재실행 → 화면 벗어남 자동 보정.
+
+#### 3. 드롭다운 높이 자동 확장 (`2dc8107a`)
+- **`ConnectionEditOverlay.tsx`** `useLayoutEffect` 내:
+  - `spaceBelow = viewport.height - anchorRect.bottom - VIEWPORT_MARGIN(16)`.
+  - `spaceAbove = anchorRect.top - VIEWPORT_MARGIN(16)`.
+  - `showAbove = availableBelow < 500 && availableAbove > availableBelow` → 위로 배치.
+  - `computedHeight = min(500, showAbove ? availableAbove : availableBelow)`.
+  - 외곽 컨테이너 `style.height` 직접 적용 + `overflowY: auto` 내부 스크롤. 기존 내부 `max-h-[260px]` 래퍼 제거 — 외곽 컨테이너가 단일 스크롤 영역.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 17/18 의 singleSelect pill + cellRendererModelList + 셀 중앙 정렬 모두 무변경.
+
 ## v001.341.0
 
 > 통합일: 2026-05-20
