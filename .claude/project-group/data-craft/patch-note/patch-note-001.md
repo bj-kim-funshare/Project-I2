@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.306.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #130 (HOTFIX 1 — 테마 변경 권한 게이트 제거)
+
+### 마스터 보고 증상
+v001.302.0 머지 후 테마 변경 시도 자체가 실패. 브라우저 콘솔/서버 로그:
+```
+[ERROR] PERMISSION_DENIED (callId=FORBIDDEN, PUT /api/user-preference, status=403, user=6)
+ForbiddenError: PERMISSION_DENIED at permission.middleware.ts:337:15
+```
+
+### 진단
+PUT `/api/user-preference` 가 `permissionCheckMiddleware('app_theme_change')` 로 보호되어 일반 사용자의 본인 테마 저장이 BE 단에서 403 으로 거부됨. 엔드포인트는 per-user 의미 (`/user-preference`) 이나 게이트는 admin-level 권한 (`app_theme_change`, 코드 주석상 `enterprise-501`). FE 의 Phase 5 / `ThemeSection` 게이트도 동일 권한명을 검사하지만 user=6 의 FE 권한 상태가 desync 되어 PUT 까지 도달한 후 BE 가 차단. 마스터의 "DB-only, 인증된 모든 사용자가 본인 테마 변경" 의도와 게이트 의미가 충돌.
+
+### 해법 — BE + FE 동시 게이트 제거
+- **BE (`c0326b01`, data-craft-server)**: `src/routes/user-preference.ts` 의 PUT 라우트에서 `permissionCheckMiddleware('app_theme_change')` 미들웨어 제거. unused import 정리. `permissionMiddleware` (라우터-wide 인증 / 플랜 검증) 는 유지하여 인증 / 플랜 보호는 그대로.
+- **FE (`9ad9bfbc`, data-craft)**:
+  - `src/entities/theme/model/themeStore.ts` `setTheme()` 에서 `hasPermission('app_theme_change')` 게이트 + `useAuthStore` dynamic import 제거. setTheme 은 이제 `syncThemeToServer await → state·DOM commit` 만 수행 (race 차단 패턴 유지).
+  - `src/widgets/settings-dialog/ui/ThemeSection.tsx` 에서 `usePermission('app_theme_change')`, `canChangeTheme` 변수, ThemeGrid `disabled` prop 제거.
+
+### 영향 파일
+
+data-craft-server:
+- `src/routes/user-preference.ts`
+
+data-craft:
+- `src/entities/theme/model/themeStore.ts`
+- `src/widgets/settings-dialog/ui/ThemeSection.tsx`
+
+### 위험 / 미해결
+- `enterprise-501` 의 원 설계 의도가 "회사 단위 테마를 admin 만 통제" 같은 별도 use case 였을 가능성. 본 HOTFIX 는 per-user preference 해석으로 게이트 제거. company-level 강제 테마 기능이 별도로 필요해지면 다른 엔드포인트로 분리 설계 필요 (현 플랜 범위 밖).
+- 머지 커밋 메시지 (`merge[plan-enterprise #130 hotfix 1 BE/FE]: ... v001.303.0`) 의 버전 라벨은 본 패치노트 작성 시점에 v001.306.0 으로 확정되어 라벨이 어긋남 (작업 중 다른 플랜 #133 등이 선행 머지되며 버전 번호가 진행). 정사 기록은 본 항목.
+
 ## v001.305.0
 
 > 통합일: 2026-05-20
