@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.289.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #128 (진행률/세계시간/국가 셀 더블클릭 팝업 전환)
+
+### 개요
+
+데이터 뷰어 그리드의 진행률·세계시간·국가 3개 셀이 단일 클릭만으로 즉시 오버레이/팝업을 띄우던 동작을, 일반 텍스트 셀과 동일한 더블클릭 트리거로 통일. 단일 클릭은 셀 포커스만 부여한다. 키보드 진입 경로 (Enter / Space → openOverlay) 와 Shift 다중 선택 분기는 그대로 보존.
+
+원인:
+- 3개 hook (`useProgressCellHandlers` / `useWorldTimeCell` / `useNationCellHandlers`) 의 `handleClick` 이 stopPropagation → 가드 → `onFocus` → `openOverlay()` 까지 한 번에 처리 → 셀 선택만 하려 해도 매번 팝업이 떠 그리드 탐색이 불편.
+
+해법:
+- Phase 1: 각 hook 의 `handleClick` 에서 `openOverlay()` 호출을 제거하고 새 `handleDoubleClick` 콜백을 추가 (각 셀의 기존 가드 조합 — Progress 의 `isWriteMode && !isSettingMode`, WorldTime 의 `openOverlay` 내부 `isSettingMode` 가드, Nation 의 `isSettingMode` early return — 을 그대로 적용). 3개 renderer JSX 에 `onDoubleClick={handleDoubleClick}` 바인딩을 추가. 키보드 핸들러 무변경.
+
+### 페이즈 결과
+
+- **Phase 1** (fix): 3개 셀 hook 의 `handleClick` 에서 `openOverlay()` 제거 + 새 `handleDoubleClick` 추가 (각 셀 기존 가드 보존), 3개 renderer JSX 에 `onDoubleClick` 바인딩 추가, 키보드 진입 경로 무변경. (`4ce4d95`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridProgressCellRenderer/useProgressCellHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridProgressCellRenderer/FsGridProgressCellRenderer.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/useWorldTimeCell.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/FsGridWorldTimeCellRenderer.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridNationCellRenderer/useNationCellHandlers.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridNationCellRenderer/FsGridNationCellRenderer.tsx`
+
+### 비고
+
+- Shift + 더블클릭 시에는 1·2 번째 클릭이 shift 분기에서 early return 한 뒤 dblclick 에서 오버레이가 열리는 미세 동작 변화가 있음 (기존엔 shift 클릭만으로 오버레이가 열리지 않았음). 마스터의 사용성 개선 명령 범위에서 의도된 부수효과로 판단 — 별도 후속 없음.
+- `data-craft-mobile` 에도 동등 컴포넌트가 있으나 터치 디바이스 UX 차이로 본 플랜 범위 외. 모바일 동일 처리는 마스터 결정 후 별도 플랜.
+
 ## v001.288.0
 
 > 통합일: 2026-05-20
