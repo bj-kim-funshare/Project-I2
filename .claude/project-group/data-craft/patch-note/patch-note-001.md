@@ -1,5 +1,71 @@
 # data-craft — Patch Note (001)
 
+## v001.281.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #120 (HOTFIX 2 — 루트 entry wiring 교체로 11 페이즈 작업 가시화)
+
+### 마스터 보고 (스크린샷 첨부)
+
+"여전히 저렇게 나오는데?" — 브라우저 5174 → `/m/home` → 화면이 **"S-0.1 placeholder: /m/home"** 텍스트 + 5탭 bottom nav 만 표시. 11 페이즈 디자인 정합 작업이 화면에 노출되지 않음.
+
+### 원인 진단
+
+data-craft-mobile 레포에 **2개의 평행 entry** 가 존재:
+- **루트 entry** (`src/main.tsx` → `src/app/App.tsx` → `src/app/routes.tsx`): PHASE 0.1 (enterprise-416) scaffold 잔재. 18 라우트를 모두 `createPlaceholder('/m/{route}')` 로 "S-0.1 placeholder: <route>" 만 렌더. 루트 `vite.config.ts` (port 5174) 가 이 entry 를 serves.
+- **개발된 entry** (`apps/web/src/mobile/main.tsx` → `apps/web/src/mobile/router.tsx`): plan #117 / 본 #120 의 11 페이즈 + HOTFIX 1 모든 작업이 적용된 라우터. **현재 serves 되지 않음**.
+
+마스터가 본 placeholder 는 PHASE 0.1 의 빈 깡통. 본 플랜의 모든 비주얼·mock 작업은 orphan 상태였다.
+
+### 변경
+
+#### 1. `index.html` — entry path 직접 교체
+
+```html
+<!-- 기존 -->
+<script type="module" src="/src/main.tsx"></script>
+<!-- 변경 -->
+<script type="module" src="/apps/web/src/mobile/main.tsx"></script>
+```
+
+vite dev server (port 5174) 가 이제 개발된 mobile module 의 entry 를 마운트한다. 11 페이즈 + HOTFIX 1 의 모든 화면이 렌더된다.
+
+#### 2. 접근 선택 사유 (왜 App.tsx 가 아니라 index.html?)
+
+선행 시도: `src/app/App.tsx` 가 `@mobile/router` 를 import 하도록 wiring → 런타임은 성공했으나, `tsc -b --noEmit` 가 `src/` 의 import chain 을 따라가다 packages/fs-relation-builder-mobile / fs-form-builder-mobile / fs-data-viewer-mobile 의 b5754df WIP "부분 복사" 미해결 `@/` alias 들을 만나 **typecheck 회귀 50+ 건** 발생.
+
+`index.html` 의 entry path 를 직접 교체하면 루트 `tsconfig.json` 의 `include: ["src"]` 가 더 이상 @mobile 체인을 추적하지 않아 typecheck 회귀를 회피. apps/web 자체 tsconfig 는 별도 게이트 (vite/storybook 빌드) 가 책임.
+
+#### 3. `src/app/App.tsx` + `src/app/__tests__/App.smoke.test.tsx` 원복
+
+본 보강 commit 으로 PHASE 0.1 placeholder 상태로 원복. src/app/* 트리는 dead-but-untouched 상태 — 후속 클린업 페이즈에서 삭제 권고.
+
+### 시연
+
+```
+pnpm --filter @data-craft-mobile/web dev    # apps/web vite (port 5174)
+# 또는
+pnpm dev                                     # root vite — 이제 동일 entry 마운트
+```
+
+브라우저 5174 → 5탭 (홈/페이지/Inbox/DM/나) 전부 prototype 비주얼로 populated 표시. HOTFIX 1 의 DEV 자동 mock 활성 + 본 HOTFIX 의 entry wiring 두 축이 모두 효과 발휘.
+
+### 검증
+
+- `pnpm typecheck`: PASS (회귀 0).
+- `pnpm test --run`: 674 passed / 5 skipped / 0 failed (679). (1 file fail = tailwind-build dist 부재 — pre-existing infra.)
+
+### Deferred (후속 권고)
+
+- **`src/app/` + `src/pages/` 트리 삭제**: PHASE 0.1 scaffold 잔재. `src/main.tsx`, `src/app/App.tsx`, `src/app/routes.tsx`, `src/app/shell/*`, `src/app/styles/*`, `src/app/__tests__/*`, `src/pages/m/placeholder.tsx` 모두 unused. refactoring-analyzer 권고.
+- **packages/fs-{relation-builder,form-builder,data-viewer,data-link}-mobile 의 `@/` alias 미해결 / 부분 복사**: b5754df WIP 이후 미정리. apps/web tsconfig 게이트가 별도 검증 안 하는 한 typecheck 회귀 잠재. 후속 패키지 클린업 페이즈 필요.
+- **`src/main.tsx`** + 루트 `vite.config.ts` 의 `@` / `@/app` alias: 본 변경 후 사실상 미사용. 정리 권고.
+
+### 영향 파일
+
+- `index.html` (entry path 1줄 변경)
+- (이전 보강 사이클의 `src/app/App.tsx` + `src/app/__tests__/App.smoke.test.tsx` 변경은 원복되어 net 무변화)
+
 ## v001.280.0
 
 > 통합일: 2026-05-20
