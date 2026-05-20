@@ -1,23 +1,2489 @@
 {
-  "generated_at": "2026-05-20T00:54:20.851176+00:00",
+  "generated_at": "2026-05-20T01:01:49.986217+00:00",
   "hours": [
     {
-      "hour": "2026-05-10T02",
-      "input": 17,
-      "output": 3316,
+      "hour": "2026-05-06T13",
+      "input": 1709,
+      "output": 1509798,
+      "cache_creation_5m": 1786,
+      "cache_creation_1h": 13912224,
+      "cache_read": 348267091,
+      "messages": 1041,
+      "cost_usd": 1053.0613,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1709,
+          "output": 1509798,
+          "cache_creation_5m": 1786,
+          "cache_creation_1h": 13912224,
+          "cache_read": 348267091
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 526,
+          "output": 548533,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 5709429,
+          "cache_read": 130183847
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1183,
+          "output": 961265,
+          "cache_creation_5m": 1786,
+          "cache_creation_1h": 8202795,
+          "cache_read": 218083244
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T14",
+      "input": 1151,
+      "output": 997217,
+      "cache_creation_5m": 1058,
+      "cache_creation_1h": 3197290,
+      "cache_read": 258287666,
+      "messages": 759,
+      "cost_usd": 558.1786,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1151,
+          "output": 997217,
+          "cache_creation_5m": 1058,
+          "cache_creation_1h": 3197290,
+          "cache_read": 258287666
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 58,
+          "output": 85223,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 391848,
+          "cache_read": 6308495
+        },
+        {
+          "skill": "talk-end",
+          "input": 29,
+          "output": 10234,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 32710,
+          "cache_read": 2025951
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1064,
+          "output": 901760,
+          "cache_creation_5m": 1058,
+          "cache_creation_1h": 2772732,
+          "cache_read": 249953220
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T15",
+      "input": 3097,
+      "output": 1194325,
+      "cache_creation_5m": 14380,
+      "cache_creation_1h": 7093815,
+      "cache_read": 155589399,
+      "messages": 616,
+      "cost_usd": 536.089,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 3097,
+          "output": 1194325,
+          "cache_creation_5m": 14380,
+          "cache_creation_1h": 7093815,
+          "cache_read": 155589399
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 210,
+          "output": 133506,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 589836,
+          "cache_read": 31222304
+        },
+        {
+          "skill": "메인 세션",
+          "input": 2887,
+          "output": 1060819,
+          "cache_creation_5m": 14380,
+          "cache_creation_1h": 6503979,
+          "cache_read": 124367095
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T16",
+      "input": 1219,
+      "output": 1363595,
+      "cache_creation_5m": 7155,
+      "cache_creation_1h": 6226725,
+      "cache_read": 281494439,
+      "messages": 823,
+      "cost_usd": 711.4655,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1219,
+          "output": 1363595,
+          "cache_creation_5m": 7155,
+          "cache_creation_1h": 6226725,
+          "cache_read": 281494439
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-note-os",
+          "input": 76,
+          "output": 89985,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 686382,
+          "cache_read": 3936934
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1143,
+          "output": 1273610,
+          "cache_creation_5m": 7155,
+          "cache_creation_1h": 5540343,
+          "cache_read": 277557505
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T17",
+      "input": 950,
+      "output": 812629,
+      "cache_creation_5m": 7412,
+      "cache_creation_1h": 2505728,
+      "cache_read": 104420056,
+      "messages": 468,
+      "cost_usd": 292.9023,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 950,
+          "output": 812629,
+          "cache_creation_5m": 7412,
+          "cache_creation_1h": 2505728,
+          "cache_read": 104420056
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-note-os",
+          "input": 169,
+          "output": 357547,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 421874,
+          "cache_read": 30108775
+        },
+        {
+          "skill": "talk-end",
+          "input": 28,
+          "output": 18802,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 31321,
+          "cache_read": 2897386
+        },
+        {
+          "skill": "메인 세션",
+          "input": 753,
+          "output": 436280,
+          "cache_creation_5m": 7412,
+          "cache_creation_1h": 2052533,
+          "cache_read": 71413895
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T18",
+      "input": 3086,
+      "output": 742527,
       "cache_creation_5m": 0,
-      "cache_creation_1h": 18489,
-      "cache_read": 167402,
+      "cache_creation_1h": 4127075,
+      "cache_read": 123359242,
+      "messages": 543,
+      "cost_usd": 364.5869,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 3086,
+          "output": 742527,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 4127075,
+          "cache_read": 123359242
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-normal",
+          "input": 2557,
+          "output": 191459,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 637659,
+          "cache_read": 41288417
+        },
+        {
+          "skill": "메인 세션",
+          "input": 529,
+          "output": 551068,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 3489416,
+          "cache_read": 82070825
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T19",
+      "input": 4345,
+      "output": 1172662,
+      "cache_creation_5m": 80535,
+      "cache_creation_1h": 7372094,
+      "cache_read": 150044757,
+      "messages": 626,
+      "cost_usd": 535.7548,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 4345,
+          "output": 1172662,
+          "cache_creation_5m": 80535,
+          "cache_creation_1h": 7372094,
+          "cache_read": 150044757
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "merge-main",
+          "input": 151,
+          "output": 86504,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 181665,
+          "cache_read": 27293820
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 169,
+          "output": 140668,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 449399,
+          "cache_read": 26634907
+        },
+        {
+          "skill": "메인 세션",
+          "input": 4025,
+          "output": 945490,
+          "cache_creation_5m": 80535,
+          "cache_creation_1h": 6741030,
+          "cache_read": 96116030
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T20",
+      "input": 352,
+      "output": 225100,
+      "cache_creation_5m": 1086,
+      "cache_creation_1h": 1583221,
+      "cache_read": 50506402,
+      "messages": 190,
+      "cost_usd": 140.1644,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 352,
+          "output": 225100,
+          "cache_creation_5m": 1086,
+          "cache_creation_1h": 1583221,
+          "cache_read": 50506402
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 33,
+          "output": 12807,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 20794,
+          "cache_read": 4313637
+        },
+        {
+          "skill": "메인 세션",
+          "input": 319,
+          "output": 212293,
+          "cache_creation_5m": 1086,
+          "cache_creation_1h": 1562427,
+          "cache_read": 46192765
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T21",
+      "input": 601,
+      "output": 686776,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 2262495,
+      "cache_read": 123269499,
+      "messages": 407,
+      "cost_usd": 304.2963,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 601,
+          "output": 686776,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2262495,
+          "cache_read": 123269499
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "deploy-data-craft-BE-aws",
+          "input": 46,
+          "output": 15713,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 260342,
+          "cache_read": 1754092
+        },
+        {
+          "skill": "메인 세션",
+          "input": 555,
+          "output": 671063,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2002153,
+          "cache_read": 121515407
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-06T22",
+      "input": 77,
+      "output": 50027,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 142906,
+      "cache_read": 12659859,
+      "messages": 62,
+      "cost_usd": 27.0301,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 77,
+          "output": 50027,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 142906,
+          "cache_read": 12659859
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "deploy-data-craft-BE-aws",
+          "input": 5,
+          "output": 8385,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 14026,
+          "cache_read": 657758
+        },
+        {
+          "skill": "메인 세션",
+          "input": 72,
+          "output": 41642,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 128880,
+          "cache_read": 12002101
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T09",
+      "input": 1134,
+      "output": 1059917,
+      "cache_creation_5m": 9612,
+      "cache_creation_1h": 6932097,
+      "cache_read": 116261445,
+      "messages": 672,
+      "cost_usd": 462.0461,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1134,
+          "output": 1059917,
+          "cache_creation_5m": 9612,
+          "cache_creation_1h": 6932097,
+          "cache_read": 116261445
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 800,
+          "output": 924835,
+          "cache_creation_5m": 9612,
+          "cache_creation_1h": 4217526,
+          "cache_read": 97386490
+        },
+        {
+          "skill": "메인 세션",
+          "input": 334,
+          "output": 135082,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2714571,
+          "cache_read": 18874955
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T10",
+      "input": 1079,
+      "output": 787182,
+      "cache_creation_5m": 32482,
+      "cache_creation_1h": 2799373,
+      "cache_read": 159222453,
+      "messages": 704,
+      "cost_usd": 382.4787,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1079,
+          "output": 787182,
+          "cache_creation_5m": 32482,
+          "cache_creation_1h": 2799373,
+          "cache_read": 159222453
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "loop",
+          "input": 51,
+          "output": 9657,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 50008,
+          "cache_read": 3626992
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 214,
+          "output": 137381,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 214437,
+          "cache_read": 46306634
+        },
+        {
+          "skill": "patch-note-os",
+          "input": 40,
+          "output": 15839,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 50711,
+          "cache_read": 2845408
+        },
+        {
+          "skill": "메인 세션",
+          "input": 774,
+          "output": 624305,
+          "cache_creation_5m": 32482,
+          "cache_creation_1h": 2484217,
+          "cache_read": 106443419
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T11",
+      "input": 1492,
+      "output": 1138815,
+      "cache_creation_5m": 43058,
+      "cache_creation_1h": 6195502,
+      "cache_read": 261304158,
+      "messages": 1010,
+      "cost_usd": 664.0621,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1492,
+          "output": 1138815,
+          "cache_creation_5m": 43058,
+          "cache_creation_1h": 6195502,
+          "cache_read": 261304158
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 226,
+          "output": 118882,
+          "cache_creation_5m": 8507,
+          "cache_creation_1h": 372609,
+          "cache_read": 27226583
+        },
+        {
+          "skill": "restart",
+          "input": 27,
+          "output": 3820,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 530687,
+          "cache_read": 2117851
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1239,
+          "output": 1016113,
+          "cache_creation_5m": 34551,
+          "cache_creation_1h": 5292206,
+          "cache_read": 231959724
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T12",
+      "input": 775,
+      "output": 756982,
+      "cache_creation_5m": 4025,
+      "cache_creation_1h": 1609377,
+      "cache_read": 190189009,
+      "messages": 623,
+      "cost_usd": 390.4256,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 775,
+          "output": 756982,
+          "cache_creation_5m": 4025,
+          "cache_creation_1h": 1609377,
+          "cache_read": 190189009
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 182,
+          "output": 82868,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 152335,
+          "cache_read": 47070215
+        },
+        {
+          "skill": "restart",
+          "input": 16,
+          "output": 2081,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 15151,
+          "cache_read": 1464559
+        },
+        {
+          "skill": "메인 세션",
+          "input": 577,
+          "output": 672033,
+          "cache_creation_5m": 4025,
+          "cache_creation_1h": 1441891,
+          "cache_read": 141654235
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T13",
+      "input": 843,
+      "output": 437636,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1165758,
+      "cache_read": 210726586,
+      "messages": 508,
+      "cost_usd": 383.898,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 843,
+          "output": 437636,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1165758,
+          "cache_read": 210726586
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "check-os",
+          "input": 24,
+          "output": 6909,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 48453,
+          "cache_read": 1079502
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 19,
+          "output": 5848,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 6499,
+          "cache_read": 2990864
+        },
+        {
+          "skill": "restart",
+          "input": 66,
+          "output": 10773,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 62380,
+          "cache_read": 7195879
+        },
+        {
+          "skill": "메인 세션",
+          "input": 734,
+          "output": 414106,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1048426,
+          "cache_read": 199460341
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T14",
+      "input": 5682,
+      "output": 625442,
+      "cache_creation_5m": 41069,
+      "cache_creation_1h": 3069001,
+      "cache_read": 259747878,
+      "messages": 863,
+      "cost_usd": 529.4553,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 5682,
+          "output": 625442,
+          "cache_creation_5m": 41069,
+          "cache_creation_1h": 3069001,
+          "cache_read": 259747878
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "check-os",
+          "input": 4689,
+          "output": 142557,
+          "cache_creation_5m": 2266,
+          "cache_creation_1h": 467740,
+          "cache_read": 32406673
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 85,
+          "output": 69035,
+          "cache_creation_5m": 36427,
+          "cache_creation_1h": 604823,
+          "cache_read": 7656914
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 144,
+          "output": 100043,
+          "cache_creation_5m": 620,
+          "cache_creation_1h": 591232,
+          "cache_read": 21027536
+        },
+        {
+          "skill": "restart",
+          "input": 38,
+          "output": 5254,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 36928,
+          "cache_read": 4474163
+        },
+        {
+          "skill": "talk-end",
+          "input": 21,
+          "output": 8142,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 17847,
+          "cache_read": 1560523
+        },
+        {
+          "skill": "메인 세션",
+          "input": 705,
+          "output": 300411,
+          "cache_creation_5m": 1756,
+          "cache_creation_1h": 1350431,
+          "cache_read": 192622069
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T15",
+      "input": 17375,
+      "output": 1202727,
+      "cache_creation_5m": 24104,
+      "cache_creation_1h": 5510259,
+      "cache_read": 315861909,
+      "messages": 1151,
+      "cost_usd": 730.0177,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 17375,
+          "output": 1202727,
+          "cache_creation_5m": 24104,
+          "cache_creation_1h": 5510259,
+          "cache_read": 315861909
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 168,
+          "output": 126117,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 273398,
+          "cache_read": 28724632
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 16493,
+          "output": 699679,
+          "cache_creation_5m": 20399,
+          "cache_creation_1h": 1887769,
+          "cache_read": 153191681
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 104,
+          "output": 76479,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 106237,
+          "cache_read": 16078358
+        },
+        {
+          "skill": "restart",
+          "input": 38,
+          "output": 4032,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 208326,
+          "cache_read": 2418583
+        },
+        {
+          "skill": "메인 세션",
+          "input": 572,
+          "output": 296420,
+          "cache_creation_5m": 3705,
+          "cache_creation_1h": 3034529,
+          "cache_read": 115448655
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T16",
+      "input": 8661,
+      "output": 1329539,
+      "cache_creation_5m": 17793,
+      "cache_creation_1h": 4661858,
+      "cache_read": 435302467,
+      "messages": 1481,
+      "cost_usd": 892.9884,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 8661,
+          "output": 1329539,
+          "cache_creation_5m": 17793,
+          "cache_creation_1h": 4661858,
+          "cache_read": 435302467
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 6808,
+          "output": 136846,
+          "cache_creation_5m": 2182,
+          "cache_creation_1h": 256061,
+          "cache_read": 31097058
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 706,
+          "output": 533289,
+          "cache_creation_5m": 1710,
+          "cache_creation_1h": 986555,
+          "cache_read": 157166975
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 12,
+          "output": 2328,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 20924,
+          "cache_read": 225580
+        },
+        {
+          "skill": "plan-normal",
+          "input": 116,
+          "output": 39671,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 240750,
+          "cache_read": 12286444
+        },
+        {
+          "skill": "restart",
+          "input": 47,
+          "output": 6262,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 30851,
+          "cache_read": 3168538
+        },
+        {
+          "skill": "메인 세션",
+          "input": 972,
+          "output": 611143,
+          "cache_creation_5m": 13901,
+          "cache_creation_1h": 3126717,
+          "cache_read": 231357872
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T17",
+      "input": 4294,
+      "output": 1483344,
+      "cache_creation_5m": 32113,
+      "cache_creation_1h": 6253604,
+      "cache_read": 433108294,
+      "messages": 1607,
+      "cost_usd": 949.1879,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 4294,
+          "output": 1483344,
+          "cache_creation_5m": 32113,
+          "cache_creation_1h": 6253604,
+          "cache_read": 433108294
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 264,
+          "output": 229142,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 535005,
+          "cache_read": 49945535
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 1419,
+          "output": 841986,
+          "cache_creation_5m": 27580,
+          "cache_creation_1h": 2305322,
+          "cache_read": 252907357
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 83,
+          "output": 49442,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 593937,
+          "cache_read": 6834499
+        },
+        {
+          "skill": "restart",
+          "input": 16,
+          "output": 1952,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 14812,
+          "cache_read": 1208944
+        },
+        {
+          "skill": "talk-end",
+          "input": 20,
+          "output": 7116,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 16209,
+          "cache_read": 4346602
+        },
+        {
+          "skill": "메인 세션",
+          "input": 2492,
+          "output": 353706,
+          "cache_creation_5m": 4533,
+          "cache_creation_1h": 2788319,
+          "cache_read": 117865357
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T18",
+      "input": 191,
+      "output": 142098,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 2122396,
+      "cache_read": 35469785,
+      "messages": 147,
+      "cost_usd": 127.5368,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 191,
+          "output": 142098,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2122396,
+          "cache_read": 35469785
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 77,
+          "output": 70959,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1278510,
+          "cache_read": 17061390
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 57,
+          "output": 33730,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 402950,
+          "cache_read": 8971612
+        },
+        {
+          "skill": "메인 세션",
+          "input": 57,
+          "output": 37409,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 440936,
+          "cache_read": 9436783
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T19",
+      "input": 2589,
+      "output": 960383,
+      "cache_creation_5m": 10840,
+      "cache_creation_1h": 6141672,
+      "cache_read": 302427287,
+      "messages": 1093,
+      "cost_usd": 710.1619,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 2589,
+          "output": 960383,
+          "cache_creation_5m": 10840,
+          "cache_creation_1h": 6141672,
+          "cache_read": 302427287
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 337,
+          "output": 155801,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1207770,
+          "cache_read": 66648834
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 96,
+          "output": 53687,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 76108,
+          "cache_read": 19921897
+        },
+        {
+          "skill": "메인 세션",
+          "input": 2156,
+          "output": 750895,
+          "cache_creation_5m": 10840,
+          "cache_creation_1h": 4857794,
+          "cache_read": 215856556
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T20",
+      "input": 12350,
+      "output": 1974399,
+      "cache_creation_5m": 26966,
+      "cache_creation_1h": 5859359,
+      "cache_read": 398186774,
+      "messages": 1353,
+      "cost_usd": 921.8317,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 12350,
+          "output": 1974399,
+          "cache_creation_5m": 26966,
+          "cache_creation_1h": 5859359,
+          "cache_read": 398186774
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 237,
+          "output": 169628,
+          "cache_creation_5m": 2094,
+          "cache_creation_1h": 685897,
+          "cache_read": 37686207
+        },
+        {
+          "skill": "restart",
+          "input": 27,
+          "output": 2647,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 178118,
+          "cache_read": 1803931
+        },
+        {
+          "skill": "메인 세션",
+          "input": 12086,
+          "output": 1802124,
+          "cache_creation_5m": 24872,
+          "cache_creation_1h": 4995344,
+          "cache_read": 358696636
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T21",
+      "input": 6767,
+      "output": 917068,
+      "cache_creation_5m": 15202,
+      "cache_creation_1h": 4036225,
+      "cache_read": 249450814,
+      "messages": 821,
+      "cost_usd": 564.4296,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 6767,
+          "output": 917068,
+          "cache_creation_5m": 15202,
+          "cache_creation_1h": 4036225,
+          "cache_read": 249450814
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 117,
+          "output": 58741,
+          "cache_creation_5m": 8639,
+          "cache_creation_1h": 141531,
+          "cache_read": 25817498
+        },
+        {
+          "skill": "restart",
+          "input": 24,
+          "output": 3256,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 23252,
+          "cache_read": 2374801
+        },
+        {
+          "skill": "talk-end",
+          "input": 52,
+          "output": 21831,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 46035,
+          "cache_read": 9833535
+        },
+        {
+          "skill": "task-db",
+          "input": 69,
+          "output": 27748,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 193376,
+          "cache_read": 3085274
+        },
+        {
+          "skill": "메인 세션",
+          "input": 6505,
+          "output": 805492,
+          "cache_creation_5m": 6563,
+          "cache_creation_1h": 3632031,
+          "cache_read": 208339706
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T22",
+      "input": 1357,
+      "output": 1029071,
+      "cache_creation_5m": 8593,
+      "cache_creation_1h": 3347028,
+      "cache_read": 255379534,
+      "messages": 900,
+      "cost_usd": 560.8419,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1357,
+          "output": 1029071,
+          "cache_creation_5m": 8593,
+          "cache_creation_1h": 3347028,
+          "cache_read": 255379534
+        },
+        {
+          "model": "시스템 합성",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation-os",
+          "input": 64,
+          "output": 60386,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 254542,
+          "cache_read": 6128284
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 412,
+          "output": 240728,
+          "cache_creation_5m": 821,
+          "cache_creation_1h": 732833,
+          "cache_read": 99121989
+        },
+        {
+          "skill": "talk-end",
+          "input": 25,
+          "output": 10031,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 25326,
+          "cache_read": 3065565
+        },
+        {
+          "skill": "task-db",
+          "input": 513,
+          "output": 487759,
+          "cache_creation_5m": 875,
+          "cache_creation_1h": 1001985,
+          "cache_read": 84340686
+        },
+        {
+          "skill": "메인 세션",
+          "input": 343,
+          "output": 230167,
+          "cache_creation_5m": 6897,
+          "cache_creation_1h": 1332342,
+          "cache_read": 62723010
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-07T23",
+      "input": 17943,
+      "output": 1254033,
+      "cache_creation_5m": 1699,
+      "cache_creation_1h": 7276420,
+      "cache_read": 325443963,
+      "messages": 1309,
+      "cost_usd": 800.812,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 17943,
+          "output": 1254033,
+          "cache_creation_5m": 1699,
+          "cache_creation_1h": 7276420,
+          "cache_read": 325443963
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation-os",
+          "input": 107,
+          "output": 130895,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 880831,
+          "cache_read": 21610687
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 332,
+          "output": 241372,
+          "cache_creation_5m": 1461,
+          "cache_creation_1h": 1028301,
+          "cache_read": 59299308
+        },
+        {
+          "skill": "task-db",
+          "input": 103,
+          "output": 57620,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 901535,
+          "cache_read": 23112115
+        },
+        {
+          "skill": "trace-recover",
+          "input": 54,
+          "output": 49204,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 115154,
+          "cache_read": 6736746
+        },
+        {
+          "skill": "메인 세션",
+          "input": 17347,
+          "output": 774942,
+          "cache_creation_5m": 238,
+          "cache_creation_1h": 4350599,
+          "cache_read": 214685107
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T00",
+      "input": 1408,
+      "output": 893808,
+      "cache_creation_5m": 22363,
+      "cache_creation_1h": 3195665,
+      "cache_read": 284988948,
+      "messages": 958,
+      "cost_usd": 590.8294,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1408,
+          "output": 893808,
+          "cache_creation_5m": 22363,
+          "cache_creation_1h": 3195665,
+          "cache_read": 284988948
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 37,
+          "output": 30262,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 99742,
+          "cache_read": 3839055
+        },
+        {
+          "skill": "patch-confirmation-os",
+          "input": 75,
+          "output": 41958,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 104683,
+          "cache_read": 16991207
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 749,
+          "output": 501052,
+          "cache_creation_5m": 3615,
+          "cache_creation_1h": 1007234,
+          "cache_read": 185388189
+        },
+        {
+          "skill": "메인 세션",
+          "input": 547,
+          "output": 320536,
+          "cache_creation_5m": 18748,
+          "cache_creation_1h": 1984006,
+          "cache_read": 78770497
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T01",
+      "input": 21952,
+      "output": 943596,
+      "cache_creation_5m": 24020,
+      "cache_creation_1h": 4337670,
+      "cache_read": 216827535,
+      "messages": 905,
+      "cost_usd": 526.9208,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 21952,
+          "output": 943596,
+          "cache_creation_5m": 24020,
+          "cache_creation_1h": 4337670,
+          "cache_read": 216827535
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 254,
+          "output": 170896,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 258021,
+          "cache_read": 49829557
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 21103,
+          "output": 305036,
+          "cache_creation_5m": 1980,
+          "cache_creation_1h": 767536,
+          "cache_read": 106116991
+        },
+        {
+          "skill": "talk-end",
+          "input": 26,
+          "output": 5171,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 19066,
+          "cache_read": 2402115
+        },
+        {
+          "skill": "메인 세션",
+          "input": 569,
+          "output": 462493,
+          "cache_creation_5m": 22040,
+          "cache_creation_1h": 3293047,
+          "cache_read": 58478872
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T02",
+      "input": 31041,
+      "output": 1587860,
+      "cache_creation_5m": 21704,
+      "cache_creation_1h": 8310263,
+      "cache_read": 252908790,
+      "messages": 1258,
+      "cost_usd": 748.6331,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 31041,
+          "output": 1587860,
+          "cache_creation_5m": 21704,
+          "cache_creation_1h": 8310263,
+          "cache_read": 252908790
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 98,
+          "output": 31732,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 76501,
+          "cache_read": 17389039
+        },
+        {
+          "skill": "plan-design",
+          "input": 124,
+          "output": 126910,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1020092,
+          "cache_read": 19155947
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 105,
+          "output": 70635,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 333729,
+          "cache_read": 8639788
+        },
+        {
+          "skill": "plan-normal",
+          "input": 391,
+          "output": 236582,
+          "cache_creation_5m": 4016,
+          "cache_creation_1h": 932534,
+          "cache_read": 51036981
+        },
+        {
+          "skill": "talk-end",
+          "input": 35,
+          "output": 15919,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 33108,
+          "cache_read": 2950093
+        },
+        {
+          "skill": "메인 세션",
+          "input": 30288,
+          "output": 1106082,
+          "cache_creation_5m": 17688,
+          "cache_creation_1h": 5914299,
+          "cache_read": 153736942
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T03",
+      "input": 1251,
+      "output": 921170,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1462933,
+      "cache_read": 365542601,
+      "messages": 1030,
+      "cost_usd": 661.3084,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1251,
+          "output": 921170,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1462933,
+          "cache_read": 365542601
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 87,
+          "output": 31146,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 74194,
+          "cache_read": 14130988
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 92,
+          "output": 72828,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 136479,
+          "cache_read": 21380534
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 388,
+          "output": 178081,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 330564,
+          "cache_read": 145284257
+        },
+        {
+          "skill": "plan-normal",
+          "input": 35,
+          "output": 14986,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 38689,
+          "cache_read": 5810124
+        },
+        {
+          "skill": "메인 세션",
+          "input": 649,
+          "output": 624129,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 883007,
+          "cache_read": 178936698
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T09",
+      "input": 1159,
+      "output": 743133,
+      "cache_creation_5m": 14059,
+      "cache_creation_1h": 7788026,
+      "cache_read": 199623085,
+      "messages": 728,
+      "cost_usd": 589.0914,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1159,
+          "output": 743133,
+          "cache_creation_5m": 14059,
+          "cache_creation_1h": 7788026,
+          "cache_read": 199623085
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 245,
+          "output": 204322,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 696882,
+          "cache_read": 43016375
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 259,
+          "output": 133866,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1326366,
+          "cache_read": 51329193
+        },
+        {
+          "skill": "patch-confirmation-os",
+          "input": 69,
+          "output": 82773,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 179610,
+          "cache_read": 26926944
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 43,
+          "output": 9780,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 981949,
+          "cache_read": 10607442
+        },
+        {
+          "skill": "메인 세션",
+          "input": 543,
+          "output": 312392,
+          "cache_creation_5m": 14059,
+          "cache_creation_1h": 4603219,
+          "cache_read": 67743131
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T10",
+      "input": 803,
+      "output": 334496,
+      "cache_creation_5m": 1337,
+      "cache_creation_1h": 2725183,
+      "cache_read": 77201304,
+      "messages": 389,
+      "cost_usd": 222.6818,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 803,
+          "output": 334496,
+          "cache_creation_5m": 1337,
+          "cache_creation_1h": 2725183,
+          "cache_read": 77201304
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "restart",
+          "input": 17,
+          "output": 1978,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 216054,
+          "cache_read": 918953
+        },
+        {
+          "skill": "메인 세션",
+          "input": 786,
+          "output": 332518,
+          "cache_creation_5m": 1337,
+          "cache_creation_1h": 2509129,
+          "cache_read": 76282351
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T11",
+      "input": 326,
+      "output": 229539,
+      "cache_creation_5m": 2475,
+      "cache_creation_1h": 820155,
+      "cache_read": 47278463,
+      "messages": 204,
+      "cost_usd": 112.7891,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 326,
+          "output": 229539,
+          "cache_creation_5m": 2475,
+          "cache_creation_1h": 820155,
+          "cache_read": 47278463
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 276,
+          "output": 203671,
+          "cache_creation_5m": 2475,
+          "cache_creation_1h": 497270,
+          "cache_read": 45023823
+        },
+        {
+          "skill": "메인 세션",
+          "input": 50,
+          "output": 25868,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 322885,
+          "cache_read": 2254640
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T12",
+      "input": 143,
+      "output": 136248,
+      "cache_creation_5m": 2561,
+      "cache_creation_1h": 174854,
+      "cache_read": 24117394,
+      "messages": 68,
+      "cost_usd": 51.6905,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 143,
+          "output": 136248,
+          "cache_creation_5m": 2561,
+          "cache_creation_1h": 174854,
+          "cache_read": 24117394
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 143,
+          "output": 136248,
+          "cache_creation_5m": 2561,
+          "cache_creation_1h": 174854,
+          "cache_read": 24117394
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T13",
+      "input": 540,
+      "output": 360466,
+      "cache_creation_5m": 590,
+      "cache_creation_1h": 1121602,
+      "cache_read": 90484113,
+      "messages": 303,
+      "cost_usd": 196.4283,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 540,
+          "output": 360466,
+          "cache_creation_5m": 590,
+          "cache_creation_1h": 1121602,
+          "cache_read": 90484113
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "check-os",
+          "input": 351,
+          "output": 235286,
+          "cache_creation_5m": 590,
+          "cache_creation_1h": 585029,
+          "cache_read": 47388722
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 157,
+          "output": 117150,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 155809,
+          "cache_read": 40343830
+        },
+        {
+          "skill": "talk-end",
+          "input": 14,
+          "output": 5384,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 12646,
+          "cache_read": 2751561
+        },
+        {
+          "skill": "메인 세션",
+          "input": 18,
+          "output": 2646,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 368118,
+          "cache_read": 0
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T14",
+      "input": 14645,
+      "output": 342461,
+      "cache_creation_5m": 9710,
+      "cache_creation_1h": 1689469,
+      "cache_read": 68910073,
+      "messages": 305,
+      "cost_usd": 180.1355,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 14645,
+          "output": 342461,
+          "cache_creation_5m": 9710,
+          "cache_creation_1h": 1689469,
+          "cache_read": 68910073
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "check-os",
+          "input": 2494,
+          "output": 105601,
+          "cache_creation_5m": 1452,
+          "cache_creation_1h": 175475,
+          "cache_read": 30615046
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 266,
+          "output": 183880,
+          "cache_creation_5m": 4980,
+          "cache_creation_1h": 497599,
+          "cache_read": 34353612
+        },
+        {
+          "skill": "메인 세션",
+          "input": 11885,
+          "output": 52980,
+          "cache_creation_5m": 3278,
+          "cache_creation_1h": 1016395,
+          "cache_read": 3941415
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T15",
+      "input": 13067,
+      "output": 538618,
+      "cache_creation_5m": 2875,
+      "cache_creation_1h": 1666699,
+      "cache_read": 82315985,
+      "messages": 283,
+      "cost_usd": 214.1212,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 13067,
+          "output": 538618,
+          "cache_creation_5m": 2875,
+          "cache_creation_1h": 1666699,
+          "cache_read": 82315985
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "check-os",
+          "input": 12895,
+          "output": 314422,
+          "cache_creation_5m": 161,
+          "cache_creation_1h": 907360,
+          "cache_read": 72138711
+        },
+        {
+          "skill": "talk-end",
+          "input": 30,
+          "output": 17565,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 24307,
+          "cache_read": 3253240
+        },
+        {
+          "skill": "메인 세션",
+          "input": 142,
+          "output": 206631,
+          "cache_creation_5m": 2714,
+          "cache_creation_1h": 735032,
+          "cache_read": 6924034
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T16",
+      "input": 350,
+      "output": 268172,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1499274,
+      "cache_read": 130501791,
+      "messages": 291,
+      "cost_usd": 260.8491,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 350,
+          "output": 268172,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1499274,
+          "cache_read": 130501791
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 350,
+          "output": 268172,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1499274,
+          "cache_read": 130501791
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T17",
+      "input": 14751,
+      "output": 725443,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 4189974,
+      "cache_read": 158355757,
+      "messages": 521,
+      "cost_usd": 417.8623,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 14751,
+          "output": 725443,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 4189974,
+          "cache_read": 158355757
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 14751,
+          "output": 725443,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 4189974,
+          "cache_read": 158355757
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T18",
+      "input": 5690,
+      "output": 376260,
+      "cache_creation_5m": 3179,
+      "cache_creation_1h": 772401,
+      "cache_read": 23115373,
+      "messages": 97,
+      "cost_usd": 86.2095,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 5690,
+          "output": 376260,
+          "cache_creation_5m": 3179,
+          "cache_creation_1h": 772401,
+          "cache_read": 23115373
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 5690,
+          "output": 376260,
+          "cache_creation_5m": 3179,
+          "cache_creation_1h": 772401,
+          "cache_read": 23115373
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T19",
+      "input": 244,
+      "output": 539295,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1192006,
+      "cache_read": 82259474,
+      "messages": 202,
+      "cost_usd": 199.6002,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 244,
+          "output": 539295,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1192006,
+          "cache_read": 82259474
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 244,
+          "output": 539295,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1192006,
+          "cache_read": 82259474
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T20",
+      "input": 299,
+      "output": 310615,
+      "cache_creation_5m": 3914,
+      "cache_creation_1h": 1160983,
+      "cache_read": 84127737,
+      "messages": 262,
+      "cost_usd": 184.3951,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 299,
+          "output": 310615,
+          "cache_creation_5m": 3914,
+          "cache_creation_1h": 1160983,
+          "cache_read": 84127737
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 299,
+          "output": 310615,
+          "cache_creation_5m": 3914,
+          "cache_creation_1h": 1160983,
+          "cache_read": 84127737
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-08T21",
+      "input": 101,
+      "output": 71245,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 92723,
+      "cache_read": 35023803,
+      "messages": 79,
+      "cost_usd": 60.6623,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 101,
+          "output": 71245,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 92723,
+          "cache_read": 35023803
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 101,
+          "output": 71245,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 92723,
+          "cache_read": 35023803
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T08",
+      "input": 317,
+      "output": 290887,
+      "cache_creation_5m": 12326,
+      "cache_creation_1h": 2920842,
+      "cache_read": 69717885,
+      "messages": 155,
+      "cost_usd": 214.2545,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 317,
+          "output": 290887,
+          "cache_creation_5m": 12326,
+          "cache_creation_1h": 2920842,
+          "cache_read": 69717885
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 317,
+          "output": 290887,
+          "cache_creation_5m": 12326,
+          "cache_creation_1h": 2920842,
+          "cache_read": 69717885
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T09",
+      "input": 21960,
+      "output": 1515369,
+      "cache_creation_5m": 6845,
+      "cache_creation_1h": 5581570,
+      "cache_read": 148972443,
+      "messages": 494,
+      "cost_usd": 505.0162,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 21960,
+          "output": 1515369,
+          "cache_creation_5m": 6845,
+          "cache_creation_1h": 5581570,
+          "cache_read": 148972443
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 21960,
+          "output": 1515369,
+          "cache_creation_5m": 6845,
+          "cache_creation_1h": 5581570,
+          "cache_read": 148972443
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T10",
+      "input": 545,
+      "output": 478074,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 3529714,
+      "cache_read": 135123592,
+      "messages": 321,
+      "cost_usd": 344.4405,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 545,
+          "output": 478074,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 3529714,
+          "cache_read": 135123592
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 545,
+          "output": 478074,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 3529714,
+          "cache_read": 135123592
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T11",
+      "input": 98,
+      "output": 82887,
+      "cache_creation_5m": 51029,
+      "cache_creation_1h": 622892,
+      "cache_read": 16177460,
+      "messages": 42,
+      "cost_usd": 50.1277,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 98,
+          "output": 82887,
+          "cache_creation_5m": 51029,
+          "cache_creation_1h": 622892,
+          "cache_read": 16177460
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 98,
+          "output": 82887,
+          "cache_creation_5m": 51029,
+          "cache_creation_1h": 622892,
+          "cache_read": 16177460
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T16",
+      "input": 11167,
+      "output": 148546,
+      "cache_creation_5m": 2103,
+      "cache_creation_1h": 1052626,
+      "cache_read": 6324046,
+      "messages": 44,
+      "cost_usd": 52.4127,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 11167,
+          "output": 148546,
+          "cache_creation_5m": 2103,
+          "cache_creation_1h": 1052626,
+          "cache_read": 6324046
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 11167,
+          "output": 148546,
+          "cache_creation_5m": 2103,
+          "cache_creation_1h": 1052626,
+          "cache_read": 6324046
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T17",
+      "input": 36,
+      "output": 40021,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 93886,
+      "cache_read": 7725568,
+      "messages": 36,
+      "cost_usd": 17.407,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 36,
+          "output": 40021,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 93886,
+          "cache_read": 7725568
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 36,
+          "output": 40021,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 93886,
+          "cache_read": 7725568
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T19",
+      "input": 0,
+      "output": 0,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 0,
+      "cache_read": 0,
+      "messages": 1,
+      "cost_usd": 0.0,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T20",
+      "input": 17,
+      "output": 3533,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 474494,
+      "cache_read": 1179180,
       "messages": 7,
-      "cost_usd": 1.0547,
+      "cost_usd": 16.2688,
       "by_model": [
         {
           "model": "claude-opus-4-7",
           "input": 17,
-          "output": 3316,
+          "output": 3533,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 18489,
-          "cache_read": 167402
+          "cache_creation_1h": 474494,
+          "cache_read": 1179180
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 17,
+          "output": 3533,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 474494,
+          "cache_read": 1179180
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T21",
+      "input": 355,
+      "output": 267586,
+      "cache_creation_5m": 4598,
+      "cache_creation_1h": 436252,
+      "cache_read": 78726974,
+      "messages": 207,
+      "cost_usd": 151.3385,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 355,
+          "output": 267586,
+          "cache_creation_5m": 4598,
+          "cache_creation_1h": 436252,
+          "cache_read": 78726974
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 355,
+          "output": 267586,
+          "cache_creation_5m": 4598,
+          "cache_creation_1h": 436252,
+          "cache_read": 78726974
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T22",
+      "input": 8218,
+      "output": 737006,
+      "cache_creation_5m": 10415,
+      "cache_creation_1h": 2427053,
+      "cache_read": 99501350,
+      "messages": 332,
+      "cost_usd": 277.6576,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 8218,
+          "output": 737006,
+          "cache_creation_5m": 10415,
+          "cache_creation_1h": 2427053,
+          "cache_read": 99501350
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 39,
+          "output": 45565,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 91705,
+          "cache_read": 4100002
+        },
+        {
+          "skill": "메인 세션",
+          "input": 8179,
+          "output": 691441,
+          "cache_creation_5m": 10415,
+          "cache_creation_1h": 2335348,
+          "cache_read": 95401348
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-09T23",
+      "input": 517,
+      "output": 683023,
+      "cache_creation_5m": 11621,
+      "cache_creation_1h": 2167485,
+      "cache_read": 124069018,
+      "messages": 352,
+      "cost_usd": 302.5805,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 517,
+          "output": 683023,
+          "cache_creation_5m": 11621,
+          "cache_creation_1h": 2167485,
+          "cache_read": 124069018
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 311,
+          "output": 348580,
+          "cache_creation_5m": 5837,
+          "cache_creation_1h": 971838,
+          "cache_read": 79132567
+        },
+        {
+          "skill": "메인 세션",
+          "input": 206,
+          "output": 334443,
+          "cache_creation_5m": 5784,
+          "cache_creation_1h": 1195647,
+          "cache_read": 44936451
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T00",
+      "input": 1450,
+      "output": 540829,
+      "cache_creation_5m": 15311,
+      "cache_creation_1h": 1992920,
+      "cache_read": 82281876,
+      "messages": 212,
+      "cost_usd": 224.0814,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1450,
+          "output": 540829,
+          "cache_creation_5m": 15311,
+          "cache_creation_1h": 1992920,
+          "cache_read": 82281876
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 1450,
+          "output": 540829,
+          "cache_creation_5m": 15311,
+          "cache_creation_1h": 1992920,
+          "cache_read": 82281876
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T01",
+      "input": 11965,
+      "output": 2627881,
+      "cache_creation_5m": 22378,
+      "cache_creation_1h": 16012835,
+      "cache_read": 432951211,
+      "messages": 1638,
+      "cost_usd": 1327.502,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 11965,
+          "output": 2627881,
+          "cache_creation_5m": 22378,
+          "cache_creation_1h": 16012835,
+          "cache_read": 432951211
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 263,
+          "output": 259172,
+          "cache_creation_5m": 8744,
+          "cache_creation_1h": 2511910,
+          "cache_read": 48806944
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 225,
+          "output": 308838,
+          "cache_creation_5m": 1650,
+          "cache_creation_1h": 1065669,
+          "cache_read": 29621254
+        },
+        {
+          "skill": "메인 세션",
+          "input": 11477,
+          "output": 2059871,
+          "cache_creation_5m": 11984,
+          "cache_creation_1h": 12435256,
+          "cache_read": 354523013
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-10T02",
+      "input": 8151,
+      "output": 2671751,
+      "cache_creation_5m": 16491,
+      "cache_creation_1h": 8722314,
+      "cache_read": 607623970,
+      "messages": 1696,
+      "cost_usd": 1373.9182,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 8151,
+          "output": 2671751,
+          "cache_creation_5m": 16491,
+          "cache_creation_1h": 8722314,
+          "cache_read": 607623970
         }
       ],
       "by_skill": [
@@ -28,36 +2494,116 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 18489,
           "cache_read": 167402
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 6484,
+          "output": 1079614,
+          "cache_creation_5m": 6927,
+          "cache_creation_1h": 3067766,
+          "cache_read": 250223519
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 67,
+          "output": 34368,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 43999,
+          "cache_read": 15240374
+        },
+        {
+          "skill": "restart",
+          "input": 42,
+          "output": 5183,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 280629,
+          "cache_read": 3145092
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1541,
+          "output": 1549270,
+          "cache_creation_5m": 9564,
+          "cache_creation_1h": 5311431,
+          "cache_read": 338847583
         }
       ]
     },
     {
       "hour": "2026-05-10T03",
-      "input": 640,
-      "output": 205800,
+      "input": 1831,
+      "output": 983981,
       "cache_creation_5m": 0,
-      "cache_creation_1h": 1322598,
-      "cache_read": 11726415,
-      "messages": 114,
-      "cost_usd": 72.7122,
+      "cache_creation_1h": 2639814,
+      "cache_read": 460958906,
+      "messages": 1044,
+      "cost_usd": 844.4588,
       "by_model": [
         {
           "model": "claude-opus-4-7",
-          "input": 640,
-          "output": 205800,
+          "input": 1831,
+          "output": 983981,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 1322598,
-          "cache_read": 11726415
+          "cache_creation_1h": 2639814,
+          "cache_read": 460958906
+        },
+        {
+          "model": "시스템 합성",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
         }
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
-          "input": 640,
-          "output": 205800,
+          "skill": "init",
+          "input": 492,
+          "output": 102504,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 1322598,
-          "cache_read": 11726415
+          "cache_creation_1h": 965833,
+          "cache_read": 8766254
+        },
+        {
+          "skill": "os-refactoring",
+          "input": 306,
+          "output": 278305,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 431898,
+          "cache_read": 137178398
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 69,
+          "output": 32576,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 149620,
+          "cache_read": 19988405
+        },
+        {
+          "skill": "patch-confirmation-os",
+          "input": 135,
+          "output": 67827,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 159370,
+          "cache_read": 57806849
+        },
+        {
+          "skill": "restart",
+          "input": 16,
+          "output": 2032,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 16856,
+          "cache_read": 1458412
+        },
+        {
+          "skill": "메인 세션",
+          "input": 813,
+          "output": 500737,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 916237,
+          "cache_read": 235760588
         }
       ]
     },
@@ -283,21 +2829,21 @@
     },
     {
       "hour": "2026-05-10T20",
-      "input": 5,
-      "output": 23018,
+      "input": 202,
+      "output": 102898,
       "cache_creation_5m": 0,
-      "cache_creation_1h": 137271,
-      "cache_read": 433234,
-      "messages": 5,
-      "cost_usd": 6.4944,
+      "cache_creation_1h": 964724,
+      "cache_read": 26571034,
+      "messages": 113,
+      "cost_usd": 76.5187,
       "by_model": [
         {
           "model": "claude-opus-4-7",
-          "input": 5,
-          "output": 23018,
+          "input": 202,
+          "output": 102898,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 137271,
-          "cache_read": 433234
+          "cache_creation_1h": 964724,
+          "cache_read": 26571034
         }
       ],
       "by_skill": [
@@ -308,29 +2854,77 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 137271,
           "cache_read": 433234
+        },
+        {
+          "skill": "merge-main",
+          "input": 115,
+          "output": 48798,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 321928,
+          "cache_read": 17130161
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 28,
+          "output": 9930,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 54942,
+          "cache_read": 2247080
+        },
+        {
+          "skill": "pre-deploy",
+          "input": 35,
+          "output": 20467,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 64969,
+          "cache_read": 6632186
+        },
+        {
+          "skill": "메인 세션",
+          "input": 19,
+          "output": 685,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 385614,
+          "cache_read": 128373
         }
       ]
     },
     {
       "hour": "2026-05-10T21",
-      "input": 86,
-      "output": 321663,
+      "input": 267,
+      "output": 393735,
       "cache_creation_5m": 0,
-      "cache_creation_1h": 1574296,
-      "cache_read": 7554853,
-      "messages": 39,
-      "cost_usd": 82.6872,
+      "cache_creation_1h": 1730228,
+      "cache_read": 44946600,
+      "messages": 149,
+      "cost_usd": 148.8609,
       "by_model": [
         {
           "model": "claude-opus-4-7",
-          "input": 86,
-          "output": 321663,
+          "input": 267,
+          "output": 393735,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 1574296,
-          "cache_read": 7554853
+          "cache_creation_1h": 1730228,
+          "cache_read": 44946600
         }
       ],
       "by_skill": [
+        {
+          "skill": "deploy-data-craft-BE-aws",
+          "input": 14,
+          "output": 4160,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 16981,
+          "cache_read": 1999504
+        },
+        {
+          "skill": "deploy-data-craft-FE-gh-pages",
+          "input": 28,
+          "output": 11145,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 32855,
+          "cache_read": 6400605
+        },
         {
           "skill": "master-key",
           "input": 72,
@@ -338,6 +2932,14 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 447822,
           "cache_read": 6360411
+        },
+        {
+          "skill": "pre-deploy",
+          "input": 139,
+          "output": 56767,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 106096,
+          "cache_read": 28991638
         },
         {
           "skill": "메인 세션",
@@ -350,40 +2952,1050 @@
       ]
     },
     {
-      "hour": "2026-05-12T17",
-      "input": 245,
-      "output": 158645,
+      "hour": "2026-05-11T11",
+      "input": 20372,
+      "output": 1604363,
+      "cache_creation_5m": 37795,
+      "cache_creation_1h": 8116348,
+      "cache_read": 311144034,
+      "messages": 1303,
+      "cost_usd": 831.548,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 20372,
+          "output": 1604363,
+          "cache_creation_5m": 37795,
+          "cache_creation_1h": 8116348,
+          "cache_read": 311144034
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 1896,
+          "output": 517284,
+          "cache_creation_5m": 11878,
+          "cache_creation_1h": 2138883,
+          "cache_read": 115329035
+        },
+        {
+          "skill": "메인 세션",
+          "input": 18476,
+          "output": 1087079,
+          "cache_creation_5m": 25917,
+          "cache_creation_1h": 5977465,
+          "cache_read": 195814999
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T12",
+      "input": 356,
+      "output": 196149,
       "cache_creation_5m": 0,
-      "cache_creation_1h": 550221,
-      "cache_read": 5026123,
-      "messages": 67,
-      "cost_usd": 35.9479,
+      "cache_creation_1h": 299841,
+      "cache_read": 96540761,
+      "messages": 291,
+      "cost_usd": 168.5229,
       "by_model": [
         {
           "model": "claude-opus-4-7",
-          "input": 245,
-          "output": 158645,
+          "input": 356,
+          "output": 196149,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 550221,
-          "cache_read": 5026123
+          "cache_creation_1h": 299841,
+          "cache_read": 96540761
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 158,
+          "output": 78695,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 134393,
+          "cache_read": 46084676
+        },
+        {
+          "skill": "메인 세션",
+          "input": 198,
+          "output": 117454,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 165448,
+          "cache_read": 50456085
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T13",
+      "input": 22034,
+      "output": 782689,
+      "cache_creation_5m": 25531,
+      "cache_creation_1h": 8325091,
+      "cache_read": 251681287,
+      "messages": 947,
+      "cost_usd": 686.7856,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 22034,
+          "output": 782689,
+          "cache_creation_5m": 25531,
+          "cache_creation_1h": 8325091,
+          "cache_read": 251681287
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 435,
+          "output": 248034,
+          "cache_creation_5m": 4205,
+          "cache_creation_1h": 2471722,
+          "cache_read": 95702662
+        },
+        {
+          "skill": "plan-prompt",
+          "input": 44,
+          "output": 20334,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 37601,
+          "cache_read": 8623221
+        },
+        {
+          "skill": "restart",
+          "input": 33,
+          "output": 5635,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 280592,
+          "cache_read": 3194477
+        },
+        {
+          "skill": "메인 세션",
+          "input": 21522,
+          "output": 508686,
+          "cache_creation_5m": 21326,
+          "cache_creation_1h": 5535176,
+          "cache_read": 144160927
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T14",
+      "input": 5761,
+      "output": 2335164,
+      "cache_creation_5m": 7410,
+      "cache_creation_1h": 5372579,
+      "cache_read": 600143681,
+      "messages": 2135,
+      "cost_usd": 1236.7555,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 5761,
+          "output": 2335164,
+          "cache_creation_5m": 7410,
+          "cache_creation_1h": 5372579,
+          "cache_read": 600143681
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "loop",
+          "input": 130,
+          "output": 110932,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 87034,
+          "cache_read": 34570406
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 731,
+          "output": 417713,
+          "cache_creation_5m": 4192,
+          "cache_creation_1h": 936779,
+          "cache_read": 163781071
+        },
+        {
+          "skill": "메인 세션",
+          "input": 4900,
+          "output": 1806519,
+          "cache_creation_5m": 3218,
+          "cache_creation_1h": 4348766,
+          "cache_read": 401792204
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T15",
+      "input": 1912,
+      "output": 797498,
+      "cache_creation_5m": 5948,
+      "cache_creation_1h": 2401226,
+      "cache_read": 390579132,
+      "messages": 949,
+      "cost_usd": 717.858,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 1912,
+          "output": 797498,
+          "cache_creation_5m": 5948,
+          "cache_creation_1h": 2401226,
+          "cache_read": 390579132
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "loop",
+          "input": 213,
+          "output": 105872,
+          "cache_creation_5m": 2606,
+          "cache_creation_1h": 160760,
+          "cache_read": 62102447
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 161,
+          "output": 54551,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 119083,
+          "cache_read": 37972521
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1538,
+          "output": 637075,
+          "cache_creation_5m": 3342,
+          "cache_creation_1h": 2121383,
+          "cache_read": 290504164
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T16",
+      "input": 4800,
+      "output": 1228503,
+      "cache_creation_5m": 9377,
+      "cache_creation_1h": 4819965,
+      "cache_read": 319130302,
+      "messages": 1122,
+      "cost_usd": 715.6799,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 4800,
+          "output": 1228503,
+          "cache_creation_5m": 9377,
+          "cache_creation_1h": 4819965,
+          "cache_read": 319130302
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 172,
+          "output": 107479,
+          "cache_creation_5m": 1725,
+          "cache_creation_1h": 397330,
+          "cache_read": 18695469
+        },
+        {
+          "skill": "restart",
+          "input": 30,
+          "output": 3750,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 149801,
+          "cache_read": 2708188
+        },
+        {
+          "skill": "메인 세션",
+          "input": 4598,
+          "output": 1117274,
+          "cache_creation_5m": 7652,
+          "cache_creation_1h": 4272834,
+          "cache_read": 297726645
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T17",
+      "input": 8607,
+      "output": 731871,
+      "cache_creation_5m": 7149,
+      "cache_creation_1h": 1700479,
+      "cache_read": 305575404,
+      "messages": 899,
+      "cost_usd": 564.5309,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 8607,
+          "output": 731871,
+          "cache_creation_5m": 7149,
+          "cache_creation_1h": 1700479,
+          "cache_read": 305575404
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 7619,
+          "output": 325521,
+          "cache_creation_5m": 5405,
+          "cache_creation_1h": 725929,
+          "cache_read": 87739142
+        },
+        {
+          "skill": "plan-prompt",
+          "input": 23,
+          "output": 11987,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 33809,
+          "cache_read": 1095969
+        },
+        {
+          "skill": "restart",
+          "input": 10,
+          "output": 1246,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 8763,
+          "cache_read": 1048189
+        },
+        {
+          "skill": "메인 세션",
+          "input": 955,
+          "output": 393117,
+          "cache_creation_5m": 1744,
+          "cache_creation_1h": 931978,
+          "cache_read": 215692104
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T18",
+      "input": 33971,
+      "output": 1312238,
+      "cache_creation_5m": 11948,
+      "cache_creation_1h": 5405823,
+      "cache_read": 340921175,
+      "messages": 1072,
+      "cost_usd": 772.7079,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 33971,
+          "output": 1312238,
+          "cache_creation_5m": 11948,
+          "cache_creation_1h": 5405823,
+          "cache_read": 340921175
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 732,
+          "output": 681218,
+          "cache_creation_5m": 3491,
+          "cache_creation_1h": 1807341,
+          "cache_read": 226944961
+        },
+        {
+          "skill": "plan-prompt",
+          "input": 21,
+          "output": 18106,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 152938,
+          "cache_read": 2283816
+        },
+        {
+          "skill": "restart",
+          "input": 10,
+          "output": 1248,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 8664,
+          "cache_read": 1100849
+        },
+        {
+          "skill": "task-db",
+          "input": 27,
+          "output": 14270,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 51110,
+          "cache_read": 3009162
+        },
+        {
+          "skill": "메인 세션",
+          "input": 33181,
+          "output": 597396,
+          "cache_creation_5m": 8457,
+          "cache_creation_1h": 3385770,
+          "cache_read": 107582387
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T19",
+      "input": 360,
+      "output": 349520,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 501298,
+      "cache_read": 103126523,
+      "messages": 274,
+      "cost_usd": 195.9481,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 360,
+          "output": 349520,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 501298,
+          "cache_read": 103126523
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 137,
+          "output": 146995,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 216217,
+          "cache_read": 56634321
+        },
+        {
+          "skill": "task-db",
+          "input": 108,
+          "output": 47350,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 56633,
+          "cache_read": 13187478
+        },
+        {
+          "skill": "메인 세션",
+          "input": 115,
+          "output": 155175,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 228448,
+          "cache_read": 33304724
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T20",
+      "input": 203,
+      "output": 85303,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 633297,
+      "cache_read": 46628947,
+      "messages": 115,
+      "cost_usd": 95.3431,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 203,
+          "output": 85303,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 633297,
+          "cache_read": 46628947
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 41,
+          "output": 32354,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 84800,
+          "cache_read": 15741020
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 61,
+          "output": 28420,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 76907,
+          "cache_read": 5124929
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 82,
+          "output": 23814,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 81047,
+          "cache_read": 25632988
+        },
+        {
+          "skill": "메인 세션",
+          "input": 19,
+          "output": 715,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 390543,
+          "cache_read": 130010
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T21",
+      "input": 137,
+      "output": 39177,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 426693,
+      "cache_read": 42518271,
+      "messages": 82,
+      "cost_usd": 79.5185,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 137,
+          "output": 39177,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 426693,
+          "cache_read": 42518271
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "os-refactoring",
+          "input": 81,
+          "output": 32712,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 254919,
+          "cache_read": 39084613
+        },
+        {
+          "skill": "patch-confirmation",
+          "input": 56,
+          "output": 6465,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 171774,
+          "cache_read": 3433658
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T22",
+      "input": 164,
+      "output": 73233,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 170638,
+      "cache_read": 21769616,
+      "messages": 102,
+      "cost_usd": 43.2685,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 164,
+          "output": 73233,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 170638,
+          "cache_read": 21769616
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "patch-confirmation",
+          "input": 104,
+          "output": 40534,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 65635,
+          "cache_read": 12422656
+        },
+        {
+          "skill": "pre-deploy",
+          "input": 60,
+          "output": 32699,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 105003,
+          "cache_read": 9346960
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-11T23",
+      "input": 76,
+      "output": 46073,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 161850,
+      "cache_read": 16513776,
+      "messages": 51,
+      "cost_usd": 33.0828,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 76,
+          "output": 46073,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 161850,
+          "cache_read": 16513776
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "merge-main",
+          "input": 53,
+          "output": 33130,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 85251,
+          "cache_read": 12971109
+        },
+        {
+          "skill": "pre-deploy",
+          "input": 23,
+          "output": 12943,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 76599,
+          "cache_read": 3542667
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T00",
+      "input": 54,
+      "output": 19071,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 36641,
+      "cache_read": 11682222,
+      "messages": 34,
+      "cost_usd": 20.0537,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 54,
+          "output": 19071,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 36641,
+          "cache_read": 11682222
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "pre-deploy",
+          "input": 54,
+          "output": 19071,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 36641,
+          "cache_read": 11682222
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T08",
+      "input": 126,
+      "output": 41528,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 2641336,
+      "cache_read": 21718993,
+      "messages": 60,
+      "cost_usd": 114.9351,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 126,
+          "output": 41528,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 2641336,
+          "cache_read": 21718993
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "deploy-data-craft-BE-aws",
+          "input": 33,
+          "output": 16627,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 156165,
+          "cache_read": 2658317
+        },
+        {
+          "skill": "deploy-data-craft-FE-gh-pages",
+          "input": 47,
+          "output": 12400,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1362649,
+          "cache_read": 15316866
+        },
+        {
+          "skill": "pre-deploy",
+          "input": 27,
+          "output": 11746,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 731867,
+          "cache_read": 3613768
+        },
+        {
+          "skill": "메인 세션",
+          "input": 19,
+          "output": 755,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 390655,
+          "cache_read": 130042
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T09",
+      "input": 4830,
+      "output": 472708,
+      "cache_creation_5m": 5101,
+      "cache_creation_1h": 4467110,
+      "cache_read": 124540222,
+      "messages": 538,
+      "cost_usd": 356.4448,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 4830,
+          "output": 472708,
+          "cache_creation_5m": 5101,
+          "cache_creation_1h": 4467110,
+          "cache_read": 124540222
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 3740,
+          "output": 241497,
+          "cache_creation_5m": 3446,
+          "cache_creation_1h": 1595824,
+          "cache_read": 55843216
+        },
+        {
+          "skill": "restart",
+          "input": 10,
+          "output": 1248,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 177340,
+          "cache_read": 992526
+        },
+        {
+          "skill": "메인 세션",
+          "input": 1080,
+          "output": 229963,
+          "cache_creation_5m": 1655,
+          "cache_creation_1h": 2693946,
+          "cache_read": 67704480
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T10",
+      "input": 1650,
+      "output": 1052694,
+      "cache_creation_5m": 24651,
+      "cache_creation_1h": 3674869,
+      "cache_read": 312625598,
+      "messages": 1128,
+      "cost_usd": 658.6235,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 1650,
+          "output": 1052694,
+          "cache_creation_5m": 24651,
+          "cache_creation_1h": 3674869,
+          "cache_read": 312625598
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 1056,
+          "output": 653199,
+          "cache_creation_5m": 6515,
+          "cache_creation_1h": 1999703,
+          "cache_read": 214639340
+        },
+        {
+          "skill": "restart",
+          "input": 15,
+          "output": 1514,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 15388,
+          "cache_read": 1409259
+        },
+        {
+          "skill": "task-db",
+          "input": 58,
+          "output": 28547,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 243491,
+          "cache_read": 5817055
+        },
+        {
+          "skill": "메인 세션",
+          "input": 521,
+          "output": 369434,
+          "cache_creation_5m": 18136,
+          "cache_creation_1h": 1416287,
+          "cache_read": 90759944
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T11",
+      "input": 15176,
+      "output": 475174,
+      "cache_creation_5m": 3130,
+      "cache_creation_1h": 2417964,
+      "cache_read": 129933751,
+      "messages": 478,
+      "cost_usd": 303.3639,
+      "by_model": [
+        {
+          "model": "API 에러",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        },
+        {
+          "model": "claude-opus-4-7",
+          "input": 15176,
+          "output": 475174,
+          "cache_creation_5m": 3130,
+          "cache_creation_1h": 2417964,
+          "cache_read": 129933751
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 146,
+          "output": 95454,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 144458,
+          "cache_read": 39401261
+        },
+        {
+          "skill": "task-db",
+          "input": 129,
+          "output": 59857,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 95627,
+          "cache_read": 17265928
+        },
+        {
+          "skill": "메인 세션",
+          "input": 14901,
+          "output": 319863,
+          "cache_creation_5m": 3130,
+          "cache_creation_1h": 2177879,
+          "cache_read": 73266562
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T12",
+      "input": 367,
+      "output": 150977,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 307358,
+      "cache_read": 112275131,
+      "messages": 309,
+      "cost_usd": 188.9622,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 367,
+          "output": 150977,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 307358,
+          "cache_read": 112275131
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 367,
+          "output": 150977,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 307358,
+          "cache_read": 112275131
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T13",
+      "input": 139,
+      "output": 56910,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 1596048,
+      "cache_read": 38257153,
+      "messages": 89,
+      "cost_usd": 109.5375,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 139,
+          "output": 56910,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1596048,
+          "cache_read": 38257153
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 139,
+          "output": 56910,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1596048,
+          "cache_read": 38257153
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T14",
+      "input": 332,
+      "output": 231329,
+      "cache_creation_5m": 2328,
+      "cache_creation_1h": 1505656,
+      "cache_read": 75730120,
+      "messages": 248,
+      "cost_usd": 176.1632,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 332,
+          "output": 231329,
+          "cache_creation_5m": 2328,
+          "cache_creation_1h": 1505656,
+          "cache_read": 75730120
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 332,
+          "output": 231329,
+          "cache_creation_5m": 2328,
+          "cache_creation_1h": 1505656,
+          "cache_read": 75730120
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T15",
+      "input": 595,
+      "output": 433549,
+      "cache_creation_5m": 7978,
+      "cache_creation_1h": 2388344,
+      "cache_read": 146861594,
+      "messages": 404,
+      "cost_usd": 324.6174,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 595,
+          "output": 433549,
+          "cache_creation_5m": 7978,
+          "cache_creation_1h": 2388344,
+          "cache_read": 146861594
+        },
+        {
+          "model": "시스템 합성",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 595,
+          "output": 433549,
+          "cache_creation_5m": 7978,
+          "cache_creation_1h": 2388344,
+          "cache_read": 146861594
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T16",
+      "input": 561,
+      "output": 310921,
+      "cache_creation_5m": 20434,
+      "cache_creation_1h": 1914103,
+      "cache_read": 100835419,
+      "messages": 361,
+      "cost_usd": 232.3868,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 561,
+          "output": 310921,
+          "cache_creation_5m": 20434,
+          "cache_creation_1h": 1914103,
+          "cache_read": 100835419
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "메인 세션",
+          "input": 561,
+          "output": 310921,
+          "cache_creation_5m": 20434,
+          "cache_creation_1h": 1914103,
+          "cache_read": 100835419
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-12T17",
+      "input": 321,
+      "output": 177765,
+      "cache_creation_5m": 0,
+      "cache_creation_1h": 870569,
+      "cache_read": 15777430,
+      "messages": 98,
+      "cost_usd": 63.1204,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 321,
+          "output": 177765,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 870569,
+          "cache_read": 15777430
         }
       ],
       "by_skill": [
         {
           "skill": "init",
-          "input": 35,
-          "output": 12577,
+          "input": 245,
+          "output": 158645,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 132675,
-          "cache_read": 531201
+          "cache_creation_1h": 550221,
+          "cache_read": 5026123
         },
         {
           "skill": "메인 세션",
-          "input": 210,
-          "output": 146068,
+          "input": 76,
+          "output": 19120,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 417546,
-          "cache_read": 4494922
+          "cache_creation_1h": 320348,
+          "cache_read": 10751307
         }
       ]
     },
@@ -408,7 +4020,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 12140,
           "output": 687660,
           "cache_creation_5m": 0,
@@ -438,7 +4050,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 112,
           "output": 192366,
           "cache_creation_5m": 0,
@@ -468,7 +4080,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 200,
           "output": 285261,
           "cache_creation_5m": 0,
@@ -498,7 +4110,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 24883,
           "output": 300479,
           "cache_creation_5m": 0,
@@ -528,7 +4140,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 224,
           "output": 329450,
           "cache_creation_5m": 0,
@@ -558,12 +4170,20 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
-          "input": 417,
-          "output": 310021,
+          "skill": "init",
+          "input": 354,
+          "output": 282007,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 2380714,
-          "cache_read": 70564437
+          "cache_creation_1h": 2226748,
+          "cache_read": 69016905
+        },
+        {
+          "skill": "메인 세션",
+          "input": 63,
+          "output": 28014,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 153966,
+          "cache_read": 1547532
         }
       ]
     },
@@ -588,7 +4208,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 439,
           "output": 346973,
           "cache_creation_5m": 0,
@@ -618,7 +4238,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "init",
           "input": 76,
           "output": 86384,
           "cache_creation_5m": 0,
@@ -629,13 +4249,13 @@
     },
     {
       "hour": "2026-05-13T09",
-      "input": 6212,
-      "output": 763123,
+      "input": 6369,
+      "output": 812871,
       "cache_creation_5m": 19253,
-      "cache_creation_1h": 1956360,
-      "cache_read": 70162586,
-      "messages": 493,
-      "cost_usd": 221.6231,
+      "cache_creation_1h": 6079672,
+      "cache_read": 98399262,
+      "messages": 569,
+      "cost_usd": 391.4109,
       "by_model": [
         {
           "model": "API 에러",
@@ -647,29 +4267,37 @@
         },
         {
           "model": "claude-opus-4-7",
-          "input": 6212,
-          "output": 763123,
+          "input": 6369,
+          "output": 812871,
           "cache_creation_5m": 19253,
-          "cache_creation_1h": 1956360,
-          "cache_read": 70162586
+          "cache_creation_1h": 6079672,
+          "cache_read": 98399262
         }
       ],
       "by_skill": [
         {
+          "skill": "plan-enterprise",
+          "input": 55,
+          "output": 21760,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1179898,
+          "cache_read": 10542933
+        },
+        {
           "skill": "plan-enterprise-os",
-          "input": 308,
-          "output": 250056,
+          "input": 349,
+          "output": 274532,
           "cache_creation_5m": 9613,
-          "cache_creation_1h": 323378,
-          "cache_read": 35567822
+          "cache_creation_1h": 349685,
+          "cache_read": 38480716
         },
         {
           "skill": "메인 세션",
-          "input": 5904,
-          "output": 513067,
+          "input": 5965,
+          "output": 516579,
           "cache_creation_5m": 9640,
-          "cache_creation_1h": 1632982,
-          "cache_read": 34594764
+          "cache_creation_1h": 4550089,
+          "cache_read": 49375613
         }
       ]
     },
@@ -703,31 +4331,23 @@
       "by_skill": [
         {
           "skill": "plan-enterprise-os",
-          "input": 7795,
-          "output": 366410,
+          "input": 7944,
+          "output": 490797,
           "cache_creation_5m": 19020,
-          "cache_creation_1h": 1317030,
-          "cache_read": 34123942
-        },
-        {
-          "skill": "메인 세션",
-          "input": 149,
-          "output": 124387,
-          "cache_creation_5m": 0,
-          "cache_creation_1h": 249535,
-          "cache_read": 27175932
+          "cache_creation_1h": 1566565,
+          "cache_read": 61299874
         }
       ]
     },
     {
       "hour": "2026-05-13T11",
-      "input": 11250,
-      "output": 880831,
+      "input": 11316,
+      "output": 894623,
       "cache_creation_5m": 13099,
-      "cache_creation_1h": 2242499,
-      "cache_read": 99294055,
-      "messages": 698,
-      "cost_usd": 282.1375,
+      "cache_creation_1h": 2990991,
+      "cache_read": 103784068,
+      "messages": 732,
+      "cost_usd": 312.3626,
       "by_model": [
         {
           "model": "claude-haiku-4-5",
@@ -739,11 +4359,11 @@
         },
         {
           "model": "claude-opus-4-7",
-          "input": 11233,
-          "output": 876914,
+          "input": 11299,
+          "output": 890706,
           "cache_creation_5m": 10721,
-          "cache_creation_1h": 2242499,
-          "cache_read": 99060046
+          "cache_creation_1h": 2990991,
+          "cache_read": 103550059
         },
         {
           "model": "claude-sonnet-4-6",
@@ -780,6 +4400,14 @@
           "cache_read": 2770351
         },
         {
+          "skill": "patch-confirmation-os",
+          "input": 66,
+          "output": 13792,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 748492,
+          "cache_read": 4490013
+        },
+        {
           "skill": "plan-enterprise",
           "input": 10083,
           "output": 232111,
@@ -789,31 +4417,31 @@
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 541,
-          "output": 346332,
+          "input": 708,
+          "output": 423852,
           "cache_creation_5m": 7158,
-          "cache_creation_1h": 1070652,
-          "cache_read": 50137272
+          "cache_creation_1h": 1195043,
+          "cache_read": 66768335
         },
         {
           "skill": "메인 세션",
-          "input": 195,
-          "output": 86323,
+          "input": 28,
+          "output": 8803,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 200309,
-          "cache_read": 17099637
+          "cache_creation_1h": 75918,
+          "cache_read": 468574
         }
       ]
     },
     {
       "hour": "2026-05-13T12",
-      "input": 1096,
-      "output": 611746,
+      "input": 1272,
+      "output": 656103,
       "cache_creation_5m": 6107,
-      "cache_creation_1h": 2514428,
-      "cache_read": 69745209,
-      "messages": 537,
-      "cost_usd": 225.7012,
+      "cache_creation_1h": 3116773,
+      "cache_read": 93148067,
+      "messages": 653,
+      "cost_usd": 282.2052,
       "by_model": [
         {
           "model": "claude-haiku-4-5",
@@ -825,11 +4453,11 @@
         },
         {
           "model": "claude-opus-4-7",
-          "input": 1085,
-          "output": 609429,
+          "input": 1261,
+          "output": 653786,
           "cache_creation_5m": 4140,
-          "cache_creation_1h": 2514428,
-          "cache_read": 69587789
+          "cache_creation_1h": 3116773,
+          "cache_read": 92990647
         },
         {
           "model": "claude-sonnet-4-6",
@@ -850,40 +4478,40 @@
           "cache_read": 81100
         },
         {
+          "skill": "patch-confirmation-os",
+          "input": 176,
+          "output": 44357,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 602345,
+          "cache_read": 23402858
+        },
+        {
           "skill": "plan-enterprise",
-          "input": 536,
-          "output": 386003,
+          "input": 555,
+          "output": 387815,
           "cache_creation_5m": 1569,
-          "cache_creation_1h": 1412495,
-          "cache_read": 42330913
+          "cache_creation_1h": 1415682,
+          "cache_read": 43314348
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 388,
-          "output": 201247,
+          "input": 527,
+          "output": 222977,
           "cache_creation_5m": 4538,
-          "cache_creation_1h": 981674,
-          "cache_read": 20178176
-        },
-        {
-          "skill": "메인 세션",
-          "input": 158,
-          "output": 23542,
-          "cache_creation_5m": 0,
-          "cache_creation_1h": 36811,
-          "cache_read": 7155020
+          "cache_creation_1h": 1015298,
+          "cache_read": 26349761
         }
       ]
     },
     {
       "hour": "2026-05-13T13",
-      "input": 2863,
-      "output": 731560,
+      "input": 2878,
+      "output": 733665,
       "cache_creation_5m": 15258,
-      "cache_creation_1h": 2386934,
-      "cache_read": 94607446,
-      "messages": 811,
-      "cost_usd": 266.6725,
+      "cache_creation_1h": 2388564,
+      "cache_read": 95753118,
+      "messages": 816,
+      "cost_usd": 268.598,
       "by_model": [
         {
           "model": "claude-haiku-4-5",
@@ -895,11 +4523,11 @@
         },
         {
           "model": "claude-opus-4-7",
-          "input": 2821,
-          "output": 718306,
+          "input": 2836,
+          "output": 720411,
           "cache_creation_5m": 5225,
-          "cache_creation_1h": 2386934,
-          "cache_read": 93707743
+          "cache_creation_1h": 2388564,
+          "cache_read": 94853415
         },
         {
           "model": "claude-sonnet-4-6",
@@ -920,20 +4548,28 @@
           "cache_read": 223379
         },
         {
+          "skill": "patch-confirmation-os",
+          "input": 15,
+          "output": 2105,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 1630,
+          "cache_read": 1145672
+        },
+        {
           "skill": "plan-enterprise",
-          "input": 486,
-          "output": 186223,
+          "input": 506,
+          "output": 189100,
           "cache_creation_5m": 7436,
-          "cache_creation_1h": 346065,
-          "cache_read": 15985428
+          "cache_creation_1h": 349930,
+          "cache_read": 16749916
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 750,
-          "output": 345890,
+          "input": 795,
+          "output": 348744,
           "cache_creation_5m": 5528,
-          "cache_creation_1h": 1218286,
-          "cache_read": 52628435
+          "cache_creation_1h": 1224119,
+          "cache_read": 53834108
         },
         {
           "skill": "task-db-data",
@@ -945,11 +4581,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 93,
-          "output": 9291,
+          "input": 28,
+          "output": 3560,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 145645,
-          "cache_read": 2241703
+          "cache_creation_1h": 135947,
+          "cache_read": 271542
         }
       ]
     },
@@ -983,19 +4619,19 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 911,
-          "output": 252222,
+          "input": 930,
+          "output": 253424,
           "cache_creation_5m": 4699,
-          "cache_creation_1h": 721925,
-          "cache_read": 25468078
+          "cache_creation_1h": 726527,
+          "cache_read": 26121121
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 310,
-          "output": 200208,
+          "input": 338,
+          "output": 201949,
           "cache_creation_5m": 28317,
-          "cache_creation_1h": 377690,
-          "cache_read": 31797938
+          "cache_creation_1h": 381824,
+          "cache_read": 33269638
         },
         {
           "skill": "task-db-data",
@@ -1015,11 +4651,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 59,
-          "output": 7531,
+          "input": 12,
+          "output": 4588,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 36098,
-          "cache_read": 2158987
+          "cache_creation_1h": 27362,
+          "cache_read": 34244
         }
       ]
     },
@@ -1069,19 +4705,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 244,
-          "output": 134210,
+          "input": 278,
+          "output": 143659,
           "cache_creation_5m": 24961,
-          "cache_creation_1h": 177702,
-          "cache_read": 29435070
+          "cache_creation_1h": 201762,
+          "cache_read": 31229352
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 643,
-          "output": 351973,
-          "cache_creation_5m": 46611,
-          "cache_creation_1h": 1347030,
-          "cache_read": 42838811
+          "input": 659,
+          "output": 354842,
+          "cache_creation_5m": 57354,
+          "cache_creation_1h": 1608075,
+          "cache_read": 43323400
         },
         {
           "skill": "task-db-data",
@@ -1101,11 +4737,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 62,
-          "output": 17230,
-          "cache_creation_5m": 10743,
-          "cache_creation_1h": 312741,
-          "cache_read": 2313115
+          "input": 12,
+          "output": 4912,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 27636,
+          "cache_read": 34244
         }
       ]
     },
@@ -1138,28 +4774,44 @@
       ],
       "by_skill": [
         {
+          "skill": "plan-enterprise",
+          "input": 324,
+          "output": 133544,
+          "cache_creation_5m": 85874,
+          "cache_creation_1h": 195569,
+          "cache_read": 55622184
+        },
+        {
           "skill": "plan-enterprise-os",
-          "input": 248,
-          "output": 182897,
-          "cache_creation_5m": 73401,
-          "cache_creation_1h": 500626,
-          "cache_read": 20180885
+          "input": 326,
+          "output": 196964,
+          "cache_creation_5m": 138895,
+          "cache_creation_1h": 1247174,
+          "cache_read": 22385026
         },
         {
           "skill": "task-db-data",
-          "input": 183,
-          "output": 82561,
+          "input": 396,
+          "output": 207737,
           "cache_creation_5m": 19131,
-          "cache_creation_1h": 314810,
-          "cache_read": 9460119
+          "cache_creation_1h": 440287,
+          "cache_read": 37105258
+        },
+        {
+          "skill": "task-db-structure",
+          "input": 129,
+          "output": 50141,
+          "cache_creation_5m": 16341,
+          "cache_creation_1h": 83786,
+          "cache_read": 8852482
         },
         {
           "skill": "메인 세션",
-          "input": 65258,
-          "output": 402449,
-          "cache_creation_5m": 181610,
-          "cache_creation_1h": 1423280,
-          "cache_read": 95289662
+          "input": 64514,
+          "output": 79521,
+          "cache_creation_5m": 13901,
+          "cache_creation_1h": 271900,
+          "cache_read": 965716
         }
       ]
     },
@@ -1209,11 +4861,11 @@
         },
         {
           "skill": "dev-security-inspection",
-          "input": 98,
-          "output": 91326,
+          "input": 110,
+          "output": 92065,
           "cache_creation_5m": 835,
-          "cache_creation_1h": 445716,
-          "cache_read": 3899677
+          "cache_creation_1h": 447188,
+          "cache_read": 4155761
         },
         {
           "skill": "dev-start",
@@ -1225,27 +4877,35 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 274,
-          "output": 200021,
-          "cache_creation_5m": 24976,
-          "cache_creation_1h": 526315,
-          "cache_read": 14603094
+          "input": 592,
+          "output": 357048,
+          "cache_creation_5m": 92717,
+          "cache_creation_1h": 765722,
+          "cache_read": 77504548
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 431,
-          "output": 174606,
-          "cache_creation_5m": 69177,
-          "cache_creation_1h": 691210,
-          "cache_read": 25174660
+          "input": 485,
+          "output": 184654,
+          "cache_creation_5m": 134852,
+          "cache_creation_1h": 705196,
+          "cache_read": 26816534
+        },
+        {
+          "skill": "task-db-data",
+          "input": 130,
+          "output": 42536,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 63325,
+          "cache_read": 15941461
         },
         {
           "skill": "메인 세션",
-          "input": 715,
-          "output": 309562,
-          "cache_creation_5m": 138465,
-          "cache_creation_1h": 747573,
-          "cache_read": 85773467
+          "input": 201,
+          "output": 99212,
+          "cache_creation_5m": 5049,
+          "cache_creation_1h": 429383,
+          "cache_read": 5032594
         }
       ]
     },
@@ -1271,11 +4931,11 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 87,
-          "output": 54466,
+          "input": 111,
+          "output": 66059,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 201225,
-          "cache_read": 9740434
+          "cache_creation_1h": 220806,
+          "cache_read": 21198074
         },
         {
           "skill": "plan-enterprise-os",
@@ -1286,12 +4946,12 @@
           "cache_read": 1885409
         },
         {
-          "skill": "메인 세션",
-          "input": 37,
-          "output": 13638,
+          "skill": "task-db-data",
+          "input": 13,
+          "output": 2045,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 20796,
-          "cache_read": 12990372
+          "cache_creation_1h": 1215,
+          "cache_read": 1532732
         }
       ]
     },
@@ -1316,7 +4976,7 @@
       ],
       "by_skill": [
         {
-          "skill": "메인 세션",
+          "skill": "plan-enterprise",
           "input": 20,
           "output": 5543,
           "cache_creation_5m": 0,
@@ -1363,11 +5023,11 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 136,
-          "output": 67278,
-          "cache_creation_5m": 13318,
-          "cache_creation_1h": 479573,
-          "cache_read": 14282071
+          "input": 153,
+          "output": 80830,
+          "cache_creation_5m": 13935,
+          "cache_creation_1h": 502789,
+          "cache_read": 21810790
         },
         {
           "skill": "plan-enterprise-os",
@@ -1376,14 +5036,6 @@
           "cache_creation_5m": 17543,
           "cache_creation_1h": 82886,
           "cache_read": 5826731
-        },
-        {
-          "skill": "메인 세션",
-          "input": 17,
-          "output": 13552,
-          "cache_creation_5m": 617,
-          "cache_creation_1h": 23216,
-          "cache_read": 7528719
         }
       ]
     },
@@ -1441,35 +5093,35 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 1520,
-          "output": 238952,
-          "cache_creation_5m": 30720,
-          "cache_creation_1h": 1713394,
-          "cache_read": 34182451
+          "input": 1740,
+          "output": 315820,
+          "cache_creation_5m": 64584,
+          "cache_creation_1h": 3257637,
+          "cache_read": 74749039
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 21,
+          "output": 2631,
+          "cache_creation_5m": 16731,
+          "cache_creation_1h": 318732,
+          "cache_read": 305842
         },
         {
           "skill": "task-db-data",
-          "input": 38,
-          "output": 12557,
+          "input": 176,
+          "output": 74027,
           "cache_creation_5m": 2492,
-          "cache_creation_1h": 190243,
-          "cache_read": 489025
+          "cache_creation_1h": 1265075,
+          "cache_read": 16923370
         },
         {
           "skill": "task-db-structure",
-          "input": 225,
-          "output": 131757,
+          "input": 249,
+          "output": 132819,
           "cache_creation_5m": 35167,
-          "cache_creation_1h": 424390,
-          "cache_read": 12339855
-        },
-        {
-          "skill": "메인 세션",
-          "input": 403,
-          "output": 142031,
-          "cache_creation_5m": 50595,
-          "cache_creation_1h": 2941447,
-          "cache_read": 57698285
+          "cache_creation_1h": 428030,
+          "cache_read": 12731365
         }
       ]
     },
@@ -1511,19 +5163,19 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 77,
-          "output": 10739,
+          "input": 89,
+          "output": 10870,
           "cache_creation_5m": 127110,
-          "cache_creation_1h": 39452,
-          "cache_read": 2977782
+          "cache_creation_1h": 40491,
+          "cache_read": 3175173
         },
         {
           "skill": "plan-enterprise",
-          "input": 4990,
-          "output": 537777,
-          "cache_creation_5m": 106184,
-          "cache_creation_1h": 1779917,
-          "cache_read": 66702776
+          "input": 5058,
+          "output": 549417,
+          "cache_creation_5m": 172928,
+          "cache_creation_1h": 1802085,
+          "cache_read": 69061040
         },
         {
           "skill": "plan-enterprise-os",
@@ -1535,19 +5187,11 @@
         },
         {
           "skill": "task-db-data",
-          "input": 179,
-          "output": 33636,
+          "input": 304,
+          "output": 100735,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 48859,
-          "cache_read": 4087614
-        },
-        {
-          "skill": "메인 세션",
-          "input": 205,
-          "output": 78870,
-          "cache_creation_5m": 66744,
-          "cache_creation_1h": 70363,
-          "cache_read": 18415426
+          "cache_creation_1h": 96015,
+          "cache_read": 19947385
         }
       ]
     },
@@ -1589,35 +5233,43 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 11,
-          "output": 1748,
+          "input": 17,
+          "output": 1808,
           "cache_creation_5m": 21185,
-          "cache_creation_1h": 4694,
-          "cache_read": 585583
+          "cache_creation_1h": 5213,
+          "cache_read": 695301
         },
         {
           "skill": "plan-enterprise",
-          "input": 520,
-          "output": 334775,
-          "cache_creation_5m": 78251,
-          "cache_creation_1h": 569740,
-          "cache_read": 44560409
+          "input": 645,
+          "output": 394821,
+          "cache_creation_5m": 111623,
+          "cache_creation_1h": 675666,
+          "cache_read": 55193189
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 405,
-          "output": 186787,
-          "cache_creation_5m": 54424,
-          "cache_creation_1h": 535469,
-          "cache_read": 27720855
+          "input": 441,
+          "output": 191645,
+          "cache_creation_5m": 87796,
+          "cache_creation_1h": 545002,
+          "cache_read": 28609713
+        },
+        {
+          "skill": "task-db-data",
+          "input": 101,
+          "output": 52974,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 37345,
+          "cache_read": 15267462
         },
         {
           "skill": "메인 세션",
-          "input": 280,
-          "output": 120506,
-          "cache_creation_5m": 66744,
-          "cache_creation_1h": 199425,
-          "cache_read": 26933062
+          "input": 12,
+          "output": 2568,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 46102,
+          "cache_read": 34244
         }
       ]
     },
@@ -1651,11 +5303,11 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 97,
-          "output": 49900,
-          "cache_creation_5m": 17461,
-          "cache_creation_1h": 58648,
-          "cache_read": 12353051
+          "input": 212,
+          "output": 131336,
+          "cache_creation_5m": 51036,
+          "cache_creation_1h": 199373,
+          "cache_read": 30603641
         },
         {
           "skill": "plan-enterprise-os",
@@ -1666,12 +5318,12 @@
           "cache_read": 28601403
         },
         {
-          "skill": "메인 세션",
-          "input": 186,
-          "output": 215449,
-          "cache_creation_5m": 33575,
-          "cache_creation_1h": 256390,
-          "cache_read": 28291174
+          "skill": "task-db-data",
+          "input": 71,
+          "output": 134013,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 115665,
+          "cache_read": 10040584
         }
       ]
     },
@@ -1705,27 +5357,27 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 213,
-          "output": 113323,
-          "cache_creation_5m": 1827,
-          "cache_creation_1h": 155334,
-          "cache_read": 24133505
+          "input": 273,
+          "output": 155591,
+          "cache_creation_5m": 19827,
+          "cache_creation_1h": 249782,
+          "cache_read": 39607335
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 158,
-          "output": 58053,
-          "cache_creation_5m": 156,
-          "cache_creation_1h": 78711,
-          "cache_read": 27098662
+          "input": 302,
+          "output": 125200,
+          "cache_creation_5m": 471,
+          "cache_creation_1h": 167453,
+          "cache_read": 55689571
         },
         {
-          "skill": "메인 세션",
-          "input": 423,
-          "output": 252589,
-          "cache_creation_5m": 18315,
-          "cache_creation_1h": 337200,
-          "cache_read": 92403528
+          "skill": "task-db-data",
+          "input": 219,
+          "output": 143174,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 154010,
+          "cache_read": 48338789
         }
       ]
     },
@@ -1759,27 +5411,35 @@
       "by_skill": [
         {
           "skill": "patch-confirmation",
-          "input": 74,
-          "output": 22922,
-          "cache_creation_5m": 16686,
-          "cache_creation_1h": 59404,
-          "cache_read": 14731789
+          "input": 243,
+          "output": 119570,
+          "cache_creation_5m": 33372,
+          "cache_creation_1h": 168770,
+          "cache_read": 51234734
+        },
+        {
+          "skill": "plan-enterprise",
+          "input": 155,
+          "output": 46293,
+          "cache_creation_5m": 66924,
+          "cache_creation_1h": 81872,
+          "cache_read": 20742129
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 152,
-          "output": 76588,
-          "cache_creation_5m": 16686,
-          "cache_creation_1h": 311565,
-          "cache_read": 4376879
+          "input": 394,
+          "output": 168631,
+          "cache_creation_5m": 50225,
+          "cache_creation_1h": 470235,
+          "cache_read": 60855428
         },
         {
-          "skill": "메인 세션",
-          "input": 616,
-          "output": 241112,
-          "cache_creation_5m": 117149,
-          "cache_creation_1h": 353630,
-          "cache_read": 121168159
+          "skill": "task-db-data",
+          "input": 50,
+          "output": 6128,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 3722,
+          "cache_read": 7444536
         }
       ]
     },
@@ -1828,36 +5488,44 @@
       ],
       "by_skill": [
         {
+          "skill": "patch-confirmation",
+          "input": 22,
+          "output": 5070,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 6416,
+          "cache_read": 4833149
+        },
+        {
           "skill": "plan-enterprise",
-          "input": 843,
-          "output": 308815,
-          "cache_creation_5m": 60594,
-          "cache_creation_1h": 1610508,
-          "cache_read": 47741028
+          "input": 880,
+          "output": 314663,
+          "cache_creation_5m": 93966,
+          "cache_creation_1h": 1620111,
+          "cache_read": 49134301
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 2334,
-          "output": 173675,
-          "cache_creation_5m": 41596,
-          "cache_creation_1h": 456030,
-          "cache_read": 16154079
+          "input": 2354,
+          "output": 175974,
+          "cache_creation_5m": 58282,
+          "cache_creation_1h": 458232,
+          "cache_read": 16966173
         },
         {
           "skill": "task-db-structure",
-          "input": 139,
-          "output": 47637,
+          "input": 151,
+          "output": 48061,
           "cache_creation_5m": 18628,
-          "cache_creation_1h": 203182,
-          "cache_read": 6998479
+          "cache_creation_1h": 203708,
+          "cache_read": 7200763
         },
         {
           "skill": "메인 세션",
-          "input": 189,
-          "output": 45555,
-          "cache_creation_5m": 50058,
-          "cache_creation_1h": 248785,
-          "cache_read": 8354699
+          "input": 98,
+          "output": 31914,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 230038,
+          "cache_read": 1113899
         }
       ]
     },
@@ -1890,20 +5558,28 @@
       ],
       "by_skill": [
         {
+          "skill": "plan-enterprise",
+          "input": 18,
+          "output": 7473,
+          "cache_creation_5m": 16686,
+          "cache_creation_1h": 11591,
+          "cache_read": 1130976
+        },
+        {
           "skill": "plan-enterprise-os",
-          "input": 831,
-          "output": 434122,
-          "cache_creation_5m": 34538,
-          "cache_creation_1h": 1113360,
-          "cache_read": 55440338
+          "input": 868,
+          "output": 444229,
+          "cache_creation_5m": 50584,
+          "cache_creation_1h": 1129752,
+          "cache_read": 57146072
         },
         {
           "skill": "메인 세션",
-          "input": 67,
-          "output": 21664,
-          "cache_creation_5m": 32732,
-          "cache_creation_1h": 70023,
-          "cache_read": 2878190
+          "input": 12,
+          "output": 4084,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 42040,
+          "cache_read": 41480
         }
       ]
     },
@@ -1961,11 +5637,11 @@
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 470,
-          "output": 229135,
-          "cache_creation_5m": 19522,
-          "cache_creation_1h": 549398,
-          "cache_read": 34610761
+          "input": 486,
+          "output": 233313,
+          "cache_creation_5m": 35568,
+          "cache_creation_1h": 554130,
+          "cache_read": 36121869
         },
         {
           "skill": "pre-deploy",
@@ -1974,14 +5650,6 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 88140,
           "cache_read": 670745
-        },
-        {
-          "skill": "메인 세션",
-          "input": 16,
-          "output": 4178,
-          "cache_creation_5m": 16046,
-          "cache_creation_1h": 4732,
-          "cache_read": 1511108
         }
       ]
     },
@@ -2023,19 +5691,19 @@
       "by_skill": [
         {
           "skill": "group-policy",
-          "input": 55,
-          "output": 37209,
+          "input": 67,
+          "output": 37803,
           "cache_creation_5m": 16228,
-          "cache_creation_1h": 139978,
-          "cache_read": 2155315
+          "cache_creation_1h": 141268,
+          "cache_read": 2299897
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 231,
-          "output": 110384,
-          "cache_creation_5m": 42380,
-          "cache_creation_1h": 373688,
-          "cache_read": 12741768
+          "input": 266,
+          "output": 115520,
+          "cache_creation_5m": 74888,
+          "cache_creation_1h": 383125,
+          "cache_read": 13779366
         },
         {
           "skill": "pre-deploy",
@@ -2044,14 +5712,6 @@
           "cache_creation_5m": 0,
           "cache_creation_1h": 51050,
           "cache_read": 329163
-        },
-        {
-          "skill": "메인 세션",
-          "input": 47,
-          "output": 5730,
-          "cache_creation_5m": 32508,
-          "cache_creation_1h": 10727,
-          "cache_read": 1182180
         }
       ]
     },
@@ -2093,11 +5753,11 @@
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 302,
-          "output": 130772,
-          "cache_creation_5m": 20843,
-          "cache_creation_1h": 475913,
-          "cache_read": 15014737
+          "input": 332,
+          "output": 135875,
+          "cache_creation_5m": 53419,
+          "cache_creation_1h": 487197,
+          "cache_read": 15902141
         },
         {
           "skill": "pre-deploy",
@@ -2106,14 +5766,6 @@
           "cache_creation_5m": 17134,
           "cache_creation_1h": 162693,
           "cache_read": 3553638
-        },
-        {
-          "skill": "메인 세션",
-          "input": 30,
-          "output": 5103,
-          "cache_creation_5m": 32576,
-          "cache_creation_1h": 11284,
-          "cache_read": 887404
         }
       ]
     },
@@ -2171,19 +5823,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 260,
-          "output": 129910,
-          "cache_creation_5m": 18521,
-          "cache_creation_1h": 395383,
-          "cache_read": 16310657
+          "input": 275,
+          "output": 132374,
+          "cache_creation_5m": 34805,
+          "cache_creation_1h": 400681,
+          "cache_read": 16824336
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 59,
-          "output": 26519,
-          "cache_creation_5m": 16463,
-          "cache_creation_1h": 38729,
-          "cache_read": 5728830
+          "input": 74,
+          "output": 28573,
+          "cache_creation_5m": 32747,
+          "cache_creation_1h": 42567,
+          "cache_read": 6182318
         },
         {
           "skill": "pre-deploy",
@@ -2192,14 +5844,6 @@
           "cache_creation_5m": 33404,
           "cache_creation_1h": 344545,
           "cache_read": 3883539
-        },
-        {
-          "skill": "메인 세션",
-          "input": 30,
-          "output": 4518,
-          "cache_creation_5m": 32568,
-          "cache_creation_1h": 9136,
-          "cache_read": 967167
         }
       ]
     },
@@ -2241,27 +5885,27 @@
         },
         {
           "skill": "patch-confirmation",
-          "input": 66,
-          "output": 21133,
+          "input": 133,
+          "output": 35557,
           "cache_creation_5m": 16383,
-          "cache_creation_1h": 189503,
-          "cache_read": 2677962
+          "cache_creation_1h": 205224,
+          "cache_read": 5694813
         },
         {
           "skill": "plan-enterprise",
-          "input": 325,
-          "output": 37891,
-          "cache_creation_5m": 16431,
-          "cache_creation_1h": 80056,
-          "cache_read": 13186607
+          "input": 341,
+          "output": 41100,
+          "cache_creation_5m": 32715,
+          "cache_creation_1h": 84120,
+          "cache_read": 14456315
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 16800,
-          "output": 154973,
-          "cache_creation_5m": 50435,
-          "cache_creation_1h": 526932,
-          "cache_read": 14825024
+          "input": 16865,
+          "output": 158619,
+          "cache_creation_5m": 66818,
+          "cache_creation_1h": 532407,
+          "cache_read": 15664994
         },
         {
           "skill": "pre-deploy",
@@ -2270,14 +5914,6 @@
           "cache_creation_5m": 16284,
           "cache_creation_1h": 4693,
           "cache_read": 360948
-        },
-        {
-          "skill": "메인 세션",
-          "input": 148,
-          "output": 21279,
-          "cache_creation_5m": 32667,
-          "cache_creation_1h": 25260,
-          "cache_read": 5126529
         }
       ]
     },
@@ -2319,19 +5955,11 @@
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 217,
-          "output": 116470,
-          "cache_creation_5m": 34068,
-          "cache_creation_1h": 291412,
-          "cache_read": 26689181
-        },
-        {
-          "skill": "메인 세션",
-          "input": 16,
-          "output": 2332,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 4108,
-          "cache_read": 674554
+          "input": 233,
+          "output": 118802,
+          "cache_creation_5m": 50451,
+          "cache_creation_1h": 295520,
+          "cache_read": 27363735
         }
       ]
     },
@@ -2381,11 +6009,19 @@
         },
         {
           "skill": "patch-confirmation",
-          "input": 46,
-          "output": 16826,
+          "input": 58,
+          "output": 17286,
           "cache_creation_5m": 16383,
-          "cache_creation_1h": 49689,
-          "cache_read": 7141932
+          "cache_creation_1h": 50477,
+          "cache_read": 7632570
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 15,
+          "output": 2047,
+          "cache_creation_5m": 16383,
+          "cache_creation_1h": 3331,
+          "cache_read": 887353
         },
         {
           "skill": "pre-deploy",
@@ -2394,14 +6030,6 @@
           "cache_creation_5m": 16669,
           "cache_creation_1h": 33739,
           "cache_read": 2340691
-        },
-        {
-          "skill": "메인 세션",
-          "input": 27,
-          "output": 2507,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 4119,
-          "cache_read": 1377991
         }
       ]
     },
@@ -2440,6 +6068,14 @@
           "cache_creation_5m": 839,
           "cache_creation_1h": 425088,
           "cache_read": 7005793
+        },
+        {
+          "skill": "메인 세션",
+          "input": 0,
+          "output": 0,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 0,
+          "cache_read": 0
         }
       ]
     },
@@ -2489,19 +6125,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 1578,
-          "output": 793304,
-          "cache_creation_5m": 227018,
-          "cache_creation_1h": 2363012,
-          "cache_read": 100270264
-        },
-        {
-          "skill": "메인 세션",
-          "input": 15,
-          "output": 3375,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 5188,
-          "cache_read": 742015
+          "input": 1593,
+          "output": 796679,
+          "cache_creation_5m": 243401,
+          "cache_creation_1h": 2368200,
+          "cache_read": 101012279
         }
       ]
     },
@@ -2551,19 +6179,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 3589,
-          "output": 1014465,
-          "cache_creation_5m": 412645,
-          "cache_creation_1h": 2298392,
-          "cache_read": 175042276
+          "input": 3681,
+          "output": 1030723,
+          "cache_creation_5m": 494617,
+          "cache_creation_1h": 2323003,
+          "cache_read": 178984055
         },
         {
           "skill": "메인 세션",
-          "input": 122,
-          "output": 22855,
-          "cache_creation_5m": 81972,
-          "cache_creation_1h": 104466,
-          "cache_read": 4265973
+          "input": 30,
+          "output": 6597,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 79855,
+          "cache_read": 324194
         }
       ]
     },
@@ -2643,19 +6271,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 1531,
-          "output": 806727,
-          "cache_creation_5m": 272587,
-          "cache_creation_1h": 4073248,
-          "cache_read": 120123504
-        },
-        {
-          "skill": "메인 세션",
-          "input": 196,
-          "output": 30574,
-          "cache_creation_5m": 147447,
-          "cache_creation_1h": 697676,
-          "cache_read": 6332213
+          "input": 1727,
+          "output": 837301,
+          "cache_creation_5m": 420034,
+          "cache_creation_1h": 4770924,
+          "cache_read": 126455717
         }
       ]
     },
@@ -2713,27 +6333,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 1182,
-          "output": 635572,
-          "cache_creation_5m": 225287,
-          "cache_creation_1h": 1760533,
-          "cache_read": 88373109
+          "input": 1275,
+          "output": 649925,
+          "cache_creation_5m": 290819,
+          "cache_creation_1h": 1787460,
+          "cache_read": 91247371
         },
         {
           "skill": "task-db-structure",
-          "input": 87,
-          "output": 30309,
+          "input": 99,
+          "output": 30741,
           "cache_creation_5m": 16718,
-          "cache_creation_1h": 160211,
-          "cache_read": 4126816
-        },
-        {
-          "skill": "메인 세션",
-          "input": 105,
-          "output": 14785,
-          "cache_creation_5m": 65532,
-          "cache_creation_1h": 28417,
-          "cache_read": 3042816
+          "cache_creation_1h": 161701,
+          "cache_read": 4295370
         }
       ]
     },
@@ -2799,19 +6411,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 2447,
-          "output": 302543,
-          "cache_creation_5m": 61974,
-          "cache_creation_1h": 2464679,
-          "cache_read": 37827843
-        },
-        {
-          "skill": "메인 세션",
-          "input": 15,
-          "output": 3115,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 375145,
-          "cache_read": 465001
+          "input": 2462,
+          "output": 305658,
+          "cache_creation_5m": 78357,
+          "cache_creation_1h": 2839824,
+          "cache_read": 38292844
         }
       ]
     },
@@ -2861,11 +6465,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 2206,
-          "output": 977962,
-          "cache_creation_5m": 220949,
-          "cache_creation_1h": 2580099,
-          "cache_read": 151925245
+          "input": 2286,
+          "output": 988396,
+          "cache_creation_5m": 270098,
+          "cache_creation_1h": 2601428,
+          "cache_read": 154748803
         },
         {
           "skill": "plan-roadmap",
@@ -2877,11 +6481,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 94,
-          "output": 11256,
-          "cache_creation_5m": 49149,
-          "cache_creation_1h": 59920,
-          "cache_read": 2944728
+          "input": 14,
+          "output": 822,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 38591,
+          "cache_read": 121170
         }
       ]
     },
@@ -2931,19 +6535,19 @@
         },
         {
           "skill": "dev-start",
-          "input": 48,
-          "output": 7211,
-          "cache_creation_5m": 43136,
-          "cache_creation_1h": 26858,
-          "cache_read": 3996499
+          "input": 100,
+          "output": 22744,
+          "cache_creation_5m": 64704,
+          "cache_creation_1h": 46777,
+          "cache_read": 9648842
         },
         {
           "skill": "plan-enterprise",
-          "input": 1960,
-          "output": 1035736,
-          "cache_creation_5m": 379776,
-          "cache_creation_1h": 2607281,
-          "cache_read": 168723311
+          "input": 2157,
+          "output": 1076936,
+          "cache_creation_5m": 510840,
+          "cache_creation_1h": 2708597,
+          "cache_read": 179016755
         },
         {
           "skill": "plan-roadmap",
@@ -2952,14 +6556,6 @@
           "cache_creation_5m": 16383,
           "cache_creation_1h": 43651,
           "cache_read": 2679671
-        },
-        {
-          "skill": "메인 세션",
-          "input": 249,
-          "output": 56733,
-          "cache_creation_5m": 152632,
-          "cache_creation_1h": 121235,
-          "cache_read": 15945787
         }
       ]
     },
@@ -3009,19 +6605,19 @@
         },
         {
           "skill": "dev-security-inspection",
-          "input": 67,
-          "output": 31071,
+          "input": 79,
+          "output": 31363,
           "cache_creation_5m": 17249,
-          "cache_creation_1h": 229846,
-          "cache_read": 1569587
+          "cache_creation_1h": 229892,
+          "cache_read": 1760659
         },
         {
           "skill": "dev-start",
-          "input": 18,
-          "output": 2435,
+          "input": 24,
+          "output": 2515,
           "cache_creation_5m": 21568,
-          "cache_creation_1h": 8331,
-          "cache_read": 1461430
+          "cache_creation_1h": 194362,
+          "cache_read": 1478542
         },
         {
           "skill": "new-project-group",
@@ -3033,19 +6629,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 21205,
-          "output": 1326178,
-          "cache_creation_5m": 384847,
-          "cache_creation_1h": 3024470,
-          "cache_read": 210262343
-        },
-        {
-          "skill": "메인 세션",
-          "input": 210,
-          "output": 54121,
-          "cache_creation_5m": 131076,
-          "cache_creation_1h": 274626,
-          "cache_read": 12498355
+          "input": 21397,
+          "output": 1379927,
+          "cache_creation_5m": 515923,
+          "cache_creation_1h": 3113019,
+          "cache_read": 222552514
         }
       ]
     },
@@ -3087,27 +6675,27 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 12,
-          "output": 2097,
+          "input": 18,
+          "output": 2174,
           "cache_creation_5m": 21568,
-          "cache_creation_1h": 5085,
-          "cache_read": 1292834
+          "cache_creation_1h": 5640,
+          "cache_read": 1501250
         },
         {
           "skill": "plan-enterprise",
-          "input": 655,
-          "output": 374162,
-          "cache_creation_5m": 115763,
-          "cache_creation_1h": 1051029,
-          "cache_read": 51930058
+          "input": 752,
+          "output": 393997,
+          "cache_creation_5m": 164912,
+          "cache_creation_1h": 1084281,
+          "cache_read": 58632033
         },
         {
           "skill": "메인 세션",
-          "input": 115,
-          "output": 20642,
-          "cache_creation_5m": 49149,
-          "cache_creation_1h": 72095,
-          "cache_read": 6951871
+          "input": 12,
+          "output": 730,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 38288,
+          "cache_read": 41480
         }
       ]
     },
@@ -3309,11 +6897,11 @@
       "by_skill": [
         {
           "skill": "dev-build",
-          "input": 20,
-          "output": 8315,
+          "input": 56,
+          "output": 26840,
           "cache_creation_5m": 16428,
-          "cache_creation_1h": 15263,
-          "cache_read": 1833205
+          "cache_creation_1h": 41217,
+          "cache_read": 7430020
         },
         {
           "skill": "dev-start",
@@ -3325,19 +6913,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 297,
-          "output": 129016,
-          "cache_creation_5m": 57608,
-          "cache_creation_1h": 1979689,
-          "cache_read": 34520012
+          "input": 407,
+          "output": 145931,
+          "cache_creation_5m": 156176,
+          "cache_creation_1h": 3196430,
+          "cache_read": 39101562
         },
         {
           "skill": "메인 세션",
-          "input": 507,
-          "output": 58939,
-          "cache_creation_5m": 98568,
-          "cache_creation_1h": 1366247,
-          "cache_read": 10635797
+          "input": 361,
+          "output": 23499,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 123552,
+          "cache_read": 457432
         }
       ]
     },
@@ -3370,6 +6958,14 @@
       ],
       "by_skill": [
         {
+          "skill": "dev-build",
+          "input": 106,
+          "output": 42474,
+          "cache_creation_5m": 16428,
+          "cache_creation_1h": 55622,
+          "cache_read": 14663269
+        },
+        {
           "skill": "dev-start",
           "input": 40,
           "output": 6176,
@@ -3379,11 +6975,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 260,
-          "output": 84663,
-          "cache_creation_5m": 16428,
-          "cache_creation_1h": 116750,
-          "cache_read": 17214715
+          "input": 154,
+          "output": 42189,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 61128,
+          "cache_read": 2551446
         }
       ]
     },
@@ -3471,11 +7067,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 177,
-          "output": 68072,
-          "cache_creation_5m": 82826,
-          "cache_creation_1h": 122863,
-          "cache_read": 12481767
+          "input": 198,
+          "output": 70839,
+          "cache_creation_5m": 99209,
+          "cache_creation_1h": 127637,
+          "cache_read": 13160354
         },
         {
           "skill": "pre-deploy",
@@ -3484,14 +7080,6 @@
           "cache_creation_5m": 16576,
           "cache_creation_1h": 68859,
           "cache_read": 8129334
-        },
-        {
-          "skill": "메인 세션",
-          "input": 21,
-          "output": 2767,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 4774,
-          "cache_read": 678587
         }
       ]
     },
@@ -3678,20 +7266,20 @@
       ],
       "by_skill": [
         {
+          "skill": "dev-start",
+          "input": 6,
+          "output": 55,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 651,
+          "cache_read": 50397
+        },
+        {
           "skill": "plan-enterprise",
           "input": 40,
           "output": 51802,
           "cache_creation_5m": 17970,
           "cache_creation_1h": 117964,
           "cache_read": 2200421
-        },
-        {
-          "skill": "메인 세션",
-          "input": 6,
-          "output": 55,
-          "cache_creation_5m": 0,
-          "cache_creation_1h": 651,
-          "cache_read": 50397
         }
       ]
     },
@@ -3857,19 +7445,11 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 30030,
-          "output": 610300,
-          "cache_creation_5m": 126028,
-          "cache_creation_1h": 1147624,
-          "cache_read": 104646591
-        },
-        {
-          "skill": "메인 세션",
-          "input": 61,
-          "output": 14771,
-          "cache_creation_5m": 32766,
-          "cache_creation_1h": 28103,
-          "cache_read": 5294489
+          "input": 30091,
+          "output": 625071,
+          "cache_creation_5m": 158794,
+          "cache_creation_1h": 1175727,
+          "cache_read": 109941080
         }
       ]
     },
@@ -3911,19 +7491,11 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 657,
-          "output": 412568,
-          "cache_creation_5m": 140407,
-          "cache_creation_1h": 658347,
-          "cache_read": 104897967
-        },
-        {
-          "skill": "메인 세션",
-          "input": 24,
-          "output": 4993,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 10421,
-          "cache_read": 2865056
+          "input": 681,
+          "output": 417561,
+          "cache_creation_5m": 156790,
+          "cache_creation_1h": 668768,
+          "cache_read": 107763023
         }
       ]
     },
@@ -3973,19 +7545,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 525,
-          "output": 309410,
-          "cache_creation_5m": 116001,
-          "cache_creation_1h": 522945,
-          "cache_read": 127563560
-        },
-        {
-          "skill": "메인 세션",
-          "input": 48,
-          "output": 9848,
-          "cache_creation_5m": 32766,
-          "cache_creation_1h": 19200,
-          "cache_read": 7537388
+          "input": 573,
+          "output": 319258,
+          "cache_creation_5m": 148767,
+          "cache_creation_1h": 542145,
+          "cache_read": 135100948
         }
       ]
     },
@@ -4127,27 +7691,19 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 93,
-          "output": 24157,
+          "input": 204,
+          "output": 62043,
           "cache_creation_5m": 32856,
-          "cache_creation_1h": 59316,
-          "cache_read": 13135089
+          "cache_creation_1h": 122050,
+          "cache_read": 31476679
         },
         {
           "skill": "plan-enterprise",
-          "input": 948,
-          "output": 500978,
-          "cache_creation_5m": 122833,
-          "cache_creation_1h": 5606760,
-          "cache_read": 224497405
-        },
-        {
-          "skill": "메인 세션",
-          "input": 135,
-          "output": 43305,
-          "cache_creation_5m": 16428,
-          "cache_creation_1h": 72033,
-          "cache_read": 23315065
+          "input": 972,
+          "output": 506397,
+          "cache_creation_5m": 139261,
+          "cache_creation_1h": 5616059,
+          "cache_read": 229470880
         }
       ]
     },
@@ -4235,19 +7791,19 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 47,
-          "output": 14634,
+          "input": 313,
+          "output": 135059,
           "cache_creation_5m": 16383,
-          "cache_creation_1h": 64017,
-          "cache_read": 1129508
+          "cache_creation_1h": 1409898,
+          "cache_read": 81043095
         },
         {
           "skill": "plan-enterprise",
-          "input": 1791,
-          "output": 351833,
-          "cache_creation_5m": 181286,
-          "cache_creation_1h": 3613299,
-          "cache_read": 115519993
+          "input": 1980,
+          "output": 428881,
+          "cache_creation_5m": 240418,
+          "cache_creation_1h": 4263686,
+          "cache_read": 132746744
         },
         {
           "skill": "plan-enterprise-os",
@@ -4256,14 +7812,6 @@
           "cache_creation_5m": 18491,
           "cache_creation_1h": 468539,
           "cache_read": 24266596
-        },
-        {
-          "skill": "메인 세션",
-          "input": 455,
-          "output": 197473,
-          "cache_creation_5m": 59132,
-          "cache_creation_1h": 1996268,
-          "cache_read": 97140338
         }
       ]
     },
@@ -4313,11 +7861,11 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 66,
-          "output": 22514,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 89108,
-          "cache_read": 1730078
+          "input": 299,
+          "output": 134137,
+          "cache_creation_5m": 16529,
+          "cache_creation_1h": 1362459,
+          "cache_read": 76290479
         },
         {
           "skill": "group-policy",
@@ -4329,11 +7877,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 616,
-          "output": 230807,
-          "cache_creation_5m": 149173,
-          "cache_creation_1h": 3667252,
-          "cache_read": 97972519
+          "input": 667,
+          "output": 246347,
+          "cache_creation_5m": 165556,
+          "cache_creation_1h": 3705465,
+          "cache_read": 104851452
         },
         {
           "skill": "plan-enterprise-os",
@@ -4345,11 +7893,11 @@
         },
         {
           "skill": "메인 세션",
-          "input": 296,
-          "output": 127599,
-          "cache_creation_5m": 16529,
-          "cache_creation_1h": 1346720,
-          "cache_read": 81480814
+          "input": 12,
+          "output": 436,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 35156,
+          "cache_read": 41480
         }
       ]
     },
@@ -4391,11 +7939,11 @@
       "by_skill": [
         {
           "skill": "dev-start",
-          "input": 30,
-          "output": 7528,
+          "input": 436,
+          "output": 161506,
           "cache_creation_5m": 0,
-          "cache_creation_1h": 17960,
-          "cache_read": 662265
+          "cache_creation_1h": 239378,
+          "cache_read": 145382740
         },
         {
           "skill": "group-policy",
@@ -4407,27 +7955,27 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 1419,
-          "output": 281168,
-          "cache_creation_5m": 149532,
-          "cache_creation_1h": 711280,
-          "cache_read": 82350229
+          "input": 1475,
+          "output": 291726,
+          "cache_creation_5m": 198681,
+          "cache_creation_1h": 740835,
+          "cache_read": 88864883
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 85,
-          "output": 34537,
-          "cache_creation_5m": 1198,
-          "cache_creation_1h": 56604,
-          "cache_read": 7143199
+          "input": 106,
+          "output": 38074,
+          "cache_creation_5m": 17581,
+          "cache_creation_1h": 61650,
+          "cache_read": 8320431
         },
         {
           "skill": "메인 세션",
-          "input": 499,
-          "output": 170173,
-          "cache_creation_5m": 65532,
-          "cache_creation_1h": 294833,
-          "cache_read": 152608177
+          "input": 16,
+          "output": 2100,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 38814,
+          "cache_read": 195816
         }
       ]
     },
@@ -4476,6 +8024,22 @@
           "cache_read": 4364287
         },
         {
+          "skill": "dev-start",
+          "input": 90,
+          "output": 34308,
+          "cache_creation_5m": 16383,
+          "cache_creation_1h": 59066,
+          "cache_read": 48745616
+        },
+        {
+          "skill": "group-policy",
+          "input": 26,
+          "output": 4563,
+          "cache_creation_5m": 16383,
+          "cache_creation_1h": 6417,
+          "cache_read": 1103275
+        },
+        {
           "skill": "patch-confirmation",
           "input": 36,
           "output": 10910,
@@ -4485,19 +8049,19 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 4558,
-          "output": 384303,
-          "cache_creation_5m": 153837,
-          "cache_creation_1h": 1041190,
-          "cache_read": 82410934
+          "input": 4608,
+          "output": 392840,
+          "cache_creation_5m": 202986,
+          "cache_creation_1h": 1051432,
+          "cache_read": 86383639
         },
         {
           "skill": "메인 세션",
-          "input": 193,
-          "output": 52453,
-          "cache_creation_5m": 81915,
-          "cache_creation_1h": 144341,
-          "cache_read": 54503987
+          "input": 27,
+          "output": 5045,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 68616,
+          "cache_read": 682391
         }
       ]
     },
@@ -4555,19 +8119,11 @@
         },
         {
           "skill": "plan-enterprise",
-          "input": 5993,
-          "output": 299585,
-          "cache_creation_5m": 103211,
-          "cache_creation_1h": 1967349,
-          "cache_read": 48772092
-        },
-        {
-          "skill": "메인 세션",
-          "input": 15,
-          "output": 2872,
-          "cache_creation_5m": 16383,
-          "cache_creation_1h": 3997,
-          "cache_read": 703803
+          "input": 6008,
+          "output": 302457,
+          "cache_creation_5m": 119594,
+          "cache_creation_1h": 1971346,
+          "cache_read": 49475895
         }
       ]
     },
@@ -4853,13 +8409,13 @@
     },
     {
       "hour": "2026-05-20T09",
-      "input": 8869,
-      "output": 339655,
-      "cache_creation_5m": 115559,
-      "cache_creation_1h": 1763591,
-      "cache_read": 41972623,
-      "messages": 344,
-      "cost_usd": 140.2595,
+      "input": 8974,
+      "output": 412476,
+      "cache_creation_5m": 132788,
+      "cache_creation_1h": 1865899,
+      "cache_read": 56368146,
+      "messages": 419,
+      "cost_usd": 170.1486,
       "by_model": [
         {
           "model": "claude-haiku-4-5",
@@ -4871,19 +8427,19 @@
         },
         {
           "model": "claude-opus-4-7",
-          "input": 8800,
-          "output": 329044,
+          "input": 8901,
+          "output": 399024,
           "cache_creation_5m": 3101,
-          "cache_creation_1h": 1763591,
-          "cache_read": 41236677
+          "cache_creation_1h": 1865899,
+          "cache_read": 55523336
         },
         {
           "model": "claude-sonnet-4-6",
-          "input": 17,
-          "output": 9679,
-          "cache_creation_5m": 55575,
+          "input": 21,
+          "output": 12520,
+          "cache_creation_5m": 72804,
           "cache_creation_1h": 0,
-          "cache_read": 626198
+          "cache_read": 735062
         },
         {
           "model": "시스템 합성",
@@ -4897,27 +8453,65 @@
       "by_skill": [
         {
           "skill": "plan-enterprise",
-          "input": 484,
-          "output": 213703,
-          "cache_creation_5m": 96802,
-          "cache_creation_1h": 1154099,
-          "cache_read": 33456637
+          "input": 548,
+          "output": 249815,
+          "cache_creation_5m": 113186,
+          "cache_creation_1h": 1199899,
+          "cache_read": 42155583
         },
         {
           "skill": "plan-enterprise-os",
-          "input": 8363,
-          "output": 121862,
-          "cache_creation_5m": 2373,
-          "cache_creation_1h": 602004,
-          "cache_read": 7847996
+          "input": 8426,
+          "output": 162661,
+          "cache_creation_5m": 19602,
+          "cache_creation_1h": 666000,
+          "cache_read": 14212563
+        }
+      ]
+    },
+    {
+      "hour": "2026-05-20T10",
+      "input": 20,
+      "output": 14922,
+      "cache_creation_5m": 149,
+      "cache_creation_1h": 23294,
+      "cache_read": 1109100,
+      "messages": 10,
+      "cost_usd": 3.3668,
+      "by_model": [
+        {
+          "model": "claude-opus-4-7",
+          "input": 19,
+          "output": 14142,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 23294,
+          "cache_read": 1051689
         },
         {
-          "skill": "메인 세션",
-          "input": 22,
-          "output": 4090,
-          "cache_creation_5m": 16384,
-          "cache_creation_1h": 7488,
-          "cache_read": 667990
+          "model": "claude-sonnet-4-6",
+          "input": 1,
+          "output": 780,
+          "cache_creation_5m": 149,
+          "cache_creation_1h": 0,
+          "cache_read": 57411
+        }
+      ],
+      "by_skill": [
+        {
+          "skill": "plan-enterprise",
+          "input": 3,
+          "output": 1816,
+          "cache_creation_5m": 149,
+          "cache_creation_1h": 7608,
+          "cache_read": 426623
+        },
+        {
+          "skill": "plan-enterprise-os",
+          "input": 17,
+          "output": 13106,
+          "cache_creation_5m": 0,
+          "cache_creation_1h": 15686,
+          "cache_read": 682477
         }
       ]
     }
