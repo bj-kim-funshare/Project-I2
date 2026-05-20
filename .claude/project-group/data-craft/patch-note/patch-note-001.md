@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.270.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (Phase 5 보강 — 그리드 file/image 등가 위임)
+
+### 개요
+
+플랜 #118 (rowLink 비리더 풀-매칭 렌더러 위임) 의 req 4 ("extraProps 를 **등가** 구성한 뒤 위임 렌더링") 완결 보강. 이전 머지 (v001.265.0) 시점에 Phase 5 코멘트에 명시된 blocker — "그리드 비리더 file/image: userList / dataViewerField / onFileLoad / fileCell 미공급 → 실제 파일 목록 미조회" — 가 dispatch-map 레이어 (`cell-renderer-map.tsx`) 의 `simpleRenderers` ↔ `extendedRenderers` 분기 때문임이 advisor #2 사전 검증에서 확인되어, 본 보강이 rowLink 등록을 `extendedRenderers` 로 이주하고 4개 prop 을 forwarding 하여 그리드/비그리드 위임 인터페이스의 완전 등가를 달성.
+
+### 변경
+
+- **`packages/fs-data-viewer/src/widgets/fs_grid_renderer/cell-renderer-map.tsx`** (`86eeb6a`): rowLink 항목을 `simpleRenderers` 에서 제거하고 `extendedRenderers` 에 `userList / dataViewerField / onFileLoad / fileCell` 4개 prop 을 forwarding 하는 항목으로 이주.
+- **`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx`** (`86eeb6a`): 동일 4개 optional prop 시그니처 추가 → 비리더 dispatcher 호출 시 그대로 전달. `rowLinkDelegateDispatcher.tsx` / `rowLinkDelegateResolver.ts` 는 이미 해당 prop 수신·처리 인터페이스 보유 — 무변경.
+
+### 영향
+
+- ✅ 그리드 비리더 셀이 타겟 file/image 컬럼으로 매핑된 경우, 실제 파일 목록 조회 + 미리보기가 비그리드 (table/kanban/gallery/calendar) 경로와 동등하게 작동.
+- ✅ 다른 타입 (text/number/date/select/등) 의 위임 동작은 부작용 없음 — forwarding 된 4개 prop 은 모두 optional 이며 file/image 외 렌더러에서 무시.
+- ✅ HOTFIX 14 회귀 (unit suffix 표시) + Phase 6 보강 (빈값 `-` placeholder) 그대로 유지.
+
+### 정책 합치
+
+- data-craft FE-only (BE/DB 무수정).
+- Lint gate (`pnpm typecheck:all && pnpm lint`): PASS (0 errors, 18 warnings pre-existing).
+- advisor #2 (5-perspective) PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment.
+
 ## v001.269.0
 
 > 통합일: 2026-05-19
