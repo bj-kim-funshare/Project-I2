@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.332.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #138 (보드 위젯 상세 설정 모달화)
+
+### 개요
+
+QA 보고 — 데이터 뷰어 → 대시보드 뷰 → 디자인 모드에서 보드 위젯의 ⚙️ 아이콘을 눌렀을 때 상세 설정이 데이터 뷰어 섹션 안의 풀-스크린 인-페이지로 렌더되어, 섹션 높이를 낮게 잡으면 헤더/2단 본문/푸터가 짓눌려 사용 불가. 본 패치는 인-페이지 방식을 제거하고 Radix Dialog 포털 기반 모달로 전환해 섹션 높이 의존을 끊는다.
+
+### 변경 (3 파일, +140/-45)
+
+#### 1. `WidgetSettingsModal.tsx` 신설 (`0b593b7c`)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsModal.tsx` — 캐노니컬 자산 `shared/ui/Dialog/Dialog.tsx` 의 `Dialog` / `DialogContent` 위에 뷰포트 기준 사이징 `w-[min(95vw,1280px)] h-[min(90vh,800px)] max-w-none` 으로 패널 호스팅. `initialConfigRef` 스냅샷 + `handleCancel` (config revert) 를 모달 계층으로 끌어올려 ESC / 오버레이 클릭 / X 버튼 모두 동일 Cancel 시멘틱으로 라우팅 (`onOpenChange(false)` → `handleCancel`). Save & Apply 는 외부에서 `configuringWidgetId=null` 로 닫히므로 revert 경로를 우회.
+
+#### 2. `WidgetSettingsPanel.tsx` 모달 친화 (`0b593b7c`)
+- `dataViewerHeight` prop 제거, 모달 컨테이너 부모 flex `h-full` 기반으로 높이 처리.
+- `useRef`/`initialConfigRef` 및 내부 `handleCancel` 제거 → 모달 계층으로 이전.
+- `onCancel` prop 신설 — 푸터 취소 버튼이 이 prop 을 직접 호출.
+- 2단 본문 레이아웃 (좌 `WidgetSettingsTabs` 35% / 우 `WidgetPreviewPane` 65%), 헤더 / 푸터 구조 보존.
+
+#### 3. `FsDashboard.tsx` 진입 흐름 모달화 (`0b593b7c`)
+- `DashboardViewState` 에서 `'configuring'` 리터럴 제거 → `'empty' | 'grid'` 로 축소.
+- `dashboardView` 메모에서 `configuringWidgetId` 분기 제거, `useMemo` deps 정리.
+- `renderContent()` 의 `'configuring'` case 전체 삭제 (≈ 30 줄).
+- `<WidgetSettingsModal isOpen={configuringWidgetId !== null} ... />` 를 `renderContent()` 와 동일 형제 레벨에 마운트, props 는 기존 `handleConfigChange` / `handleConfigComplete` / `handleSizeChange` / `handleReset` / `handleBackToSelector` / `handleUpdateWidgetType` 재사용.
+- `handleModalCancel` 콜백 신설 — `configuringWidgetId` / `viewOverride` 클리어 (revert 는 모달 내부 처리).
+- 기존 `useCloseWidgetSettingsOnModeExit` 훅 유지 — 디자인 모드 이탈 시 자동 닫힘 보존.
+- 임포트 정리: `WidgetSettingsPanel` → `WidgetSettingsModal` 직접 임포트.
+
+### Lint hotfix 1 (`3c605b37`)
+
+`react-hooks/refs` 룰 위반 — 모달의 `initialConfigRef.current` 를 렌더 본문에서 read/write. `useEffect(..., [isOpen, widget])` 로 이전, snapshot 설정/클리어를 이펙트 안에서 수행. `current === null` 가드는 그대로 유지하여 동일 위젯 재렌더 시 최초 스냅샷만 보존.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` 통과 (0 errors, 17 warnings, lint hotfix 1회 후).
+- 런타임 QA (수동) 권장: 섹션 높이 낮춤 상태에서 ⚙️ 클릭 → 모달이 뷰포트 중앙에 정상 사이즈로 렌더, 4가지 닫힘 경로 (Save / Cancel / ESC / 오버레이 / X) 의미 일치, 디자인 모드 이탈 시 자동 닫힘.
+
+### 비고
+
+- `WidgetSettingsTabs.tsx:102` 의 `dataViewerHeight={600}` 은 `WidgetSelector` 로의 사전 존재 하드코드 — 본 모달화 스코프 외, 변경 없음.
+- BE / DB 무수정. FE-only 변경.
+- 머지 시점 동시 통합 `v001.331.0` (#129 HOTFIX 8) 과 충돌, §5 step 4 양측 보존 정책에 따라 본 항목은 `v001.332.0` 으로 발급.
+
+---
+
 ## v001.331.0
 
 > 통합일: 2026-05-20
