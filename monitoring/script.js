@@ -324,6 +324,26 @@ function applyDeltaBadges(data) {
   }
 }
 
+// ---------- Skill count helper ----------
+
+// Use local-time date keys because collect.py:867 parse_ts_hour writes hour keys in local time,
+// so by_day[i].day is a local date. A UTC slice would misalign at day boundaries.
+function computeSkillCountByDay(invocations) {
+  const counts = {};
+  for (const w of (invocations || [])) {
+    const skill = w.skill || '';
+    if (!skill || skill === '(no-skill)') continue;
+    const d = new Date(w.start_timestamp);
+    if (isNaN(d.getTime())) continue;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const key = `${yyyy}-${mm}-${dd}`;
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
 // ---------- Plugin ----------
 
 const pieLabelsPlugin = {
@@ -348,6 +368,47 @@ const pieLabelsPlugin = {
       ctx.shadowBlur = 3;
       ctx.fillText(pct.toFixed(0) + '%', x, y - 7);
       ctx.fillText(fmtKMB(value), x, y + 7);
+      ctx.restore();
+    });
+  },
+};
+
+const dayTokensSkillCountPlugin = {
+  id: 'dayTokensSkillCount',
+  afterDatasetsDraw(chart) {
+    const pluginOpts = chart.config.options &&
+      chart.config.options.plugins &&
+      chart.config.options.plugins.dayTokensSkillCount;
+    if (!pluginOpts) return;
+    const countsByDay = pluginOpts.countsByDay;
+    if (!countsByDay || !Object.keys(countsByDay).length) return;
+
+    const { ctx } = chart;
+    const labels = chart.data.labels || [];
+    const datasets = chart.data.datasets || [];
+
+    labels.forEach((label, i) => {
+      const count = countsByDay[label];
+      if (!count) return;
+
+      // Sum only stack 's' datasets (skip comparison stack 'c')
+      let sumY = 0;
+      for (const ds of datasets) {
+        if (ds.stack !== 's') continue;
+        sumY += (ds.data[i] || 0);
+      }
+
+      const x = chart.scales.x.getPixelForValue(label);
+      const y = chart.scales.y.getPixelForValue(sumY);
+
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(String(count), x, y - 8);
       ctx.restore();
     });
   },
@@ -378,21 +439,28 @@ function renderChartDayTokens(data, opts) {
     );
   }
 
+  const skillCountsByDay = (opts && opts.skillCountsByDay) || null;
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { stacked: true },
+      y: { stacked: true, ticks: { callback: (v) => fmtKMB(v) } },
+    },
+    plugins: {
+      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtKMB(c.parsed.y)}` } },
+      legend: { position: 'bottom' },
+    },
+  };
+  if (skillCountsByDay) {
+    chartOptions.plugins.dayTokensSkillCount = { countsByDay: skillCountsByDay };
+  }
+  const chartPlugins = skillCountsByDay ? [dayTokensSkillCountPlugin] : [];
   charts[chartKey] = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, ticks: { callback: (v) => fmtKMB(v) } },
-      },
-      plugins: {
-        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtKMB(c.parsed.y)}` } },
-        legend: { position: 'bottom' },
-      },
-    },
+    options: chartOptions,
+    plugins: chartPlugins,
   });
 }
 
@@ -1434,7 +1502,7 @@ function updateUrl(unit, key) {
 function renderAll(data, compareData) {
   const aggData = _aggregateCache || data;
   renderKpi(data);
-  renderChartDayTokens(aggData, {});
+  renderChartDayTokens(aggData, { skillCountsByDay: computeSkillCountByDay(aggData.by_skill_invocation || []) });
   if (compareData) {
     const prevTotal = compareData.total || {};
     const prevCacheRows = [
