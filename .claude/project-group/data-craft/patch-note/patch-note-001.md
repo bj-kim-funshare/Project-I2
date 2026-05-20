@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.340.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 10 (간트 인쇄 렉 해소 — segment 분할로 폭증한 DOM/렌더 비용 절감)
+
+### 개요
+
+HOTFIX 9 의 timeline segment 분할 적용 후 마스터 보고: 간트 뷰 인쇄 → 브라우저 인쇄 dialog 넘어갈 때 렉 심함.
+
+원인: segment 분할이 DOM 노드 수와 격자 gradient 횟수 폭증. 6 개월 / 23 일/segment ≈ 8 segments × 7 rows = 56 개 row-canvas + 56 개 `repeating-linear-gradient`. label/헤더도 segment 마다 반복.
+
+### 해법 (3 단계 절감)
+
+**A. Empty segment 생략** (`buildGanttHorizontalHtml`)
+- segment 와 막대 하나도 안 걸치는 경우 chart 출력 자체 skip.
+- effectiveStart/End 가 좁을 때 대부분의 segment 가 빈 상태일 수 있어 큰 절감.
+
+**B. DAY_WIDTH 40 → 30 px**
+- segment 당 dayCount 증가 (가용 920px / 30 ≈ 30 days/segment).
+- 6 개월 / 30 ≈ 6 segments (~33% 절감).
+- 막대 padding 10→8px, 막대 폰트 12→11px, 일별 헤더 일/요일 11/10→10/9px 미세 보정.
+- 화면 디자인 정합은 그리드+격자+요일+막대 구조 본질이라 유지.
+
+**C. 격자 gradient row → chart 통합** (가장 큰 절감)
+- 기존: 각 row 의 `gantt-print-row-canvas` 에 `repeating-linear-gradient`. segments × rows 개 (~56).
+- 변경: segment chart body 에 단일 absolute positioned `gantt-print-grid` div 추가. label 영역 이후부터 segment 폭 만큼 grid layer 한 번만. row-canvas 의 background-image 제거.
+- segments × rows → segments (~6) 로 절감. paint 비용 ~10x 감소 예상.
+- `pointer-events: none` + `z-index: 0` 으로 막대 인터랙션/표시 방해 X.
+
+### 페이즈 결과
+
+- **Phase 11 / HOTFIX 10** (perf): `buildGanttHorizontalHtml` 에 segment 별 hasBars 검사 + empty skip 추가. DAY_WIDTH constant 30 으로 조정 + 폰트/패딩 미세 보정. 격자 gradient 를 row-canvas → segment body 의 단일 grid layer 로 통합 (absolute / z-index / pointer-events:none). 일별 헤더 셀 너비는 CSS 고정값 대신 inline style 로 JS 상수와 단일 소스 관리하도록 정리. (`f3bfa9ed`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- HOTFIX 6 (막대 색) / HOTFIX 7 (부록 노션 토큰) / HOTFIX 8 (본체 디자인 핵심) / HOTFIX 9 (segment 분할 + 막대 clipping + label 반복) 모두 보존.
+- 본 hotfix 는 segment 폭증 비용 절감만 — 시각 결과는 큰 변화 없음 (DAY_WIDTH 미세 축소만).
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+
 ## v001.339.0
 
 > 통합일: 2026-05-20
