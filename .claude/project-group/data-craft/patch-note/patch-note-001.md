@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.324.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 6 (간트 인쇄 결과물 3건 — 막대 색 반영 + 부록 제목 + 표→카드)
+
+### 개요
+
+v001.317.0 (#129 HOTFIX 5 — 캘린더 pointer-events 해결) 통과 후 마스터 추가 요청:
+1. 인쇄 시 간트 막대 색이 행마다 다른 실제 색이 아닌 파란색 (#4A90E2) 으로 고정 출력.
+2. 부록 데이터 표기 방식을 표(table) 가 아니라 막대 단위로 큰 제목 + 세부 내용 카드 형식.
+3. 부록 제목 "선택된 행 (n개)" → "일정 상세 (총 N개)".
+
+### 해법
+
+**A. 막대 색 동적 반영** (`printHtmlBuilder.ts` `buildGanttHorizontalHtml`):
+- `BAR_COLORS` (`widgets/gantt-chart/types.ts` 의 `componentColors.gantt.barPalette`) import.
+- 각 row 의 `colorIndex` (이미 `useGanttPrint.ts` 의 `filteredRows`(GanttRowData) 에 추출되어 있음) 를 사용하여 막대 element 의 inline `style="background: <BAR_COLORS[colorIndex % length]>"` 주입.
+- 기존 `.gantt-h-bar { background:#4A90E2 }` 는 colorIndex 미지정 행용 fallback 으로 유지.
+
+**B. 부록 표 → 막대 단위 카드** (신규 함수 `buildGanttAppendixCards` in `printHtmlBuilder.ts`):
+- 캘린더 인쇄와 공유되는 기존 `buildCalendarAppendixTable` 은 **수정하지 않고 보존** (회귀 방지). 간트 전용 신규 함수.
+- 각 row → 하나의 `<div class="gantt-appendix-card">` 카드.
+  - 카드 헤더: 컬러 스워치 (BAR_COLORS[colorIndex] 와 동일) + "{순번} · {row ID}" 큰 제목.
+  - 카드 본문: 기존 표 컬럼들을 키-값 그리드로 표기.
+- 카드 단위 `page-break-inside: avoid` — 인쇄 친화적.
+
+**C. 부록 제목**: `buildGanttAppendixCards` 가 `<div class="gantt-appendix-title">일정 상세 (총 ${rows.length}개)</div>` 출력.
+
+`useGanttPrint.ts` 가 `buildCalendarAppendixTable` 호출 → `buildGanttAppendixCards` 호출로 교체. `filteredRows` (GanttRowData 배열, colorIndex 포함) 를 그대로 패스. CSS 도 카드 레이아웃 전용 (`gantt-appendix-card` 등) 으로 교체.
+
+### 페이즈 결과
+
+- **Phase 7 / HOTFIX 6** (fix): `printHtmlBuilder.ts` — `BAR_COLORS` import + `buildGanttHorizontalHtml` 의 막대에 colorIndex 기반 inline background 주입, `buildGanttAppendixCards` 신규 함수 추가. `views/gantt/useGanttPrint.ts` — `buildCalendarAppendixTable` → `buildGanttAppendixCards` 교체 + filteredRows 직접 패스 + 카드 레이아웃 CSS. (`e319c136`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- 캘린더 인쇄와 공유되는 `buildCalendarAppendixTable` 는 무수정 — 간트 전용 신규 함수 분리로 회귀 위험 0.
+- 카드 안의 "세부 내용" 키-값 구성은 기존 표 컬럼을 그대로 가져옴. PDF 확인 후 컬럼 누락/순서 조정 등 미세 요구는 후속 핫픽스 가능.
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+- `fs-sub-data-viewer` / `fs-external-data-viewer` 사본은 본 plan 범위 외.
+
 ## v001.323.0
 
 > 통합일: 2026-05-20
