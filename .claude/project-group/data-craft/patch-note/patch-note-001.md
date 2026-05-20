@@ -1,5 +1,72 @@
 # data-craft — Patch Note (001)
 
+## v001.325.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 5 + HOTFIX 6 — 비밀번호 미설정 client 우회 + 다이얼로그 outline 통일)
+
+### 개요
+
+HOTFIX 3+4 의 잔존 후속 2건 처리:
+
+**HOTFIX 5 (BE)** — `BillingSuccessPage` 의 자동 카드 삭제 경로 (비밀번호 미설정 client 가 비밀번호 모달을 X 닫고 떠나는 시나리오) 가 HOTFIX 3 미들웨어로 차단되어 카드 leak 발생하던 문제 해소. `requirePaymentPassword` 미들웨어를 옵션 팩토리로 변환, delete-card 라우트만 `allowUnsetUser: true` 적용.
+
+**HOTFIX 6 (FE)** — HOTFIX 2 가 `DeleteCardDialog` 의 AlertDialogCancel 검정 outline 만 제거한 상태를 결제/구독 도메인 5개 다이얼로그 전체로 일관 적용.
+
+### 변경
+
+**data-craft-server (HOTFIX 5 — `7db4819b`)**
+
+- **`src/middlewares/requirePaymentPassword.ts`**: 함수 → 팩토리. `RequirePaymentPasswordOptions { allowUnsetUser?: boolean }`. 분기:
+  - `hash === null && allowUnsetUser` → 통과 (비밀번호 미설정 client 우회).
+  - `hash === null && !allowUnsetUser` → `PAYMENT_PASSWORD_NOT_SET` (기존 동작).
+  - `hash !== null` → 기존 비밀번호 검증 (req.body.paymentPassword 필수, mismatch 차단).
+- **`src/routes/subscription.ts`**: 7개 호출 사이트 함수 호출로 갱신. delete-card 만 `requirePaymentPassword({ allowUnsetUser: true })`, 나머지 6개는 `requirePaymentPassword()` 기본 (엄격).
+- **`src/routes/promotion.routes.ts`**: `/purchase` 라우트도 동일 패턴 (1개) — `requirePaymentPassword()` 기본.
+
+**data-craft (HOTFIX 6 — `b9607c8f`)**
+
+- 결제/구독 도메인 5개 다이얼로그의 `AlertDialogCancel` 에 `className='border-0 shadow-none bg-transparent'` 적용:
+  - `src/features/subscription/ui/CancelSubscriptionDialog.tsx`
+  - `src/features/subscription/ui/ReactivateConfirmDialog.tsx`
+  - `src/features/subscription/ui/AdjustStep.tsx`
+  - `src/features/unsaved-changes-guard/ui/UnsavedChangesDialog.tsx` (기존 `border-0` 에 shadow-none/bg-transparent 병합, 의도된 red hover 스타일 보존)
+  - `src/pages/billing-callback/ui/BillingSuccessPage.tsx` (HOTFIX 1 에서 신설한 카드 삭제 confirm 다이얼로그)
+- form-builder 등 비결제 도메인은 본 hotfix 범위 외 — 기본 outline 유지.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/middlewares/requirePaymentPassword.ts`
+- `src/routes/subscription.ts`
+- `src/routes/promotion.routes.ts`
+
+**data-craft**
+- `src/features/subscription/ui/CancelSubscriptionDialog.tsx`
+- `src/features/subscription/ui/ReactivateConfirmDialog.tsx`
+- `src/features/subscription/ui/AdjustStep.tsx`
+- `src/features/unsaved-changes-guard/ui/UnsavedChangesDialog.tsx`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 배포 선행 조건
+
+BE + FE 둘 다 영향이나 서로 독립적으로 머지 가능 — BE 만 먼저 배포해도 기존 기능 유지, FE 만 배포해도 보안 우회 없음. 다만 **HOTFIX 5 BE 배포 시점에 비로소 `BillingSuccessPage` 의 자동 카드 삭제 경로가 정상 작동** → 카드 leak 위험 해소. 가급적 빠른 BE 배포 권장.
+
+### 테스트 시나리오
+
+1. **HOTFIX 5 — 정상 경로 (비밀번호 설정된 client)**:
+   - 결제 수단 삭제 → 비밀번호 입력 → 200. 기존 동작 유지.
+2. **HOTFIX 5 — best-effort 우회 경로 (비밀번호 미설정 client)**:
+   - 카드 등록 직후 비밀번호 설정 안 한 상태에서 `BillingSuccessPage` 자동 deleteCard 호출 → hash null, allowUnsetUser=true → 통과 → 카드 삭제 성공. 이전: `PAYMENT_PASSWORD_NOT_SET` 실패.
+3. **HOTFIX 5 — 우회 차단 (다른 라우트)**:
+   - 비밀번호 미설정 client 가 `/billing/upgrade` 직접 호출 → `PAYMENT_PASSWORD_NOT_SET` (기본 옵션이라 차단). 우회 누출 없음.
+4. **HOTFIX 6 — outline 통일**:
+   - CancelSubscriptionDialog / ReactivateConfirmDialog / AdjustStep / UnsavedChangesDialog / BillingSuccessPage 의 confirm 다이얼로그 모두 취소 버튼 검정 테두리 없음 확인.
+
+### 잔존 후속
+
+- `BillingSuccessPage.tsx:150` `navigator.sendBeacon('/api/subscription/billing/delete-card')`: sendBeacon 은 인증 헤더 포함 불가 → `authMiddleware` 단계에서 거부. HOTFIX 5 로도 해소 불가 (인증 자체 불통). 별도 처리 필요 — BE 측에 페이지 이탈 시점 카드 정리 cron 또는 별도 인증 토큰 경로 (예: 짧은 TTL pre-signed url) 후속 검토. 본 플랜 범위 외.
+
 ## v001.324.0
 
 > 통합일: 2026-05-20
