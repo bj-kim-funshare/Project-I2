@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.323.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #133 (HOTFIX 3 — HOTFIX 2 revert · 측정 기반 재진단으로 복귀)
+
+### 개요 — HOTFIX 2 정공법 시도 실패 · 안정 상태(HOTFIX 1) 복귀
+
+v001.318.0 (HOTFIX 2 — 구조 정렬 minWidth + overscroll-behavior-x contain + source-clamp 제거) 적용 후 마스터 보고: "다시 열 헤더만 본문보다 1칸 더 스크롤됨 — 이건 제대로된 해결 방법이 아니다". HOTFIX 2 가 다른 종류의 비대칭을 노출시킨 것으로 보임. 한 사이클의 가설 기반 변경을 더 시도하기보다 **안정 상태(HOTFIX 1)로 복귀하고 마스터의 정확한 픽셀 측정을 받아 재진단** 한다.
+
+### 페이즈 결과
+
+- **Phase 4 / HOTFIX 3** (`77fa2dde`): HOTFIX 2 의 단일 머지 커밋 `5c017c16` 의 변경분 5개 파일에 대한 **타겟 revert**. 결과 상태는 HOTFIX 1 (v001.311.0) 직후와 동일 — `useScrollSync.ts` 에 source-self clamp 안전망이 다시 들어있고, `GridBody`/`GridHeader`/`GroupHeaderRow`/`AggregationRow` 의 `minWidth` 및 `overscrollBehaviorX` 추가 분은 모두 제거됨. useScrollSync 인덱스 해시 `1de8f513` 가 HOTFIX 1 후 상태와 정확히 일치함을 확인.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/GroupHeaderRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 17 warnings).
+- HOTFIX 2 revert 가 의도대로 적용됨 — index hash 정합 확인.
+
+### 절차 노트 — 정직한 진단 부재 인정
+
+세 번의 사이클이 모두 추정 기반이었음. 두 사이클 전에 했어야 할 일은 실제 픽셀 측정. 본 HOTFIX 3 는 **안정 상태 복귀 + 측정 요청** 단계이며, 측정 결과를 받은 후 한 번에 정확한 fix 를 적용하는 것이 목표.
+
+마스터에게 PENDING 게이트에서 다음 측정값을 요청:
+```js
+const h = document.querySelector('.overflow-x-auto.scrollbar-hide');
+const b = document.querySelector('.cursor-grab.overflow-auto');
+console.log({ headerSW: h.scrollWidth, headerCW: h.clientWidth, bodySW: b.scrollWidth, bodyCW: b.clientWidth, viewport: window.innerWidth });
+```
+
 ## v001.322.0
 
 > 통합일: 2026-05-20
