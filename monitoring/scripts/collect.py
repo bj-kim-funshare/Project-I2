@@ -27,6 +27,8 @@ SESSION_DIRS: tuple[Path, ...] = (
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I",
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-elastic-visvesvaraya-b7dda5",
     Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-Project-I--claude-worktrees-sweet-mahavira-e1a1bf",
+    # pre-I-OS era — parent JSONLs lost, sub-agent JSONLs survive under */subagents/
+    Path.home() / ".claude" / "projects" / "-Users-starbox-Documents-GitHub-data-craft",
 )
 # Alias for the primary (required) directory.
 PRIMARY_SESSION_DIR = SESSION_DIRS[0]
@@ -1012,8 +1014,16 @@ def collect() -> dict[str, Any]:
 
     all_jsonls: list[Path] = []
     for _d in SESSION_DIRS:
-        if _d.exists():
-            all_jsonls.extend(_d.glob("*.jsonl"))
+        if not _d.exists():
+            continue
+        parent_jsonls = sorted(_d.glob("*.jsonl"))
+        if parent_jsonls:
+            all_jsonls.extend(parent_jsonls)
+        else:
+            # Parent JSONLs absent (e.g. data-craft) — fall back to surviving sub-agent JSONLs.
+            # Project-I-style directories never hit this branch because their parent JSONLs exist;
+            # therefore toolUseResult.usage-based sub-agent accounting is unaffected (no double count).
+            all_jsonls.extend(sorted(_d.glob("*/subagents/*.jsonl")))
     for jsonl_path in sorted(all_jsonls):
         records = parse_jsonl(jsonl_path)
         if not records:
