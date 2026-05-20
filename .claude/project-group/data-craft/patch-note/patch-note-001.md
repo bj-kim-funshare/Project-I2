@@ -1,5 +1,53 @@
 # data-craft — Patch Note (001)
 
+## v001.316.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 13 — rowLink 컬럼 생성 시 target 4개 속성 1회 복사)
+
+### 개요
+
+마스터 명령: rowLink 컬럼 신규 생성 + 기존 그룹 append 시점에 target column 의 4개 속성 (열 너비 / 열 본문 스타일 / 단위 / 단위 위치) 을 새 source 컬럼에 **1회 자동 복사** (참조 아닌 복사 — target 이후 변경되어도 source 무변경).
+
+### 사전 transport 현황 (HOTFIX 13 전)
+
+- 이미 transport 되고 있던 필드: unit / unitPosition / cellRendererModelList / enableSorting / enableAggregation / aggregationDisplayType / importanceLevels.
+- 누락 필드: **width** (ConnectionColumnItem 에 필드 자체가 없었음).
+- cellRendererModelList 는 참조 복사 (`inherited.cellRendererModelList ?? []`) — target 변경 시 영향 가능성.
+
+### 변경 (7 파일, +11/-4)
+
+#### 1. ConnectionColumnItem 확장
+- **`entities/connection/types.ts`** (`a7888b7`): `ConnectionColumnItem` 에 `width?: number` 필드 신규 추가.
+
+#### 2. host callback 매핑
+- **`apps/data-craft/src/features/viewer/lib/connectionCallbacks.ts` + 3개 다른 패키지** (`fs-data-viewer-explorer`, `fs-sub-data-viewer-explorer`, `fs-external-data-viewer-explorer`) — server `ViewerColumnSetting.width` → `ConnectionColumnItem.width` 매핑 추가 (`typeof s?.width === 'number' ? s.width : undefined` 패턴).
+
+#### 3. addRowLinkColumns 복사 로직
+- **`widgets/column-generator/addRowLinkColumns.ts`** (`a7888b7`):
+  - `columnTemplate` / `newColumn` 양쪽에서 `width: inherited.width ?? rowLinkType.defaultWidth` 로 교체.
+  - `cellRendererModelList` 복사를 `structuredClone` 으로 변경 → **target 변경 시 source 독립 보장** (참조 아닌 복사).
+
+#### 4. 타입 정합
+- **`entities/row-link/types.ts`** (`98d186e1`): `RowLinkTargetColumnMetadata` 에 `width?: number` 필드 추가 — `inherited.width` 참조 typecheck 통과.
+
+### 동작 요약
+
+| 4개 속성 | 복사 방식 |
+|---|---|
+| 열 너비 (width) | inherited.width → newColumn.width, 1회 카피 |
+| 열 본문 스타일 (cellRendererModelList) | structuredClone 으로 deep copy, 1회 |
+| 단위 (unit) | inherited.unit → newColumn.unit, 1회 |
+| 단위 위치 (unitPosition) | inherited.unitPosition → newColumn.unitPosition, 1회 |
+
+생성 시점 한 번만 복사 — target column 이 나중에 변경되어도 source column 은 무변경.
+
+### 정책 합치
+
+- data-craft FE-only (BE/DB 무수정 — `ViewerColumnSetting.width` 는 이미 BE 직렬화에 존재했음).
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 12 universal-trigger / HOTFIX 7 시안 매칭 / HOTFIX 11 즉시 반영 / HOTFIX 8 동적 라벨 모두 무변경.
+
 ## v001.315.0
 
 > 통합일: 2026-05-20
