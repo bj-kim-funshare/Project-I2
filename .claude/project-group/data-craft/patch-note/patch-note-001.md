@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.352.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 14 (mid-divider 정정 + 우측 여백 확장 + 부록 5행 구분선)
+
+### 개요
+
+마스터 보고 3 건 (한 묶음):
+1. HOTFIX 13 의 MONTH mid-divider 위치 오해석. 마스터 원 의도 = **달력상 monthLength/2 일 position** (31→15.5, 30→15, 28→14). 현재 effective range 중심이라 첫/끝 truncated month 에서 어긋남.
+2. HOTFIX 13 의 우측 safety margin 8px 부족 — 가장 긴 막대 끝 % 진행률 여전히 잘림.
+3. 끝까지 이어지는 막대도 chart 우측 border 와 안 붙어보이게 여백 필요.
+4. (추가) 부록 카드 본문에 **5행 단위 가로 구분선** — 5의 배수에 안 떨어지면 안 떨어지는 부분 앞 boundary 까지만 (7행=0, 12행=1, 15행=2).
+
+### 해법
+
+**A. MONTH mid-divider 달력 위치 정정** (`printHtmlBuilder.ts` `renderMonthMode`)
+- 기존 H13: `m.left + Math.round(m.width / 2)` — effective range 기준 cell 중심.
+- 정정: 달력 시점 계산 — `monthFirstDay.getTime() + (monthLength / 2) × dayMs` → effectiveStart 기준 offset days → usablePx 비율로 px 위치.
+- 31일 → 15.5, 30 → 15, 29 → 14.5, 28 → 14.
+- `midOffsetDays < 0 || > totalDays` 면 effective range 밖이므로 skip — 마스터 "해당 지점 없는 월은 안 그어도 돼" 충족.
+
+**B. 우측 safety margin 8 → 32 확장** (`printHtmlBuilder.ts` `computeUsablePx`)
+- chart body width 가 32px 작아져 가장 긴 막대도 chart 우측 border 와 32px 떨어져 끝남.
+- 막대 padding-right 안의 진행률 text (예: `0%`) + 시각 여백 모두 확보.
+- DAY/MONTH 양 모드 자동 적용.
+
+**C. 부록 카드 5행 단위 가로 구분선** (`printHtmlBuilder.ts` `buildGanttAppendixCards` + `useGanttPrint.ts` CSS)
+- 공식: `boundaryCount = Math.max(0, Math.floor((totalRows - 5) / 5))`.
+- boundary 위치 = 5, 10, ..., 5 × boundaryCount (1-based row).
+- 5의 배수 row 의 끝에 `gantt-appendix-row-divider` 클래스 추가 — 연한 border-bottom (`1px solid rgba(40,30,20,0.07)`) + `padding-bottom: 8px` + `margin-bottom: 8px`.
+- 검증: 5→0, 7→0, 10→1(5), 11→1(5), 12→1(5), 15→2(5/10), 17→2(5/10), 20→3(5/10/15).
+
+### 페이즈 결과
+
+- **Phase 15 / HOTFIX 14** (fix · 2 commits):
+  - 937c39ee: mid-divider 달력 위치 + safety margin 32 (A + B).
+  - 14051e4d: 부록 5행 구분선 (C).
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 비고
+
+- HOTFIX 11~13 의 듀얼 모드 + chart 외곽 border + 부록 카드 중앙 정렬 + 빈 페이지 제거 모두 보존.
+- `gantt-print-month-mid-divider` 클래스는 H13 에서 도입 — 위치 계산만 H14 에서 정정.
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+- 캘린더 인쇄 무관.
+
 ## v001.351.0
 
 > 통합일: 2026-05-20
