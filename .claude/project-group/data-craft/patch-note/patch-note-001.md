@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.314.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #126 (HOTFIX 2 — 결제 수단 메뉴 / 삭제 다이얼로그 / 토스트 시점 UX 개선)
+
+### 개요
+
+마스터 보고 4건을 한 HOTFIX 로 묶어 해소:
+
+**A** — 결제 수단 케밥 메뉴에서 "결제 수단 삭제" 가 2번째 위치 → 3번째로 이동.
+**B** — 결제 수단 삭제 경고 모달의 "취소" 버튼 검정 outline 테두리 제거.
+**C** — 결제 수단 삭제 시 결제 비밀번호 게이트 추가 (다른 결제 액션과 동일 패턴).
+**D** — "카드가 성공적으로 변경되었습니다" 토스트가 비밀번호 설정 모달 표시 전에 노출되던 문제 → 비밀번호 설정 완료 후 시점으로 이동.
+
+### 변경
+
+**`src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`** (`19ec5c45`):
+- DropdownMenu 항목 순서 재정렬: "결제 수단 변경 → 결제 비밀번호 변경 → 결제 수단 삭제" (기존: 변경 → 삭제 → 비밀번호).
+
+**`src/features/subscription/ui/DeleteCardDialog.tsx`** (`19ec5c45`):
+- AlertDialogCancel 의 shadcn 기본 outline variant 를 Tailwind 덮어쓰기 (`className='border-0 shadow-none bg-transparent'`) 로 검정 테두리 제거.
+- `usePaymentPasswordGate` 도입. 확인 버튼 클릭 → `gate()` → onSuccess 시 `onConfirm()` 호출 흐름. `ReactivateConfirmDialog` 와 동일 패턴, gateElement 는 AlertDialog 외부 Fragment 형제 렌더.
+
+**`src/pages/billing-callback/ui/BillingSuccessPage.tsx`** (`f9760f45`):
+- card-change 분기에서 `changeCard.mutateAsync` 직후 즉시 호출되던 `toast.success(t('billing.changeCardSuccess', ...))` 제거.
+- `handlePasswordSetupComplete` 콜백 내에서 `currentActionRef.current === 'card-change'` 조건 분기로 동일 토스트를 비밀번호 설정 완료 시점에 호출.
+- promotion-purchase 분기의 토스트는 위치 변경 없음 (마스터 요구는 카드 등록 한정).
+
+### 영향 파일
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+- `src/features/subscription/ui/DeleteCardDialog.tsx`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 테스트 시나리오
+
+1. 설정 → 플랜 관리 → 결제 수단 케밥 메뉴 → 순서가 **변경 → 비밀번호 → 삭제** 인지 확인.
+2. "결제 수단 삭제" 클릭 → 경고 모달의 **취소 버튼에 검정 테두리 없음** 확인.
+3. 삭제 확인 클릭 → **결제 비밀번호 입력 게이트** 노출 → 통과 시에만 카드 삭제 진행.
+4. 비밀번호 미입력/취소 시 카드 삭제 안 됨.
+5. 결제 수단 등록/변경 흐름 → **비밀번호 설정 완료 시점에만** "카드가 성공적으로 변경되었습니다" 토스트 노출 (비밀번호 모달 표시 중에는 토스트 없음).
+
+### 후속 권장 (HOTFIX 2 범위 외)
+
+- **BE `/api/subscription/billing/delete-card` 엔드포인트의 `requirePaymentPassword` 미들웨어 적용 여부 확인** — FE 게이트만으로는 우회 가능. 미적용 시 BE 후속 플랜으로 별도 진행.
+- AlertDialogCancel 의 outline 테두리 정책 — 다른 다이얼로그 (`CancelSubscriptionDialog`, `ReactivateConfirmDialog`, `AdjustStep` 등) 와 일관성 점검. 마스터 결정 후 전체 통일 가능.
+
+### 회귀 위험
+
+- 토스트 이동: 사용자가 비밀번호 설정 모달을 강제 닫고 카드 삭제 confirm 으로 진입한 경우, "카드 변경 완료" 토스트가 미노출됨 (정상 — 비밀번호 미완료). 카드 삭제 확정 시점에 다른 토스트가 별도로 표시됨.
+- promotion-purchase 의 토스트는 기존 위치 그대로 — 회귀 없음.
+
 ## v001.313.0
 
 > 통합일: 2026-05-20
