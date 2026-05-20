@@ -35,6 +35,8 @@ git worktree add -b "${wip}" "${wt_path}" "${integration}"
 git -C "${wt_path}" push -u origin "${wip}"           # optional: push for sub-agent visibility
 ```
 
+**Base 인자 = local ref**: `git worktree add -b <wip> <wt_path> <integration>` 에서 `<integration>` 은 항상 local ref (`main` / `i-dev`) 이어야 한다. `origin/<integration>` 사용 금지. 사유: plan-enterprise / -os 의 표준 종료점은 local 머지이므로 local 이 truth-of-record 이고 origin 은 stale 일 수 있다. origin base 분기 시 stale 상태에서 시작 → 머지 시 광범위 충돌. 베이스 가드 절차는 `plan-enterprise` / `plan-enterprise-os` 의 Step 6 참조.
+
 ### Dispatch sub-agent (phase-executor / code-fixer / db-migration-author / db-data-author)
 
 - Pass `worktree_cwd` = absolute path of `wt_path` (resolve to absolute before passing).

@@ -123,6 +123,20 @@ Issue body template extends `plan-enterprise`'s with one section:
 
 본 스킬은 N=1 고정 (work repo = Project-I2 한 개). plan-enterprise 가 N>1 일 때 가지는 lazy 생성 / repo-slug 접미사 분기는 본 스킬에 적용되지 않는다.
 
+worktree 생성 직전 local-vs-origin 정합성 검사:
+
+```text
+a. git fetch origin main
+b. ahead=$(git rev-list --count origin/main..main)
+c. behind=$(git rev-list --count main..origin/main)
+d. ahead==0 && behind==0 → 정상, 진행
+e. ahead>0 && behind==0  → 메인 세션이 한 줄 보고
+   "local main 가 origin 보다 N 커밋 앞섭니다 — local 기준으로 WIP 분기합니다."
+   진행 (운영 규칙상 push 강요 안 함).
+f. behind>0              → halt + 마스터 보고
+   "origin/main 이 local 보다 M 커밋 앞섭니다 — 외부 commit 발생, fast-forward 또는 마스터 결정 필요."
+```
+
 ```bash
 # Entry ritual — see .claude/md/worktree-lifecycle.md
 git worktree prune
@@ -133,7 +147,7 @@ wip_a="plan-enterprise-os-<N>-<slug>-작업"
 # if --codex is set:
 wip_a="plan-enterprise-os-<N>-<slug>-작업-codex"
 wt_a="../$(basename "$(pwd)")-worktrees/${wip_a}"
-git worktree add -b "${wip_a}" "${wt_a}" main
+git worktree add -b "${wip_a}" "${wt_a}" main  # base = local ref, origin/main 사용 금지
 git -C "${wt_a}" push -u origin "${wip_a}"
 ```
 
@@ -238,12 +252,12 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 
 본 스킬의 머지는 N+1=2-step (WIP A 1번 + WIP B 1번) 으로 plan-enterprise 의 일반화된 (N+1)-step 머지 절차의 N=1 케이스와 동치.
 
-1. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업` (or `-작업-codex` if `--codex` was used). Conflict handling identical. After merge: `git worktree remove "${wt_a}"` and `git branch -d "${wip_a}"`.
+1. 머지 직전 안전망 확인: `git fetch origin main` 후 `behind=$(git rev-list --count main..origin/main)`. `behind>0` 이면 halt + 마스터 보고 (Step 6 가드와 동일 메시지 형식). `ahead>0` 는 정상 (phase 커밋 존재) — 진행. In main working tree: `git checkout main` then `git merge --no-ff plan-enterprise-os-<N>-<slug>-작업` (or `-작업-codex` if `--codex` was used). Conflict handling identical. After merge: `git worktree remove "${wt_a}"` and `git branch -d "${wip_a}"`.
 2. Create WIP B as a worktree from main:
    ```bash
    wip_b="plan-enterprise-os-<N>-<slug>-문서"
    wt_b="../$(basename "$(pwd)")-worktrees/${wip_b}"
-   git worktree add -b "${wip_b}" "${wt_b}" main
+   git worktree add -b "${wip_b}" "${wt_b}" main  # base = local ref, origin/main 사용 금지
    ```
    The document WIP never receives a `-codex` suffix — patch-note is always Claude-authored.
 3. Patch-note path: `patch-note/patch-note-{NNN}.md` (repo root, NOT under `.claude/`). Parse for max `K`; new entry = `v{NNN}.{K+1}.0`.
@@ -307,12 +321,25 @@ When master types `핫픽스 <description>`:
    - From `<description>` semantically.
    - If unclear, ask master one sharpening question (text, no card).
 2. The new phase number = `prior_max_phase + 1` (cumulative across the plan).
-3. **Create hotfix WIP** as a worktree from `main`:
+3. **Create hotfix WIP** as a worktree from `main`. HOTFIX 는 임의 시점 재진입이므로 worktree 생성 직전 사전 가드를 독립 1회 수행:
+
+   ```text
+   a. git fetch origin main
+   b. ahead=$(git rev-list --count origin/main..main)
+   c. behind=$(git rev-list --count main..origin/main)
+   d. ahead==0 && behind==0 → 정상, 진행
+   e. ahead>0 && behind==0  → 메인 세션이 한 줄 보고
+      "local main 가 origin 보다 N 커밋 앞섭니다 — local 기준으로 WIP 분기합니다."
+      진행 (운영 규칙상 push 강요 안 함).
+   f. behind>0              → halt + 마스터 보고
+      "origin/main 이 local 보다 M 커밋 앞섭니다 — 외부 commit 발생, fast-forward 또는 마스터 결정 필요."
+   ```
+
    ```bash
    wip_h="plan-enterprise-os-<N>-<slug>-핫픽스<M>"          # default; M = cumulative hotfix count, from 1
    wip_h="plan-enterprise-os-<N>-<slug>-핫픽스<M>-codex"    # when the original invocation used --codex
    wt_h="../$(basename "$(pwd)")-worktrees/${wip_h}"
-   git worktree add -b "${wip_h}" "${wt_h}" main
+   git worktree add -b "${wip_h}" "${wt_h}" main  # base = local ref, origin/main 사용 금지
    git -C "${wt_h}" push -u origin "${wip_h}"
    ```
 4. Re-enter Step 7 against this hotfix WIP:
