@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.87.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #46
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — WIP base 로컬-ref 명문화 + 사전/사후 가드 절차 추가** (commit `1ecd4cf`): `plan-enterprise` / `plan-enterprise-os` 두 스킬의 모든 `git worktree add -b <wip> <wt_path> <integration>` 사이트가 항상 local integration ref (`i-dev` / `main`) 의 HEAD 에서 분기되도록 spec 텍스트 명문화. (1) `.claude/md/worktree-lifecycle.md` "Create" 코드 블록 직후에 "Base 인자 = local ref" 한 문단 추가 (`origin/<integration>` 사용 금지 사유 + 가드 절차 참조). (2) `plan-enterprise` SKILL.md Step 6 에 사전 가드 a~f 절차 (`fetch origin <integration>` → `rev-list --count` ahead/behind 측정 → ahead-only 정상·진행 / behind>0 halt) 명문화 + N==1·N>1·9.2·HOTFIX 4개 worktree-add 라인에 인라인 주석 `# base = local ref, origin/i-dev 사용 금지` 부착 + Step 9.1 머지 직전 behind>0 안전망 1줄 추가 + Step 11 HOTFIX re-entry 에 a~f 가드 1회 독립 수행 명문화. (3) `plan-enterprise-os` SKILL.md 에도 동일 구조 적용 (integration = `main`, Step 6 a~f 가드, Step 9 step1 안전망, step2 WIP B 주석, Step 11 HOTFIX a~f 가드 + 주석).
+
+### 영향 파일
+
+- `.claude/md/worktree-lifecycle.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+
+### 배경 — `plan-enterprise #126` 운영 결함
+
+`plan-enterprise #126` (data-craft FE) 진행 중, 메인 세션이 Step 6 의 `git worktree add -b <wip> <wt_path> i-dev` 에서 base 가 `origin/i-dev` 로 해석되어 stale 상태에서 분기됨. 운영 규칙 (`feedback_plan_enterprise_no_auto_push.md`) 상 plan-enterprise / -os 의 표준 종료점 = local 머지이고 origin push 는 마스터 명시 시에만 → local 이 truth-of-record, origin 은 stale 가능성 항상 존재. data-craft FE 의 경우 local i-dev 가 origin 보다 339 커밋 앞서 있던 상태였고, plan-enterprise #91 phase 13 (`c85d4046`) 가 `SeatAddDialog` 삭제 + `SeatManageDialog` 신설을 이미 적용했음에도 WIP 가 그 변경이 없는 origin/i-dev 시점에서 분기되어 머지 시 "deleted in HEAD / modified in WIP" conflict 발생. 본 패치로 동일 base-stale conflict 메커니즘이 향후 invocation 에서 재발하지 않음.
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 (rule/hook/agent/skill/검증축) 추가 없음. 본 변경은 기존 Step 6 `git worktree add` base 인자의 의도 명확화 (spec 텍스트 강화) + 기존 메인 세션 절차에 가드 1개 (Step 6 a~f, Step 9 머지 직전 1줄) 삽입에 해당. 신규 추상화/축이 없으므로 폐기 대상 없음. 마스터 사전 판단 ("치트키 자동화나 hook 신설은 net-positive 3 질문 통과 못 함 — spec 텍스트 강화 + 메인 세션 절차 가드만으로 충분") 과 정합.
+
 ## v001.86.0
 
 > 통합일: 2026-05-20
