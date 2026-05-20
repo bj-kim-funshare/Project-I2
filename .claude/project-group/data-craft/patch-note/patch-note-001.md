@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.291.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #128 HOTFIX 1 (세계시간 셀 모달 셀 위치 앵커드 포지셔닝)
+
+### 개요
+
+v001.289.0 (#128 본 플랜) 적용 후, 세계시간 셀 모달이 더블클릭 시 화면 중앙에 뜨는 잔존 문제가 보고됨. 동일 위치를 잡아야 할 진행률 셀과 달리 세계시간 모달은 셀 위치를 참조하지 않고 `fixed inset-0 flex items-center justify-center` 로 단순 중앙 배치되어 있어, 그리드 흐름과 떨어진 위치에 등장하던 문제. 진행률 셀의 앵커드 포지셔닝 패턴 (`useProgressCell` + `ProgressOverlay`) 을 그대로 미러링해 셀 하단에 모달이 붙도록 통일.
+
+### 페이즈 결과
+
+- **Phase 2 / HOTFIX 1** (fix): `useWorldTimeCell` 에 `overlayPosition` state 추가 + `openOverlay` 에서 `cellRef.getBoundingClientRect()` 캡처. `WorldTimeOverlay` 에서 중앙 flex 레이아웃 제거 → `absolute top/left` + `useLayoutEffect` 로 `adjustOverlayPosition` 적용 + `isPositionReady` 가드 (Progress 패턴 동일). `FsGridWorldTimeCellRenderer` 가 `overlayPosition` 을 prop 으로 전달. 부수: `visibility:hidden` 상태 동안 focus 가 사일런트 실패하던 흐름을 막기 위해 `isOverlayOpen → focus` useEffect 를 hook 에서 overlay 내부의 `isPositionReady → focus` 효과로 이전. (`d8d324b`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/useWorldTimeCell.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/WorldTimeOverlay.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/FsGridWorldTimeCellRenderer.tsx`
+
+### 비고
+
+- 국가 셀 모달도 동일하게 중앙 배치 패턴이지만 마스터 명시 보고 범위 외 — 별도 결정 필요.
+
 ## v001.290.0
 
 > 통합일: 2026-05-20
