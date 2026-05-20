@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.312.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #136 (HOTFIX 1 — overscroll-behavior-x contain revert)
+
+### 페이즈 결과
+- **Phase 1 (HOTFIX 1)**: v001.309.0 에서 `src/app/styles/index.css` 에 추가했던 `.fs-data-viewer-container, .fs-data-viewer-container * { overscroll-behavior-x: contain; }` 6줄 revert. v001.309.0 적용 후 마스터 보고 — "트랙패드를 통한 가로 스크롤 자체가 막혔다" 치명 회귀. CSS 광역 자손 셀렉터가 fs_data_viewer 내부 스크롤 동작과 어떻게 간섭했는지 메커니즘은 미규명, 회귀 사실만 확정. 일단 revert 로 v001.308.0 시점 상태로 복원.
+
+### 영향 파일
+- `data-craft`:
+  - `src/app/styles/index.css`
+
+### 재시도 시 검토 사항
+- CSS 광역 셀렉터 (`.fs-data-viewer-container *`) 대신 fs_data_viewer 의 실제 가로 스크롤 요소를 DevTools 로 식별 후 그 단일 요소에만 `overscroll-behavior-x: contain` 적용.
+- 또는 컨테이너 레벨 `onWheel` 핸들러로 boundary-only `preventDefault` (deltaX 가 dominant 이고 scrollLeft 가 0 또는 max 인 경우에만).
+- fs_data_viewer 가 이미 vertical 에 `overscroll-behavior-y: contain` 을 적용한 위치를 정확히 찾아 (해당 요소 셀렉터 확인) 같은 요소에만 horizontal 도 추가하는 정공법 우선.
+
 ## v001.311.0
 
 > 통합일: 2026-05-20
