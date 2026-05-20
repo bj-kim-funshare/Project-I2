@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.309.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #136
+
+### 페이즈 결과
+- **Phase 1**: `.fs-data-viewer-container` 및 모든 하위 요소에 `overscroll-behavior-x: contain` 적용 (`src/app/styles/index.css`). 트랙패드 가로 스와이프가 그리드 좌/우 끝 도달 후 브라우저 뒤로/앞으로 nav 를 트리거하던 현상 차단. 가로 스크롤이 발생하지 않는 화면 폭에서는 `contain` 이 자연 no-op 이라 기본 브라우저 뒤로/앞으로 제스처는 유지됨. fs_data_viewer 패키지가 vertical 축에는 이미 `overscroll-behavior-y: contain` 을 적용한 선례에 horizontal 축을 정합화.
+
+### 영향 파일
+- `data-craft`:
+  - `src/app/styles/index.css`
+
 ## v001.308.0
 
 > 통합일: 2026-05-20
