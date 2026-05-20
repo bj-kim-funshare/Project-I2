@@ -1,5 +1,68 @@
 # data-craft — Patch Note (001)
 
+## v001.344.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #129 HOTFIX 11 (간트 인쇄 단일 페이지 fit 듀얼 모드 + 부록 카드 중앙 정렬)
+
+### 개요
+
+마스터 요구 (간트 차트 한 페이지에 모두 출력):
+1. 지정 범위 ≤ 1개월 → 일별 디자인 유지, 한 페이지에 fit (현재 ≈28일에서 잘림).
+2. 지정 범위 > 1개월 → 월 단위 디자인으로 변경 후 한 페이지에 fit.
+
+추가 요청 (같은 hotfix 묶음): 부록 상세 카드 **자체** 가 페이지 가로 중앙 정렬 (내부 cells 정렬은 그대로).
+
+→ HOTFIX 9 의 segment 다중 페이지 분할 + HOTFIX 10 의 empty segment / page-break-before CSS 폐기. 항상 단일 페이지 fit 으로 전환.
+
+### 해법
+
+#### A. DAY mode (totalDays ≤ 31)
+- `DAY_WIDTH = clamp(20, floor(usablePx / totalDays), 60)` 동적 stretch — 가용 폭을 꽉 채움.
+- 기존 일별 디자인 유지 (월 헤더, 일별 헤더 + 요일 stacked + 토일 색, 둥근 막대, label 영역 160px, 격자 chart-level 통합).
+- HOTFIX 8 디자인 토큰 모두 유지.
+
+#### B. MONTH mode (totalDays > 31)
+- effectiveStart ~ effectiveEnd 사이 월 리스트 추출.
+- **월별 cell 너비 = (해당 월 effective 일수 / totalDays) × usablePx** — 일수 비례라 막대 좌표와 정확히 align.
+- 일별 헤더 미렌더, 월 헤더만 (높이 32 → 44 px, 폰트 13/600).
+- 격자: month cell border-right 만 (일별 세로선 제거).
+- **막대 좌표**: `left = (visibleStart - effectiveStart).days / totalDays × usablePx`, `width = (visibleEnd - visibleStart + 1).days / totalDays × usablePx`. 일 비율 정확.
+
+#### C. 부록 카드 중앙 정렬 (추가 commit)
+- `.gantt-appendix-card { max-width: 720px; margin-left: auto; margin-right: auto }` — 카드 외곽이 페이지 가로 중앙.
+- `.gantt-appendix-title { max-width: 720px; margin: 32px auto 16px; text-align: left }` — 제목 블록 동일 정렬, 텍스트는 좌측 유지.
+- 카드 내부 (3열 그리드, label/value, header, 스워치) 무변경.
+
+#### D. HOTFIX 9/10 폐기 항목
+- segment 분할 for-loop (H9) 제거.
+- empty segment 검사 (H10) 제거.
+- `.gantt-print-chart + .gantt-print-chart { page-break-before: always }` CSS 규칙 (H10) 제거.
+- DAY_WIDTH 30 고정값 (H10) → 동적 계산.
+
+### 페이즈 결과
+
+- **Phase 12 / HOTFIX 11** (feat 구조 변경): `buildGanttHorizontalHtml` 전면 재작성, `renderDayMode`/`renderMonthMode` 두 헬퍼로 분리. `computeSegmentDayCount` 삭제 → `computeUsablePx` 신설. LABEL_COL_WIDTH 180→160 통일. `useGanttPrint.ts` 의 segment 전용 CSS 제거 + MONTH 모드 전용 `gantt-print-month-row-large` (44px) / `gantt-print-month-cell-large` (13px/600) 추가. 부록 카드 + 제목 중앙 정렬 CSS (`e97df3bf` 추가 commit). (`36bbd8da` → `e97df3bf`)
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
+### 알려진 제약 (phase-executor blocker 보고)
+
+- DAY mode 에서 A4 세로 + 31일 + 좁은 여백 조합 시 DAY_WIDTH 최솟값(20px) 보장으로 timeline 이 가용 폭(약 483px)을 초과할 수 있음 (620px vs 483px). 스펙 명시한 min 20 준수이나 실제 인쇄 시 우측 잘림 가능 — 본 케이스는 마스터가 보고 시 후속 hotfix 결정. 대안: A4 세로 31일은 자동 MONTH mode 강제 / 또는 min 20 제거.
+
+### 비고 (보존 / 무관)
+
+- HOTFIX 6 의 막대 색 (BAR_COLORS).
+- HOTFIX 7 의 부록 카드 노션 토큰 (3열은 H8, 중앙 정렬은 H11 추가).
+- HOTFIX 8 의 부록 타이틀 강조 + 본체 디자인 핵심.
+- HOTFIX 5 (pointer-events) 무관.
+- BE/DB 무수정 — Roadmap-1 lock 준수.
+- `buildCalendarAppendixTable` 무수정 (캘린더 인쇄 공유).
+
 ## v001.343.0
 
 > 통합일: 2026-05-20
