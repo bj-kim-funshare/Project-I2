@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.345.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 20 — picker 폭/툴팁 + longText 중앙 + fontWeight 5건 통합)
+
+### 변경 (2 파일, +59/-11)
+
+#### 1. picker 최소 폭 보장 (`e935de0`)
+- **`ConnectionEditOverlay.tsx`** `MIN_OVERLAY_WIDTH` 200 → **280**. 좁은 anchor 셀에서도 검색 input + 리턴 아이콘 + 확장 버튼이 안 잘림. `Math.max(anchorRect.width, MIN_OVERLAY_WIDTH)` 기존 패턴 유지.
+
+#### 2. 확장 폭 정정 + hover 툴팁 (`f1f8cce`)
+- 확장 공식: `expandedWidth = Math.max(baseWidth, Math.min(500, baseWidth + 500))` — `base > 0` 이면 항상 **500px** 로 귀결, `base > 500` 광폭 anchor 에서는 base 그대로 (줄지 않음). 상수 `EXPAND_EXTRA_WIDTH=500 / MAX_OVERLAY_WIDTH=500` 두 개 분리.
+- hover 툴팁: 각 옵션 label span 에 `title` attribute. 라벨 > 500자 → `slice + "..."`. 빈 라벨은 undefined.
+
+#### 3. longText 세로 중앙 정렬 + cellRendererModelList fontWeight (`6da75ff`)
+- **`rowLinkDelegateDispatcher.tsx`**: `longText` / `code` 타입 전용 분기 추가 — registry `LongTextRenderer` 경유 우회. `<div>` 블록 대신 `<span className="whitespace-pre-wrap">` 인라인 → 외부 `flex items-center` 의 수직 중앙 정렬이 single-line 에서도 정확히 동작. multi-line 은 `whitespace-pre-wrap` 자연 래핑 유지. **원인**: `LongTextRenderer` 의 `font-normal` Tailwind 클래스가 CSS 캐스케이드에서 부모 fontWeight 상속을 차단하던 구조적 문제도 함께 해소.
+- **`FsGridRowLinkCellRenderer.tsx`**: `cellRendererChildModel.fontWeight` 를 `resolvedStyle` 안에 포함, metadata fallback 경로에서 `model.themeType.fontWeight` 사용. 추출 fontWeight 를 `RowLinkDelegateRenderer` 신규 prop 으로 전달.
+- **`rowLinkDelegateDispatcher.tsx`** fallback / singleSelect / longText·code 세 분기 모두 inline `style={{ fontWeight }}` 적용.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 17 warnings).
+- 회귀: HOTFIX 19 picker 검색/정렬/높이 + HOTFIX 18 중앙 정렬 + HOTFIX 17 cellRendererModelList fallback 모두 무변경.
+
 ## v001.344.0
 
 > 통합일: 2026-05-20
