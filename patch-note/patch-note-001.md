@@ -1,5 +1,54 @@
 # 아이OS — Patch Note (001)
 
+## v001.86.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #45
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — PRICING 키 dated-suffix 정규화** (commit 7db8f2d): `_normalize_model_key(raw)` 헬퍼를 `monitoring/scripts/collect.py` 의 PRICING 사전 바로 아래에 추가. 정규식 `-\d{8}$` 으로 dated suffix 를 strip 하며 sentinel 4종 (`unknown`, `<synthetic>`, `"API 에러"`, `"시스템 합성"`) 은 우회. `collect()` assistant/agent 분기, `build_by_prompt()` assistant 분기, `build_by_skill_invocation._finalize_window()` assistant/agent 분기 총 5개 호출 지점에 적용. PRICING 사전·AGENT_MODEL_MAP 자체는 변경 없음.
+- **Phase 2 — data-craft 흡수 (parent-orphan fallback)** (commit aa3bd00): `SESSION_DIRS` 튜플 (collect.py:25-30) 끝에 `~/.claude/projects/-Users-starbox-Documents-GitHub-data-craft` 추가 + 영문 인라인 주석으로 "pre-I-OS era — parent JSONLs lost, sub-agent JSONLs survive under */subagents/" 사실 명시. `all_jsonls` 구성 루프를 parent-orphan 분기로 교체 — 디렉터리의 top-level `*.jsonl` 존재 시 기존 경로, 부재 시 `*/subagents/*.jsonl` fallback. Project-I 같이 parent JSONL 이 살아있는 디렉터리는 fallback 분기에 진입하지 않아 기존 `toolUseResult.usage` 기반 sub-agent 카운팅과 이중 카운트 없음 (실증 확인: SESSION_DIRS 5개 중 I-OS 계열 4개는 parent 분기, data-craft 만 fallback).
+- **Phase 3 — 산출물 재생성** (commit 6058784): `python3 monitoring/scripts/collect.py` 실행으로 `monitoring/data/hourly.json` (트래킹) 및 `aggregate.json` / `periods/*` (gitignored) 갱신. 트래킹된 hourly.json 만 커밋.
+
+### 진단 요지 — 마스터 명령 vs 실제 가용 데이터
+
+- 마스터 명령: 구 아이OS (Project-I) + 그 이전 시스템 data-craft 의 사용량 데이터를 현재 모니터링으로 통합. 기대 표현 "작년부터".
+- **Project-I (구 아이OS)**: 이미 `SESSION_DIRS[1..3]` 에 등재되어 있어 별도 변경 없이 자동 수집 중. parent JSONL 가장 오래된 mtime = 2026-04-20.
+- **data-craft (그 이전)**: parent JSONL (sessions-index.json 의 fullPath) 들이 디스크에서 소실. 잔존한 데이터는 4개 세션 UUID 디렉터리 내 `subagents/agent-*.jsonl` **50개** (총 2,637 assistant+usage 메시지). 메인 세션 토큰은 영구 손실로 본 모니터링에 반영 불가.
+- **실제 가용 floor — 단일 작업일 `2026-03-12`**: 50개 sub-agent JSONL 의 assistant timestamp 가 전부 2026-03-12 하루에 집중 (디렉터리 mtime 은 2026-04-13 까지 보이나 record ts 는 2026-03-12 단일). 마스터의 "작년부터" 기대 표현 대비 실제로는 "두 달 전 단일 작업일치".
+- 모델 분포 (data-craft): `claude-haiku-4-5-20251001` 와 `claude-opus-4-6` 두 가지. dated suffix 가 PRICING 사전과 매칭 안 되어 silently 0-cost 처리되던 pre-existing bug 도 본 플랜의 Phase 1 정규화로 함께 보정.
+
+### 회귀 검증
+
+- 재수집 후 비교 (aggregate.json snapshot 04:06:31Z → 04:25:57Z):
+  - 총 메시지: 171,275 → **174,211** (+2,936).
+  - 가장 이른 날짜: 2026-04-19 → **2026-03-12** (data-craft floor 도달).
+  - `claude-opus-4-6`: 822 → **2,326** msgs (+1,504), \$365.70 → \$714.56 — data-craft 흡수 효과.
+  - `claude-haiku-4-5`: 413 → **1,467** msgs (+1,054, dated-suffix alias 75 흡수 포함), \$4.28 → \$17.25.
+  - `-20251001` 접미사 별도 행 부재 확인.
+  - `by_session` 에 cwd 가 data-craft 인 세션 **49개** 등장.
+- 이중 카운트 카나리 (opus-4-7 ±100): 166,791 → 167,076 (+285) 로 범위 초과했으나 실증으로 false positive 확인. 근거: (a) data-craft 모델은 haiku/opus-4-6 두 가지로 opus-4-7 0%, (b) hourly.json 의 2026-03-12 ~ 2026-04-13 window 에서 opus-4-7 by_model 항목 0건, (c) aggregate generated_at 간격 ~20분 동안 본 main 세션 (opus-4-7) + Explore × 2 의 자연 누적이 +285 메시지를 충분히 설명.
+- Books reconciliation: data-craft 단독 assistant ts 합계 2,637 vs by_model 델타 합 (opus-4-6 +1,504 + haiku-4-5 +979 = 2,483) → 차이 ~154 (~5.8%). sentinel 경로 (`<synthetic>` → "API 에러" / "시스템 합성") 또는 acompact 엣지 케이스로 라우팅된 것으로 추정. 전체 174,211 중 0.09% 비중으로 비치명.
+- SESSION_DIRS 분기 분포 (parent vs fallback): Project-I2 parent=302/sub=2170, Project-I parent=703/sub=1004, 워크트리×2 parent=1 each, data-craft parent=0/sub=50 — I-OS 계열 4개는 모두 parent 분기, data-craft 만 fallback 분기. 설계 의도 정확히 일치.
+
+### Treadmill Audit
+
+**PASS** — 신규 메커니즘 추가 없음. Phase 1 은 기존 모델 키 추출 지점에 정규화 함수 1개를 끼우는 pre-existing bug 수정. Phase 2 는 기존 `SESSION_DIRS` 튜플 한 항목 + 기존 glob 루프에 fallback 분기 1개 추가. Phase 3 는 운영. Q3 trade-out: pre-existing 0-cost silently 처리되던 `claude-haiku-4-5-20251001` 별도 행 분류를 폐기 (정상 모델 키로 통합 흡수).
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+- `monitoring/data/hourly.json`
+- (gitignored 갱신 only: `monitoring/data/aggregate.json`, `monitoring/data/periods/*`)
+
+### 한계 — 본 작업으로 복원되지 않는 데이터
+
+- data-craft 의 **메인 세션 JSONL** 들은 디스크에서 소실 (sessions-index.json fullPath 가 가리키는 `*.jsonl` 모두 부재). sub-agent JSONL 만 부분 복원 가능했으며 메인 세션 토큰은 영구 손실로 본 모니터링에 반영 불가.
+- 마스터의 "작년부터" 기대 (~2025-05) 대비 실제 가용 floor 는 2026-03-12. 그 이전 데이터는 디스크 부재로 본 작업 영역 밖.
+- 외부 프로젝트 세션 디렉터리 (`fs-data-viewer`, `Pingus-Server`, `PinLog-Web`, `zero-builder`) 는 본 명령의 "아이OS 계보" 범위 외로 통합 대상 아님.
+
 ## v001.85.0
 
 > 통합일: 2026-05-20
