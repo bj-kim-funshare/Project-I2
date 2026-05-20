@@ -375,12 +375,8 @@ const pieLabelsPlugin = {
 
 const dayTokensSkillCountPlugin = {
   id: 'dayTokensSkillCount',
-  afterDatasetsDraw(chart) {
-    const pluginOpts = chart.config.options &&
-      chart.config.options.plugins &&
-      chart.config.options.plugins.dayTokensSkillCount;
-    if (!pluginOpts) return;
-    const countsByDay = pluginOpts.countsByDay;
+  afterDatasetsDraw(chart, args, options) {
+    const countsByDay = (options && options.countsByDay) || null;
     if (!countsByDay || !Object.keys(countsByDay).length) return;
 
     const { ctx } = chart;
