@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.376.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 33 — sticky wrapper 위 미세 비침 영역 제거)
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`76a936b9`, +2/-2): overlay body 본체 inline padding-top 8px → **0**. sticky wrapper `pt-1` (4px) → **`pt-2`** (8px) 로 상단 여백 wrapper 내부 흡수. overlay 상단과 sticky wrapper 사이 8px gap (미세 비침 영역) 완전 제거.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 32 overlay body bg-white / HOTFIX 31 wrapper bg-white / HOTFIX 30 sticky 동작 모두 그대로.
+
 ## v001.375.0
 
 > 통합일: 2026-05-21
