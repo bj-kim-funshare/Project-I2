@@ -12,24 +12,13 @@
 <body>
   <header class="topbar">
     <h1>토큰 사용량 모니터링</h1>
-    <div class="period-selector">
-      <label for="period-unit">기간:</label>
-      <select id="period-unit">
-        <option value="realtime">실시간</option>
-        <option value="all" selected>전체</option>
-        <option value="weekly">주간</option>
-        <option value="monthly">월간</option>
-        <option value="quarterly">분기</option>
-        <option value="half">반기</option>
-        <option value="yearly">연간</option>
-      </select>
-      <select id="period-key" disabled>
-        <option value="">—</option>
-      </select>
-      <label for="period-compare-target">비교:</label>
-      <select id="period-compare-target" disabled>
-        <option value="">없음</option>
-      </select>
+    <div class="cdrop" id="week-picker-left">
+      <button type="button" class="cdrop-toggle">—</button>
+      <ul class="cdrop-menu" role="listbox"></ul>
+    </div>
+    <div class="cdrop" id="week-picker-right">
+      <button type="button" class="cdrop-toggle">—</button>
+      <ul class="cdrop-menu" role="listbox"></ul>
     </div>
     <div id="meta" class="meta"></div>
     <span id="last-refresh-time" class="last-refresh-time" title="마지막 새로고침 시각"></span>
@@ -166,64 +155,6 @@
         <h3>프롬프트별 토큰 소모 (Top 30)</h3>
         <div class="chart-wrap"><canvas></canvas></div>
       </article>
-
-      <article class="chart-card wide" id="chart-session-bar">
-        <h3>세션 Top 10 (총 토큰)</h3>
-        <div class="chart-body chart-body-tall"><canvas></canvas></div>
-      </article>
-    </section>
-
-    <!-- 보조 테이블 -->
-    <section class="tables-section">
-      <h2>상세 테이블</h2>
-
-      <div class="detail-row-2col">
-        <section class="detail-section has-html-legend">
-          <h3>모델별</h3>
-          <div class="detail-chart">
-            <canvas id="chart-detail-model"></canvas>
-            <div class="chart-legend" data-target="chart-detail-model"></div>
-          </div>
-          <details class="table-block">
-            <summary>표 보기</summary>
-            <div id="by-model" class="table-wrap"></div>
-          </details>
-        </section>
-
-        <section class="detail-section has-html-legend">
-          <h3>스킬별</h3>
-          <div class="detail-chart">
-            <canvas id="chart-detail-skill"></canvas>
-            <div class="chart-legend" data-target="chart-detail-skill"></div>
-          </div>
-          <details class="table-block">
-            <summary>표 보기</summary>
-            <div id="by-skill" class="table-wrap"></div>
-          </details>
-        </section>
-      </div>
-
-      <section class="detail-section">
-        <h3>일자별</h3>
-        <div class="detail-chart">
-          <canvas id="chart-detail-day"></canvas>
-        </div>
-        <details class="table-block">
-          <summary>표 보기</summary>
-          <div id="by-day" class="table-wrap"></div>
-        </details>
-      </section>
-
-      <section class="detail-section">
-        <h3>세션별 (최근 50)</h3>
-        <div class="detail-chart">
-          <canvas id="chart-detail-session"></canvas>
-        </div>
-        <details class="table-block">
-          <summary>표 보기</summary>
-          <div id="by-session" class="table-wrap"></div>
-        </details>
-      </section>
 
     </section>
 
