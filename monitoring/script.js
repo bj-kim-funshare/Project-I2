@@ -58,6 +58,8 @@ if (typeof Chart !== 'undefined') {
 }
 
 const charts = {};
+let __lastAggregateData = null;
+const __periodMode = { dayTokens: 'day', dayCost: 'day' };
 
 function destroyChart(key) {
   if (charts[key]) {
@@ -414,12 +416,47 @@ function makeDayTokensSkillCountPlugin(countsByDay) {
 
 // ---------- Charts ----------
 
+function getISOWeek(date) {
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  target.setUTCMonth(0, 1);
+  if (target.getUTCDay() !== 4) {
+    target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
+  }
+  const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+  return { year: new Date(firstThursday).getUTCFullYear(), week };
+}
+
+function aggregateByWeek(daysArray, fields) {
+  const map = new Map();
+  for (const d of daysArray) {
+    const date = new Date(d.day + 'T00:00:00');
+    const { year, week } = getISOWeek(date);
+    const key = `${year}-W${String(week).padStart(2, '0')}`;
+    if (!map.has(key)) {
+      const entry = { day: key };
+      for (const f of fields) entry[f] = 0;
+      map.set(key, entry);
+    }
+    const entry = map.get(key);
+    for (const f of fields) entry[f] = (entry[f] || 0) + (d[f] || 0);
+  }
+  return Array.from(map.entries())
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([, v]) => v);
+}
+
 function renderChartDayTokens(data, opts) {
   const chartKey = (opts && opts.chartKey) || 'dayTokens';
   const canvasSel = (opts && opts.canvasSel) || '#chart-day-tokens canvas';
   const compareData = (opts && opts.compareData) || null;
+  const periodMode = (opts && opts.periodMode) || 'day';
   destroyChart(chartKey);
-  const days = (data.by_day || []);
+  const days = periodMode === 'week'
+    ? aggregateByWeek(data.by_day || [], ['input', 'output'])
+    : (data.by_day || []);
   const labels = days.map(d => d.day);
   const ctx = $(canvasSel);
   if (!ctx || !days.length) return;
@@ -430,7 +467,9 @@ function renderChartDayTokens(data, opts) {
   ];
 
   if (compareData) {
-    const cdays = (compareData.by_day || []);
+    const cdays = periodMode === 'week'
+      ? aggregateByWeek(compareData.by_day || [], ['input', 'output'])
+      : (compareData.by_day || []);
     datasets.push(
       { label: 'input (비교)', data: cdays.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '99', borderDash: [5, 5], stack: 'c', fill: 'origin' },
       { label: 'output (비교)', data: cdays.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '99', borderDash: [5, 5], stack: 'c', fill: '-1' },
@@ -450,7 +489,7 @@ function renderChartDayTokens(data, opts) {
       legend: { position: 'bottom' },
     },
   };
-  const chartPlugins = skillCountsByDay ? [makeDayTokensSkillCountPlugin(skillCountsByDay)] : [];
+  const chartPlugins = (skillCountsByDay && periodMode === 'day') ? [makeDayTokensSkillCountPlugin(skillCountsByDay)] : [];
   charts[chartKey] = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -797,46 +836,71 @@ function renderChartAgentBar(data, opts) {
   }
 }
 
-function renderChartPromptBar(data) {
+function renderChartPromptBar(data, invocations) {
   destroyChart('promptBar');
-  const items = (data.by_prompt || []).slice(0, 30);
   const ctx = $('#chart-prompt-bar canvas');
-  if (!ctx || !items.length) return;
+  const rows = (invocations || [])
+    .map(w => {
+      const t = w.total || {};
+      const usage = (t.input || 0) + (t.output || 0);
+      const cache = (t.cache_creation_5m || 0) + (t.cache_creation_1h || 0) + (t.cache_read || 0);
+      return { w, usage, cache, total: usage + cache };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 30);
+  if (!ctx || !rows.length) return;
+  const truncate = (s) => s.length > 60 ? s.slice(0, 60) + '...' : s;
   charts.promptBar = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: items.map(p => p.prompt_preview || ''),
-      datasets: [{
-        label: '총 토큰',
-        data: items.map(p => (p.input_tokens || 0) + (p.output_tokens || 0) + (p.cache_read || 0) + (p.cache_write || 0)),
-        backgroundColor: '#6366f1',
-      }],
+      labels: rows.map(r => truncate(r.w.title_prompt || '')),
+      datasets: [
+        {
+          label: '실사용 (input+output)',
+          data: rows.map(r => r.usage),
+          backgroundColor: COLORS.noncache,
+          stack: 's',
+        },
+        {
+          label: '캐시 (creation+read)',
+          data: rows.map(r => r.cache),
+          backgroundColor: COLORS.cache,
+          stack: 's',
+        },
+      ],
     },
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
+      scales: {
+        x: { stacked: true, ticks: { callback: (v) => fmtKMB(v) } },
+        y: { stacked: true },
+      },
       plugins: {
-        legend: { display: false },
         tooltip: {
+          mode: 'nearest',
           callbacks: {
             title: (items) => {
-              const p = (data.by_prompt || [])[items[0].dataIndex];
-              return p ? p.prompt_preview : '';
+              const r = rows[items[0].dataIndex];
+              return r ? (r.w.title_prompt || '') : '';
             },
             label: (c) => {
-              const p = (data.by_prompt || [])[c.dataIndex];
-              if (!p) return fmtKMB(c.parsed.x);
+              const r = rows[c.dataIndex];
+              if (!r) return fmtKMB(c.parsed.x);
+              const t = r.w.total || {};
               return [
-                `총 토큰: ${fmtKMB(c.parsed.x)}`,
-                `input: ${fmtKMB(p.input_tokens)}`,
-                `output: ${fmtKMB(p.output_tokens)}`,
-                `cache read: ${fmtKMB(p.cache_read)}`,
-                `cache write: ${fmtKMB(p.cache_write)}`,
-                `비용: $${(p.cost_usd || 0).toFixed(4)}`,
-                `세션: ${(p.session_id || '').slice(0, 8)}`,
-                `시각: ${shortTime(p.timestamp)}`,
+                `${c.dataset.label}: ${fmtKMB(c.parsed.x)}`,
+                `총 토큰: ${fmtKMB(r.usage + r.cache)}`,
+                `input: ${fmtKMB(t.input)}`,
+                `output: ${fmtKMB(t.output)}`,
+                `cache_creation_5m: ${fmtKMB(t.cache_creation_5m)}`,
+                `cache_creation_1h: ${fmtKMB(t.cache_creation_1h)}`,
+                `cache_read: ${fmtKMB(t.cache_read)}`,
+                `비용: $${(t.cost_usd || 0).toFixed(4)}`,
+                `스킬: ${r.w.skill || ''}`,
+                `세션: ${(r.w.session_id || '').slice(0, 8)}`,
+                `시작: ${shortTime(r.w.start_timestamp)}`,
               ];
             },
           },
@@ -846,25 +910,32 @@ function renderChartPromptBar(data) {
   });
 }
 
-function renderChartDayCost(data) {
+function renderChartDayCost(data, opts) {
   destroyChart('dayCost');
-  const days = (data.by_day || []);
+  const periodMode = (opts && opts.periodMode) || 'day';
+  const days = periodMode === 'week'
+    ? aggregateByWeek(data.by_day || [], ['cost_usd'])
+    : (data.by_day || []);
   const ctx = $('#chart-day-cost canvas');
   if (!ctx || !days.length) return;
   charts.dayCost = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: days.map(d => d.day),
       datasets: [{
         label: '추정 비용 (USD)',
         data: days.map(d => d.cost_usd || 0),
-        backgroundColor: COLORS.positive,
+        borderColor: COLORS.positive,
+        backgroundColor: COLORS.positive + '33',
+        tension: 0.25,
+        pointRadius: 3,
+        fill: false,
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: { y: { ticks: { callback: (v) => USD(v) } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => USD(v) } } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => USD(c.parsed.y) } },
@@ -1545,6 +1616,7 @@ async function applyWeekSelection(state) {
       loadWeekly(state.right),
       loadAggregate(),
     ]);
+    __lastAggregateData = aggregateData;
 
     $('#meta').textContent = `기간: ${state.left} vs ${state.right} | 생성일: ${shortTime(aggregateData.generated_at)}`;
 
@@ -1567,10 +1639,10 @@ async function applyWeekSelection(state) {
     const weekInvocations = (aggregateData.by_skill_invocation || [])
       .filter(inv => weekDays.has((inv.start_timestamp || '').slice(0, 10)));
     loadSkillInvocations({ by_skill_invocation: weekInvocations });
-    renderChartPromptBar(leftData);
+    renderChartPromptBar(leftData, weekInvocations);
 
-    renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []) });
-    renderChartDayCost(aggregateData);
+    renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []), periodMode: __periodMode.dayTokens });
+    renderChartDayCost(aggregateData, { periodMode: __periodMode.dayCost });
 
     updateLastRefreshDisplay();
   } catch (e) {
@@ -1602,7 +1674,30 @@ async function refresh() {
   }
 }
 
+function setupPeriodToggles() {
+  document.querySelectorAll('.period-toggle').forEach(toggleEl => {
+    toggleEl.querySelectorAll('button[data-period]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleEl.querySelectorAll('button[data-period]').forEach(b => b.setAttribute('data-active', 'false'));
+        btn.setAttribute('data-active', 'true');
+        const target = toggleEl.dataset.target;
+        __periodMode[target] = btn.dataset.period;
+        if (!__lastAggregateData) return;
+        if (target === 'dayTokens') {
+          renderChartDayTokens(__lastAggregateData, {
+            skillCountsByDay: computeSkillCountByDay(__lastAggregateData.by_skill_invocation || []),
+            periodMode: __periodMode.dayTokens,
+          });
+        } else if (target === 'dayCost') {
+          renderChartDayCost(__lastAggregateData, { periodMode: __periodMode.dayCost });
+        }
+      });
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  setupPeriodToggles();
   $('#refresh-btn').addEventListener('click', refresh);
 
   document.addEventListener('click', (e) => {
