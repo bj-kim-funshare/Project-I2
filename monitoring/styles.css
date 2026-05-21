@@ -511,8 +511,11 @@ i { color: var(--muted); }
 
 .chart-legend-agent-2col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 4px;
   font-size: 11px;
 }
 
