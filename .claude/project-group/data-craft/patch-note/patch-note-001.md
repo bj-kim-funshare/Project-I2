@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.371.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 31 — picker 검색창 wrapper 명시 불투명 배경)
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`a9cca51b`, +2/-2): sticky 검색창 wrapper + 검색 input 컨테이너의 `bg-background` → **`bg-white`** 로 변경. input 자체는 이미 `bg-transparent` 라 부모 흰색이 그대로 노출되어 하단 옵션이 비치지 않음. 오버레이 본체의 `bg-background` 는 본 핫픽스 범위 밖으로 유지.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 30 sticky 동작 + HOTFIX 29 group rows source 모두 그대로.
+
 ## v001.370.0
 
 > 통합일: 2026-05-21
