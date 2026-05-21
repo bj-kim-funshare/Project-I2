@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.378.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 30 — /billing/upgrade paymentPassword 전달)
+
+### 개요
+
+마스터 보고: 프로모션 → 프리미엄 변경 시도 → 비밀번호 입력 완료 → BE 400 `PAYMENT_PASSWORD_REQUIRED`. 원인 = FE 가 비밀번호 게이트는 거쳤지만 mutation body 에 password 미전달.
+
+### 변경 — data-craft (`bd2dccf5`)
+
+**`src/features/subscription/api/billingApi.ts`**:
+- `BillingUpgradeRequest` 타입에 `paymentPassword?: string` 추가.
+
+**`src/features/subscription/ui/UpgradeDialog.tsx`** `handleDirectPayment`:
+- 이미 게이트에서 password 수신했지만 `upgradeMutation.mutate({ targetPlan, targetSeats })` 호출 시 password 누락 → `{ targetPlan, targetSeats, paymentPassword }` 로 추가.
+
+**`src/features/subscription/ui/PlanLimitExceededDialog.tsx`**:
+- 동일 패턴 적용. `void paymentPassword — API 에 포함하지 않음` 주석 제거.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/api/billingApi.ts`
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+- `src/features/subscription/ui/PlanLimitExceededDialog.tsx`
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client → 프리미엄으로 변경 → 비밀번호 입력 → 결제 진행 → **200 응답** (이전: 400 PAYMENT_PASSWORD_REQUIRED).
+2. PlanLimitExceededDialog 의 업그레이드 액션 → 비밀번호 입력 → 정상 처리.
+3. 일반 플랜 업그레이드 → 기존 동작 유지.
+
 ## v001.377.0
 
 > 통합일: 2026-05-21
