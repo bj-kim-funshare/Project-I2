@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.369.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 30 — picker 검색창 + 확장 버튼 sticky)
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`76cadcc3`, +39/-37): 검색창 + 리턴 아이콘 + 확장 버튼 wrapper 에 `sticky top-0 z-10 bg-background` 적용 — picker 옵션 스크롤 시 상단 고정 + 불투명 배경. `border-b border-border` 1px 구분선 추가. 내부 padding `px-2 pb-2 pt-1` (기존 `mx-2 mb-1` 레이아웃 유지). 외곽 컨테이너 `overflowY: auto` 가 scroll context 라 sticky 정상 동작.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 29 group rows 일관 source / HOTFIX 28/27 selected matching / HOTFIX 22~23 tooltip 모두 그대로.
+
 ## v001.368.0
 
 > 통합일: 2026-05-21
