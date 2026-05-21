@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.400.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #144 (funshare-inc/data-craft) HOTFIX 1 — 화면 편집 모달 크기/스크롤 보정
+
+### 변경
+
+**data-craft (`5fafba1`)**:
+- `EditPageDialog` 의 `DialogContent` className 을 설정 모달(`SettingsDialog`) 과 동일 dimension 으로 고정 — `max-w-5xl` → `sm:max-w-[1100px] h-[80vh] p-0 gap-0 overflow-hidden flex flex-col`.
+- 모달 내부를 3단 flex-col 구조로 재편: 헤더 (`flex-shrink-0 px-6 pt-6`), 본문 (`flex-1 overflow-y-auto px-6 py-4` + 기존 2-컬럼 grid), 푸터 (`flex-shrink-0 border-t px-6 py-4`).
+- 본문만 스크롤, 헤더·푸터 고정. 모달이 의도 폭으로 렌더되지 않고 세로로 잘리던 v001.396.0 회귀 해소.
+- props·state·handlers·i18n 무수정 — 순수 Tailwind className 4줄 교체.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/page-management/ui/EditPageDialog.tsx`
+
+### 테스트
+
+1. 디자인 모드 → 화면 편집 모달 열기: 모달 폭이 설정 모달과 동일 (≈ 1100px), 높이 80vh 고정.
+2. 폼이 길어져도 본문 스크롤로 처리되고 헤더·푸터는 고정.
+3. v001.396.0 의 2-컬럼 레이아웃·실시간 미리보기·SEL 배지·펼친/접힌 토글 등 기능 무회귀.
+
 ## v001.399.0
 
 > 통합일: 2026-05-21
