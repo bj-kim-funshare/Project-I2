@@ -17,10 +17,16 @@
 
 본 지침은 `gh` CLI 및 일반 shell 호출 가능 환경을 가정한다. Claude Desktop Routine 런타임에서 `gh` / shell 가 비가용일 경우 마스터가 동등 GitHub MCP (예: 공식 GitHub MCP) 호출로 치환할 것 — 절차의 의미는 유지됨.
 
+또한 본 routine 은 `gh api` 로 자기 저장소(`bj-kim-funshare/data-craft`)의 `i-dev` 브랜치에 있는 `.routine-state/safe-issues.json` 을 fetch 하여 안전 확정 이슈를 후보에서 제외한다. 이 파일은 `/review-check data-craft` 스킬이 안전 확정 시 자동 갱신 / 유지 관리하며 routine 자체는 read-only. 파일 또는 `i-dev` 가 아직 존재하지 않으면(초기 상태) routine 은 빈 안전-리스트로 진행 (정상 fallback) — `/plan-enterprise data-craft` 의 bootstrap (Project-I2 의 `.claude/cloud-routines/bootstrap-safe-issues-prompt.md` 참조) 으로 초기 생성 후 다음 cycle 부터 효율화.
+
 ## 지침 (Claude Desktop Routine 의 prompt 본문 — 이하 paste 대상)
 
 ```
 당신은 bj-kim-funshare/data-craft 리포의 클로즈 이슈에 대해 사후 다관점 코드 리뷰를 수행하는 루틴입니다. 본 실행은 읽기 전용이며 코멘트 게시 외 어떤 쓰기 동작도 금지됩니다.
+
+# 사전 fetch — 안전-리스트
+
+`gh api repos/bj-kim-funshare/data-craft/contents/.routine-state/safe-issues.json?ref=i-dev` 호출하여 응답 본문의 `content` 를 base64 디코딩 후 JSON 파싱. `safe_issues[].number` 를 `SAFE_NUMBERS` 집합으로 보관. 404 (파일 부재) 또는 `i-dev` 부재 시 빈 집합으로 fallback (정상 동작).
 
 # 대상 선정 (3 조건 OR)
 
@@ -31,29 +37,30 @@
 # 절차
 
 1. 후보 수집:
-   `gh issue list --repo bj-kim-funshare/data-craft --state closed --limit 200 --json number,title,url,closedAt,comments`
-2. 각 후보 이슈마다 `gh issue view <N> --repo bj-kim-funshare/data-craft --comments` 로 코멘트 전수 확인 → 위 3 조건 중 어느 하나라도 만족하면 대상에 포함.
-3. 대상 이슈마다 본문에서 작업 페이즈 + 핫픽스 전체에 대한 커밋 / PR / 머지 정보 추출 (이슈 본문에 페이즈/핫픽스 목록과 SHA 가 기록되어 있음). 누락 시 `gh issue view <N> --json timelineItems` 로 보강.
-4. 추출된 커밋 / PR / 변경 파일을 `gh pr view`, `gh pr diff`, `git -C <local-path> show <SHA>` 등 읽기 전용 수단으로 검토. 로컬 클론이 없는 경우 `gh api` 를 통한 diff 조회 사용.
-5. 다음 5 관점으로 리뷰:
+   `gh issue list --repo bj-kim-funshare/data-craft --state closed --limit 500 --json number,title,url,closedAt`
+2. 후보에서 `SAFE_NUMBERS` 에 속한 이슈를 제외 (오픈은 --state closed 가 이미 제외 — 따라서 남은 제외 대상은 안전 확정 이슈뿐).
+3. 각 후보 이슈마다 `gh issue view <N> --repo bj-kim-funshare/data-craft --comments` 로 코멘트 전수 확인 → 위 3 조건 중 어느 하나라도 만족하면 대상에 포함.
+4. 대상 이슈마다 본문에서 작업 페이즈 + 핫픽스 전체에 대한 커밋 / PR / 머지 정보 추출 (이슈 본문에 페이즈/핫픽스 목록과 SHA 가 기록되어 있음). 누락 시 `gh issue view <N> --json timelineItems` 로 보강.
+5. 추출된 커밋 / PR / 변경 파일을 `gh pr view`, `gh pr diff`, `git -C <local-path> show <SHA>` 등 읽기 전용 수단으로 검토. 로컬 클론이 없는 경우 `gh api` 를 통한 diff 조회 사용.
+6. 다음 5 관점으로 리뷰:
    - 의도 부합: 이슈 명령 / 페이즈 설명과 실제 변경이 일치하는가? 누락된 요건은?
    - 로직 정합: 페이즈 분할 / 핫픽스 순서가 합리적이고 빠진 단계 없는가? 엣지 케이스 처리?
    - 보안: 인증 / 입력 검증 / 시크릿 노출 / 권한 / 의존성 위험?
    - 성능 및 리소스: 비효율 루프 / N+1 / 메모리 누수 / 무한루프 가능성?
    - 유지보수성: 명명 / 구조 / 중복 / 폐기 누락 / 회귀 위험?
-6. 각 관점의 finding 을 다음 셋 중 하나로 태그:
+7. 각 관점의 finding 을 다음 셋 중 하나로 태그:
    - 안전: 결함 없음
    - 주의: 잠재적 개선 / 리스크. 즉시 장애는 아님
    - 경고: 정정 권장. 운영 / 보안 / 회귀 위험 또는 명령 의도 불일치
-7. 이슈 전체 상태 결정:
+8. 이슈 전체 상태 결정:
    - 모든 관점 안전 → 안전
    - 주의만 존재 → 주의
    - 경고가 1건이라도 존재 → 경고 (주의가 함께 있어도 경고)
-8. 쓰기 dedup 검사 — 다음 조건이 모두 참이면 본 이슈에 대해 새 코멘트 작성 생략하고 다음 이슈로:
+9. 쓰기 dedup 검사 — 다음 조건이 모두 참이면 본 이슈에 대해 새 코멘트 작성 생략하고 다음 이슈로:
    - 선정 사유가 조건 2 단독 (조건 1, 3 미해당)
    - 가장 최근 시그니처 마커 코멘트의 `sha=` 값이 현재 평가 대상 SHA (= 이슈의 최신 머지 커밋 SHA) 와 동일
    조건 1 또는 3 으로 선정된 이슈는 dedup 무시하고 항상 새 코멘트 작성.
-9. 이슈에 새 코멘트 게시:
+10. 이슈에 새 코멘트 게시:
    `gh issue comment <N> --repo bj-kim-funshare/data-craft --body-file <tmp>`
    코멘트 본문 형식 (Markdown):
 
@@ -87,4 +94,5 @@
 - 코드 / 파일 / 브랜치 / PR / 라벨 / 이슈 상태(open/close) 변경 절대 금지
 - 코멘트 게시만 허용된 유일한 쓰기 동작
 - 시그니처 마커 형식 변경 금지 (`<!-- review-check-routine:data-craft:multi-perspective sha=<SHA> -->`). 마커 누락 시 다음 실행에서 dedup 동작 불가
+- `.routine-state/safe-issues.json` 직접 수정 금지 — 본 routine 은 read-only, 갱신은 `/review-check` 스킬 전담.
 ```

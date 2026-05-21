@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.93.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #48 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 1) — 안전-리스트 cross-repo 도입 + bootstrap 엔터프라이즈 프롬프트** (commit `2b6ed1f` + amendment `b7fa754` + amendment 2 `4c403d6`): 마스터 합의 — 클로즈 이슈 누적 시 routine + review-check 의 매 사이클 전수 스캔이 비효율적이므로 "안전 확정 이슈"를 별도 안전-리스트 파일로 관리하여 후보에서 제외하는 모델 도입. 안전 문서를 각 멤버 리포 (data-craft, data-craft-server) 자체의 `i-dev` 브랜치 `.routine-state/safe-issues.json` 에 두어 routine 이 자기 묶인 저장소 안에서 same-repo read 로 가져갈 수 있게 했다 (cross-repo read 회피). `/review-check <leader>` 는 호출마다 (1) 각 선택 리포의 i-dev 에서 안전-리스트 로드 → (2) `--state closed` 후보에서 안전-리스트 번호 제외 → (3) routine 마커 코멘트 파싱 (안전이면 리스트에 append, marker_sha 불일치면 제거) → (4) 델타가 있는 리포 각각에 대해 i-dev 에서 분기한 `review-check-safe-list-<timestamp>-문서` 단일 파일 WIP 머지로 갱신 → (5) 주의/경고 이슈 enterprise prompt 문서 작성. 14일 윈도우는 마스터 결정으로 폐기 — "오픈 + 안전" 만 제외하는 단순 모델 채택. SKILL.md frontmatter / Pre-conditions / Step 4~9 / WIP·머지 절 / Failure policy / Scope 갱신. 두 routine 문서 (`data-craft-review.md` / `data-craft-server-review.md`) 의 환경 가정·지침·금지 항목에 `gh api repos/<owner>/<repo>/contents/.routine-state/safe-issues.json?ref=i-dev` 사전 fetch + `SAFE_NUMBERS` 제외 단계 추가, 404 fallback 명시. 신규 `bootstrap-safe-issues-prompt.md` — 두 멤버 리포에 빈 `.routine-state/safe-issues.json` 을 i-dev 에 1회성 생성하는 `/plan-enterprise data-craft` 호출용 free-form 프롬프트 문서.
+
+### 영향 파일
+
+- `.claude/skills/review-check/SKILL.md`
+- `.claude/cloud-routines/data-craft-review.md`
+- `.claude/cloud-routines/data-craft-server-review.md`
+- `.claude/cloud-routines/bootstrap-safe-issues-prompt.md` (NEW)
+
+### Treadmill Audit
+
+PASS — Q1: 클로즈 이슈 누적에 따른 routine + review-check 전수 스캔 비용 증가가 실재 위험으로 확인 (마스터 직접 지적). Q2: 엣지케이스 명시 완료 — `i-dev` 부재 시 해당 리포 skip + bootstrap 안내 / marker_sha 불일치 자동 무효화 / 델타 0 인 리포 WIP 생성 생략 / 안전-리스트 JSON 파싱 실패 / 멤버 리포 working tree dirty (운영 발견 위임). **Q3 PASS — v001.92.0 amendment `b157005` 의 "review-check 는 WIP/머지 없음" §2 carve-out 은 본 라운드에서 폐기되고, "단일 파일 cross-repo §5 WIP+머지 사이클" 패턴으로 대체** (carve-out 유효 조건: (a) 단일 파일 한정, (b) JSON state catalog 한정, (c) 코드·룰 파일 무변경). 폐기되는 기존 1건 충족.
+
 ## v001.92.0
 
 > 통합일: 2026-05-21
