@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.367.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 29 — requestRowLinkGroupRows 콜백 + group rows 일관 source)
+
+### 근본 진단
+
+HOTFIX 27/28 의 selected matching 실패 (같은 그룹 다른 picker 가 selected 표시 안 됨) + picker 행 목록 불일치 (Image #13 vs #14 의 행 차이) 의 공통 root cause:
+
+기존 `requestConnectionValues` 가 **cell-level PK (data_values PK)** 를 `valueId` 로 반환 → 같은 그룹의 다른 컬럼 picker 마다 다른 PK 세트 → propagated 셀의 rowId 가 다른 picker 의 valueId 목록에 부재 → selected matching 실패. 또한 mapping 컬럼에 값이 빈 row 는 picker 에 미노출.
+
+### 변경 (18 파일, +198/-12)
+
+#### 신규 콜백 `requestRowLinkGroupRows`
+- **`entities/data-viewer-props.types.ts`** + **`app/types.ts`**: `FsDataViewerProps` / `FsGridRouterProps` / `NormalizedProps` 에 신규 prop 선언.
+- **호스트 구현 4개** (`apps/data-craft` + 3개 explorer 패키지 connectionCallbacks): `(groupId, columnId)` → `{valueId: rowNum, value: cells[columnId]}[]` 반환. **`rowNum = row-level PK`** (모든 picker 공통). 빈값 row 포함.
+- **prop chain**: `FsDataViewer` → `FsDataViewerRouter` → `DataViewerProvider` / `GridContext` → `FsGridRowLinkCellRenderer` → `ConnectionEditOverlay`. Viewer/SubViewer/ExternalViewer widget callbacks 도 동일 패턴.
+
+#### picker source 교체
+- **`ConnectionEditOverlay.tsx`**: `rowUniqueIdentity=true && requestRowLinkGroupRows` 존재 시 group rows 를 data source 로 사용. 일반 connection 셀 (rowLink 아님) 은 기존 `requestConnectionValues` 유지. 정렬 = **`rowId DESC`** (큰 행 번호 위).
+
+#### propagation selected matching 정합
+- **`useRowLinkCell.ts`** `handleAnyCellSave`: `requestRowLinkGroupRows` 우선 경로 (rowId 직접 매칭) + `requestRowLinkTargetRow` fallback 경로 분기. 같은 그룹 모든 셀이 동일 rowId 로 저장 → 어느 picker 든 동일 row selected 표시.
+
+### 동작
+
+| 시나리오 | 결과 |
+|---|---|
+| 셀 A 선택 → target row 123456 | A: `{rowId:123456, value:"..."}` |
+| 같은 그룹 propagated 셀 B/C/D | 모두 `{rowId:123456, value:"..."}` |
+| 셀 B picker 열기 | `requestRowLinkGroupRows` 호출 → group 전체 row 목록 (123456 포함) → rowId 매칭 → 선택됨 |
+| 빈값 row 도 | picker 에 노출 (행 번호 prefix 보이고 라벨은 빈값) |
+| 정렬 | valueId DESC (최신/높은 번호 위) |
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: 일반 connection 셀 (비 rowLink) picker 무변경. HOTFIX 27/28 의 `{rowId, value}` JSON 포맷 + legacy plain string 후방 호환 유지.
+
 ## v001.366.0
 
 > 통합일: 2026-05-21
