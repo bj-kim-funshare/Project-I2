@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.392.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #143 (HOTFIX 1 — 실제 타겟 컴포넌트 식별)
+
+### 배경
+
+원 플랜 v001.390.0 (phase 1) 에서 식별한 `GroupTabBar` (컬럼 그룹 다이얼로그) 는 마스터가 의도한 컴포넌트가 아니었음. 마스터의 진짜 타겟은 **화면 편집 다이얼로그의 아이콘 picker 카테고리 탭** (파일/탐색/액션/UI/상태/사용/통신/미디어/데이/비즈/도형/자연 12개 카테고리가 가로 탭으로 배치) = `src/shared/ui/icon-picker/CategoryTabs.tsx`. 현재 컴포넌트는 `pointerType === 'mouse'` 조건의 pointer drag 핸들러만 가지고 있어 트랙패드 두 손가락 수평 제스처가 동작하지 않았음.
+
+### 변경 — data-craft (`89e0d9a`)
+
+- `src/shared/ui/icon-picker/CategoryTabs.tsx` 의 `scrollRef` 컨테이너 `<div>` 에 `useEffect` + `addEventListener('wheel', handler, { passive: false })` 패턴으로 wheel 이벤트 리스너 부착.
+- 핸들러 본문은 v001.390.0 GroupTabBar 와 동일: `Math.abs(deltaX) >= Math.abs(deltaY)` 조건으로 주 이동 방향 판별 → `scrollLeft` 가산. 스크롤 여지가 남아 있을 때만 `preventDefault` 호출 (끝 도달 시 기본 체이닝 유지).
+- 기존 `handlePointerDown/Move/Up/Cancel` (mouse drag) / `isGrabbing` state / Tabs 자식 구조는 무수정 유지.
+- React import 에 `useEffect` 추가.
+
+### 영향 파일
+
+data-craft:
+- `src/shared/ui/icon-picker/CategoryTabs.tsx`
+
+### 사용처 (CategoryTabs → IconPicker)
+
+- `src/features/page-management/ui/EditPageForm.tsx` (화면 편집 — 마스터 보고 케이스)
+- `src/features/page-management/ui/CreatePageForm.tsx` (화면 생성)
+- `src/features/widget/...` ButtonPropertiesEditor 등 위젯 아이콘 설정 (테스트 파일 grep 기준)
+
+### 머지 commit
+
+data-craft i-dev: phase 1 머지에 더해 `89e0d9a` (HOTFIX 1) 가 onWheel 처리를 진짜 타겟에 적용.
+
 ## v001.391.0
 
 > 통합일: 2026-05-21
