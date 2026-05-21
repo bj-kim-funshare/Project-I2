@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.398.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #142 (funshare-inc/data-craft) HOTFIX 1+2 — 마스터 시각/동작 회귀 보고 즉시 대응
+
+### 원인 및 수정
+
+**HOTFIX 1 (`646addf0`) — AuthPage 가 뷰포트 전체 높이를 채우지 못함**
+- 증상: `/signin` 등 5개 인증 페이지에서 AuthPage 가 콘텐츠 자연 높이만큼만 차지, 푸터가 화면 중간에 표시되고 하단 절반이 빈 공간.
+- 원인: AuthPage 루트 div 의 `h-full` 은 부모 요소가 명시적 높이를 갖지 않으면 자연 높이로 해석됨. 라우터 outlet 이 100vh 를 강제하지 않아 0~자연 높이로 축소.
+- 수정: `src/shared/ui/auth/AuthPage.tsx` — 루트 클래스를 `flex flex-col w-full h-full overflow-hidden` → `flex flex-col min-h-screen w-full` 로 교체. 부모 높이와 무관하게 뷰포트 최소 높이를 보장. 긴 폼(signup) 도 자연 높이로 스크롤 허용.
+
+**HOTFIX 2 (`850ce5cb`) — `/signin` 비밀번호 입력 후 Enter 시 `/reset-password` 로 이동**
+- 증상: 비밀번호 입력 후 Enter 키를 치면 로그인 폼이 제출되지 않고 비밀번호 재설정 페이지로 이동.
+- 원인: 폼 내 `<button>` 이 `type` 미지정 시 브라우저 기본값이 `submit` 으로 해석됨. `LnkBtn` ("비밀번호를 잊으셨나요?") 이 type 없이 렌더되어 폼 첫 submit 버튼으로 인식 → Enter 키가 그쪽 `onClick` 활성화 → `navigate('/reset-password')`.
+- 수정: `src/shared/ui/auth/Lnk.tsx` `LnkBtn` 과 `src/shared/ui/auth/Btn.tsx` `Btn` 모두 `type` 프롭 기본값을 `'button'` 으로 명시. 실제 submit 인 `Btn type="submit"` 호출부는 명시값이 기본값을 오버라이드. 페이지 인라인 `<button>` 들은 이미 `type="button"` 명시되어 있어 추가 수정 불필요.
+
+### 영향 파일
+- data-craft:`src/shared/ui/auth/AuthPage.tsx` (HOTFIX 1)
+- data-craft:`src/shared/ui/auth/Lnk.tsx` (HOTFIX 2)
+- data-craft:`src/shared/ui/auth/Btn.tsx` (HOTFIX 2)
+
+총 3 파일, +7 / -3 lines.
+
+### Lint gate
+PASS (1 iter, 0 errors / 18 기존 warnings).
+
 ## v001.397.0
 
 > 통합일: 2026-05-21
