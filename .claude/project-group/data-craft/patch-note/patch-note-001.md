@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.414.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #146 (HOTFIX 1 + HOTFIX 2 — 단일 patch-note entry)
+
+### 배경
+
+본 플랜이 도입한 `SameSite=Lax` HttpOnly refresh-token 쿠키는 cross-eTLD+1 origin 에서 호출 시 브라우저에 의해 자동 차단된다. 마스터 결정: 모든 client origin 을 `*.datacraft.ai.kr` 단일 eTLD+1 아래로 통합. 대안 `SameSite=None; Secure` 는 HTTPS 정합이 충분히 검증되지 않아 미선택.
+
+추가 확인: tenant 매칭은 이미 `?tenant=<companyId>` query param 으로 단일화되어 있음 — hostname 기반 subdomain 파싱(`*.datacraft.co.kr`) 은 죽은 코드. 따라서 CORS allowlist 정리(hotfix 1) 후 legacy 코드 purge(hotfix 2) 까지 함께 정리.
+
+### 본 entry 의 두 hotfix 통합 기록
+
+skill 절차상 hotfix 마다 자체 patch-note entry 가 원칙이나, **hotfix 1 머지 시 patch-note 작성을 누락**한 절차적 단축이 있었음. 두 hotfix 가 동일 의도(legacy 잔재 전수 제거)의 짝 작업이므로 본 entry 에 통합 기록 — 미래 독자가 hotfix 1 의 patch-note 누락을 미문서화로 오해하지 않도록 명시.
+
+### HOTFIX 1 결과 (data-craft-server, `9599a896`)
+
+CORS allowlist (`src/app.ts`) 에서 legacy origin 패턴 2건 제거:
+- `^https?://([\w-]+\.)?datacraft\.co\.kr$` (cross-eTLD+1)
+- `^https://funshare-inc\.github\.io$` (legacy GitHub Pages 직접 origin)
+
+유지된 패턴:
+- `^https?://([\w-]+\.)?datacraft\.ai\.kr$` — consolidation 타겟.
+- `^https?://([\w-]+\.)?localhost(:\d+)?$` / `^https?://127\.0\.0\.1(:\d+)?$` — dev 환경 필수.
+
+### HOTFIX 2 결과 (data-craft-server, `eb0fc82`)
+
+legacy `.datacraft.co.kr` subdomain 스킴 코드 purge:
+- `src/middlewares/tenant.middleware.ts`: `parseSubdomain` 함수 통째 제거. `tenantMiddleware` 가 `req.query.tenant` 단일 채널로 단순화. 사후 grep 결과 `parseSubdomain` 참조 0건.
+- `src/models/client.model.ts:121`: `subdomain` 자동 생성을 `${companyId}.datacraft.co.kr` → `companyId` 직접 할당.
+- `src/services/auth.service.ts:251`: 동일 패턴 적용.
+- `src/types/auth.types.ts:23,239`: 주석 `(예: abc-corp.datacraft.co.kr)` → `(= companyId)` 갱신.
+- `DB/tables.md:26`: `subdomain` 컬럼 설명 갱신.
+
+사후 grep 결과 `src/` + `DB/` 내 `datacraft.co.kr` 잔존 0건 확인.
+
+### 영향 파일
+
+**data-craft-server (6 files, +8 −45)**:
+- `src/app.ts` (hotfix 1)
+- `src/middlewares/tenant.middleware.ts`, `src/models/client.model.ts`, `src/services/auth.service.ts`, `src/types/auth.types.ts`, `DB/tables.md` (hotfix 2)
+
+### 마스터 후속 액션
+
+#### 병렬 진행 중 (별도 세션)
+
+- **DB 정규화** (`/task-db-data data-craft` 호출): 기존 `client.subdomain` 컬럼 row 들 중 `.datacraft.co.kr` suffix 가 박힌 행들의 suffix 제거. 본 hotfix 가 코드 측 신규 생성은 정리했지만 기존 row 는 legacy 문자열 잔존. 결과적으로 모든 row 의 `subdomain == company_id` 로 정규화. capture/rollback table 자동 생성됨 (안전 절차).
+- **group-policy 갱신** (별도 세션 `be8cdc5`): 보안 정책 7항목 dev.md 에 baked-in 완료.
+
+#### 영구 확인 사항
+
+- 본 hotfix 1+2 머지 후 deploy 시점:
+  - prod 클라이언트는 반드시 `*.datacraft.ai.kr` origin 에서만 호출.
+  - GitHub Pages 배포는 유지하되 직접 origin 으로는 노출 금지 — 사용자는 `datacraft.ai.kr/login?tenant=<slug>` 로만 진입.
+- 기존 회사 가입 데이터의 `subdomain` 컬럼은 DB 정규화 작업으로 깨끗해짐 — 그 이후로는 코드/데이터 모두 `companyId == subdomain`.
+
+### advisor 검증
+
+- hotfix outcome 5관점: 전부 PASS. 절차적 shortcut (hotfix 1 patch-note 누락) 은 본 entry 통합 기록으로 Evidence 관점 해소.
+
 ## v001.413.0
 
 > 통합일: 2026-05-21
