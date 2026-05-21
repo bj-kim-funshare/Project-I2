@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.413.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 54 — deprecated /api/subscription/upgrade 폐기)
+
+### 배경
+7차 검증 (advisor 동행) finding 1건: `POST /api/subscription/upgrade` 라우트가 `updatePlanType` 직접 호출 → activePromotionId invariant 우회 가능. FE 미사용 (`useUpgradePlan` 훅 정의만, mount 0). dead code = HOTFIX 13/50 패턴 적용.
+
+### 변경
+
+**data-craft-server (`50eff08` + 보완 `dd881e2`)**:
+- `src/routes/subscription.ts` 의 `POST /api/subscription/upgrade` 라우트 등록 삭제.
+- `src/controllers/subscription.controller.ts` 의 `upgradePlanController` 삭제.
+- `src/services/subscription.service.ts` 의 `upgradePlan` 함수 (L186-219) + VALID_PLAN_TYPES 상수 삭제.
+- 보완: 미사용 BadRequestError import 정리.
+총 4 파일, +1/-78.
+
+**data-craft (`d43b40ae`)**:
+- `subscriptionApi.ts` 의 `upgradePlan` API 함수 + UpgradeRequest/UpgradeResponse import 삭제.
+- `subscriptionQueries.ts` 의 `useUpgradePlan` 훅 + 관련 import 제거.
+- `index.ts` barrel export 에서 `upgradePlan` API + `useUpgradePlan` 훅 export 삭제.
+총 3 파일, 0/-42.
+
+### 영향 파일
+**data-craft-server**
+- src/routes/subscription.ts
+- src/controllers/subscription.controller.ts
+- src/services/subscription.service.ts
+
+**data-craft**
+- src/features/subscription/api/subscriptionApi.ts
+- src/features/subscription/index.ts
+- src/features/subscription/model/subscriptionQueries.ts
+
+### 검증 사이클 종결
+
+- 7차 검증 = 1 finding → HOTFIX 54 로 해소.
+- code-inspector + advisor 모두 트레드밀 종결 확인 (HOTFIX 53 의 invariant 헬퍼 / reason 인자 / snapshot semantic 가 회귀 사이클 근본 원인 해소).
+- 다음 단계 옵션: 플랜 완료 / 통합 테스트 작성 / 추가 hotfix.
+
 ## v001.412.0
 
 > 통합일: 2026-05-21
