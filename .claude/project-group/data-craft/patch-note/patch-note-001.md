@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.361.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 27 — picker 시스템 valueId 행 번호 + cellValue {rowId,value} JSON + selected matching rowId)
+
+### 개요
+
+마스터 정정 (HOTFIX 24/25/26 누적 진동 최종 해소): (1) HOTFIX 26 의 행 번호 `idx+1` 은 picker 내부 배열 인덱스로 잘못 — 시스템의 실제 6자리 row identifier (`ConnectionValueItem.valueId`) 를 표시해야 함. (2) 같은 값 다중 선택 표기 미해결 — selected matching 이 cellValue (값 문자열) 기준이라 같은 값의 모든 row 가 동시 selected. **셀 저장 포맷을 `{rowId, value}` JSON 으로 변경** 하여 selected matching 을 rowId 기준 정확화.
+
+### 변경 (5 파일, +98/-27)
+
+#### 1. picker 행 번호 정정 + selected matching rowId 기준
+- **`ConnectionEditOverlay.tsx`** (`73cededa`):
+  - 행 번호 prefix `idx+1` 제거 → **`item.valueId`** (BE row PK, 6자리 시스템 식별자) 사용.
+  - 신규 `rowUniqueIdentity` prop 으로 rowLink 전용 동작 게이트 (일반 connection 셀 기존 동작 유지).
+  - selected matching: 값 문자열 → **rowId (정수) 비교** 로 전환 → 같은 값 다중 row 공동 선택 문제 해결.
+
+#### 2. 셀 저장 포맷 변경 — `{rowId, value}` JSON
+- **`useRowLinkCell.ts`** (`73cededa`): `handleAnyCellSave` 가 선택 시 `JSON.stringify({rowId: item.valueId, value: displayValue})` 형식으로 저장. `requestRowLinkTargetRow` BE 조회 키도 parse 후 `.value` 사용.
+- `parseRowLinkCellValue` 헬퍼 신규 — JSON parse 성공 시 `{rowId, value}` 반환, 실패 시 raw string 그대로 (**legacy plain string 후방 호환**).
+
+#### 3. 렌더링 경로 parse 적용
+- **`FsGridRowLinkCellRenderer.tsx` / `RowLinkRenderer.tsx` / `rowLinkDelegateDispatcher.tsx`** (`73cededa`): cellValue 가 JSON 이면 parse → `.value` 부분만 display delegate. 구버전 plain string 케이스는 raw 사용 (legacy 데이터 그대로 표시).
+
+### 회귀 검증 포인트 (마스터 manual)
+
+1. 신규 rowLink 선택 시 picker selectedIds 가 **단일 rowId 항목만 하이라이트** 되는지 확인. 같은 displayValue 의 다른 row 는 비활성.
+2. 저장된 JSON cellValue 가 각 렌더러 (그리드/칸반/캘린더/간트) 에서 displayValue 로 올바르게 표시되는지.
+3. 레거시 plain string cellValue 의 기존 데이터가 `-` fallback 없이 그대로 표시되는지.
+4. picker 옵션 앞 행 번호 prefix = 시스템 6자리 valueId (각 row 고유).
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 24 image/file 연동 + document JSON 가공 / HOTFIX 23 tooltip / HOTFIX 22 Tooltip 컴포넌트 / HOTFIX 21 longText 중앙 + 확장 단방향 모두 그대로 유지.
+
 ## v001.360.0
 
 > 통합일: 2026-05-21
