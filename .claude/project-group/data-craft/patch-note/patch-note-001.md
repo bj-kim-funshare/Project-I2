@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.373.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 32 — picker overlay body 본체 bg-white)
+
+### 진단
+
+HOTFIX 31 의 sticky 검색창 wrapper bg-white 적용 후에도 마스터 시안 — 검색창 주변 padding 영역으로 옵션이 비침. 근본 원인: overlay body 컨테이너의 `bg-background` 가 CSS variable 기반이라 실제 흰색 보장 X + overlay 상단 padding 8px 영역이 투명 → sticky 검색창 위/주변으로 스크롤된 옵션이 비침.
+
+### 변경
+
+- **`ConnectionEditOverlay.tsx`** (`2c3a66b7`, +1/-1): overlay body 컨테이너 `bg-background` → **`bg-white`**. padding 영역 포함 overlay 전 영역이 불투명 흰색. sticky 검색창의 `bg-white` 는 유지.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 31 sticky wrapper / HOTFIX 30 sticky 동작 / HOTFIX 29 group rows source 모두 그대로.
+
 ## v001.372.0
 
 > 통합일: 2026-05-21
