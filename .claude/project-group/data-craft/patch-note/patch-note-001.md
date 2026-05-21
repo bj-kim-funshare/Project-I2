@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.362.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 21 — UpgradeStepPayment 인원수 빈 값 허용)
+
+### 개요
+
+마스터 보고: 플랜 업그레이드 모달의 결제할 인원수 입력 필드가 빈 값으로 두는 게 불가능 (롤백된 상태). HOTFIX 10 의 SeatManageDialog 와 동일 패턴으로 빈 값 허용 + 빈 상태에서 결제 클릭 시 빨강 경고 표시.
+
+### 변경 — data-craft (`acf25469`)
+
+**`src/features/subscription/ui/UpgradeStepPayment.tsx`**:
+- `seatsInput` state 타입 `number` → `number | null` 확장.
+- `NumberInputWithReturn` (다른 곳에서 공유) → SeatManageDialog HOTFIX 10 패턴의 인라인 input 으로 교체.
+- 신규 state `showSeatsRequiredError: boolean`. `handlePaymentClick` / `handleRequestBillingAuth` 양쪽에서 `seatsInput === null` 시 mutation 차단 + 에러 표시.
+- 입력 필드 아래 빨강 안내 (`text-red-500 text-sm mt-1`): `seatManage.seatsRequired` i18n 키 재사용 ("인원수를 입력해 주세요.").
+- 사용자가 다시 입력하면 onChange 핸들러가 `setShowSeatsRequiredError(false)`.
+- 400ms 디바운스 effect 는 `seatsInput === null` 시 조기 리턴 — 마지막 유효 `debouncedSeats` 보존, 새 quote 호출 없음.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+
+### 테스트 시나리오
+
+1. 플랜 업그레이드 모달 → 결제할 인원수 필드 모두 지움 → 빈 값으로 유지됨.
+2. 빈 상태에서 "결제하기" 클릭 → mutation 호출 X + 필드 아래 빨강 "인원수를 입력해 주세요." 인라인 안내.
+3. 다시 숫자 입력 → 빨강 안내 자동 해제.
+4. 정상 결제 흐름 (숫자 입력 + 결제 클릭) → 기존 동작 유지.
+
 ## v001.361.0
 
 > 통합일: 2026-05-20
