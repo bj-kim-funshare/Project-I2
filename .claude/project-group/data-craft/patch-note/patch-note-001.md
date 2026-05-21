@@ -1,5 +1,88 @@
 # data-craft — Patch Note (001)
 
+## v001.412.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #146 — 코덱스 보안 검토 6안건 풀스택 적용
+
+### 배경
+
+코덱스가 data-craft web FE 에 제기한 6건 보안 안건을 사전 정적 검증으로 전부 타당 판정 후 multi-repo 풀스택 (FE: data-craft / BE: data-craft-server) 으로 일괄 처리. 9 페이즈 + Phase 9 amendment 1회 = 10개 커밋. advisor #1 / #2 모두 PASS (BLOCK 없음).
+
+### 페이즈 결과 (FE 6 + BE 4)
+
+- **Phase 1 (data-craft, `883a500f`)**: `devLoginDefaults` 의 평문 자격(`starbox918@naver.com` / `Test1234!@`) 제거, `.env.example` 키 추가, `scripts/setup-dev-env.sh` 신규 (`.env.local` 부트스트랩 — git 미커밋).
+- **Phase 2 (data-craft, `d5341219`)**: 미사용 `xlsx@0.18.5` 제거. pnpm audit high 2건(sheetJS Prototype Pollution + ReDoS) 동시 해소 (8→6 vulnerabilities, high 0건).
+- **Phase 3 (data-craft, `d13ba902`)**: 3 viewer 패키지(fs-data-viewer / fs-sub / fs-external)의 `PrintPreview.tsx` `srcDoc` 에 기존 `sanitizePrintHtml` 적용. 신규 의존성 0건.
+- **Phase 4 (data-craft, `e2c3d7ee`)**: link cell 의 `window.open(..., '_blank')` 호출 3곳에 `'noopener,noreferrer'` 적용. tabnabbing 차단.
+- **Phase 5 (data-craft-server, `d00d85bb`)**: `cookie-parser` 1.4.7 도입 + signinController 가 rememberMe 분기에서 `httpOnly + SameSite=lax` refresh token 쿠키 발급. body refreshToken 은 Phase 9 까지 호환 유지.
+- **Phase 6 (data-craft-server, `a845fe7`)**: refreshController = 쿠키 우선 + body fallback. autoSigninController + initController = Authorization Bearer 헤더 우선 + body fallback.
+- **Phase 7 (data-craft, `dce05a2a`)**: `createLocalStorageTokenStorage` → `createMemoryTokenStorage` 전수 교체 (25 files). access token 만 모듈 스코프 변수에 보관, refresh token 은 서버 HttpOnly 쿠키만으로 운영. `client.fetch.ts` 두 fetch 호출에 `credentials: 'include'` 추가. shim 없음.
+- **Phase 8 (data-craft, `4c6f4507`)**: `autoSignin` / `init` 의 body `accessToken` 키 제거 + skipAuth 인자 제거 → Authorization 헤더 자동 첨부. 보안 고지 주석 제거.
+- **Phase 9 (data-craft-server, `c7f68d8`)**: BE body 채널 전수 제거 — read 측 `req.body` fallback 삭제, write 측 signin/autoSignin 서비스가 `{ response, refreshToken? }` 튜플 반환 → controller 가 쿠키로만 발급.
+- **Phase 9 amendment (data-craft-server, `c7af19b`)**: refresh 엔드포인트 rotation 도 동일 튜플 패턴으로 쿠키 발급. `RefreshResponse` 타입에서 `refreshToken` 필드 제거 → 타입 수준 봉인. **refresh 흐름 단일 채널 (쿠키 read + 쿠키 write).**
+
+### 영향 파일
+
+**data-craft (38 files, +128 −319)**:
+- `src/pages/auth/devLoginDefaults.ts`, `.env.example`, `scripts/setup-dev-env.sh`, `tests/pages/auth/devLoginDefaults.test.ts`
+- `packages/fs-data-link/package.json`, `pnpm-lock.yaml`
+- `packages/fs-data-viewer/src/features/print/ui/PrintPreview.tsx`, `packages/fs-sub-data-viewer/src/features/print/ui/PrintPreview.tsx`, `packages/fs-external-data-viewer/src/features/print/ui/PrintPreview.tsx`
+- `packages/fs-{data-viewer,sub-data-viewer,external-data-viewer}/src/widgets/cell-renderers/FsGridLinkCellRenderer/useLinkCellHandlers.ts`
+- `packages/fs-api/src/{core/token.ts, core/client.auth.ts, core/client.fetch.ts, core/client.ts, core/index.ts, index.ts, api/auth.ts, api/__tests__/token.test.ts}`
+- `src/{entities/auth/model/authStore.ts, shared/lib/apiClient.ts, features/subscription/ui/ExceededItemList.tsx, widgets/settings-dialog/ui/SettingsFooter.tsx}`
+- 15개 테스트 mock 갱신 (`tests/bug-detection/p01-p10`, `tests/features/auth/*`, `tests/features/file/loadFileList.test.ts`, `tests/widgets/settings-dialog/SettingsFooter.test.tsx`, `tests/entities/form/api/settingsFormApi.test.ts`)
+
+**data-craft-server (7 files, +159 −78)**:
+- `package.json`, `pnpm-lock.yaml`, `src/app.ts`
+- `src/controllers/auth.controller.ts`, `src/controllers/init.controller.ts`
+- `src/services/auth.service.ts`, `src/types/auth.types.ts`
+
+### 마스터 후속 액션
+
+#### 즉시 수행 필요
+
+1. **비밀번호 회전 (P0)**: git 이력에 평문 잔존하는 `starbox918@naver.com` 의 비밀번호(`Test1234!@`) 를 즉시 회전. 본 플랜의 코드 제거는 잔존 위험을 차단하지 못함.
+2. **`.env.local` 생성**: 머지 후 data-craft 체크아웃에서 `bash scripts/setup-dev-env.sh` 1회 실행 → `.env.local` 생성됨 (gitignored). `VITE_DEV_EMAIL` / `VITE_DEV_PASSWORD` 에 회전된 자격 입력.
+
+#### Deploy 시점 결정 필요 (SameSite=lax cross-site 위험)
+
+- 현재 refresh token 쿠키는 `SameSite=lax` 로 발급. `*.datacraft.ai.kr` / `funshare-inc.github.io` 같은 cross-site origin 에서 호출 시 브라우저가 쿠키를 자동 차단 → refresh 가 깨짐.
+- 본 플랜이 Phase 9 에서 body fallback 을 전수 제거했으므로, deploy 전 1택 필요:
+  - (a) `SameSite=none; secure` 전환 (CORS allowlist 와 정합).
+  - (b) 모든 client origin 을 same-site 로 통합.
+  - (c) cross-site 사용처는 별도 인증 채널 운영.
+
+#### Follow-up 플랜 후보 (별도 phase 권장)
+
+- **print 엔진 iframe 리팩토링**: sub/external viewer 의 `BrowserPrintEngine.ts` + `usePrintExecution.ts` 의 `window.open(..., '_blank')` 호출 ~7곳은 새 창의 `document.write()` + `print()` 메서드를 직접 호출하므로 `noopener` 적용 시 기능 파괴. iframe 기반 print 엔진으로 리팩토링하면 noopener 적용 가능.
+- **자격 평문 잔존 스캔**: `tests/bug-detection/qa-001-p08-signin-dev-autofill.test.ts` 의 stale guard (`not.toMatch`) + `registerValidation.ts` / `signupValidation.ts` 의 JSDoc `@example` 잔존 평문 정리.
+- **`auth.types.ts` 타입 cleanup**: `AuthResponseData` / `LightAuthResponseData` 의 optional `refreshToken?: string` 키 제거 (직렬화 시 값 undefined 라 실제 노출은 없으나 타입 표면에서 봉인).
+
+### group-policy 반영용 스킬 호출 프롬프트
+
+다음 프롬프트를 마스터가 복사·붙여넣기로 실행하여 정책을 본 플랜의 결정에 정렬:
+
+```
+/group-policy data-craft
+
+dev.md 에 추가 정책:
+- 인증: refresh token 은 서버가 HttpOnly; Secure; SameSite=Lax (또는 운영상 필요 시 SameSite=None; Secure) 쿠키로만 발급한다. localStorage / sessionStorage / IndexedDB 등 JS 접근 가능 영역에 refresh token 저장 금지.
+- 인증: access token 은 메모리 (모듈 스코프 또는 인메모리 스토어) 에만 보관, 보호된 API 호출은 Authorization: Bearer 헤더 사용. request body 의 accessToken 키 사용 금지.
+- 시크릿: 자격 평문(이메일·비밀번호 등)을 소스 트리에 두지 않는다. dev 자동 로그인 편의는 .env.local 또는 동등한 gitignored 파일을 통해서만 주입한다. .env.example 은 키만 공개, 값은 공백.
+- 의존성: 신규/유지 의존성에 npm/pnpm audit high 이상 취약 항목이 있으면 (a) 즉시 제거 가능한지 검증 → 제거, (b) 불가능하면 대체 검토 또는 마스터 명시 승인.
+- iframe: srcDoc/srcdoc 에 동적 HTML 주입 시 sanitizer 통과 필수. sub/external viewer 패키지 동일 적용. preview 경로 예외 없음.
+- 새 창 열기: window.open 호출 시 `'noopener,noreferrer'` 사용 의무. 반환 window 를 사용해야 하는 경우 iframe 기반 대체 패턴 검토.
+
+group.md 에 추가:
+- 코덱스/외부 도구 보안 검토 결과는 본 정책 갱신의 트리거가 될 수 있다 — 적용 후 즉시 group-policy 로 정책에 반영한다.
+```
+
+### advisor 검증
+
+- 플랜 시점 (5관점): 전부 PASS.
+- 완료 시점 (5관점): 전부 PASS — Command Fulfillment 에서 두 follow-up (print 엔진, 타입 cleanup) 을 인접 작업으로 명시 후 PASS.
+
 ## v001.411.0
 
 > 통합일: 2026-05-21
