@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.385.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 35 — 다운그레이드/연간변경 예약 다음 결제일 금액 안내)
+
+### 개요
+
+마스터 보고 2건 통합:
+- 프리미엄 월간 → 스탠다드 연간 다운그레이드 시 다음 결제일 청구 예정 금액 미표시.
+- SubscriptionActionSection "연간으로 변경 예약" 클릭 시 금액 미표시 + 즉시 mutation.
+
+### 변경 — data-craft (`c82b4f6f` + 보완 `c127af97`)
+
+**`src/features/subscription/ui/UpgradeStepPayment.tsx`**:
+- isDowngrade 분기 안내 배너 2줄로 확장:
+  - `해당 변경사항이 {nextBillingDate}부터 적용됩니다.`
+  - `다음 결제일 청구 예정 금액: {nextPaymentAmount}원 (VAT 별도)`.
+- 계산: `plansData[selectedPlan].priceKrw × seats × (yearly: 12 × 9/10)`. flat 플랜 seats=1.
+- 보완: seats 계산을 `seatsInput` → `status?.seats ?? 1` 로 변경하여 BE 실 청구 (client.seats 기준) 와 정합. handlePaymentClick 다운그레이드 분기 onDirectPayment 인자도 동일하게 정렬.
+
+**`src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`**:
+- "변경 예약" 버튼 클릭 → 즉시 mutation 대신 **AlertDialog confirm** 우선 노출:
+  - 제목: `결제 주기 변경 예약`
+  - 본문 1: `다음 결제일({date})부터 {월간/연간} 결제로 변경됩니다.`
+  - 본문 2: `다음 결제일 청구 예정 금액: {amount}원 (VAT 별도)`
+  - 연간 시: `연간 결제는 10% 할인이 적용됩니다.`
+  - 확인 → 비밀번호 게이트 → mutation.
+- 금액 계산: `usePlans` 활용, 프로모션 활성 client 는 `activePromotion.monthlyPrice` 우선 (HOTFIX 23 정합).
+
+**`src/shared/i18n/locales/{ko,en}.ts`**:
+- `billing.nextChargeAmount`, `billing.cycleChangeConfirm.title`, `billing.cycleChangeConfirm.body` 신규.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+### 테스트 시나리오
+
+1. 프리미엄 월간 → 스탠다드 연간 다운그레이드 → 안내 2줄 (적용일 + 청구 예정 금액) 표시.
+2. 다운그레이드 mutation seats = client.seats (실 청구와 표시 일치).
+3. SubscriptionActionSection "연간 변경 예약" 클릭 → confirm 다이얼로그 (다음 결제일 + 금액 + 10% 할인 안내) → 확인 → 비밀번호 → 예약.
+4. 프로모션 활성 client 는 promotion.monthlyPrice 기준 표시.
+
 ## v001.384.0
 
 > 통합일: 2026-05-21
