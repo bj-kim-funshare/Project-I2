@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.421.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 2 — FE refresh 3 경로 쿠키 기반 통합)
+
+### 배경
+
+HOTFIX 1 으로 ts-node 부팅 차단 (TS2339) 을 해소 후 마스터가 dev 환경 E2E 테스트 진행. 페이지를 전환할 때마다 강제 로그아웃되어 서비스 사용 불가 수준. console 신호: `ApiException: Refresh token not found`, SSE `/api/sse/connect` 403, `[requestSaveDataViewerChanges] 일부 저장 실패`.
+
+원인 — refresh token 채널의 쿠키 이관이 절반만 완료되어 있음:
+- BE 측: `data-craft-server/src/controllers/auth.controller.ts` L85/L167/L195 가 `res.cookie('refreshToken', ...)` HttpOnly 쿠키로 발급, L157 가 `req.cookies?.refreshToken` 으로 수신 — 단일 채널 이관 완료.
+- FE 측: 3개 refresh 함수가 옛 body-based 흐름 그대로 잔존. `tokenStorage.getRefreshToken()` → 항상 null → 즉시 실패. JSON body 에 `{ refreshToken }` 동봉. response 에서 `data.refreshToken` 을 읽어 저장 시도.
+
+연쇄: access token 만료 (또는 SSE 가 401 수신) → refresh 시도 → 즉시 실패 → `handleAuthFailure` / `onAuthRequired` → `clearAuth` → 로그인 페이지 강제 이동.
+
+### HOTFIX 2 결과
+
+데이터크래프트 FE (`data-craft`, `1ca6a0d7`) — 3 file 수정 (+13 / -25):
+
+- `packages/fs-api/src/core/tokenRefresh.ts` (L56–88) — fs-api 의 1차 refresh 함수.
+- `src/app/providers/AuthProvider.tsx` (L43–76) — 앱 부트스트랩 시 수동 refresh.
+- `src/app/providers/SseProvider.tsx` (L75–88) — SSE 401 발생 시 refresh 콜백.
+
+세 곳 동일 패턴 적용:
+- `tokenStorage.getRefreshToken()` 사전 가드 / `body: JSON.stringify({ refreshToken })` 동봉 제거.
+- `credentials: 'include'` 옵션 추가 — HttpOnly 쿠키가 fetch 에 자동 동봉.
+- `setTokens(accessToken, null)` — FE 가 refresh token 을 로컬 저장하지 않도록 통일 (보안 정책 § refresh token 채널 — HttpOnly cookie only 준수).
+
+### 인프라 검증
+
+advisor 핫픽스 검토에서 3건 사전 확인:
+- `data-craft-server/src/app.ts` L52 `app.use(cookieParser())` 마운트 — 정상.
+- CORS origin 화이트리스트 정규식 `/^https?:\/\/([\w-]+\.)?localhost(:\d+)?$/` 가 `http://localhost:5173` 매칭 + `credentials: true` 설정 — 정상.
+- 쿠키 `path: '/api/auth'` 범위 — refresh 엔드포인트 `/api/auth/refresh` 가 그 아래라 정상.
+
+### 검증
+
+- lint gate: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- 메인 세션 부팅 smoke test 는 메모리 정책 (요청 없는 dev 서버 기동 금지) 으로 미실행 — 마스터가 직접 `pnpm dev` 양쪽 재기동으로 E2E 검증.
+
+### 비고 — 잔존 의제
+
+- `useSignin.ts` L78–79 의 `setTokens(data.accessToken, data.refreshToken || null)` 은 `|| null` 단락으로 무해하지만 dead field 잔존 — 후속 정리 후보.
+- `entities/auth/model/authStore.ts` 의 tokenStorage 사용도 동일 검토 필요 — 본 핫픽스 범위 외.
+- `acquireTimeout` mysql2 경고는 HOTFIX 1 비고와 동일하게 범위 외 유지.
+
 ## v001.420.0
 
 > 통합일: 2026-05-21
