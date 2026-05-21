@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.409.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #145
+
+### 페이즈 결과
+
+- **Phase 1 (`cc25501b`)**: 공유 컴포넌트 `AuthPage.tsx` 푸터의 라벨 배열 `(['이용약관', '개인정보 처리방침', '고객지원'])` 를 `{label, href}` 객체 배열로 교체, 각 `<a>` 에 `href` · `target="_blank"` · `rel="noopener noreferrer"` 부착. 매핑: 이용약관 → `https://funshare.co.kr/terms`, 개인정보 처리방침 → `https://funshare.co.kr/privacy`, 고객지원 → `https://funshare.co.kr/support`. 5개 인증 페이지(SigninPage / SignupPage / SubdomainLoginPage / SubdomainRegisterPage / ResetPasswordRequestPage) 가 본 컴포넌트를 공유하므로 단일 편집으로 일괄 반영. ReactivatePage · PendingApprovalPage 는 자체 레이아웃이라 영향 없음.
+
+### 영향 파일
+
+**data-craft**
+- `src/shared/ui/auth/AuthPage.tsx`
+
+### 비고
+
+- funshare.co.kr 측 `/terms` · `/privacy` · `/support` 페이지의 실제 경로 운영 여부는 본 플랜 범위 외. 마케팅/운영 측 후속 시 핫픽스 한 번이면 URL 교체 가능.
+
 ## v001.408.0
 
 > 통합일: 2026-05-21
