@@ -676,58 +676,9 @@ function renderPieCompareList(listId, currRows, prevRows, labelKey, valueKey) {
   el.hidden = false;
 }
 
-function renderChartSessionBar(data, opts) {
-  const chartKey = (opts && opts.chartKey) || 'sessionBar';
-  const canvasSel = (opts && opts.canvasSel) || '#chart-session-bar canvas';
-  destroyChart(chartKey);
-  const rows = (data.by_session || [])
-    .filter(s => (s.tokens && s.tokens.messages) > 0)
-    .slice()
-    .sort((a, b) => totalTokens(b.tokens) - totalTokens(a.tokens))
-    .slice(0, 10);
-  const ctx = $(canvasSel);
-  if (!ctx || !rows.length) return;
-  charts[chartKey] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: rows.map(r => shortSha(r.session_id)),
-      datasets: [{
-        label: '총 토큰',
-        data: rows.map(r => totalTokens(r.tokens)),
-        backgroundColor: rows.map((_, i) => PALETTE[i % PALETTE.length]),
-      }],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (c) => `${fmtKMB(c.parsed.x)} 토큰`,
-            afterLabel: (c) => {
-              const r = rows[c.dataIndex];
-              const skills = (r.skills || []).filter(s => s !== '(no-skill)');
-              const lines = [
-                `시작: ${shortTime(r.first_timestamp)}`,
-                `종료: ${shortTime(r.last_timestamp)}`,
-                `메시지: ${fmtNum(r.tokens.messages)}`,
-                `주 모델: ${r.model_primary || '?'}`,
-              ];
-              if (skills.length) lines.push(`스킬: ${skills.join(', ')}`);
-              return lines;
-            },
-          },
-        },
-      },
-    },
-  });
-}
-
-function renderChartAgentBar(data) {
+function renderChartAgentBar(data, opts) {
   destroyChart('agentBar');
+  const compareData = (opts && opts.compareData) || null;
   const rows = (data.by_agent || [])
     .slice()
     .sort((a, b) => {
@@ -790,6 +741,60 @@ function renderChartAgentBar(data) {
       },
     },
   });
+
+  if (compareData) {
+    const card = ctx.closest('#chart-agent-bar');
+    if (card) {
+      let legendEl = card.querySelector('.chart-legend');
+      if (!legendEl) {
+        legendEl = document.createElement('div');
+        legendEl.className = 'chart-legend';
+        card.appendChild(legendEl);
+      }
+      const prevMap = {};
+      for (const r of (compareData.by_agent || [])) {
+        prevMap[r.agent] = (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0);
+      }
+      const prevTotal = Object.values(prevMap).reduce((a, v) => a + v, 0);
+      const labels = rows.map(r => r.agent);
+      const values = rows.map(r => (r.input || 0) + (r.output || 0) + (r.cache_creation_5m || 0) + (r.cache_creation_1h || 0) + (r.cache_read || 0));
+      const bgs = labels.map((_, i) => PALETTE[i % PALETTE.length]);
+      legendEl.innerHTML = '';
+      labels.forEach((label, i) => {
+        const li = document.createElement('div');
+        li.className = 'chart-legend-item';
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = bgs[i];
+        const textBox = document.createElement('span');
+        textBox.className = 'text';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'label';
+        labelEl.textContent = label === '신규' ? label : label;
+        textBox.appendChild(labelEl);
+        const curVal = values[i];
+        const prevVal = prevMap[label];
+        if (prevVal == null) {
+          const newEl = document.createElement('span');
+          newEl.className = 'delta up';
+          newEl.textContent = '신규';
+          textBox.appendChild(newEl);
+        } else {
+          const absDelta = curVal - prevVal;
+          if (Math.abs(absDelta) >= 1) {
+            const deltaEl = document.createElement('span');
+            deltaEl.className = 'delta ' + (absDelta >= 0 ? 'up' : 'down');
+            const sign = absDelta >= 0 ? '▲' : '▼';
+            deltaEl.textContent = `${sign} ${absDelta >= 0 ? '+' : ''}${fmtKMB(absDelta)}`;
+            textBox.appendChild(deltaEl);
+          }
+        }
+        li.appendChild(dot);
+        li.appendChild(textBox);
+        legendEl.appendChild(li);
+      });
+    }
+  }
 }
 
 function renderChartPromptBar(data) {
@@ -866,55 +871,6 @@ function renderChartDayCost(data) {
       },
     },
   });
-}
-
-// ---------- Tables ----------
-
-function renderByModel(rows) {
-  return table(
-    ['모델', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read', '비용'],
-    rows.map(r => [
-      escapeHtml(r.model), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
-      fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
-      USD(r.cost_usd || 0),
-    ]),
-  );
-}
-
-function renderBySkill(rows) {
-  return table(
-    ['스킬', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read'],
-    rows.map(r => [
-      escapeHtml(r.skill), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
-      fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
-    ]),
-  );
-}
-
-function renderByDay(rows) {
-  return table(
-    ['일자', 'messages', 'input', 'output', 'cache write 5m', 'cache write 1h', 'cache read', '비용'],
-    rows.map(r => [
-      escapeHtml(r.day), fmtNum(r.messages), fmtNum(r.input), fmtNum(r.output),
-      fmtNum(r.cache_creation_5m), fmtNum(r.cache_creation_1h), fmtNum(r.cache_read),
-      USD(r.cost_usd || 0),
-    ]),
-  );
-}
-
-function renderBySession(rows) {
-  const live = rows.filter(s => (s.tokens && s.tokens.messages) > 0);
-  return table(
-    ['session', '시작', '종료', '주 모델', '메시지', 'skills'],
-    live.slice(0, 50).map(r => [
-      shortSha(r.session_id),
-      shortTime(r.first_timestamp),
-      shortTime(r.last_timestamp),
-      escapeHtml(r.model_primary || '?'),
-      fmtNum(r.tokens.messages),
-      (() => { const live = (r.skills || []).filter(s => s !== '(no-skill)'); return live.length ? escapeHtml(live.join(', ')) : '<i>(no-skill)</i>'; })(),
-    ]),
-  );
 }
 
 // ---------- Skill Invocations ----------
@@ -1359,7 +1315,8 @@ function loadSkillInvocations(data) {
 
 let _aggregateCache = null;
 let _hourlyCache = null;
-let _autoRefreshInFlight = false;
+let _pickerState = { left: null, right: null };
+let _allWeeklyKeys = [];
 
 async function loadAggregate() {
   if (_aggregateCache) return _aggregateCache;
@@ -1494,135 +1451,6 @@ function updateUrl(unit, key) {
   history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
 }
 
-function renderAll(data, compareData) {
-  const aggData = _aggregateCache || data;
-  renderKpi(data);
-  renderChartDayTokens(aggData, { skillCountsByDay: computeSkillCountByDay(aggData.by_skill_invocation || []) });
-  if (compareData) {
-    const prevTotal = compareData.total || {};
-    const prevCacheRows = [
-      { val: (prevTotal.input || 0) + (prevTotal.output || 0) },
-      { val: (prevTotal.cache_creation_5m || 0) + (prevTotal.cache_creation_1h || 0) },
-      { val: prevTotal.cache_read || 0 },
-    ];
-    renderChartModelDonut(data, { prevRows: compareData.by_model || [] });
-    renderChartSkillDonut(data, { prevRows: compareData.by_skill || [] });
-    renderChartCacheDonut(data, { prevRows: prevCacheRows });
-  } else {
-    renderChartModelDonut(data);
-    renderChartSkillDonut(data);
-    renderChartCacheDonut(data);
-  }
-  renderChartSessionBar(data);
-  renderChartAgentBar(aggData);
-  renderChartDayCost(aggData);
-  renderChartPromptBar(data);
-
-  renderChartModelDonut(data, { chartKey: 'modelDonutDetail', canvasSel: '#chart-detail-model' });
-  renderChartSkillDonut(data, { chartKey: 'skillDonutDetail', canvasSel: '#chart-detail-skill' });
-  renderChartDayTokens(aggData, { chartKey: 'dayTokensDetail', canvasSel: '#chart-detail-day' });
-  renderChartSessionBar(data, { chartKey: 'sessionBarDetail', canvasSel: '#chart-detail-session' });
-
-  $('#by-model').innerHTML = renderByModel(data.by_model || []);
-  $('#by-skill').innerHTML = renderBySkill(data.by_skill || []);
-  $('#by-day').innerHTML = renderByDay(data.by_day || []);
-  $('#by-session').innerHTML = renderBySession(data.by_session || []);
-}
-
-function render(data) {
-  $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
-
-  if (data.error) {
-    const err = $('#error');
-    err.hidden = false;
-    err.textContent = data.error;
-    return;
-  }
-
-  renderAll(data);
-  applyDeltaBadges(data);
-}
-
-function populatePeriodKeys(periodsIndex, unit) {
-  const keyEl = $('#period-key');
-  keyEl.innerHTML = '';
-  if (!unit || unit === 'all' || unit === 'realtime') {
-    keyEl.disabled = true;
-    keyEl.innerHTML = '<option value="">—</option>';
-    return;
-  }
-  const keys = ((periodsIndex || {})[unit] || []).slice().sort().reverse();
-  if (!keys.length) {
-    keyEl.disabled = true;
-    keyEl.innerHTML = '<option value="">—</option>';
-    return;
-  }
-  let displayKeys = keys;
-  if (unit === 'weekly') {
-    const { year: cy, week: cw } = dateToIsoWeek(new Date());
-    const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
-    displayKeys = keys.filter(k => k !== currentWeekKey);
-  }
-  if (!displayKeys.length) {
-    keyEl.disabled = true;
-    keyEl.innerHTML = '<option value="">—</option>';
-    return;
-  }
-  if (unit === 'weekly') {
-    keyEl.innerHTML = displayKeys.map(k => `<option value="${k}">${formatWeekLabel(k)}</option>`).join('');
-  } else {
-    keyEl.innerHTML = displayKeys.map(k => `<option value="${k}">${k}</option>`).join('');
-  }
-  keyEl.disabled = false;
-}
-
-function populateCompareTarget(periodsIndex, unit, selectedKey) {
-  const el = document.getElementById('period-compare-target');
-  if (!el) return;
-  el.innerHTML = '<option value="">없음</option>';
-  if (!unit || unit === 'all') {
-    el.disabled = true;
-    return;
-  }
-  if (unit === 'realtime') {
-    const REALTIME_OPTIONS = [
-      { value: '1', label: '1시간 전' },
-      { value: '3', label: '3시간 전' },
-      { value: '7', label: '7시간 전' },
-      { value: '24', label: '24시간 전' },
-      { value: '48', label: '2일 전' },
-      { value: '72', label: '3일 전' },
-      { value: '120', label: '5일 전' },
-    ];
-    for (const opt of REALTIME_OPTIONS) {
-      const o = document.createElement('option');
-      o.value = opt.value;
-      o.textContent = opt.label;
-      el.appendChild(o);
-    }
-    el.disabled = false;
-    return;
-  }
-  const { year: cy, week: cw } = dateToIsoWeek(new Date());
-  const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
-  let keys = ((periodsIndex || {})[unit] || []).slice().sort().reverse();
-  keys = keys.filter(k => k !== selectedKey);
-  if (unit === 'weekly') {
-    keys = keys.filter(k => k !== currentWeekKey);
-  }
-  if (!keys.length) {
-    el.disabled = true;
-    return;
-  }
-  for (const k of keys) {
-    const opt = document.createElement('option');
-    opt.value = k;
-    opt.textContent = unit === 'weekly' ? formatWeekLabel(k) : k;
-    el.appendChild(opt);
-  }
-  el.disabled = false;
-}
-
 function updateLastRefreshDisplay() {
   const el = document.getElementById('last-refresh-time');
   if (!el) return;
@@ -1633,97 +1461,136 @@ function updateLastRefreshDisplay() {
   el.textContent = `마지막 새로고침: ${hh}:${mm}:${ss}`;
 }
 
-async function applyPeriodSelection(unit, key, periodsIndex) {
+// ---------- Weekly picker functions ----------
+
+async function loadWeekly(weekKey) {
+  return loadPeriodData('weekly', weekKey);
+}
+
+async function listWeeklyKeys() {
+  const agg = await loadAggregate();
+  const pi = (agg.periods_index || {});
+  const keys = (pi.weekly || []).slice().sort().reverse();
+  return keys;
+}
+
+function weekDropdownLabel(weekKey, allKeys) {
+  const m = weekKey.match(/^(\d{4})-W(\d+)$/);
+  if (!m) return weekKey;
+  const year = parseInt(m[1], 10);
+  const week = parseInt(m[2], 10);
+  const monday = isoWeekToDate(year, week);
+  const md = String(monday.getUTCMonth() + 1);
+  const dd = String(monday.getUTCDate());
+  const idx = allKeys.indexOf(weekKey);
+  if (idx === 0) return `이번 주 (${weekKey})`;
+  if (idx === 1) return `지난 주 (${weekKey})`;
+  return `${weekKey} (${md}월 ${dd}일 주)`;
+}
+
+function renderCustomDropdown(rootEl, options, selectedKey, onChange) {
+  if (!rootEl) return;
+  const toggle = rootEl.querySelector('.cdrop-toggle');
+  const menu = rootEl.querySelector('.cdrop-menu');
+  if (!toggle || !menu) return;
+
+  const selectedOpt = options.find(o => o.value === selectedKey) || options[0];
+
+  const newToggle = toggle.cloneNode(false);
+  newToggle.textContent = selectedOpt ? selectedOpt.label : '—';
+  toggle.parentNode.replaceChild(newToggle, toggle);
+  newToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = rootEl.classList.contains('is-open');
+    document.querySelectorAll('.cdrop.is-open').forEach(el => el.classList.remove('is-open'));
+    if (!isOpen) rootEl.classList.add('is-open');
+  });
+
+  const newMenu = menu.cloneNode(false);
+  menu.parentNode.replaceChild(newMenu, menu);
+  options.forEach((opt) => {
+    const li = document.createElement('li');
+    li.className = 'cdrop-item' + (opt.value === selectedKey ? ' is-active' : '');
+    li.setAttribute('role', 'option');
+    li.setAttribute('tabindex', '-1');
+    li.dataset.value = opt.value;
+    li.textContent = opt.label;
+    li.addEventListener('click', () => {
+      rootEl.classList.remove('is-open');
+      if (opt.value !== selectedKey) {
+        onChange(opt.value);
+      }
+    });
+    newMenu.appendChild(li);
+  });
+
+  newMenu.addEventListener('keydown', (e) => {
+    const items = Array.from(newMenu.querySelectorAll('.cdrop-item'));
+    const focused = document.activeElement;
+    const idx = items.indexOf(focused);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = items[idx + 1] || items[0];
+      next && next.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = items[idx - 1] || items[items.length - 1];
+      prev && prev.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      focused && focused.click();
+    } else if (e.key === 'Escape') {
+      rootEl.classList.remove('is-open');
+      newToggle.focus();
+    }
+  });
+}
+
+function enforceLeftRightOrder(state, allKeys) {
+  if (!state.right || !state.left) return;
+  if (state.right >= state.left) {
+    const pastKeys = allKeys.filter(k => k < state.left);
+    state.right = pastKeys.length > 0 ? pastKeys[0] : state.left;
+  }
+}
+
+async function applyWeekSelection(state) {
   const err = $('#error');
   err.hidden = true;
-  const compareTargetEl = document.getElementById('period-compare-target');
-  const compareKey = compareTargetEl && !compareTargetEl.disabled ? compareTargetEl.value : '';
-
-  const keyEl = $('#period-key');
-  if (unit === 'realtime') {
-    keyEl.style.display = 'none';
-  } else {
-    keyEl.style.display = '';
-  }
-
   try {
-    if (unit === 'realtime') {
-      const hoursBack = parseInt(compareKey, 10) || 0;
-      let hourly;
-      try {
-        hourly = await loadHourlyData();
-      } catch (fetchErr) {
-        $('#meta').textContent = `실시간 데이터 없음 — collect.py 실행 필요`;
-        err.hidden = false;
-        err.textContent = `${fetchErr.message}`;
-        updateUrl('realtime', null);
-        return;
-      }
-      const now = Date.now();
-      const windows = computeRealtimeWindows(now, hoursBack);
-      const baseData = aggregateHoursInWindow(hourly.hours, windows.baseStart, windows.baseEnd);
-      let compareData = null;
-      if (windows.compareStart != null) {
-        compareData = aggregateHoursInWindow(hourly.hours, windows.compareStart, windows.compareEnd);
-      }
-      // preload aggregate so _aggregateCache is set before renderAll uses it for day charts
-      await loadAggregate().catch(() => null);
-      // fallback: inject current week's session/prompt data into realtime base
-      try {
-        const { year: cy, week: cw } = dateToIsoWeek(new Date());
-        const currentWeekKey = `${cy}-W${String(cw).padStart(2, '0')}`;
-        const weeklyFallback = await loadPeriodData('weekly', currentWeekKey);
-        baseData.by_session = weeklyFallback.by_session || [];
-        baseData.by_prompt = weeklyFallback.by_prompt || [];
-      } catch (_) { /* 현재 주 데이터 없으면 빈 채로 유지 */ }
-      if (compareData) {
-        const hoursLabel = compareKey === '48' ? '2일' : compareKey === '72' ? '3일' : compareKey === '120' ? '5일' : `${compareKey}시간`;
-        $('#meta').textContent = `실시간: 최근 ${hoursLabel} vs 그 이전 ${hoursLabel} (동일 창폭 비교)`;
-      } else {
-        $('#meta').textContent = `실시간: 최근 5일`;
-      }
-      renderAll(baseData, compareData);
-      if (compareData) {
-        applyDeltaBadgesFromValues(computeKpiSnapshot(compareData), computeKpiSnapshot(baseData));
-      } else {
-        clearDeltaBadges();
-      }
-      updateUrl('realtime', null);
-    } else if (!unit || unit === 'all') {
-      const data = await loadAggregate();
-      $('#meta').textContent = `생성일: ${shortTime(data.generated_at)} | 처리된 세션: ${data.files_processed}`;
-      renderAll(data);
-      applyDeltaBadges(data);
-      clearPieCompareLists();
-      updateUrl('all', null);
-    } else {
-      const data = await loadPeriodData(unit, key);
-      const agg = await loadAggregate();
-      const idx = periodsIndex || (agg.periods_index || {});
+    const [leftData, rightData, aggregateData] = await Promise.all([
+      loadWeekly(state.left),
+      loadWeekly(state.right),
+      loadAggregate(),
+    ]);
 
-      if (compareKey && compareKey !== key) {
-        const compareKeys = idx[unit] || [];
-        if (compareKeys.includes(compareKey)) {
-          const compareData = await loadPeriodData(unit, compareKey);
-          $('#meta').textContent = `기간: ${key} vs ${compareKey} (비교) | 생성일: ${shortTime(agg.generated_at)}`;
-          renderAll(data, compareData);
-          applyDeltaBadgesFromValues(computeKpiSnapshot(compareData), computeKpiSnapshot(data));
-        } else {
-          $('#meta').textContent = `기간: ${key} | 비교 불가: 선택한 비교 기간 데이터 없음 | 생성일: ${shortTime(agg.generated_at)}`;
-          clearDeltaBadges();
-          renderAll(data);
-        }
-      } else {
-        $('#meta').textContent = `기간: ${key} | 생성일: ${shortTime(agg.generated_at)}`;
-        clearDeltaBadges();
-        renderAll(data);
-      }
-      updateUrl(unit, key);
-    }
+    $('#meta').textContent = `기간: ${state.left} vs ${state.right} | 생성일: ${shortTime(aggregateData.generated_at)}`;
+
+    renderKpi(leftData);
+    applyDeltaBadgesFromValues(computeKpiSnapshot(rightData), computeKpiSnapshot(leftData));
+
+    const rightTotal = rightData.total || {};
+    const prevCacheRows = [
+      { val: (rightTotal.input || 0) + (rightTotal.output || 0) },
+      { val: (rightTotal.cache_creation_5m || 0) + (rightTotal.cache_creation_1h || 0) },
+      { val: rightTotal.cache_read || 0 },
+    ];
+    renderChartModelDonut(leftData, { prevRows: rightData.by_model || [] });
+    renderChartSkillDonut(leftData, { prevRows: rightData.by_skill || [] });
+    renderChartCacheDonut(leftData, { prevRows: prevCacheRows });
+
+    renderChartAgentBar(leftData, { compareData: rightData });
+
+    loadSkillInvocations(leftData);
+    renderChartPromptBar(leftData);
+
+    renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []) });
+    renderChartDayCost(aggregateData);
+
     updateLastRefreshDisplay();
   } catch (e) {
     err.hidden = false;
-    err.textContent = `기간 데이터 로딩 실패: ${e.message}`;
+    err.textContent = `주간 데이터 로딩 실패: ${e.message}`;
   }
 }
 
@@ -1739,9 +1606,7 @@ async function refresh() {
     }
     _aggregateCache = null;
     _hourlyCache = null;
-    const unit = $('#period-unit').value;
-    const key = $('#period-key').value;
-    await applyPeriodSelection(unit, key);
+    await applyWeekSelection(_pickerState);
   } catch (e) {
     const err = $('#error');
     err.hidden = false;
@@ -1755,10 +1620,12 @@ async function refresh() {
 document.addEventListener('DOMContentLoaded', async () => {
   $('#refresh-btn').addEventListener('click', refresh);
 
-  // Wire modal close: backdrop/close button clicks and ESC key
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-close-modal]')) {
       closeSkillInvocationModal();
+    }
+    if (!e.target.closest('.cdrop')) {
+      document.querySelectorAll('.cdrop.is-open').forEach(el => el.classList.remove('is-open'));
     }
   });
   document.addEventListener('keydown', (e) => {
@@ -1771,100 +1638,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   try {
-    const agg = await loadAggregate();
+    const allKeys = await listWeeklyKeys();
+    _allWeeklyKeys = allKeys;
 
-    // Load skill invocations once from the unfiltered full aggregate (not affected by period/compare toggles)
-    loadSkillInvocations(agg);
+    _pickerState.left = allKeys[0] || null;
+    _pickerState.right = allKeys[1] || allKeys[0] || null;
 
-    const urlParams = new URLSearchParams(location.search);
-    const initUnit = urlParams.get('period') || 'all';
-    const initKey = urlParams.get('key') || '';
-
-    const periodsIndex = agg.periods_index || {};
-
-    const unitEl = $('#period-unit');
-    const keyEl = $('#period-key');
-    const compareTargetEl = document.getElementById('period-compare-target');
-
-    unitEl.value = initUnit;
-    populatePeriodKeys(periodsIndex, initUnit);
-
-    if (initUnit !== 'all' && initUnit !== 'realtime' && initKey) {
-      const validKeys = (periodsIndex[initUnit] || []);
-      if (validKeys.includes(initKey)) {
-        keyEl.value = initKey;
-      } else {
-        unitEl.value = 'all';
-        populatePeriodKeys(periodsIndex, 'all');
-      }
+    function buildLeftOptions() {
+      return allKeys.map(k => ({ value: k, label: weekDropdownLabel(k, allKeys) }));
     }
 
-    const resolvedUnit = unitEl.value;
-    const resolvedKey = keyEl.value;
-    populateCompareTarget(periodsIndex, resolvedUnit, resolvedKey);
-
-    const initCompare = urlParams.get('compare') || '';
-    if (initCompare && compareTargetEl && !compareTargetEl.disabled) {
-      compareTargetEl.value = initCompare;
+    function buildRightOptions(leftKey) {
+      const past = allKeys.filter(k => k < leftKey);
+      return past.map(k => ({ value: k, label: weekDropdownLabel(k, allKeys) }));
     }
 
-    unitEl.addEventListener('change', () => {
-      const unit = unitEl.value;
-      populatePeriodKeys(periodsIndex, unit);
-      populateCompareTarget(periodsIndex, unit, keyEl.value);
-      if (unit === 'realtime') {
-        applyPeriodSelection('realtime', null, periodsIndex);
-      } else if (unit === 'all') {
-        applyPeriodSelection('all', null, periodsIndex);
-      } else {
-        const key = keyEl.value;
-        if (key) applyPeriodSelection(unit, key, periodsIndex);
-      }
-    });
+    const leftEl = document.getElementById('week-picker-left');
+    const rightEl = document.getElementById('week-picker-right');
 
-    keyEl.addEventListener('change', () => {
-      const unit = unitEl.value;
-      const key = keyEl.value;
-      populateCompareTarget(periodsIndex, unit, key);
-      if (unit !== 'all' && key) applyPeriodSelection(unit, key, periodsIndex);
-    });
-
-    if (compareTargetEl) {
-      compareTargetEl.addEventListener('change', () => {
-        const unit = unitEl.value;
-        const key = keyEl.value;
-        if (unit === 'realtime') {
-          applyPeriodSelection('realtime', null, periodsIndex);
-        } else if (unit !== 'all' && key) {
-          applyPeriodSelection(unit, key, periodsIndex);
-        }
+    function rebuildDropdowns() {
+      renderCustomDropdown(leftEl, buildLeftOptions(), _pickerState.left, (newKey) => {
+        _pickerState.left = newKey;
+        enforceLeftRightOrder(_pickerState, allKeys);
+        rebuildDropdowns();
+        applyWeekSelection(_pickerState);
+      });
+      renderCustomDropdown(rightEl, buildRightOptions(_pickerState.left), _pickerState.right, (newKey) => {
+        _pickerState.right = newKey;
+        applyWeekSelection(_pickerState);
       });
     }
 
-    const currentUnit = unitEl.value;
-    const currentKey = keyEl.value;
-    if (currentUnit === 'realtime') {
-      await applyPeriodSelection('realtime', null, periodsIndex);
-    } else if (currentUnit !== 'all' && currentKey) {
-      await applyPeriodSelection(currentUnit, currentKey, periodsIndex);
+    if (allKeys.length > 0) {
+      rebuildDropdowns();
+      await applyWeekSelection(_pickerState);
     } else {
-      render(agg);
-      updateLastRefreshDisplay();
+      const err = $('#error');
+      err.hidden = false;
+      err.textContent = '주간 데이터 없음 — collect.py 실행 필요.';
     }
-
-    const AUTO_REFRESH_MS = 60_000;
-    const autoRefreshHandle = setInterval(async () => {
-      if (_autoRefreshInFlight) return;
-      _autoRefreshInFlight = true;
-      try {
-        await refresh();
-      } catch (_) {
-        // 자동 새로고침 실패는 조용히 무시 (수동 버튼은 사용자에게 노출)
-      } finally {
-        _autoRefreshInFlight = false;
-      }
-    }, AUTO_REFRESH_MS);
-    window.addEventListener('beforeunload', () => clearInterval(autoRefreshHandle));
   } catch (e) {
     const err = $('#error');
     err.hidden = false;
