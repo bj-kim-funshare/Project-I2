@@ -509,6 +509,13 @@ i { color: var(--muted); }
 .chart-legend-item .delta.up { color: #3b82f6; }
 .chart-legend-item .delta.down { color: #ef4444; }
 
+.chart-legend-agent-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  font-size: 11px;
+}
+
 /* ================= REALTIME MODE ================= */
 .period-key-hidden { display: none; }
 
