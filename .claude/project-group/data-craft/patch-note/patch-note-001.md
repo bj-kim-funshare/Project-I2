@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.381.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #141 (HOTFIX 1 — TS2769 회귀 해소)
+
+### 개요
+
+v001.380.0 (Phase 4 — TOKEN_EXPIRES.ACCESS env-driven getter) 머지 직후 마스터 dev 서버 ts-node 컴파일 실패 보고. nodemon 출력에 `TS2769 No overload matches this call ... Type 'string' is not assignable to type 'number | StringValue | undefined'` 두 건 + `logger.info({...}) 객체→string` 세 건.
+
+### 원인
+
+1. `TOKEN_EXPIRES.ACCESS` 를 정적 const → getter 로 전환하면서 반환 타입이 literal `'15m'` 에서 wide `string` 으로 바뀜. jwt.sign 의 `expiresIn: number | ms.StringValue | undefined` 와 호환 불일치. `TOKEN_EXPIRES.REFRESH` 도 원래 `'14d'` 가 객체 리터럴 속성으로 `string` 추론되어 동일 문제 잠재.
+2. Phase 3 의 `logger.info({...})` 객체 단일 인자 호출이 logger 시그니처 `(message: string, context?: object)` 와 불일치. ESLint 가 typecheck 를 안 돌리는 `pnpm lint` 단독 구성이라 사전에 못 잡힘.
+
+### 변경 — data-craft-server (`4f43023` + `df9eebd` + `b02aa84`, merge `<머지 SHA>`)
+
+**`src/config/constant.ts`**:
+- `jwt` import 추가.
+- `TOKEN_EXPIRES.ACCESS` getter 반환 타입을 `NonNullable<jwt.SignOptions['expiresIn']>` 으로 명시.
+- 각 return 에 `as NonNullable<jwt.SignOptions['expiresIn']>` cast.
+- `TOKEN_EXPIRES.REFRESH: '14d'` 도 같은 cast 적용 (회귀 잠재 차단).
+
+**`src/services/auth.service.ts`**:
+- `logger.warn(obj)` / `logger.info(obj)` 3건을 `(message, context)` 2-인자 시그니처로 정합. message 와 context.event 둘 다 대괄호 포함 일관 마커 (`[GRACE-HIT]` / `[GRACE-MISS]` / `[GRACE-DEDUP-LOCK]`) 로 통일 — 매뉴얼 테스트 문서·v001.380.0 patch-note 의 grep 가이드와 정합.
+- `userId: String(user.id)` 변환 (LogContext.userId 타입 정합).
+
+### 검증
+
+- `pnpm tsc --noEmit` → 0 에러.
+- `pnpm lint` → 0 에러.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/config/constant.ts`
+- `src/services/auth.service.ts`
+
+### 후속 권고 (1차 제외, 별도 결정)
+
+`pnpm lint` 에 `pnpm tsc --noEmit` 를 prefix 로 추가하여 typecheck 회귀를 사전 차단할지 그룹 정책 결정 필요. data-craft (FE) 의 lint 는 이미 `pnpm typecheck:all && pnpm lint` 직렬 — BE 도 동일 패턴 적용 시 본 회귀 사전 차단 가능. 도입은 dev.md `data-craft-server.lint_command` 변경으로 처리.
+
 ## v001.380.0
 
 > 통합일: 2026-05-21
