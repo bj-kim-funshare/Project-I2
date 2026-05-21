@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.375.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 28 — seatChange 협업 프로모션 허용)
+
+### 개요
+
+마스터 보고: 프로모션 인원 관리 진입 시 견적 호출 실패. `GET /api/subscription/seats/change/quote` 400 `SEAT_CHANGE_NOT_APPLICABLE_FOR_PLAN`.
+
+### 원인
+
+`seatChange.service.ts` 의 `isPerUserPlan(client.planType)` 검증이 raw plan_type 만 봄. 프로모션 활성 client 의 plan_type='free' (택일 정책) → 협업 프로모션이라도 차단. HOTFIX 25 가 FE 버튼을 노출했지만 BE 검증이 따라가지 못함.
+
+### 변경 — data-craft-server (`cf73d68`)
+
+**`src/services/seatChange.service.ts`**:
+- `findActiveClientPromotionWithMeta` import 추가.
+- `_changeSeatsImpl` (L50-58) + `getSeatChangeQuote` (L184-192) 양쪽:
+  ```ts
+  const isPerUser = isPerUserPlan(client.planType);
+  let isPromoCollaboration = false;
+  if (!isPerUser) {
+    const meta = await findActiveClientPromotionWithMeta(companyId);
+    isPromoCollaboration = meta?.isCollaboration === true;
+  }
+  if (!isPerUser && !isPromoCollaboration) {
+    throw new BadRequestError('SEAT_CHANGE_NOT_APPLICABLE_FOR_PLAN');
+  }
+  ```
+- `_changeSeatsImpl` 의 `assertNoActivePromotion` 호출도 협업 프로모션 시 skip:
+  ```ts
+  if (!isPromoCollaboration) {
+    await assertNoActivePromotion(companyId, 'seat-change');
+  }
+  ```
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/seatChange.service.ts`
+
+### 효과
+
+- 협업 프로모션 활성 client → seat change quote / 변경 정상 작동.
+- 비협업 프로모션 client → 기존대로 차단 (정책 일관).
+- 일반 standard / premium client → 기존 동작 그대로.
+
+### 테스트 시나리오
+
+1. 협업 프로모션 활성 client → 인원 관리 → 견적 호출 → **200 응답** (이전: 400 SEAT_CHANGE_NOT_APPLICABLE_FOR_PLAN).
+2. 인원 변경 결제 진행 → 정상 처리.
+3. 비협업 프로모션 client (드문 케이스) → 인원 변경 시 400 (기존 차단 유지).
+
 ## v001.374.0
 
 > 통합일: 2026-05-21
