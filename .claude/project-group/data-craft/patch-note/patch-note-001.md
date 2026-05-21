@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.395.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 44 — 결제 이력 프로모션 라벨에 consumed/max 표기)
+
+### 변경
+
+**data-craft-server (`8f0d7cea`)**:
+- `subscription.service.ts` getSubscriptionStatus 응답의 `activePromotion` 객체에 `consumedRetentionMonths` / `maxRetentionMonths` 필드 추가.
+- `findActiveClientPromotionWithMeta` 가 이미 노출하는 `meta.retentionConsumedMonths` / `meta.snapshotMaxRetentionMonths` 그대로 매핑 — 신규 SQL 없음.
+
+**data-craft (`9a512b3a`)**:
+- `ActivePromotionInfo` 타입에 `consumedRetentionMonths?` / `maxRetentionMonths?` 추가.
+- `PlanTabContent.upcomingPayment` 프로모션 분기 planLabel: `${promotion.name} (프로모션)` → `${promotion.name} (프로모션, N/M개월)`. 둘 중 하나 0/누락 시 기존 폴백.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/subscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/model/types.ts`
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 테스트
+
+1. 프로모션 활성 (consumed=2, max=12) → 결제 이력 예정 행 라벨: "운영 기술 지원 프로모션 (프로모션, 2/12개월)".
+2. 신규 프로모션 (consumed=0) → "(프로모션)" 폴백.
+3. 일반 영구 client → 영향 없음.
+
 ## v001.394.0
 
 > 통합일: 2026-05-21
