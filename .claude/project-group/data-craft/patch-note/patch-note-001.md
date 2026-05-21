@@ -1,5 +1,75 @@
 # data-craft — Patch Note (001)
 
+## v001.405.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 49 — 결제·프로모션 검증 10건 일괄 정정)
+
+### 개요
+
+code-inspector 가 발견한 block 4 + warn 6 = 10건을 권장 순서대로 일괄 정정. 본 commit (`ea5f9e0a`) + 보완 (`19d7ee8`).
+
+### 변경
+
+**#2/#3 — charge.service.ts SEC-SRV-45 PG cancel 누락 (실 금전 노출)**
+- `tossPayments.service.ts` 에 `cancelPayment(paymentKey, reason)` 신규.
+- charge.service.ts 의 직접금액 + price-mirror 양 분기에서 orderId mismatch 시 PG cancel 호출 후 반환. cancel 실패는 logger.error.
+
+**#1 — scheduleDowngrade 트랜잭션**
+- setPendingPlanType + setPendingBillingCycle 두 호출을 단일 트랜잭션으로 묶고 실패 시 rollback.
+
+**#7 — billingRenewal cron 필터 + plan_expires_at 연장**
+- billingScheduler 의 cron 필터에 `active_promotion_id IS NOT NULL` OR 조건 추가.
+- pendingPromotion 자동 적용 후 plan_expires_at +31일 연장.
+- 보완: `renewPromotionClient` Phase C 트랜잭션 내에서도 plan_expires_at +31일 추가.
+
+**#8 — executeUpgradeWithDiff basePlanType 인식**
+- 활성 프로모션 client 의 effectiveCurrentPlan = activePromotion.basePlanType 으로 치환 후 isCommitmentChange / isLevelUp 판정.
+- HOTFIX 33 의 scheduleDowngrade 패턴 동일.
+
+**#4 — cycle + plan/seats 동시 변경 차단**
+- executeUpgradeWithDiff 가 cycle 전환과 plan/seats 변경 동시 요청 시 `BadRequestError('CYCLE_CHANGE_WITH_PLAN_CHANGE_NOT_SUPPORTED')`.
+- 정책: cycle 전환은 단독 (scheduleBillingCycleChange 예약 흐름) 으로만 가능.
+
+**#5/#6 — scheduleBillingCycleChange 가드**
+- 진입부: activePromotion 시 `CYCLE_CHANGE_BLOCKED_BY_PROMOTION`, pendingPlanType 시 `CYCLE_CHANGE_BLOCKED_BY_PENDING_PLAN`.
+- SAME_BILLING_CYCLE 검사: `(pendingBillingCycle ?? billingCycle) === targetCycle` 로 변경.
+
+**#9 — yearly 단가 정정**
+- purchasePromotion / getPromotionQuote: currentCycle yearly 시 PLAN 정가에 0.9 곱셈.
+- 보완: calculateProrationDiff 도 isCurrentFromPromotion / isTargetFromPromotion 플래그로 정가 출처만 0.9 적용 (프로모션 snapshot 은 월 고정 유지).
+
+**#10 — getPromotionQuote seats 검증**
+- isCollab 분기에 `assertValidSeats(seats, p.minUsers ?? 1, p.maxSeats ?? MAX_SEATS_PER_PLAN)` 추가.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/charge.service.ts`
+- `src/services/tossPayments.service.ts` (cancelPayment 신규)
+- `src/services/billingSubscription.service.ts`
+- `src/services/billingRenewal.service.ts`
+- `src/services/billingScheduler.service.ts`
+- `src/services/promotion.service.ts`
+
+### 신규 에러 코드
+- `CYCLE_CHANGE_WITH_PLAN_CHANGE_NOT_SUPPORTED`
+- `CYCLE_CHANGE_BLOCKED_BY_PROMOTION`
+- `CYCLE_CHANGE_BLOCKED_BY_PENDING_PLAN`
+
+### 검증 효과
+
+| # | 효과 |
+|---|------|
+| 2/3 | 결제 보안 검증 실패 시 PG 측 결제도 자동 cancel — 사용자 카드 청구 회수 |
+| 1 | 다운그레이드 + cycle 변경 동시 예약이 원자적으로 적용/롤백 |
+| 7 | 프로모션 client 가 cron 에서 누락되지 않음 + 다음 결제일 정상 갱신 |
+| 8 | 프로모션 client 의 영구 전환 검증이 base_plan_type 기준 정확 |
+| 4 | cycle 변경 시 1년치 무료 노출 차단 |
+| 5/6 | 프로모션 / pending 충돌 케이스 사전 차단 |
+| 9 | 연간 결제 사용자 잔존가치 계산 정확 (정가 ×0.9) |
+| 10 | quote 통과 후 purchase 실패 케이스 방지 |
+
 ## v001.404.0
 
 > 통합일: 2026-05-21
