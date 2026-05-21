@@ -1,5 +1,21 @@
 # 아이OS — Patch Note (001)
 
+## v001.95.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #49
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: 두 SKILL.md 에 integration branch (i-dev / main) origin push 금지 Hard rule 가드 박기 — description 1구절 + Step 10 직후 blockquote (A-1/A-2/B-1/B-2 네 변경, A-2 의 WIP 열거에 핫픽스 정합 추가)
+
+### 영향 파일
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+
+### Treadmill Audit
+NOT APPLICABLE — 메모리 `feedback_plan_enterprise_no_auto_push.md` 의 cross-session policy 를 두 SKILL.md 본문에 inline 명시화한 것으로 신규 invariant 아님, trade-out 대상 없음.
+
 ## v001.94.0
 
 > 통합일: 2026-05-21
