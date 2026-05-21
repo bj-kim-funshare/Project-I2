@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.96.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #48 (HOTFIX 3)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 5 (HOTFIX 3) — Routine cron 표현식 UTC 정정 + UI 동작 메모 추가** (commit `f075aca`): 마스터가 routine 1차 동작 검증 결과 12:37 KST 실행이 정규 동작임을 확인 → Claude Desktop Routine UI 가 cron 을 UTC 로 해석한다는 사실 확정. UI 에 별도 timezone 설정 필드가 없으므로 cron 표현식 자체를 UTC 로 작성해야 함. 의도 시각 KST 03:30 / 15:30 = UTC 18:30 / 06:30. 두 routine 사양서 (`data-craft-review.md` / `data-craft-server-review.md`) 의 메타 표 두 줄 — "실행 시각" 을 `UTC 06:30, 18:30 (= 한국시 Asia/Seoul 15:30, 03:30 다음날)` 로, "Cron" 을 `` `30 6,18 * * *` (UTC — Claude Desktop Routine UI 가 cron 을 UTC 로 해석) `` 로 교체. "환경 가정" 절 끝에 동작 메모 단락 추가 — UI 의 UTC-only 해석 사실 + KST 역산 산식 + v001.92.0 ~ v001.94.0 의 `30 3,15 * * *` 표기가 본 v001.96.0 에서 정정됨 명시 + 향후 routine 신설 시 동일 함정 주의. SKILL.md / bootstrap-safe-issues-prompt.md 는 TZ 와 무관하므로 건드리지 않음. 마스터는 본 hotfix 머지 후 Claude Desktop UI 의 두 routine cron 필드를 `30 6,18 * * *` 로 갱신하면 KST 03:30 / 15:30 정상화.
+
+### 영향 파일
+
+- `.claude/cloud-routines/data-craft-review.md`
+- `.claude/cloud-routines/data-craft-server-review.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 hotfix 는 신규 메커니즘 / 규칙 / 카르베아웃 추가 없음. 순수 사양 정정 + 운영 메모 추가. v001.93.0 의 cross-repo §2 carve-out 그대로 유효.
+
+### 재발 방지 메모
+
+오류 근본 원인: routine 사양 작성 시 "TZ=Asia/Seoul" 을 cron 메타 라벨에 표기하면 UI 가 그 라벨을 해석할 것이라 암묵적으로 가정함. 실제로 Claude Desktop Routine UI 는 cron 표현식만 받고 TZ 라벨은 무시 / UTC 로 고정 해석. 향후 cloud-routine 사양 작성 시: (1) UI 가 받는 입력 (cron expression 문자열) 의 실제 timezone 해석 모드를 사전 확인, (2) 입력 가능 필드 외의 메타 (TZ 등) 는 사양 *문서* 의 보조 설명일 뿐 UI 동작에 영향 없음을 명시.
+
 ## v001.95.0
 
 > 통합일: 2026-05-21
