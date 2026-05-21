@@ -593,25 +593,6 @@ def build_by_skill_invocation(
                                 artifact_kind = "roadmap"
                                 artifact_id = f"Roadmap-{rm_match.group(1)}"
 
-            elif rec_type == "user":
-                tur = rec.get("toolUseResult")
-                if not isinstance(tur, dict):
-                    continue
-                agent_type = tur.get("agentType")
-                if not agent_type:
-                    continue
-                agent_usage = tur.get("usage")
-                if not agent_usage:
-                    continue
-                agent_model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
-                if agent_type not in by_agent:
-                    by_agent[agent_type] = empty_token_record()
-                    by_agent_cost[agent_type] = 0.0
-                add_usage(by_agent[agent_type], agent_usage)
-                rec_tok = empty_token_record()
-                add_usage(rec_tok, agent_usage)
-                by_agent_cost[agent_type] += cost_of(agent_model, rec_tok)
-
         # Attach costs
         main_session["cost_usd"] = round(main_session_cost, 6)  # type: ignore[assignment]
 
@@ -836,6 +817,22 @@ def load_agent_descriptions() -> dict[str, str]:
     }
 
 
+def is_subagent_jsonl(path: Path) -> bool:
+    """Return True when path is a sub-agent JSONL (lives under */subagents/)."""
+    return path.parent.name == "subagents"
+
+
+def read_subagent_meta(path: Path) -> dict[str, Any]:
+    """Return parsed agent-<id>.meta.json for a sub-agent JSONL, or {} on any error."""
+    meta_path = path.parent / (path.stem + ".meta.json")
+    if meta_path.exists():
+        try:
+            return json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
 def parse_jsonl(path: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     try:
@@ -1017,13 +1014,13 @@ def collect() -> dict[str, Any]:
         if not _d.exists():
             continue
         parent_jsonls = sorted(_d.glob("*.jsonl"))
+        sub_jsonls = sorted(_d.glob("*/subagents/*.jsonl"))
         if parent_jsonls:
             all_jsonls.extend(parent_jsonls)
+            all_jsonls.extend(sub_jsonls)  # include sub-agent JSONLs alongside parent
         else:
-            # Parent JSONLs absent (e.g. data-craft) — fall back to surviving sub-agent JSONLs.
-            # Project-I-style directories never hit this branch because their parent JSONLs exist;
-            # therefore toolUseResult.usage-based sub-agent accounting is unaffected (no double count).
-            all_jsonls.extend(sorted(_d.glob("*/subagents/*.jsonl")))
+            # Parent JSONLs absent (e.g. data-craft) — fall back to sub-agent JSONLs only.
+            all_jsonls.extend(sub_jsonls)
     for jsonl_path in sorted(all_jsonls):
         records = parse_jsonl(jsonl_path)
         if not records:
@@ -1031,43 +1028,64 @@ def collect() -> dict[str, Any]:
             continue
         files_processed += 1
 
-        session_id = jsonl_path.stem  # uuid is the session id
-        session_record = {
-            "session_id": session_id,
-            "first_timestamp": None,
-            "last_timestamp": None,
-            "model_primary": None,
-            "tokens": empty_token_record(),
-            "skills": set(),
-            "cwd": None,
-            "git_branch": None,
-        }
+        _is_subagent = is_subagent_jsonl(jsonl_path)
+        if _is_subagent:
+            # Sub-agent JSONL: session_id = parent session uuid (grandparent dir name)
+            session_id = jsonl_path.parent.parent.name
+            _subagent_meta = read_subagent_meta(jsonl_path)
+            _subagent_agent_type: str | None = _subagent_meta.get("agentType") or None
+        else:
+            session_id = jsonl_path.stem  # uuid is the session id
+            _subagent_agent_type = None
+
+        # Reuse existing session_record when sub-agent shares parent's session_id
+        if session_id in by_session:
+            session_record = by_session[session_id]
+            session_record["skills"] = set(session_record["skills"])  # re-open for mutation
+        else:
+            session_record = {
+                "session_id": session_id,
+                "first_timestamp": None,
+                "last_timestamp": None,
+                "model_primary": None,
+                "tokens": empty_token_record(),
+                "skills": set(),
+                "cwd": None,
+                "git_branch": None,
+            }
 
         # Per-period session records: (period_type, period_key) -> session_record dict
         period_session_records: dict[tuple[str, str], dict[str, Any]] = {}
 
         model_counts: dict[str, int] = defaultdict(int)
 
-        # Sticky skill attribution: Claude Code runtime tags attributionSkill only on
-        # the first few assistant turns after a skill invocation; subsequent turns
-        # within the same skill flow drop to None → would fall back to "메인 세션",
-        # heavily under-attributing skills. Carry the last seen attributionSkill
-        # forward within a session until another non-null attributionSkill appears.
-        sticky_skill: str = "메인 세션"
-        # Master-declared skill = the most recent skill explicitly invoked by master
-        # via /X. Tracked separately from sticky_skill so that inner-skill drift
-        # (e.g. runtime tagging dev-start during an internal Skill tool call inside
-        # a plan-enterprise window) doesn't permanently change the outer attribution.
-        # On the next plain master prompt during a gated outer skill (PENDING gate),
-        # sticky_skill reverts to master_declared_skill — the runtime stops tagging
-        # raw=attributionSkill after the first few turns, so without this revert,
-        # post-inner-skill assistant turns continue carrying the inner skill name.
-        master_declared_skill: str = "메인 세션"
-        # Timestamp of the record that opened the current sticky_skill window.
-        # Used as a same-ts guard so that a SKILL.md body injected by the runtime
-        # at the same timestamp as its /X command cannot accidentally close the window
-        # via "플랜 완료" text inside the skill doc itself.
-        active_skill_start_ts: str | None = None
+        # For sub-agent JSONLs: attributionSkill comes from the records themselves.
+        # For parent JSONLs: sticky attribution logic tracks master-declared skill.
+        if _is_subagent:
+            sticky_skill: str = "unknown"
+            master_declared_skill: str = "unknown"
+            active_skill_start_ts: str | None = None
+        else:
+            # Sticky skill attribution: Claude Code runtime tags attributionSkill only on
+            # the first few assistant turns after a skill invocation; subsequent turns
+            # within the same skill flow drop to None → would fall back to "메인 세션",
+            # heavily under-attributing skills. Carry the last seen attributionSkill
+            # forward within a session until another non-null attributionSkill appears.
+            sticky_skill = "메인 세션"
+            # Master-declared skill = the most recent skill explicitly invoked by master
+            # via /X. Tracked separately from sticky_skill so that inner-skill drift
+            # (e.g. runtime tagging dev-start during an internal Skill tool call inside
+            # a plan-enterprise window) doesn't permanently change the outer attribution.
+            # On the next plain master prompt during a gated outer skill (PENDING gate),
+            # sticky_skill reverts to master_declared_skill — the runtime stops tagging
+            # raw=attributionSkill after the first few turns, so without this revert,
+            # post-inner-skill assistant turns continue carrying the inner skill name.
+            master_declared_skill = "메인 세션"
+            # Timestamp of the record that opened the current sticky_skill window.
+            # Used as a same-ts guard so that a SKILL.md body injected by the runtime
+            # at the same timestamp as its /X command cannot accidentally close the window
+            # via "플랜 완료" text inside the skill doc itself.
+            active_skill_start_ts = None
 
         for rec in records:
             rec_type = rec.get("type")
@@ -1130,6 +1148,8 @@ def collect() -> dict[str, Any]:
 
                 add_usage(by_model[model], usage)
                 add_usage(by_skill[skill], usage)
+                if _is_subagent and _subagent_agent_type:
+                    add_usage(by_agent[_subagent_agent_type], usage)
                 day_key = (ts or "")[:10] or "unknown"
                 add_usage(by_day[day_key], usage)
                 add_usage(session_record["tokens"], usage)
@@ -1152,7 +1172,9 @@ def collect() -> dict[str, Any]:
                     if skill:
                         add_usage(hourly_by_skill[hour_key][skill], usage)
 
-                model_counts[model] += 1
+                # Sub-agent JSONLs: skip model_counts to avoid polluting parent session's model_primary
+                if not _is_subagent:
+                    model_counts[model] += 1
                 session_record["skills"].add(skill)
                 if cwd and not session_record["cwd"]:
                     session_record["cwd"] = cwd
@@ -1173,6 +1195,8 @@ def collect() -> dict[str, Any]:
 
                         add_usage(ps["by_model"][model], usage)
                         add_usage(ps["by_skill"][skill], usage)
+                        if _is_subagent and _subagent_agent_type:
+                            add_usage(ps["by_agent"][_subagent_agent_type], usage)
                         add_usage(ps["by_day"][day_key], usage)
                         add_usage(ps["total"], usage)
 
@@ -1206,121 +1230,28 @@ def collect() -> dict[str, Any]:
                             if not psr["last_timestamp"] or ts > psr["last_timestamp"]:
                                 psr["last_timestamp"] = ts
 
-            elif rec_type == "user":
-                tur = rec.get("toolUseResult")
-                if not isinstance(tur, dict):
-                    continue
-                agent_type = tur.get("agentType")
-                if not agent_type:
-                    continue
-                agent_usage = tur.get("usage")
-                if not agent_usage:
-                    continue
-                model = _normalize_model_key(AGENT_MODEL_MAP.get(agent_type, "claude-opus-4-7"))
-                ts = rec.get("timestamp")
-                cwd = rec.get("cwd")
-                branch = rec.get("gitBranch")
-                skill = sticky_skill
-
-                add_usage(by_model[model], agent_usage)
-                add_usage(by_skill[skill], agent_usage)
-                add_usage(by_agent[agent_type], agent_usage)
-                day_key = (ts or "")[:10] or "unknown"
-                add_usage(by_day[day_key], agent_usage)
-                add_usage(session_record["tokens"], agent_usage)
-                add_usage(total, agent_usage)
-
-                msg_record = empty_token_record()
-                add_usage(msg_record, agent_usage)
-                by_day_cost[day_key] += cost_of(model, msg_record)
-                msg_bd = cost_breakdown_of(model, msg_record)
-                day_bd = by_day_breakdown[day_key]
-                for k in day_bd:
-                    day_bd[k] += msg_bd[k]
-
-                hour_key = parse_ts_hour(ts)
-                if hour_key is not None:
-                    add_usage(hourly_agg[hour_key], agent_usage)
-                    hourly_cost[hour_key] += cost_of(model, msg_record)
-                    hourly_messages[hour_key] += 1
-                    add_usage(hourly_by_model[hour_key][model], agent_usage)
-                    if skill:
-                        add_usage(hourly_by_skill[hour_key][skill], agent_usage)
-
-                model_counts[model] += 1
-                session_record["skills"].add(skill)
-                if cwd and not session_record["cwd"]:
-                    session_record["cwd"] = cwd
-                if branch and not session_record["git_branch"]:
-                    session_record["git_branch"] = branch
-                if ts:
-                    if not session_record["first_timestamp"] or ts < session_record["first_timestamp"]:
-                        session_record["first_timestamp"] = ts
-                    if not session_record["last_timestamp"] or ts > session_record["last_timestamp"]:
-                        session_record["last_timestamp"] = ts
-
-                msg_date = parse_ts(ts)
-                if msg_date is not None:
-                    pkeys = period_keys_for(msg_date)
-                    for pt, pk in pkeys.items():
-                        ps = period_agg[pt][pk]
-
-                        add_usage(ps["by_model"][model], agent_usage)
-                        add_usage(ps["by_skill"][skill], agent_usage)
-                        add_usage(ps["by_agent"][agent_type], agent_usage)
-                        add_usage(ps["by_day"][day_key], agent_usage)
-                        add_usage(ps["total"], agent_usage)
-
-                        ps["by_day_cost"][day_key] += cost_of(model, msg_record)
-                        ps_day_bd = ps["by_day_breakdown"][day_key]
-                        for k in ps_day_bd:
-                            ps_day_bd[k] += msg_bd[k]
-
-                        psk = (pt, pk)
-                        if psk not in period_session_records:
-                            period_session_records[psk] = {
-                                "session_id": session_id,
-                                "first_timestamp": None,
-                                "last_timestamp": None,
-                                "model_primary": None,
-                                "tokens": empty_token_record(),
-                                "skills": set(),
-                                "cwd": None,
-                                "git_branch": None,
-                            }
-                        psr = period_session_records[psk]
-                        add_usage(psr["tokens"], agent_usage)
-                        psr["skills"].add(skill)
-                        if cwd and not psr["cwd"]:
-                            psr["cwd"] = cwd
-                        if branch and not psr["git_branch"]:
-                            psr["git_branch"] = branch
-                        if ts:
-                            if not psr["first_timestamp"] or ts < psr["first_timestamp"]:
-                                psr["first_timestamp"] = ts
-                            if not psr["last_timestamp"] or ts > psr["last_timestamp"]:
-                                psr["last_timestamp"] = ts
-
-        if model_counts:
+        # Sub-agent JSONLs: preserve parent model_primary; only set if not already assigned
+        if model_counts and not session_record["model_primary"]:
             session_record["model_primary"] = max(model_counts.items(), key=lambda kv: kv[1])[0]
         session_record["skills"] = sorted(session_record["skills"])
         by_session[session_id] = session_record
 
-        # Build per-master-prompt aggregation for this session
-        session_prompt_items = build_by_prompt(records, session_id)
-        all_prompt_items.extend(session_prompt_items)
+        if not _is_subagent:
+            # Build per-master-prompt aggregation for this session (parent JSONLs only)
+            session_prompt_items = build_by_prompt(records, session_id)
+            all_prompt_items.extend(session_prompt_items)
 
-        # Build skill-invocation windows for this session (independent of sticky_skill logic)
-        session_skill_windows = build_by_skill_invocation(records, session_id, jsonl_path)
-        all_skill_invocations.extend(session_skill_windows)
+            # Build skill-invocation windows for this session (parent JSONLs only)
+            session_skill_windows = build_by_skill_invocation(records, session_id, jsonl_path)
+            all_skill_invocations.extend(session_skill_windows)
 
-        # Distribute prompt items into period buckets by master prompt timestamp
-        for item in session_prompt_items:
-            prompt_date = parse_ts(item.get("timestamp"))
-            if prompt_date is not None:
-                pkeys = period_keys_for(prompt_date)
-                for pt, pk in pkeys.items():
-                    period_agg[pt][pk]["by_prompt_items"].append(copy.copy(item))
+            # Distribute prompt items into period buckets by master prompt timestamp
+            for item in session_prompt_items:
+                prompt_date = parse_ts(item.get("timestamp"))
+                if prompt_date is not None:
+                    pkeys = period_keys_for(prompt_date)
+                    for pt, pk in pkeys.items():
+                        period_agg[pt][pk]["by_prompt_items"].append(copy.copy(item))
 
         # Finalize per-period session records for this file
         for (pt, pk), psr in period_session_records.items():
@@ -1330,7 +1261,7 @@ def collect() -> dict[str, Any]:
             if ps_models and session_id not in period_agg[pt][pk]["by_session"]:
                 # Find which model has the most messages in this session+period combo
                 # Use the global model_counts for this session as a proxy (close enough)
-                if model_counts:
+                if model_counts and not psr.get("model_primary"):
                     psr["model_primary"] = max(model_counts.items(), key=lambda kv: kv[1])[0]
             psr["skills"] = sorted(psr["skills"])
             period_agg[pt][pk]["by_session"][session_id] = psr

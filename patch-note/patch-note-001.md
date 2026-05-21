@@ -1,5 +1,52 @@
 # 아이OS — Patch Note (001)
 
+## v001.102.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #50 (HOTFIX 3)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 5 (HOTFIX 3) — collect.py sub-agent JSONL 통합 (모델 분포 정확화)** (commit `45ce998e`): 마스터가 PENDING gate 검증 중 발견한 데이터 정합성 결함을 근본 수정. 기존 `monitoring/scripts/collect.py` 는 parent JSONL 이 존재하는 디렉토리(Project-I2 본체) 에서는 그 디렉토리의 sub-agent JSONL **2626 개를 통째로 무시**하고, 메인 세션 parent JSONL 의 `toolUseResult.usage` (sub-agent invocation summary) 만으로 sub-agent 토큰을 attribution. 그 결과 sub-agent JSONL 의 실제 assistant 메시지 usage 가 6~20 배 누락되어 `by_model` 분포가 99.47% Opus / 0.11% Sonnet / 0.14% Haiku 로 왜곡됨. 마스터가 Anthropic 공식 사용량 페이지 (주간 한도 sonnet 4%) 와의 자릿수 괴리로 결함 지적 → 메인 세션이 sub-agent JSONL 500 파일 샘플 직접 read 로 진단치 (추정 sonnet 1.12B / haiku 575M tokens 누락) 산출 → 본 hotfix 진입. 변경 단계:
+  - **1단계 — JSONL 수집 확장**: `collect()` L1015~1026 의 jsonl 수집 분기를 수정. parent JSONL 이 있는 디렉토리에서도 sub-agent JSONL (`*/subagents/agent-*.jsonl`) 을 함께 수집. parent JSONL 부재 디렉토리(data-craft) 는 기존 fallback 유지.
+  - **2단계 — sub-agent 식별 헬퍼**: `is_subagent_jsonl(path)` / `read_subagent_meta(path)` 신설. 파일 경로의 부모가 `subagents` 인 jsonl 을 sub-agent 로 식별, 인접 `<같은이름>.meta.json` 에서 `agentType` (예: `gate-runner`, `phase-executor`, `Explore`) 추출.
+  - **3단계 — double-count 회피 (선택 A)**: parent JSONL 처리 시 `toolUseResult.usage + agentType` 기반 sub-agent attribution 블록을 **전부 삭제**. 메인 루프(L1212-1300) 와 `_finalize_window()` 의 윈도우 스코프 by_agent 집계(L596-613) 양쪽 동일 처리. sub-agent 토큰은 sub-agent JSONL assistant 레코드에서만 attribution.
+  - **4단계 — sub-agent JSONL 처리**: assistant 루프를 재사용. `by_model[model]`, `by_skill[attributionSkill]`, `by_day`, `total`, `hourly_by_model`, period state `by_model` 에 sub-agent 의 실제 usage 가산. `by_agent` 는 meta.json `agentType` 으로 attribution.
+  - **5단계 — `build_by_skill_invocation` 분기**: sub-agent JSONL 은 master prompt window 추출 대상이 아니므로 건너뜀. **trade-off**: 그 결과 `by_skill_invocation[*].by_agent` 가 비게 됨 — 스킬 호출별 sub-agent 분해 정보 손실. 후속 hotfix 후보로 남김.
+  - **6단계 — sticky_skill**: sub-agent JSONL 의 assistant 레코드는 `attributionSkill` 필드를 그대로 사용 (없으면 `"unknown"`).
+  - **충돌 회피**: sub-agent JSONL 의 `session_id` 는 parent session uuid 와 동일하게 처리 (sub-agent JSONL 경로의 부모-부모 디렉토리명). 기존 parent session_record 에 누적 (overwrite 아닌 merge). `model_counts` 는 sub-agent JSONL 처리 시 미가산 → parent session 의 `model_primary` 보존.
+
+  **검증 결과 (재집계 후 실측)**:
+
+  | 모델 | 이전 (잘못) | 신규 (정확) |
+  |---|---:|---:|
+  | claude-opus-4-7 | 99.47% (49.9B) | **93.00% (50.0B)** |
+  | claude-haiku-4-5 | 0.14% (69M) | **4.22% (2,270M)** |
+  | claude-sonnet-4-6 | 0.11% (55M) | **2.51% (1,350M)** |
+  | claude-opus-4-6 | 0.28% (140M) | 0.26% (140M) |
+
+  Anthropic 공식 사용량 페이지의 sonnet ~4% 와 자릿수 일치. by_agent 차트도 Explore (2.18B) / phase-executor (1.28B) / gate-runner (73M) 등 sub-agent 들의 진짜 토큰 누계 반영. 처리 파일 수 4608 (이전 ~330 parent only) / assistant 메시지 257K.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+
+### 알려진 한계 / 후속 후보
+
+- `by_skill_invocation[*].by_agent` 가 비게 됨 (5단계 trade-off). 후속 hotfix 또는 신규 플랜에서 sub-agent JSONL 의 timestamp 를 parent skill window 와 매칭하여 채우는 로직 추가 가능.
+- period state `by_session` 일부 케이스에서 sub-agent 처리분만 반영될 가능성 (collision 처리는 base 단계에서 적용했으나 period 차원 정밀 검토 권고).
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘/규칙/축 추가 없음. 기존 결함 수정 + 누락된 데이터 통합. 코드 -69 net lines (165 삭제 / 96 추가).
+
+### 수동 검증 항목
+
+- 본 hotfix 머지 후 `/api/refresh` (또는 `python3 monitoring/scripts/collect.py`) 1회 실행 → `data/aggregate.json` 재생성.
+- 브라우저 새로고침 → 모델 분포 도넛에서 sonnet 슬라이스 ~2.5%, haiku 슬라이스 ~4.2% 가시화 확인.
+- 서브 에이전트 사용량 바 차트의 단위가 100M~2B 범위인지 (이전 1M~70M 대비 한 자릿수 위) 확인.
+
 ## v001.101.0
 
 > 통합일: 2026-05-21
