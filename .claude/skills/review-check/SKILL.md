@@ -209,7 +209,7 @@ End of skill invocation.
 2. **Enterprise prompt 출력** — Project-I2 cwd 의 gitignored `.claude/review-check-output/` 폴더에 main 세션 직접 Write. tracked state 비변경.
 
 CLAUDE.md §2 (main-session read-only) 와의 정합:
-- 1번 cross-repo safe-list 갱신은 §5 표준 WIP+머지 패턴을 sub-agent 없이 main 세션이 직접 수행한다 (file write + git ops). 본 스킬은 단일 파일(`.routine-state/safe-issues.json`) 만 기계적으로 read-modify-write 하므로 §2 의 "sub-agent 경유 의무" 의 입법 취지(복잡한 코드 변경에 대한 사고 방지) 와 별개의 단순 카탈로그 갱신으로 분류, 본 스킬을 §2 carve-out 으로 채택. 본 carve-out 은 `.routine-state/safe-issues.json` 단일 파일 + 단순 JSON 객체 read-modify-write 라는 좁은 범위에서만 유효 — 다른 파일을 함께 변경하거나 더 복잡한 로직이 추가되면 sub-agent 경유로 환원할 것.
+- 1번 cross-repo safe-list 갱신은 §5 표준 WIP+머지 사이클 (worktree 생성 / 분기 / commit / push / `git merge --no-ff` / 충돌 처리 / 정리) 을 sub-agent 없이 main 세션이 직접 수행한다. 동작 자체는 §5 사이클 전체이지만, 변경 대상은 `.routine-state/safe-issues.json` 1 파일이며 내용은 코드 로직이 아닌 routine state catalog (안전 확정 이슈 번호 누적 / 무효화) 의 JSON read-modify-write 이다. 본 cross-repo 쓰기를 §2 carve-out 으로 채택하는 의미적 범위 한정은 다음 세 가지 — (a) 변경 파일이 `.routine-state/safe-issues.json` 단일 파일에 한정, (b) 변경 내용이 JSON state catalog 갱신에 한정, (c) 코드 / 스킬 / 에이전트 / 기타 룰 파일 변경 없음 — 이 세 조건이 모두 유지되는 동안만 유효. 추가 파일을 함께 변경하거나 코드 로직이 끼어들기 시작하면 sub-agent 경유로 환원할 것.
 - 2번 출력 문서는 gitignored untracked 폴더 대상이라 기존 carve-out 그대로 적용.
 
 ## Failure policy

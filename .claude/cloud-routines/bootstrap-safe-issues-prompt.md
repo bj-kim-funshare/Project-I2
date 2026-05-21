@@ -9,37 +9,18 @@
 ## 프롬프트 본문 (paste 대상)
 
 ```
-data-craft 그룹의 routine 안전-리스트 파일 초기 bootstrap.
+data-craft 그룹의 routine 안전-리스트 파일을 두 멤버 리포의 i-dev 브랜치에 1회성 bootstrap 한다.
 
-다음 2개 리포 각각에 빈 `.routine-state/safe-issues.json` 을 i-dev 브랜치 기준으로 생성한다:
+- 대상 리포 1: data-craft (bj-kim-funshare/data-craft)
+- 대상 리포 2: data-craft-server (bj-kim-funshare/data-craft-server)
+- 두 리포 공통 파일 경로: 리포 루트 기준 `.routine-state/safe-issues.json`
+- data-craft 의 파일 내용: `{"repo": "data-craft", "safe_issues": []}`
+- data-craft-server 의 파일 내용: `{"repo": "data-craft-server", "safe_issues": []}`
+- 두 리포 모두 i-dev 브랜치에 commit + push 한 상태로 본 플랜 종결. 라벨 / 이슈 / PR / 코멘트 동작 불필요.
 
-### Phase 1 — data-craft 리포
-Phase 1 work repo: data-craft
-type: doc/new
-affected_files:
-- .routine-state/safe-issues.json
+용도: 두 리포에 cron 실행되는 Claude Desktop Routine (`data-craft 클로즈 이슈 다관점 코드리뷰` / `data-craft-server 클로즈 이슈 다관점 코드리뷰`) 의 안전-리스트 fetch (`gh api repos/<owner>/<repo>/contents/.routine-state/safe-issues.json?ref=i-dev`) 가 404 fallback 을 거치지 않도록 사전 초기화. 본 작업 없이도 routine 은 빈 안전-리스트로 fallback 동작 가능하므로, /review-check data-craft 의 첫 안전 확정 commit 이 자연 발생하면 자동 정상화되어 본 bootstrap 은 권장이지 필수가 아님.
 
-파일 내용:
-{
-  "repo": "data-craft",
-  "safe_issues": []
-}
-
-### Phase 2 — data-craft-server 리포
-Phase 2 work repo: data-craft-server
-type: doc/new
-affected_files:
-- .routine-state/safe-issues.json
-
-파일 내용:
-{
-  "repo": "data-craft-server",
-  "safe_issues": []
-}
-
-### 작업 완료 시 동작
-
-각 리포의 i-dev 브랜치에 위 파일이 commit + push 된 상태로 본 플랜 종결. 별도 후속 코멘트 / 라벨 / PR 동작 불필요. 본 bootstrap 은 routine 동작에 즉시 반영되며 다음 routine 사이클부터 안전-리스트 fetch 가 정상 200 응답을 받는다.
+페이즈 분할은 plan-enterprise 가 본 free-form 설명을 기반으로 자율 수행 (멤버 리포 2건이므로 통상 2 페이즈 / 각 리포 1 파일).
 ```
 
 ## 사용 시점
