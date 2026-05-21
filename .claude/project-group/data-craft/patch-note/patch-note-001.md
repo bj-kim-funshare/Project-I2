@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.420.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 1 — data-craft-server `buildAuthResponse` refreshToken 잔존 dead 코드 제거)
+
+### 배경
+
+본 플랜의 PENDING 게이트에서 마스터가 dev 서버 부팅 테스트를 시도. `data-craft-server` 가 ts-node 부팅 단계에서 `src/middlewares/auth.middleware.ts:245/254` TS2339 (`Property 'refreshToken' does not exist on type 'AuthResponseData' | 'LightAuthResponseData'`) 로 컴파일 차단되어 nodemon crash.
+
+원인: 보안 정책 (`dev.md` § refresh token 채널 — HttpOnly 쿠키 전용, JSON body 미포함) 정착 과정에서 `AuthResponseData` / `LightAuthResponseData` 타입에서 `refreshToken` 키는 이미 제거되었으나, `buildAuthResponse` 헬퍼의 구현부에 `refreshToken?: string` 인자와 `response.refreshToken = refreshToken` 할당 라인 2건이 잔존. 호출자 grep 결과 3-인자 호출 0건이라 dead 코드 상태.
+
+### HOTFIX 1 결과
+
+데이터크래프트 서버 (`data-craft-server`, `2ec2254`) — 1-file 수정:
+
+- `src/middlewares/auth.middleware.ts` (+1 / -4):
+  - `buildAuthResponse` 시그니처에서 3번째 인자 `refreshToken?: string` 제거.
+  - 함수 본문 L245 / L254 의 `if (refreshToken) response.refreshToken = refreshToken` 할당 라인 2건 제거.
+
+### 검증
+
+- 호출자 grep (`buildAuthResponse(req,[^)]*,[^)]*)`) 0건 — 호출 측 변경 불필요.
+- Cookie-based refresh 경로 존재 확인: `src/controllers/auth.controller.ts` L85 / L167 / L195 `res.cookie('refreshToken', ...)` + L157 `req.cookies?.refreshToken` — refresh rotation 메커니즘은 헬퍼와 무관하게 컨트롤러에서 직접 처리.
+- lint gate: `pnpm lint` PASS (0 errors).
+- `tsc --noEmit` 으로 원래 차단 오류 (auth.middleware.ts:245/254 TS2339) 해소 확인. 잔존 tsc 오류는 사전 존재하던 테스트 픽스처 vitest globals — 본 핫픽스 무관.
+- 메인 세션 부팅 smoke test 는 메모리 정책 (요청 없는 dev 서버 기동 금지) 에 의해 미실행 — 마스터가 직접 `pnpm dev` 재기동으로 확인.
+
+### 비고
+
+`acquireTimeout` mysql2 경고는 단순 경고이고 ts-node 부팅 차단 요인 아님 + 사전 테스트가 해당 키 존재를 검증 (`src/config/__tests__/database.config.test.ts`) 하므로 본 핫픽스 범위 외.
+
 ## v001.419.0
 
 > 통합일: 2026-05-21
