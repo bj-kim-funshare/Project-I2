@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.366.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 24 — 프로모션 base_plan_type 기능 게이트 인식)
+
+### 개요
+
+마스터 보고: 프리미엄 협업 프로모션 적용한 client 의 "사용자 관리 등 협업 플랜 기능이 전부 안 나옴". 원인 = FE 의 기능 게이트가 `useAuthStore.accountInfo.planType` (raw plan_type, 프로모션 활성 시 'free' 택일 정책) 만 보고 프로모션의 `base_plan_type` 무시. `effectivePlanType` 함수가 이미 존재하나 6 곳에서 미사용. 모두 통합 변경.
+
+### 변경 — data-craft (`983e4f80` + 보완 `c8393293`)
+
+**`src/features/subscription/ui/PlanGate.tsx`**:
+- `useAuthStore.accountInfo.planType` 대신 `useSubscriptionStatus + effectivePlanType(status)` 사용.
+
+**`src/widgets/settings-dialog/ui/SettingsSidebar.tsx`** (핵심):
+- 사이드바 메뉴 노출 분기 (`showEmployee` / permission 탭 등) 가 effectivePlanType 기반 평가 → 프로모션 활성 시 `standard` 이상 권한 메뉴 정상 노출.
+
+**`src/pages/builder/ui/BuilderHeader.tsx`**: 표시/기능 분기 동일 적용.
+
+**`src/widgets/property-drawer/ui/property-editors/ViewerPropertiesEditor.tsx`**: feature gate 동일.
+
+**`src/widgets/viewer-widget/ui/usePlanConfig.ts`**: viewer 기능 설정 동일.
+
+**`src/app/providers/SseProvider.tsx`**: SSE 채널 분기 동일 (다운그레이드 이벤트 대응은 별도 후속).
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/PlanGate.tsx`
+- `src/widgets/settings-dialog/ui/SettingsSidebar.tsx`
+- `src/pages/builder/ui/BuilderHeader.tsx`
+- `src/widgets/property-drawer/ui/property-editors/ViewerPropertiesEditor.tsx`
+- `src/widgets/viewer-widget/ui/usePlanConfig.ts`
+- `src/app/providers/SseProvider.tsx`
+
+### 효과
+
+- 프리미엄 협업 프로모션 client → "사용자 관리" / "권한 관리" 등 standard/premium 이상 권한 메뉴 정상 노출.
+- 일반 영구 플랜 client → 기존 동작 그대로 (effectivePlanType 이 accountInfo.planType 와 동일).
+
+### 잔존 후속 (blockers)
+
+- **SSE 다운그레이드 이벤트 즉시성**: `subscription:plan-downgraded` 핸들러가 `updateAccount({planType:'free'})` 만 수행. SseProvider 가 이제 authStore.planType 미참조 → subscriptionStatus 쿼리 재페치 완료 전 SSE 연결 유지 가능. 다운그레이드 직후 수 초 지연 — 별도 hotfix 후보.
+- **초기 로드 플리커**: `useSubscriptionStatus().data` 가 undefined 인 동안 effectivePlanType 이 'free' 반환 → 프로모션 client 도 첫 렌더링 순간 메뉴 잠깐 숨김 가능 (AuthProvider 번들 캐시로 실제 시간 최소화). 원천 제거는 별도 작업.
+
+### 테스트 시나리오
+
+1. 프리미엄 협업 프로모션 활성 client 진입 → 설정 → "사용자 관리" 메뉴 **노출 확인** (이전: 숨김).
+2. 권한 관리, 사용자 추가/삭제 기능 정상 작동.
+3. 일반 standard / premium client → 기존 동작 유지.
+4. free client → 기존 잠금 동작 유지.
+
 ## v001.365.0
 
 > 통합일: 2026-05-21
