@@ -6,7 +6,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 저장소 | `bj-kim-funshare/data-craft` (Routine UI 의 repo 선택 박스에 직접 지정) |
+| 저장소 | `funshare-inc/data-craft` (Routine UI 의 repo 선택 박스에 직접 지정) |
 | 제목 | `data-craft 클로즈 이슈 다관점 코드리뷰` |
 | 실행 요일 | 매일 (월~일) |
 | 실행 시각 | 한국시 (Asia/Seoul) 03:30, 15:30 |
@@ -17,16 +17,16 @@
 
 본 지침은 `gh` CLI 및 일반 shell 호출 가능 환경을 가정한다. Claude Desktop Routine 런타임에서 `gh` / shell 가 비가용일 경우 마스터가 동등 GitHub MCP (예: 공식 GitHub MCP) 호출로 치환할 것 — 절차의 의미는 유지됨.
 
-또한 본 routine 은 `gh api` 로 자기 저장소(`bj-kim-funshare/data-craft`)의 `i-dev` 브랜치에 있는 `.routine-state/safe-issues.json` 을 fetch 하여 안전 확정 이슈를 후보에서 제외한다. 이 파일은 `/review-check data-craft` 스킬이 안전 확정 시 자동 갱신 / 유지 관리하며 routine 자체는 read-only. 파일 또는 `i-dev` 가 아직 존재하지 않으면(초기 상태) routine 은 빈 안전-리스트로 진행 (정상 fallback) — `/plan-enterprise data-craft` 의 bootstrap (Project-I2 의 `.claude/cloud-routines/bootstrap-safe-issues-prompt.md` 참조) 으로 초기 생성 후 다음 cycle 부터 효율화.
+또한 본 routine 은 `gh api` 로 자기 저장소(`funshare-inc/data-craft`)의 `i-dev` 브랜치에 있는 `.routine-state/safe-issues.json` 을 fetch 하여 안전 확정 이슈를 후보에서 제외한다. 이 파일은 `/review-check data-craft` 스킬이 안전 확정 시 자동 갱신 / 유지 관리하며 routine 자체는 read-only. 파일 또는 `i-dev` 가 아직 존재하지 않으면(초기 상태) routine 은 빈 안전-리스트로 진행 (정상 fallback) — `/plan-enterprise data-craft` 의 bootstrap (Project-I2 의 `.claude/cloud-routines/bootstrap-safe-issues-prompt.md` 참조) 으로 초기 생성 후 다음 cycle 부터 효율화.
 
 ## 지침 (Claude Desktop Routine 의 prompt 본문 — 이하 paste 대상)
 
 ```
-당신은 bj-kim-funshare/data-craft 리포의 클로즈 이슈에 대해 사후 다관점 코드 리뷰를 수행하는 루틴입니다. 본 실행은 읽기 전용이며 코멘트 게시 외 어떤 쓰기 동작도 금지됩니다.
+당신은 funshare-inc/data-craft 리포의 클로즈 이슈에 대해 사후 다관점 코드 리뷰를 수행하는 루틴입니다. 본 실행은 읽기 전용이며 코멘트 게시 외 어떤 쓰기 동작도 금지됩니다.
 
 # 사전 fetch — 안전-리스트
 
-`gh api repos/bj-kim-funshare/data-craft/contents/.routine-state/safe-issues.json?ref=i-dev` 호출하여 응답 본문의 `content` 를 base64 디코딩 후 JSON 파싱. `safe_issues[].number` 를 `SAFE_NUMBERS` 집합으로 보관. 404 (파일 부재) 또는 `i-dev` 부재 시 빈 집합으로 fallback (정상 동작).
+`gh api repos/funshare-inc/data-craft/contents/.routine-state/safe-issues.json?ref=i-dev` 호출하여 응답 본문의 `content` 를 base64 디코딩 후 JSON 파싱. `safe_issues[].number` 를 `SAFE_NUMBERS` 집합으로 보관. 404 (파일 부재) 또는 `i-dev` 부재 시 빈 집합으로 fallback (정상 동작).
 
 # 대상 선정 (3 조건 OR)
 
@@ -37,9 +37,9 @@
 # 절차
 
 1. 후보 수집:
-   `gh issue list --repo bj-kim-funshare/data-craft --state closed --limit 500 --json number,title,url,closedAt`
+   `gh issue list --repo funshare-inc/data-craft --state closed --limit 500 --json number,title,url,closedAt`
 2. 후보에서 `SAFE_NUMBERS` 에 속한 이슈를 제외 (오픈은 --state closed 가 이미 제외 — 따라서 남은 제외 대상은 안전 확정 이슈뿐).
-3. 각 후보 이슈마다 `gh issue view <N> --repo bj-kim-funshare/data-craft --comments` 로 코멘트 전수 확인 → 위 3 조건 중 어느 하나라도 만족하면 대상에 포함.
+3. 각 후보 이슈마다 `gh issue view <N> --repo funshare-inc/data-craft --comments` 로 코멘트 전수 확인 → 위 3 조건 중 어느 하나라도 만족하면 대상에 포함.
 4. 대상 이슈마다 본문에서 작업 페이즈 + 핫픽스 전체에 대한 커밋 / PR / 머지 정보 추출 (이슈 본문에 페이즈/핫픽스 목록과 SHA 가 기록되어 있음). 누락 시 `gh issue view <N> --json timelineItems` 로 보강.
 5. 추출된 커밋 / PR / 변경 파일을 `gh pr view`, `gh pr diff`, `git -C <local-path> show <SHA>` 등 읽기 전용 수단으로 검토. 로컬 클론이 없는 경우 `gh api` 를 통한 diff 조회 사용.
 6. 다음 5 관점으로 리뷰:
@@ -61,7 +61,7 @@
    - 가장 최근 시그니처 마커 코멘트의 `sha=` 값이 현재 평가 대상 SHA (= 이슈의 최신 머지 커밋 SHA) 와 동일
    조건 1 또는 3 으로 선정된 이슈는 dedup 무시하고 항상 새 코멘트 작성.
 10. 이슈에 새 코멘트 게시:
-   `gh issue comment <N> --repo bj-kim-funshare/data-craft --body-file <tmp>`
+   `gh issue comment <N> --repo funshare-inc/data-craft --body-file <tmp>`
    코멘트 본문 형식 (Markdown):
 
    ```
