@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.402.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 48 — 멤버 로그인 차단 프로모션 base_plan_type 인식)
+
+### 원인
+마스터 보고: 오너 계정 외 멤버 로그인 시 403 `PLAN_MEMBER_LOGIN_RESTRICTED`. auth.service.ts:307-313 멤버 로그인 차단 검증이 client.plan_type 만 검사. 프로모션 활성 client = plan_type='free' (택일 정책) → standard 미만이라 차단. 협업 프로모션 의도와 어긋남.
+
+### 변경 — data-craft-server (`827815d`)
+**`src/services/auth.service.ts`** L307-313:
+- activePromotionId 있으면 `findActiveClientPromotionWithMeta` 로 basePlanType 조회 → effectivePlanType.
+- PLAN_LEVEL 검사 = effectivePlanType (basePlanType 우선, 없으면 client.planType, 둘 다 없으면 'free').
+- 두 발생 위치 (signin / 또 한 곳) 모두 동일 적용.
+
+### 영향 파일
+- `src/services/auth.service.ts`
+
+### 테스트
+1. 협업 프로모션 (basePlanType='premium') 활성 client + 멤버 로그인 → effectivePlan='premium' → 통과.
+2. 일반 영구 premium client + 멤버 → 기존 동작 유지.
+3. free/basic client + 멤버 → 기존 차단 유지.
+
 ## v001.401.0
 
 > 통합일: 2026-05-21
