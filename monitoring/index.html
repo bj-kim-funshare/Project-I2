@@ -103,7 +103,13 @@
     <!-- 차트 -->
     <section class="charts" aria-label="시각화">
       <article class="chart-card wide" id="chart-day-tokens">
-        <h3>일자별 토큰 (스택)</h3>
+        <div class="chart-card-header">
+          <h3>기간별 토큰 (스택)</h3>
+          <div class="period-toggle" data-target="dayTokens">
+            <button type="button" data-period="day" data-active="true">일자별</button>
+            <button type="button" data-period="week" data-active="false">주간별</button>
+          </div>
+        </div>
         <div class="chart-body"><canvas></canvas></div>
       </article>
 
@@ -146,7 +152,13 @@
       </article>
 
       <article class="chart-card wide" id="chart-day-cost">
-        <h3>일자별 추정 비용</h3>
+        <div class="chart-card-header">
+          <h3>기간별 추정 비용</h3>
+          <div class="period-toggle" data-target="dayCost">
+            <button type="button" data-period="day" data-active="true">일자별</button>
+            <button type="button" data-period="week" data-active="false">주간별</button>
+          </div>
+        </div>
         <div class="chart-body"><canvas></canvas></div>
       </article>
 

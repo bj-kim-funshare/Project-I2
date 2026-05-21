@@ -58,6 +58,8 @@ if (typeof Chart !== 'undefined') {
 }
 
 const charts = {};
+let __lastAggregateData = null;
+const __periodMode = { dayTokens: 'day', dayCost: 'day' };
 
 function destroyChart(key) {
   if (charts[key]) {
@@ -413,6 +415,38 @@ function makeDayTokensSkillCountPlugin(countsByDay) {
 }
 
 // ---------- Charts ----------
+
+function getISOWeek(date) {
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  target.setUTCMonth(0, 1);
+  if (target.getUTCDay() !== 4) {
+    target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
+  }
+  const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+  return { year: new Date(firstThursday).getUTCFullYear(), week };
+}
+
+function aggregateByWeek(daysArray, fields) {
+  const map = new Map();
+  for (const d of daysArray) {
+    const date = new Date(d.day + 'T00:00:00');
+    const { year, week } = getISOWeek(date);
+    const key = `${year}-W${String(week).padStart(2, '0')}`;
+    if (!map.has(key)) {
+      const entry = { day: key };
+      for (const f of fields) entry[f] = 0;
+      map.set(key, entry);
+    }
+    const entry = map.get(key);
+    for (const f of fields) entry[f] = (entry[f] || 0) + (d[f] || 0);
+  }
+  return Array.from(map.entries())
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([, v]) => v);
+}
 
 function renderChartDayTokens(data, opts) {
   const chartKey = (opts && opts.chartKey) || 'dayTokens';
@@ -1570,6 +1604,7 @@ async function applyWeekSelection(state) {
       loadWeekly(state.right),
       loadAggregate(),
     ]);
+    __lastAggregateData = aggregateData;
 
     $('#meta').textContent = `기간: ${state.left} vs ${state.right} | 생성일: ${shortTime(aggregateData.generated_at)}`;
 
@@ -1627,7 +1662,30 @@ async function refresh() {
   }
 }
 
+function setupPeriodToggles() {
+  document.querySelectorAll('.period-toggle').forEach(toggleEl => {
+    toggleEl.querySelectorAll('button[data-period]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleEl.querySelectorAll('button[data-period]').forEach(b => b.setAttribute('data-active', 'false'));
+        btn.setAttribute('data-active', 'true');
+        const target = toggleEl.dataset.target;
+        __periodMode[target] = btn.dataset.period;
+        if (!__lastAggregateData) return;
+        if (target === 'dayTokens') {
+          renderChartDayTokens(__lastAggregateData, {
+            skillCountsByDay: computeSkillCountByDay(__lastAggregateData.by_skill_invocation || []),
+            periodMode: __periodMode.dayTokens,
+          });
+        } else if (target === 'dayCost') {
+          renderChartDayCost(__lastAggregateData, { periodMode: __periodMode.dayCost });
+        }
+      });
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  setupPeriodToggles();
   $('#refresh-btn').addEventListener('click', refresh);
 
   document.addEventListener('click', (e) => {
