@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.101.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #50 (HOTFIX 2)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 4 (HOTFIX 2) — 에이전트 델타 배지 가로 2행 정렬 + 모델 분포 attribution 진단** (commit `72198671`):
+  - **(a) CSS 적용**: HOTFIX 1 에서 마스터의 "가로 2줄" 요청을 2열 grid 로 잘못 해석한 점 정정. `monitoring/styles.css` 의 `.chart-legend-agent-2col` 규칙을 `grid-template-columns: 1fr 1fr` (2열) → `grid-template-rows: repeat(2, auto)` + `grid-auto-flow: column` + `grid-auto-columns: minmax(0, 1fr)` (2행 고정 + 컬럼 자동 wrap) 으로 교체. `gap` 을 `column-gap: 16px` / `row-gap: 4px` 로 분리하여 행간 여백 축소. 9개 sub-agent 의 ▲/▼ 델타 배지가 한 행 ~4~5개씩 가로 배치되어 2 행 채움. 클래스명은 script.js 의 부여 코드(affected_files 외)와의 결합 회피로 그대로 유지.
+  - **(b) 옵션 C 진단 결과 — 데이터 변경 불필요**: phase-executor sub-agent 가 `monitoring/scripts/collect.py` 분석 결과 sub-agent 토큰 by_model attribution 이 L1225 / L1268 에 **이미 구현되어 있음** 을 보고. 메인 `collect()` 루프와 period state 양쪽에서 `add_usage(by_model[model], agent_usage)` 가 `AGENT_MODEL_MAP` 기반으로 적용 중. aggregate.json 실측: opus-4-7 49.9B / sonnet-4-6 55M / haiku-4-5 69M / opus-4-6 140M — 메인 세션이 sub-agent 합(~135M)의 370배 토큰을 소비하여 attribution 통합 후에도 99.5% Opus 가 정상 사실. by_agent 차트의 막대 단위(M)와 모델 분포의 분모 단위(B)의 자릿수 차이가 시각적 mismatch 의 원인. 결론: collect.py 수정 없음. 라벨 정정(옵션 C 의 A 파트)도 본 hotfix 보류 — 라벨이 데이터 사실에 부합하므로 부연 불필요. 마스터 판단에 따라 후속 hotfix 에서 "메인 세션 모델 분포" 등 명확화 가능.
+
+### 영향 파일
+
+- `monitoring/styles.css`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 메커니즘 추가 없음. CSS rule 정정 + collect.py 진단 결과 기록.
+
+### 수동 검증 항목
+
+- `#chart-agent-bar` 카드의 델타 legend 영역이 가로 2 행 (~4–5 개씩) 배치인지 확인.
+
 ## v001.100.0
 
 > 통합일: 2026-05-21
