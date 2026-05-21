@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.363.0
+
+> 통합일: 2026-05-20
+> 플랜 이슈: #118 (HOTFIX 28 — propagated 셀도 {rowId,value} JSON 저장)
+
+### 개요
+
+마스터 보고: HOTFIX 27 의 `{rowId, value}` JSON 포맷이 **사용자가 선택한 그 셀만** 적용되고 같은 source row 의 같은 연결 그룹 다른 (propagated) 셀들은 plain value 그대로 저장. 결과 — 그 셀의 picker 를 열면 rowId 없어서 "선택안함" 표기.
+
+### 변경
+
+- **`useRowLinkCell.ts`** (`9db9b8e7`, +6/-2): `handleAnyCellSave` 의 propagation 루프 (c) — `parseRowLinkCellValue(newValue)` destructure 를 `rowId: selectedRowId` 까지 확장. fillValue 저장 시 `selectedRowId != null` 이면 **`JSON.stringify({ rowId: selectedRowId, value: String(fillValue) })`** 로 래핑.
+
+### 동작
+
+| 시나리오 | 결과 |
+|---|---|
+| 셀 A 선택 → target row 123456 | A: `{rowId:123456, value:"abc"}` |
+| 같은 그룹 propagated 셀 B/C/D | 모두 `{rowId:123456, value:"각자값"}` (동일 rowId) |
+| 셀 B picker 열기 | rowId 123456 selected — 정확 매칭 |
+| 셀 C picker 열기 | rowId 123456 selected — 정확 매칭 |
+
+### 후방 호환
+
+- `selectedRowId` 가 null 인 레거시 입력 → plain string 저장 폴백 유지.
+- HOTFIX 27 의 parse → .value 렌더링 그대로 작동.
+
+### 정책 합치
+
+- data-craft FE-only.
+- Lint gate: PASS (0 errors, 18 warnings).
+- 회귀: HOTFIX 27 selected matching rowId 기준 + 행 번호 valueId prefix 모두 그대로.
+
 ## v001.362.0
 
 > 통합일: 2026-05-21
