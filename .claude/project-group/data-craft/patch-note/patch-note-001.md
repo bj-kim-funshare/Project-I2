@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.370.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 25 — 협업 프로모션 활성 시 인원 관리 버튼 노출)
+
+### 개요
+
+마스터 보고: 프로모션 활성 시 연간 예약 버튼이 안 나오는 건 정상이나, **인원 관리 버튼도 안 나옴**. 협업 프로모션이면 인원수 조정이 가능해야 함.
+
+### 원인
+
+`SubscriptionActionSection.tsx`:
+- L47 `isCollaboration = planType === 'standard' || 'premium'` — raw planType 단독, 프로모션 활성 client (plan_type='free' 택일 정책) 미통과.
+- L117 인원 관리 버튼 `disabled={hasActivePromotion}` — 프로모션이면 비활성화 처리.
+
+### 변경 — data-craft (`ad89a477`)
+
+**`src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`**:
+- `isCollaboration` 조건 확장:
+  ```ts
+  const isPromotionCollaboration = status?.activePromotion?.isCollaboration === true;
+  const isCollaboration =
+    planType === 'standard' || planType === 'premium' || isPromotionCollaboration;
+  ```
+- 인원 관리 버튼 `disabled` 조건:
+  - `hasActivePromotion && !isPromotionCollaboration` — 비협업 프로모션(있다면)만 비활성화. 협업 프로모션은 활성화.
+- 연간 예약 버튼은 기존대로 `!hasActivePromotion` 조건 유지 (프로모션 활성 시 비노출, 마스터 명시).
+
+### 영향 파일
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`
+
+### 테스트 시나리오
+
+1. 협업 프로모션 활성 client → 인원 관리 버튼 **노출 + 활성화** (이전: 미노출).
+2. 인원 관리 클릭 → SeatManageDialog 정상 오픈. SeatManageDialog 의 minSeats 가드 (활성 user 수 기준) 유지.
+3. 연간 예약 버튼은 여전히 미노출 (프로모션 사용 중 결제주기 변경 불가).
+4. 비협업 프로모션 활성 client (드문 케이스) → 인원 관리 버튼 표시되나 disabled.
+5. 일반 standard / premium client → 기존 동작 유지 (인원 관리 활성화).
+
+### 잔존 권장 (별도 후속)
+
+- SeatManageDialog 의 minSeats 가드가 활성 user 수만 검증. 프로모션 활성 시 `promotion.min_users` 한도까지 추가 검증하면 더 안전 (현재는 BE seatChange 가 max(active, min_users) 검증하므로 사용자가 부적절 값 시도 시 BE 에서 차단). 별도 hotfix 후보.
+
 ## v001.369.0
 
 > 통합일: 2026-05-20
