@@ -11,8 +11,8 @@
 ```
 data-craft 그룹의 routine 안전-리스트 파일을 두 멤버 리포의 i-dev 브랜치에 1회성 bootstrap 한다.
 
-- 대상 리포 1: data-craft (bj-kim-funshare/data-craft)
-- 대상 리포 2: data-craft-server (bj-kim-funshare/data-craft-server)
+- 대상 리포 1: data-craft (funshare-inc/data-craft)
+- 대상 리포 2: data-craft-server (funshare-inc/data-craft-server)
 - 두 리포 공통 파일 경로: 리포 루트 기준 `.routine-state/safe-issues.json`
 - data-craft 의 파일 내용: `{"repo": "data-craft", "safe_issues": []}`
 - data-craft-server 의 파일 내용: `{"repo": "data-craft-server", "safe_issues": []}`
