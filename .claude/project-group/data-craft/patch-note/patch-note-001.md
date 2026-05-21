@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.410.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #145 (HOTFIX 1)
+
+### 변경
+
+**FE — data-craft (`f3976bc5`)** — v001.409.0 의 푸터 외부 링크 서브패스 404 해소:
+- `src/shared/ui/auth/AuthPage.tsx` 푸터 3개 링크 href 를 `/terms`·`/privacy`·`/support` 서브패스에서 `https://funshare.co.kr` 루트로 통일. funshare.co.kr 측에 해당 서브패스가 운영되지 않음(404) 확인. `{label, href}` 배열 구조 및 target / rel / className / style 등 나머지 속성은 그대로 유지.
+
+### 영향 파일
+
+**data-craft**
+- `src/shared/ui/auth/AuthPage.tsx`
+
+### 비고
+
+- HOTFIX 가 cross-repo (code = data-craft, patch-note = Project-I2) 인 케이스이므로 스킬 텍스트의 "same hotfix WIP" 패턴 대신 v001.409.0 과 동일하게 code WIP / doc WIP 분리 패턴을 적용했다 (data-craft `-핫픽스1` 머지 후 Project-I2 `-핫픽스1-문서` 별도 작성). 후속 cross-repo hotfix 운영 컨벤션으로 확정.
+
 ## v001.409.0
 
 > 통합일: 2026-05-21
