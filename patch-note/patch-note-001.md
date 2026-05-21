@@ -1,5 +1,35 @@
 # 아이OS — Patch Note (001)
 
+## v001.100.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #50 (HOTFIX 1)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX 1) — 서브 에이전트 제목 + 델타 배지 2열 + 스킬 호출 데이터 복구** (commit `122aff1`): 마스터 PENDING gate 검증 중 발견된 3건의 결함을 단일 hotfix로 묶음.
+  - (a) `monitoring/index.html` L135: `<h3>서브에이전트 사용량 (총 토큰)</h3>` → `<h3>서브 에이전트 사용량 (총 토큰)</h3>` — 마스터 요청에 따라 "서브"와 "에이전트" 사이 공백 1개 추가.
+  - (b) `monitoring/styles.css`에 `.chart-legend-agent-2col` 클래스 신설 (CSS grid `grid-template-columns: 1fr 1fr`, `gap: 8px 16px`). `monitoring/script.js`의 `renderChartAgentBar`가 동적 생성하던 범례 컨테이너 클래스를 기존 `.chart-legend` 대신 신규 클래스로 교체 — 에이전트별 ▲/▼ 델타 배지가 세로 1열 나열에서 가로 2열 배치로 전환. 도넛 3종의 `.chart-legend` 스타일은 그대로 유지되어 영향 없음.
+  - (c) `monitoring/script.js`의 `applyWeekSelection` 디스패처에서 `loadSkillInvocations` 호출부 수정. 원인: weekly JSON 파일(`data/periods/weekly/<ISO>.json`)에 `by_skill_invocation` 필드가 부재 — `collect.py`가 weekly 집계에 해당 필드를 기록하지 않아 Phase 2의 `loadSkillInvocations(leftData)` 호출이 빈 배열을 받아 화면에 "데이터 없음"으로 출력되던 결함. 수정: `aggregateData.by_skill_invocation`(전체 누적 375건)을 `leftData.by_day[].day`로 구성한 날짜 `Set`으로 필터링 — 각 invocation의 `start_timestamp.slice(0, 10)`("YYYY-MM-DD") 가 선택된 주의 일자 집합에 포함되는 항목만 통과. 주간 선택 변경 시 테이블이 해당 주의 invocation만 보여주도록 정상화. 백엔드(`collect.py`) 무수정 — 프론트엔드 필터링만으로 해결.
+
+### 영향 파일
+
+- `monitoring/index.html`
+- `monitoring/script.js`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증 축 추가 없음. 순수 버그 수정 + UI polish.
+
+### 수동 검증 항목 (master 재 PENDING gate 시점)
+
+- `#chart-agent-bar` 카드 제목이 "서브 에이전트 사용량 (총 토큰)" (서브 와 에이전트 사이 공백 1개) 으로 표시되는지.
+- 에이전트 델타 배지가 가로 2열 grid 레이아웃으로 정렬되는지 (한 행에 2개 에이전트씩).
+- "스킬 호출별 토큰 사용량" 테이블이 데이터를 보여주는지 — 2026-W21 기준 해당 주의 invocation 행 다수 보유.
+- 왼쪽 주간을 다른 주(W20, W19 등)로 변경 시 스킬 호출 테이블이 해당 주의 invocation으로 재렌더되는지.
+
 ## v001.99.0
 
 > 통합일: 2026-05-21
