@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.389.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 39 — calculateProrationDiff cycle 전환 즉시 결제 0)
+
+### 개요
+
+마스터 보고: 프리미엄 프로모션 13명 → 프리미엄 영구 13명 변경 시도 → 5,811,530원 청구. 사진 검증:
+- currentCycle = 'yearly' (잘못 저장된 데이터, 이전 HOTFIX 34 cycle 전환 시도 흔적).
+- targetCycle = 'monthly' (마스터 선택).
+- residualCredit = 14,900 × 13 × (365/365) ≈ 193,700원.
+- newCharge = 14,900 × 13 × **31** (HOTFIX 34 의 cycle 전환 분기, 월간 = × 31) = 6,002,700원.
+- chargeAmount = 6,002,700 - 193,700 ≈ 5,809,000원 → 사진의 5,811,530원과 매우 근접.
+
+### 원인
+
+HOTFIX 34 의 `calculateProrationDiff` cycle 전환 분기:
+- monthly 신규: `targetMonthlyPrice × targetSeats × 31` (31개월치 청구로 잘못 환산).
+- yearly 신규: `targetMonthlyPrice × targetSeats × 12 × 0.9` (연간 정가).
+
+마스터 정책 (HOTFIX 13): cycle 전환 = 예약 흐름. **즉시 결제 없음**. 다음 결제일에 새 사이클 정가가 cron 으로 청구. 따라서 newCharge=0 이어야 함.
+
+### 변경 — data-craft-server (`4a4a6d8`)
+
+**`src/services/billingSubscription.service.ts`** `calculateProrationDiff` L580-588:
+```ts
+const residualCredit = currentMonthlyPrice * currentSeatsEffective * (remainingDays / cycleDays);
+// HOTFIX 13 정책: cycle 전환은 예약 흐름 — 즉시 결제 없음.
+const effectiveTargetCycle = targetCycle ?? currentCycle;
+const newCharge = effectiveTargetCycle !== currentCycle
+  ? 0  // 잔여 사이클 동안 현재 cycle 그대로, 다음 결제일에 cron 청구.
+  : targetMonthlyPrice * targetSeatsEffective * (remainingDays / cycleDays);
+const chargeAmount = Math.max(0, Math.floor(newCharge - residualCredit));
+```
+
+cycle 전환 시 newCharge=0 → chargeAmount=max(0, -residualCredit)=0. 즉시 결제 없음. 다음 결제일 안내 (HOTFIX 36+38) 는 FE 측에서 별도 계산하여 표시.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+
+### 테스트 시나리오
+
+1. 프리미엄 프로모션 13명 → 프리미엄 + 월간 → chargeAmount=0 (이전: 5,811,530원). FE 는 "추가 결제 금액 없음" 표시 (cycle 변동 없음).
+2. 프리미엄 프로모션 13명 → 프리미엄 + 연간 → chargeAmount=0 + FE 가 다음 결제일 청구 예정 안내 (HOTFIX 38).
+3. 일반 영구 client 의 동일 cycle 내 plan/seats 변경 → 기존 차액 계산 그대로.
+
+### 잔존 (별도 후속)
+
+- 잘못 저장된 client.billing_cycle='yearly' 데이터는 task-db-data 로 정정 권장 (프로모션 활성 client 의 billing_cycle 은 'monthly' 또는 NULL 이어야 함).
+- 프로모션 활성 client 가 cycle 전환을 시도하지 못하도록 FE 측 차단 권장 (이미 HOTFIX 38 의 currentCycle 강제 monthly 로 표시는 정합, 단 UI 토글에서도 비활성화 권장).
+
 ## v001.388.0
 
 > 통합일: 2026-05-21
