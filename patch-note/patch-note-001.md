@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.94.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #48 (HOTFIX 2)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 4 (HOTFIX 2) — routine 지침 + bootstrap 프롬프트의 owner 오기재 정정** (commit `54f581a`): 마스터가 Claude Desktop Routine UI 에 두 routine 을 등록 후 스크린샷으로 확인한 결과, 실제 멤버 리포의 GitHub owner 가 `funshare-inc` (스크린샷 "저장소" 필드: `funshare-inc/data-craft`, `funshare-inc/data-craft-server`) 인데 v001.92.0 ~ v001.93.0 작성 당시 작성자가 **Project-I2 하니스 리포의 owner (`bj-kim-funshare`) 를 멤버 리포에도 그대로 일반화**한 오류 발견. 결과: 두 routine 의 지침 본문 6 곳씩 + bootstrap 프롬프트의 2 곳, 합 14 곳의 `gh api repos/bj-kim-funshare/<repo>/...` / `gh issue list --repo bj-kim-funshare/<repo>` 호출이 모두 404 발생 예정 → 후보 수집 자체 불가 → 코멘트 게시 0건. 본 hotfix 로 `.claude/cloud-routines/` 의 3 파일 (data-craft-review.md / data-craft-server-review.md / bootstrap-safe-issues-prompt.md) 안에서 `bj-kim-funshare` 문자열 전수 (16 위치) 를 `funshare-inc` 로 일괄 치환. `grep -rn bj-kim-funshare .claude/cloud-routines/` 0-hit 자체 검증 완료. `.claude/skills/review-check/SKILL.md` 는 owner 를 로컬 클론 origin URL 에서 동적 추출하므로 영향 없음. `.claude/project-group/data-craft/patch-note/patch-note-001.md` 의 옛 항목들에 남아있는 `bj-kim-funshare/...` 표현은 *과거 사실 기록* 이라 의도적으로 건드리지 않음.
+
+### 영향 파일
+
+- `.claude/cloud-routines/data-craft-review.md`
+- `.claude/cloud-routines/data-craft-server-review.md`
+- `.claude/cloud-routines/bootstrap-safe-issues-prompt.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 hotfix 는 신규 메커니즘 / 규칙 / 카르베아웃 추가 없음. 순수 literal 정정. v001.93.0 의 cross-repo §2 carve-out 은 그대로 유효 유지.
+
+### 재발 방지 메모
+
+오류 근본 원인: 작성자가 `gh repo view --json owner,name` 으로 Project-I2 (하니스) 자체의 owner 를 확인한 뒤, 외부 멤버 리포 owner 도 동일할 것이라 일반화함. 향후 routine / cross-repo 산출물 작성 시에는 멤버 리포 cwd 에서 직접 `gh -C <member-cwd> repo view --json owner,name` 으로 멤버별 owner 를 확인 후 하드코딩할 것. 단순 grep `bj-kim-funshare` 한 번이면 잡혔던 케이스 — 산출 직후 owner 토큰 grep 확인을 routine/bootstrap 작성 절차에 chec[k]point 로 포함 검토 (Treadmill Q3 부담이 적으면 신규 룰화 가능, 일단은 본 메모로 인지).
+
 ## v001.93.0
 
 > 통합일: 2026-05-21
