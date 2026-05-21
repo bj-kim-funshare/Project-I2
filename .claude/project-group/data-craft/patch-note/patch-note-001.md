@@ -1,5 +1,54 @@
 # data-craft — Patch Note (001)
 
+## v001.372.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 26 — 프로모션 minUsers 가드)
+
+### 개요
+
+마스터 보고: "프로모션 상태에서 인원 관리에서 프로모션 제한보다 낮게 입력하면 결제 버튼 비활성화하고 안내 텍스트 띄워". BE + FE atomic 으로 처리.
+
+### 변경
+
+**data-craft-server (HOTFIX 26 BE — `387bec51`)**
+- `models/promotion.model.findActiveClientPromotionWithMeta` SQL 에 `p.min_users` 추가.
+- `types/promotion.types.ActiveClientPromotionWithMeta` 에 `minUsers: number | null`.
+- `services/subscription.service.getSubscriptionStatus` 응답 `activePromotion.minUsers` 노출.
+
+**data-craft (HOTFIX 26 FE — `cf07afa8`)**
+- `features/subscription/model/types.ActivePromotionInfo` 에 `minUsers: number | null`.
+- `features/subscription/ui/SeatManageDialog.tsx`:
+  - `effectiveMinSeats = Math.max(1, activePromotion?.minUsers ?? 1)` 파생.
+  - `isBelowMin` 불리언으로 증가·감소 양방향 버튼 disabled.
+  - 입력 하단 빨강 안내:
+    - 프로모션 활성 시: "프로모션 최소 인원 (N명) 이상 입력해 주세요."
+    - 영구 플랜: "최소 N명 이상 입력해 주세요." (기존).
+  - 기존 빈값 가드 (HOTFIX 10) 와 공존.
+- PromotionPurchaseDialog 는 이미 PromotionSummary.minUsers 독립 사용 — 변경 X.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/models/promotion.model.ts`
+- `src/types/promotion.types.ts`
+- `src/services/subscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/model/types.ts`
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+
+### 테스트 시나리오
+
+1. 협업 프로모션 활성 client → 인원 관리 → minUsers (예: 10명) 미만 입력 → 결제/예약 버튼 disabled + 빨강 "프로모션 최소 인원 (10명) 이상 입력해 주세요." 안내.
+2. minUsers 이상 입력 → 안내 사라지고 버튼 활성화 + quote 호출.
+3. 빈값 → 기존 빈값 안내 ("인원수를 입력해 주세요.") 유지.
+4. 영구 standard/premium client → 기존 활성 user 수 기준 가드 유지.
+
+### 배포
+
+BE + FE 동시 배포 권장 (한쪽씩이라도 깨지진 않음).
+
 ## v001.371.0
 
 > 통합일: 2026-05-20
