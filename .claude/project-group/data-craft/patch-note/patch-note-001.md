@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.406.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 50 — pending_promotion 관련 dead 코드 폐기)
+
+### 배경
+
+재검증 (HOTFIX 49 후) 의 finding #1/#2/#4 는 모두 `pending_promotion_id` / `schedulePromotion` 경로의 잠재 버그. grep 결과 controller / route / FE 호출 0 — 외부 진입점 없는 dead code. 마스터 정책: 프로모션 예약은 모순 (예약은 cycle 변경 / 다운그레이드만). HOTFIX 13 의 paymentSchedule 폐기 패턴 동일 적용.
+
+### 변경 — data-craft-server (`ec91d36` + 보완 `0db4248`)
+
+**`src/services/promotion.service.ts`**: `schedulePromotion` 함수 + `setPendingPromotionId` import 제거.
+
+**`src/services/billingRenewal.service.ts`**:
+- `if (client.pendingPromotionId)` 분기 (7일 재시도 + abandon 로직 포함) 전체 삭제.
+- `setPendingPromotionId / setPendingPromotionFailedAt / findPendingPromotionFailedAt / purchasePromotion` import 제거.
+
+**`src/services/billingScheduler.service.ts`**: RenewableClient 타입과 findRenewableClients SQL 에서 `pending_promotion_id` 참조 모두 제거. HOTFIX 49 의 active_promotion_id OR 분만 유지.
+
+**`src/models/client.model.ts`**:
+- `setPendingPromotionId` / `setPendingPromotionFailedAt` / `findPendingPromotionFailedAt` setter/getter 전체 삭제.
+- ClientRow 인터페이스 `pendingPromotionId` / `pendingPromotionFailedAt` 필드 제거.
+- SELECT 쿼리에서 두 컬럼 참조 제거.
+
+**테스트**: billingRenewal.test.ts / promotion.proration.test.ts 의 관련 mock 정리.
+
+총 6 파일, +4/-130 (보완 +1/-1).
+
+### 영향 파일
+- `src/services/promotion.service.ts`
+- `src/services/billingRenewal.service.ts`
+- `src/services/billingScheduler.service.ts`
+- `src/models/client.model.ts`
+- `src/services/billingRenewal.test.ts`
+- `src/services/promotion.proration.test.ts`
+
+### 후속 (DB)
+
+DB 컬럼 / FK / 인덱스 drop 은 별도 `/task-db-structure data-craft` 진행:
+- `client.pending_promotion_id` (bigint, NULL)
+- `client.pending_promotion_failed_at` (datetime, NULL)
+- 인덱스 `idx_client_pending_promotion`
+- FK `fk_client_pending_promotion`
+
+데이터 잔존 0건 확인. **본 코드 머지 + 배포 완료 후 DDL 실행 권장** (반대 순서 시 SELECT "Unknown column" 500).
+
+### 해소된 finding
+- 재검증 #1 (회계 사고) / #2 (영구 미적용) / #4 (만료 후 edge) — 경로 자체 삭제로 자연 해소.
+
+### 잔존 (별도 hotfix)
+재검증 #3: UpgradeStepPayment cycle 토글이 프로모션 활성 시 노출 + 신규 BE 에러 코드 FE 매핑. → 다음 hotfix.
+
 ## v001.405.0
 
 > 통합일: 2026-05-21
