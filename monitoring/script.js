@@ -910,25 +910,32 @@ function renderChartPromptBar(data, invocations) {
   });
 }
 
-function renderChartDayCost(data) {
+function renderChartDayCost(data, opts) {
   destroyChart('dayCost');
-  const days = (data.by_day || []);
+  const periodMode = (opts && opts.periodMode) || 'day';
+  const days = periodMode === 'week'
+    ? aggregateByWeek(data.by_day || [], ['cost_usd'])
+    : (data.by_day || []);
   const ctx = $('#chart-day-cost canvas');
   if (!ctx || !days.length) return;
   charts.dayCost = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: days.map(d => d.day),
       datasets: [{
         label: '추정 비용 (USD)',
         data: days.map(d => d.cost_usd || 0),
-        backgroundColor: COLORS.positive,
+        borderColor: COLORS.positive,
+        backgroundColor: COLORS.positive + '33',
+        tension: 0.25,
+        pointRadius: 3,
+        fill: false,
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: { y: { ticks: { callback: (v) => USD(v) } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => USD(v) } } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => USD(c.parsed.y) } },
@@ -1635,7 +1642,7 @@ async function applyWeekSelection(state) {
     renderChartPromptBar(leftData, weekInvocations);
 
     renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []), periodMode: __periodMode.dayTokens });
-    renderChartDayCost(aggregateData);
+    renderChartDayCost(aggregateData, { periodMode: __periodMode.dayCost });
 
     updateLastRefreshDisplay();
   } catch (e) {
