@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.422.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 3 — 쿠키 이관 잔존 일괄 정리, advisor 검증 포함)
+
+### 배경
+
+HOTFIX 2 후 마스터가 "유사 패턴 한번더 검사" 요청. `code-inspector` 정밀 스윕 결과:
+
+- **BLOCK 2건**: (1) FE `authApi.logout` 가 `tokenStorage.getRefreshToken()` 가드로 항상 early-return → `/api/auth/logout` 호출 자체가 안 됨 → BE refresh token 무효화 회귀 (보안). (2) BE `init` 가 새 refreshToken 을 회전 발급 후 응답 body 의 `auth.refreshToken` 으로 누설, `initController` 가 `res.cookie` 미호출 → 쿠키 미갱신 → 다음 refresh 가 stale 쿠키로 401 회귀 가능성.
+- **WARN 4건**: BE `logoutController` 가 `req.body.refreshToken` 만 봄 (BLOCK #1 고치면 즉시 400 회귀); FE `fs-api/src/core/interceptor.ts` factory 의 `executeFetch` / `executeBinaryFetch` 가 `credentials: 'include'` 누락 (parallel-code regression — `client.fetch.ts` 는 적용됨); fs_relation_builder `useDesignerDialog` / `TestPage` 의 `refreshToken` prop / state 잔존 (dead 경로).
+
+마스터 결정으로 BLOCK + WARN 전 범위 일괄 처리, advisor 검증 끼워 진행.
+
+### HOTFIX 3 결과
+
+#### Phase 5 — data-craft FE (`314b8f45`, +9 / -13, 4 files)
+
+- `packages/fs-api/src/api/auth.ts` L300–310 — `logout()` 본문에서 `tokenStorage.getRefreshToken()` 가드와 `{ refreshToken }` body 제거. 빈 POST 로 쿠키 자동 동봉.
+- `packages/fs-api/src/core/interceptor.ts` L67, L225 — `executeFetch` / `executeBinaryFetch` 두 fetch 호출에 `credentials: 'include'` 추가.
+- `packages/fs-relation-builder/src/widgets/designer-dialog/model/useDesignerDialog.ts` L72–85 — `refreshToken` prop 시그니처는 외부 노출 가능 패키지 (`fs_relation_builder` license/exports 정의 + private 플래그 없음) 의 공개 API 호환을 위해 보존, 본문은 `setTokens(accessToken, null)` 로 정리 + deps 단순화. deprecated 주석 추가.
+- `packages/fs-relation-builder/src/pages/test/TestPage.tsx` L20, L45, L220 — `refreshToken` state 선언, `setRefreshToken` 호출, `<DesignerDialog refreshToken={...}>` prop 전달 3 곳 제거 (TestPage 는 같은 패키지 내부 테스트 페이지).
+
+#### Phase 6 — data-craft-server BE (`7014588`, +64 / -48, 4 files)
+
+- `src/services/init.service.ts` L97–134 — `initBundle` 반환 shape 를 `{ auth: { ..., refreshToken }, data }` 에서 `{ response: { auth, data }, refreshToken }` 로 분리. refreshToken 이 응답 body 에 노출되지 않는다.
+- `src/controllers/init.controller.ts` L14–29 — `initBundle` 결과를 `{ response, refreshToken }` 으로 분해, refreshToken 존재 시 HttpOnly 쿠키 세팅 후 `response` 만 JSON 응답. 쿠키 옵션 (httpOnly:true, secure:`NODE_ENV==='production'`, sameSite:'lax', path:'/api/auth', maxAge:14d) 은 signin 쿠키 발급 (`auth.controller.ts` L85–91) 과 byte-identical — 회전 시 옛 쿠키를 새 쿠키가 덮어쓴다 (별개 쿠키 누적 방지).
+- `src/controllers/auth.controller.ts` L535–553 `logoutController` — `req.body.refreshToken` 에서 `req.cookies?.refreshToken` 으로 채널 전환. 로그아웃 성공 시 `res.clearCookie('refreshToken', { path: '/api/auth' })` 로 쿠키 만료.
+- `src/types/init.types.ts` — `InitBundleResponse` 의 `auth.refreshToken` 필드 제거, 최상위 `refreshToken?: string` 추가 (런타임 / 타입 정합).
+
+### 검증
+
+- **advisor 사전 검증 (pre-dispatch)**: 3 가지 위험점 사전 식별 후 사양에 반영 — (a) fs_relation_builder 외부 노출 가능 → prop 시그니처 보존, (b) 쿠키 옵션 byte-identical 강제, (c) `init.types.ts` 동기화 포함.
+- **lint gate (FE)**: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- **lint gate (BE)**: `pnpm lint` PASS (0 errors).
+- **BE 추가 tsc**: `tsc --noEmit` 으로 본 변경 관련 오류 0건 (`billing.fixtures.ts` vitest globals 사전 오류만 잔존 — 본 핫픽스 무관).
+- **advisor 사후 검증 (post-dispatch)**: 쿠키 옵션 byte-identical 확인 + `AUTH.LOGOUT` 호출자 정확히 1건 (`auth.ts:304`) 만 존재 + 이미 정리됨 — 다른 stale caller 없음.
+
+### 비고 — 잔존 의제 (본 핫픽스 범위 외)
+
+- `useSignin.ts:79`, `seedBundleData.ts:39`, `authStore.ts` 의 `refreshToken` 파라미터 통과 / `data.refreshToken || null` 단락 — 모두 memory storage 가 드롭하므로 무해 dead field. 후속 정리 후보.
+- `fs-api/src/types/requests/auth.ts:202` `InitBundleResponse.auth.refreshToken` 옵셔널 — FE 측 타입 잔존이지만 옵셔널이라 호환. 후속 정리 후보.
+- `acquireTimeout` mysql2 경고는 단순 경고 + 테스트 의존 — 범위 외 유지.
+
 ## v001.421.0
 
 > 통합일: 2026-05-21
