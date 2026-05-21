@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.408.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 52 — 4차 검증 5건 정정)
+
+### 변경
+
+**BE — data-craft-server (`5fc88e7`)** — 협업 프로모션 인원 변경 회귀 (#1/#2/#3) + cycle 전환 dead 분기 (#5):
+- **#3** `seatChange.service.ts`: collab 프로모션 분기에서 promoBasePlanType 을 hoisting 후 `executeUpgradeWithDiff` 의 targetPlan 으로 전달. 기존 'free' 전달 회귀 해소.
+- **#1**: `billingSubscription.service.ts:715-729` (HOTFIX 32/33 의 effectiveCurrentPlan 로직) 이 이미 적용되어 있음 — no-op 확인.
+- **#2**: `expireClientPromotionInTx` 호출을 `isCommitmentTransition` (`targetPlan !== effectiveCurrentPlan`) 조건부로 변경. 협업 프로모션 seats-only 증가 시 프로모션 종료 안 됨 (HOTFIX 41 retention +1 차감도 트리거 안 됨).
+- **#5**: HOTFIX 49 #4 차단 + isLevelUp cycle-only 차단으로 도달 불가한 cycle 전환 UPDATE 분기 제거.
+
+**FE — data-craft (`41a5d0d7`)** — 매핑 누락 (#4):
+- `PromotionPurchaseDialog.tsx` mutation onError 에 `resolveBillingError` 연결. HOTFIX 51 의 3 다이얼로그에 더해 프로모션 구매까지 4 다이얼로그 일관성 확보.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/seatChange.service.ts`
+- `src/services/billingSubscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/ui/PromotionPurchaseDialog.tsx`
+
+### 시나리오 해소
+
+| 케이스 | 이전 | 변경 후 |
+|--------|------|---------|
+| 협업 프로모션 13명 → 14명 추가 | UPGRADE_DIFF_NOT_AN_UPGRADE 차단 + (통과 시) 프로모션 강제 종료 | 정상 차액 결제, 프로모션 유지 |
+| 프로모션 구매 시 BE 에러 (PAYMENT_ORDERID_MISMATCH 등) | generic 토스트 | 정확한 사유 노출 |
+| cycle 전환 dead 분기 | 도달 불가 코드 잔존 | 정리 |
+
+### 잔존 (별도 후속)
+- **collab 프로모션 seats-only 증가 시 client_promotion.snapshot_seats 갱신** — 현재 본 hotfix 는 expire 안 하는 것까지만. snapshot_seats 동기화는 필요 시 별도 점검 (HOTFIX 41/42 정합).
+
 ## v001.407.0
 
 > 통합일: 2026-05-21
