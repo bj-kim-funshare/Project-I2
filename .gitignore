@@ -1,2 +1,3 @@
 monitoring/data/aggregate.json
 monitoring/data/periods/**/*.json
+.claude/review-check-output/
