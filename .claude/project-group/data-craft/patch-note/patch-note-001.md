@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.377.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 29 — 프로모션 활성 시 seatChange 단가 인식)
+
+### 개요
+
+마스터 보고: 협업 프로모션 활성 client 가 인원 증가 시 "추가 결제 금액이 없습니다" 표시. 원인 = `calculateProrationDiff` 가 client.plan_type='free' (택일 정책) 기준으로 단가 조회 → PLAN['free'].priceKrw=0 → chargeAmount=0. perSeat 판정도 'free' 라 seats=1 강제.
+
+### 변경 — data-craft-server (`ebe31779`)
+
+**`src/services/billingSubscription.service.ts`** `calculateProrationDiff`:
+- 신규 옵셔널 인자 4개:
+  - `currentPromotionMonthlyPrice?: number | null`
+  - `currentPromotionIsCollaboration?: boolean`
+  - `targetPromotionMonthlyPrice?: number | null`
+  - `targetPromotionIsCollaboration?: boolean`
+- 단가 결정:
+  - `currentPromotionMonthlyPrice != null` → currentMonthlyPrice 덮어쓰기 (snapshot 보다 우선 — 진짜 프로모션 monthly_price).
+  - 동일하게 target.
+- perSeat 판정 확장:
+  - `isCurrentPerSeat = (currentPlan === STANDARD || PREMIUM) || currentPromotionIsCollaboration === true`
+  - target 동일.
+
+**호출자 갱신**:
+- `executeUpgradeWithDiff` — client 조회 후 `findActiveClientPromotionWithMeta` 함께 조회 → promotion 활성 시 calculateProrationDiff 에 monthly_price / isCollaboration 전달. payment_history 의 seats_at_payment 등 isTargetPerSeat 판정도 정합.
+- `getUpgradeQuote` — currentPromotion 만 있는 케이스도 처리.
+- `getSeatChangeQuote` (seatChange.service.ts) — 동일 패턴 적용.
+
+**테스트**: `billingSubscription.proration.test.ts` 에 협업 프로모션 seats 비례 chargeAmount 검증 케이스 추가.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+- `src/services/seatChange.service.ts`
+- `src/__tests__/billingSubscription.proration.test.ts`
+
+### 효과
+
+- 협업 프로모션 활성 client → 인원 증가 quote → **chargeAmount = promotion.monthly_price × delta × (잔여일수/cycleDays)** 정상 표시.
+- 실 결제 (executeUpgradeWithDiff) 도 동일 산식 → quote = 실 결제 일치.
+- 일반 플랜 client → 기존 동작 그대로.
+
+### 잔존 (blocker)
+
+- `getSeatChangeQuote` 의 `nextBillingAmount` / `applyAtAmount` 는 `calculateAmount(planType='free', ...)` 그대로라 협업 프로모션 client 의 다음 결제 예상 금액 표시도 0 — 별도 hotfix 후보 (FE 다음 결제일 표시).
+
+### 테스트 시나리오
+
+1. 협업 프로모션 활성 client → 인원 1명 증가 → **결제 금액 > 0 정상 표시**.
+2. 인원 변경 결제 진행 → quote 와 동일 chargeAmount 실 결제.
+3. 일반 standard/premium client → 기존 동작 유지.
+
 ## v001.376.0
 
 > 통합일: 2026-05-20
