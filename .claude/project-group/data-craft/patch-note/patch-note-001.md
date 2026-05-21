@@ -1,5 +1,75 @@
 # data-craft — Patch Note (001)
 
+## v001.426.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 7 — AuthProvider 부트스트랩 cookie refresh 자동 복원 + tenant 가드)
+
+### 배경
+
+마스터 보고: "자동 로그인 체크해도 새로고침하면 로그인 화면으로 가". rememberMe=true 활성 사용자의 자동 로그인 회귀.
+
+### 원인
+
+FE 의 token storage 는 `createMemoryTokenStorage` (in-memory only) — 새로고침 시 access token 휘발. `AuthProvider.tsx:152` 가 `tokenStorage.getAccessToken()` 호출 → null → L155 `if (accessToken)` false → L188 else 분기로 즉시 "비인증 처리". HttpOnly refresh cookie 가 살아있어도 시도조차 안 함.
+
+본 회귀는 쿠키 이관 시리즈 (HOTFIX 2 → 4 → 5 → 6) 의 한 측면 — refresh 흐름은 정합되었으나 부트스트랩 진입점 (AuthProvider mount 시 access token 부재 케이스) 가 cookie 기반 복원을 활용하지 않아 자동 로그인 미작동.
+
+### HOTFIX 7 결과
+
+데이터크래프트 FE (`data-craft`, `72b770c0`, +27 / -4, 1 file):
+
+`src/app/providers/AuthProvider.tsx` L188-194 else 블록만 교체. if 블록 (accessToken 있을 때 흐름) 무변경:
+
+```ts
+} else {
+  // accessToken 부재 (새로고침으로 in-memory 휘발): refresh cookie 기반으로 자동 복원 시도.
+  const newAccessToken = await refreshAccessToken();
+  if (newAccessToken) {
+    const pathPageId = extractPageIdFromUrl();
+    try {
+      const data = await authApi.init(pathPageId);
+      // tenant 가드 — useSignin.ts L58-65 와 동일 정책.
+      const { companyId: tenantCompanyId } = useTenantStore.getState();
+      const urlTenant = new URLSearchParams(window.location.search).get('tenant');
+      const effectiveTenant = tenantCompanyId || urlTenant;
+      if (effectiveTenant && data.auth.account.companyId !== effectiveTenant) {
+        handleAuthFailure();
+        return;
+      }
+      seedBundleData(data, pathPageId);
+    } catch (retryError: unknown) {
+      console.error('[자동 로그인 부트스트랩 실패]:', retryError);
+      handleAuthFailure();
+    }
+  } else {
+    // refresh 실패 (cookie 없음 / 만료) = 정상 비인증 흐름. 사용자 정의 테마만 리셋.
+    const { theme } = useThemeStore.getState();
+    if (USER_THEMES.includes(theme)) {
+      useThemeStore.getState().setThemeFromServer('light');
+    }
+  }
+}
+```
+
+핵심 변경:
+1. **자동 복원 시도**: `refreshAccessToken()` 으로 cookie 기반 새 access token 발급 → 성공 시 `authApi.init` + `seedBundleData` 진행.
+2. **tenant 가드** (advisor 옵션 b 채택): `useSignin.ts:58-65` 의 동일 정책을 부트스트랩 경로에도 적용. `tenantStore.companyId` 또는 URL `?tenant=` 와 응답 `account.companyId` 불일치 시 `handleAuthFailure()` — 다른 회사 cookie 잔존 시 silent 권한 부여 방지.
+3. **refresh 실패 = quiet 비인증**: cookie 부재/만료 케이스는 기존 "비인증 흐름" (테마 리셋만, session_expired 플래그 미설정) 유지 — UX 일관성.
+4. **init 실패 = 인증 실패 처리**: `handleAuthFailure()` 호출.
+
+### 검증
+
+- **Explore 진단**: AuthProvider 부트스트랩 흐름 전수 추적, L155-194 if/else 구조 확인, L188 else 가 즉시 비인증 처리하는 단락 식별.
+- **advisor 사전 검증**: 2 가지 위험 사전 식별 후 사양 반영 — (a) tenant 가드 (옵션 b 채택), (b) network error vs cookie missing 미구분 (기존 401 retry 와 동등이라 info-tier 유지).
+- **diff 가산성 확인**: if 블록 (L155-187) 완전 무변경, else 블록만 확장.
+- **새 import 0건**: `useTenantStore`, `useThemeStore`, `USER_THEMES`, `extractPageIdFromUrl`, `authApi`, `seedBundleData`, `refreshAccessToken`, `handleAuthFailure` 전부 기존 심볼 재사용.
+- **lint gate**: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+
+### 잔존 의제 (advisor 권고)
+
+본 플랜에서 식별된 raw→effective 회귀 4건 (HOTFIX 5 SSE, HOTFIX 6 init, 잠재 추가) sweep + HOTFIX 3 보고의 type+dead field 일괄 정리 = 두 가지 잔존 의제. 본 핫픽스로 자동 로그인 정상화 확인 후 별도 핫픽스로 진행.
+
 ## v001.425.0
 
 > 통합일: 2026-05-21
