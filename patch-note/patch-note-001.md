@@ -1,5 +1,30 @@
 # 아이OS — Patch Note (001)
 
+## v001.103.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #52
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — `renderChartPromptBar` 재작성 (commit `9de8399d`)**: `monitoring/script.js` 의 차트 함수를 `data.by_prompt` (master prompt 1건 단위) 에서 `by_skill_invocation` (스킬 호출 1회 단위) 기반으로 교체. 시그니처 `renderChartPromptBar(data, invocations)` 로 변경, 가로 막대 스택 2 데이터셋 — `실사용 (input+output)` (`COLORS.noncache`, 파랑 `#3b82f6`) + `캐시 (creation+read)` (`COLORS.cache`, 보라 `#9b59b6`). 정렬: 두 합계 내림차순 → 상위 30 건. 라벨 = `w.title_prompt` (`/skill ...` 형식), 60자 초과 시 ellipsis. Tooltip: 전체 title 노출 + input/output/cache_creation_5m/1h/cache_read 분해 + 비용 + 스킬/세션/시작시각. legend 노출 ON. 호출 지점 `applyWeekSelection` 안 1 곳에서 `weekInvocations` 변수 전달.
+- **Phase 2 — `chart-prompt-bar` 카드 제목 변경 (commit `a8bdd53b`)**: `monitoring/index.html` 의 해당 카드 `<h3>` 텍스트를 "프롬프트별 토큰 소모 (Top 30)" → "스킬 호출별 토큰 소모 (Top 30)" 로 1 줄 교체.
+- **Phase 3 — 기간 토글 인프라 (commit `c0415329`)**: 두 시계열 차트 카드(`#chart-day-tokens`, `#chart-day-cost`) 헤더에 "일자별 / 주간별" 세그먼티드 토글 추가. CSS 신규 클래스 — `.chart-card-header` (flex row), `.period-toggle` (border + active-state 토큰 일관). JS 추가: `getISOWeek(date)` / `aggregateByWeek(daysArray, fields)` 헬퍼 (ISO week 키 `YYYY-Www` 로 합산), 모듈-레벨 `__lastAggregateData` 캐시 + `__periodMode = { dayTokens: 'day', dayCost: 'day' }` 상태, `setupPeriodToggles()` (클릭 시 active 갱신 + **해당 차트 1개만** 재렌더 — 전체 `render()` 재호출 금지). `applyWeekSelection` 내부에 `__lastAggregateData = aggregateData` 캐시 저장 한 줄 추가. DOMContentLoaded 에서 1회 호출. 본 페이즈는 인프라만 — 차트 함수 본문 미수정.
+- **Phase 4 — `renderChartDayTokens` 에 `periodMode` 옵션 (commit `bd0459aa`)**: `'week'` 모드에서 `aggregateByWeek(data.by_day, ['input','output'])` 로 데이터 분기. `compareData` 도 동일 그룹핑. 차트 타입 `'line'` + stacked area 유지. `skillCountsByDay` 플러그인은 `'week'` 모드에서 비활성 (라벨 차원 불일치 회피). 호출 지점에 `periodMode: __periodMode.dayTokens` 전달.
+- **Phase 5 — `renderChartDayCost` 막대 → 선 그래프 + `periodMode` (commit `c88243d6`)**: 차트 타입 `'bar'` → `'line'` 전환 (`tension: 0.25`, `pointRadius: 3`, `fill: false`, `borderColor: COLORS.positive`). `'week'` 모드 = `aggregateByWeek(by_day, ['cost_usd'])`. y축 USD 포매팅 유지 + `beginAtZero: true` 추가. 호출 지점에 `periodMode: __periodMode.dayCost` 전달.
+- **Phase 6 — 데드 코드 정리 (옵션 A, no-op)**: 백엔드 `by_prompt` / `by_prompt_meta` 산출은 향후 raw 분석용으로 `collect.py` 에 그대로 유지. 프론트엔드 사용처는 Phase 1 의 함수 재작성 과정에서 전부 제거됨. 별도 커밋 없음.
+
+### 영향 파일
+
+- `monitoring/script.js`
+- `monitoring/index.html`
+- `monitoring/styles.css`
+
+### Treadmill Audit
+
+PASS. Q3 trade-out 2 건 — (a) `#chart-prompt-bar` 의 "프롬프트별 보기" 시각화 폐기 (백엔드 데이터는 유지하되 UI 에서는 더 이상 소비하지 않음), (b) `#chart-day-cost` 의 막대 차트 표현 폐기 (선 그래프로 통일). 신규 UI 컨트롤 `.period-toggle` 1종은 차트 카드 헤더 종속 표시 컨트롤로 자기-보호 invariant/규칙/훅/에이전트/스킬/검증축이 아님 — `feedback_no_prevention_treadmill.md` 3 질문 적용 대상 외.
+
 ## v001.102.0
 
 > 통합일: 2026-05-21
