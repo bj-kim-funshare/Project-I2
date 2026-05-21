@@ -1,6 +1,6 @@
 ---
 name: plan-enterprise
-description: The core development procedure for external project groups. Receives a plan description from master, optionally clarifies ambiguity in one sharpening question, dispatches a codebase exploration, formulates a phase-broken plan, asks for ExitPlanMode approval, then creates a GitHub issue that becomes the single source of truth for the plan (no local plan documents are written). Phases execute sequentially via the phase-executor sub-agent on a WIP branch with concrete per-phase main-session verification (no per-phase advisor — advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry on a separate doc WIP and merges both branches into i-dev. Excludes any I-OS-layer concerns — this skill is external-project-only.
+description: The core development procedure for external project groups. Receives a plan description from master, optionally clarifies ambiguity in one sharpening question, dispatches a codebase exploration, formulates a phase-broken plan, asks for ExitPlanMode approval, then creates a GitHub issue that becomes the single source of truth for the plan (no local plan documents are written). Phases execute sequentially via the phase-executor sub-agent on a WIP branch with concrete per-phase main-session verification (no per-phase advisor — advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry on a separate doc WIP and merges both branches into i-dev. Does NOT push the integration branch (i-dev) to origin unless master's invocation explicitly authorizes it. Excludes any I-OS-layer concerns — this skill is external-project-only.
 ---
 
 # plan-enterprise
@@ -434,6 +434,8 @@ In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<
 ## Step 10 — Merge
 
 Both WIPs are now merged into i-dev. The plan issue stays open through Step 11's gate; closure happens in Step 12 (FINALIZE) only on master's explicit `플랜 완료`.
+
+> **Hard rule — integration branch push 금지**: The integration branch `i-dev` MUST NOT be pushed to origin as part of the standard termination path. Only WIP branches (`-작업` / `-문서` / `-codex` / `-핫픽스<M>` / `-핫픽스<M>-codex`) may be pushed, and only at the steps where SKILL.md explicitly emits `git push -u origin <wip>`. Pushing `i-dev` is permitted only when master's invocation argument explicitly contains a push keyword ("푸시", "push") — absence of the keyword = absence of authorization. The skill MUST NOT infer a push from "completion" or "merge succeeded". The standard end-state is: local `i-dev` merged + WIP branches deleted + PENDING gate dispatched. `origin/i-dev` is intentionally left behind master's local `i-dev`. Same rule applies to the HOTFIX merge in Step 11 below. Reference: memory `feedback_plan_enterprise_no_auto_push.md` (cross-session policy).
 
 ## Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
 

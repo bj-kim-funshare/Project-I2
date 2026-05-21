@@ -1,6 +1,6 @@
 ---
 name: plan-enterprise-os
-description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into main. Optionally routes phase execution to Codex via --codex flag while Claude remains planner, verifier, and final authority.
+description: The development procedure for the harness itself (this repo, Project-I2). Mirror of plan-enterprise with the project-group concept removed and the verification rubric expanded to six perspectives that include explicit Treadmill Audit. Issue-as-source-of-truth on this repo. Logical verification only — no lint / build / test gates, as the harness has none. Phases execute via phase-executor on a WIP branch with per-phase main-session concrete verification (advisor runs only at plan formulation and at plan completion, two calls total). On completion, authors a patch-note entry in root patch-note/ on a separate doc WIP and merges both branches into main. Does NOT push the integration branch (main) to origin unless master's invocation explicitly authorizes it. Optionally routes phase execution to Codex via --codex flag while Claude remains planner, verifier, and final authority.
 ---
 
 # plan-enterprise-os
@@ -289,6 +289,8 @@ Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts pat
 ### Step 10 — Merge
 
 Identical to `plan-enterprise` Step 10. Both WIPs merged to main. Issue stays open through Step 11.
+
+> **Hard rule — integration branch push 금지**: The integration branch `main` MUST NOT be pushed to origin as part of the standard termination path. Only WIP branches (`-작업` / `-문서` / `-codex` / `-핫픽스<M>` / `-핫픽스<M>-codex`) may be pushed, and only at the steps where SKILL.md explicitly emits `git push -u origin <wip>`. Pushing `main` is permitted only when master's invocation argument explicitly contains a push keyword ("푸시", "push") — absence of the keyword = absence of authorization. The skill MUST NOT infer a push from "completion" or "merge succeeded". The standard end-state is: local `main` merged + WIP branches deleted + PENDING gate dispatched. `origin/main` is intentionally left behind master's local `main`. Same rule applies to the HOTFIX merge in Step 11 below. Reference: memory `feedback_plan_enterprise_no_auto_push.md` (cross-session policy).
 
 ### Step 11 — PENDING gate (per `.claude/md/completion-gate-procedure.md`)
 
