@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.404.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #144 (funshare-inc/data-craft) HOTFIX 2 — 미리보기 로고 이미지 fallback (실제 사이드바 패턴 일치)
+
+### 변경
+
+**data-craft (`0a982f3`)**:
+- `PageEditPreview.tsx` 헤더 로고 처리 방식을 실제 사이드바의 `CompanyLogo` (`src/features/logo-upload/ui/CompanyLogo.tsx`) 와 1:1 미러 패턴으로 변경.
+- `useTenantStore` → `useAuthStore.accountInfo` 의 `logoUrl` / `companyName` 사용으로 출처 통일.
+- `fileApi.loadImage()` 비동기 blob 로드 + `URL.createObjectURL` / `revokeObjectURL` cleanup 인라인 (isMounted 가드 포함).
+- `logoSrc` 없거나 `imageLoadError` 면 `<img>` 자체 미렌더 → 깨진 이미지 아이콘 노출 경로 0. 펼친 상태에서는 항상 `companyName` 텍스트 + chevron 노출.
+- v001.396.0 의 raw `<img src={logoUrl}>` 가 로드 실패 시 깨진 이미지로 나오던 회귀 해소.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/page-management/ui/PageEditPreview.tsx`
+
+### 테스트
+
+1. 디자인 모드 → 화면 편집 모달 열기: 미리보기 헤더에 깨진 이미지 아이콘 안 나오는지 확인.
+2. 로고 파일 부재 / 로드 실패 시 회사명 텍스트만 표시.
+3. 정상 로고 있는 테넌트 → 작은 로고 + 회사명 동시 표시.
+4. 펼친/접힌 토글 동작 무회귀.
+
 ## v001.403.0
 
 > 통합일: 2026-05-21
