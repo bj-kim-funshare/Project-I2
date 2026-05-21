@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.423.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 4 — FE refresh 응답 shape 정정, HOTFIX 2 회귀)
+
+### 배경
+
+HOTFIX 2 + 3 머지 후 마스터 재테스트. 페이지 전환 시 여전히 튕김. 스크린샷 console: `ApiException: No access token in refresh response`.
+
+### 원인 (HOTFIX 2 자체의 회귀)
+
+HOTFIX 2 (v001.421.0) 가 FE 3개 refresh 함수를 쿠키 기반으로 재작성하면서 응답 body shape 를 `{ data: { accessToken } }` 으로 오기입. BE 실제 응답:
+- `data-craft-server/src/services/auth.service.ts:579-586` — `return { response: { auth: { accessToken: ... } }, refreshToken }`.
+- `data-craft-server/src/controllers/auth.controller.ts:176` — `res.status(200).json(response)` → wire payload `{ auth: { accessToken } }`.
+
+→ refresh 200 OK 응답에서 `responseBody.data?.accessToken` 으로 찾으나 그 키 부재. `ApiException('No access token in refresh response', 401)` throw → `handleAuthFailure` / `onAuthRequired` → `clearAuth` → 로그인 페이지 강제 이동. 다른 auth 흐름 (signin/autoSignin/init) 은 `apiClient` 인터셉터가 `data.auth` 를 정상 파싱하므로 영향 없음 — 3개 manual `fetch()` refresh 만 회귀.
+
+### HOTFIX 4 결과
+
+데이터크래프트 FE (`data-craft`, `195748b2`, +14 / -14):
+
+- `packages/fs-api/src/core/tokenRefresh.ts` — `responseBody: { data?: ... }` → `{ auth?: ... }`, 모든 접근 `data` → `auth`.
+- `src/app/providers/AuthProvider.tsx` — 동일 패턴.
+- `src/app/providers/SseProvider.tsx` — `data.data?.accessToken` → `body.auth?.accessToken` (변수명 충돌 회피).
+
+### 검증
+
+- shape mismatch grep (`responseBody\.data` / `data\.data\?\.accessToken`) 결과 = 정확히 HOTFIX 2 가 손댄 3 파일만 영향. 다른 곳 없음.
+- lint gate: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- BE 응답 shape 확인 (`auth.service.ts:579-586` + `auth.controller.ts:176`) 와 정합 회복.
+
+### 교훈 (회귀 분석)
+
+HOTFIX 2 작성 시 BE 응답 shape 를 코드 확인 없이 추정한 것이 직접 원인 — `Refresh token not found` 라는 표면 증상에 매몰되어 응답 body 의 키 이름을 검증하지 않음. 향후 응답 shape 가 관여하는 FE 측 핫픽스는 BE 의 service / controller 를 1회 grep 으로 정합 확인 후 작성하는 사전 단계가 advisor 검증 워크플로우에 포함되어야 함.
+
+### 보류
+
+마스터 직전 지시 "잔존 의제 처리" (HOTFIX 3 보고의 `useSignin.ts:79`, `seedBundleData.ts:39`, `authStore.ts`, `InitBundleResponse.auth.refreshToken` 타입 잔존, `client.fetch.ts:102`/`interceptor.ts:114` dead 분기 등) 는 본 회귀 처리 우선 → 본 핫픽스 머지 후 마스터 검증 완료를 기다린 뒤 별도 핫픽스 진행.
+
 ## v001.422.0
 
 > 통합일: 2026-05-21
