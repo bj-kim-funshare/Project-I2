@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# I2 statusline — v1.3 (L3 multi-line + isMeta/제어 키워드 필터).
+# I2 statusline — v1.4 (L1 5h/7d bar 추가).
 # Reads Claude Code's statusline JSON from stdin, emits colored lines.
 # Spec: https://code.claude.com/docs/ko/statusline
 #
@@ -12,7 +12,7 @@
 #   }
 #
 # Line layout (master directive 2026-05-13):
-#   L1 — Identity + limits: model · effort · 5h · 7d · ⏱ duration
+#   L1 — Identity + limits: model · effort · 5h+bar · 7d+bar · ⏱ duration
 #   L2 — Activity + cost: ctx% bar · git split · session lines · cost · tokens
 #   L3 — Last user prompt: 💬 (max 5 lines × 105 display-units/line — CJK=2, ASCII=1; wraps; isMeta + 제어 키워드 제외)
 #
@@ -202,14 +202,16 @@ SES_RESET_FMT=$(fmt_reset_hm "$RESET_5H")
 WK_RESET_FMT=$(fmt_reset_dhm "$RESET_7D")
 
 if [ -n "$RL_5H" ]; then
-  if [ -n "$SES_RESET_FMT" ]; then SES_DISPLAY="${RL_5H}% (${SES_RESET_FMT})"
-  else SES_DISPLAY="${RL_5H}%"; fi
+  SES_BAR=$(ctx_bar "$RL_5H")
+  if [ -n "$SES_RESET_FMT" ]; then SES_DISPLAY="${RL_5H}% ${SES_BAR} (${SES_RESET_FMT})"
+  else SES_DISPLAY="${RL_5H}% ${SES_BAR}"; fi
 else
   SES_DISPLAY="n/a"
 fi
 if [ -n "$RL_7D" ]; then
-  if [ -n "$WK_RESET_FMT" ]; then WK_DISPLAY="${RL_7D}% (${WK_RESET_FMT})"
-  else WK_DISPLAY="${RL_7D}%"; fi
+  WK_BAR=$(ctx_bar "$RL_7D")
+  if [ -n "$WK_RESET_FMT" ]; then WK_DISPLAY="${RL_7D}% ${WK_BAR} (${WK_RESET_FMT})"
+  else WK_DISPLAY="${RL_7D}% ${WK_BAR}"; fi
 else
   WK_DISPLAY="n/a"
 fi
