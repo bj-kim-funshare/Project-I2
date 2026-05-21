@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.387.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 37 — 프로모션 활성 시 다음 결제 항상 월간 표시)
+
+### 개요
+
+마스터 보고: 프로모션 활성 client (13명) 의 결제 이력 예정 행이 2,091,960원 표시. 14,900 × 13 × 12 × 0.9 = 정확히 일치 — `PlanTabContent.upcomingPayment` (HOTFIX 23) 가 `cycle === 'yearly'` 분기에서 연간 정가 (× 12 × 0.9) 적용했음. 마스터 정책: **프로모션은 월 고정**, cycle 무관.
+
+### 변경 — data-craft (`6801456c`)
+
+**`src/widgets/settings-dialog/ui/PlanTabContent.tsx`** L42-58 promotion 분기:
+- 변경 전: `amount = cycle === 'yearly' ? Math.floor(baseMonthly * 12 * 0.9) : baseMonthly;`
+- 변경 후: `amount = isPromoPerUser ? promoMonthly * Math.max(seats, 1) : promoMonthly;` — cycle 분기 삭제.
+- billingCycle 응답 필드도 무조건 `'monthly'` 고정.
+
+### 영향 파일
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client (13명, billing_cycle='yearly' 데이터 잔존이라도) → 결제 이력 예정 행 = 13 × 14,900 = **193,700원** (이전: 2,091,960원).
+2. 일반 영구 client + 연간 → 기존 동작 그대로 (영구 분기는 cycle yearly 정상 적용).
+
+### 잔존 / 관련 점검 권장 (별도 후속)
+
+- BE / FE 에서 프로모션 활성 client 가 cycle 전환 (`scheduleBillingCycleChange` 또는 HOTFIX 34 의 UpgradeStepPayment 연간 토글) 을 시도할 수 있는 경로 자체를 차단해야 정합 — 프로모션은 월 고정이므로 cycle 전환 의미 없음. 별도 차단 hotfix 후보.
+- 사용자의 client.billing_cycle='yearly' 데이터가 이미 잘못 저장되어 있다면 task-db-data 로 정정 권장.
+
 ## v001.386.0
 
 > 통합일: 2026-05-21
