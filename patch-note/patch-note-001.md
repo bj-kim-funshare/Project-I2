@@ -1,5 +1,45 @@
 # 아이OS — Patch Note (001)
 
+## v001.98.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #50
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — Markup / Style 리셋** (commit `5e1420a`): topbar의 기간 단위 셀렉터(`#period-unit` 7-옵션), 기간 키 셀렉터(`#period-key`), 비교 셀렉터(`#period-compare-target`) 3종을 모두 제거하고 그 자리에 커스텀 드롭다운 2개(`#week-picker-left` / `#week-picker-right`)를 마크업했다. 각 드롭다운은 `<button class="cdrop-toggle">` + `<ul class="cdrop-menu">` 구조 — 네이티브 `<select>` 미사용. 하단의 디테일 4 테이블 섹션(`#by-model` / `#by-skill` / `#by-day` / `#by-session`)과 `#chart-session-bar` 세션 Top10 카드를 마크업 단계에서 통째로 삭제. styles.css에 `.cdrop`, `.cdrop-toggle`, `.cdrop-menu`, `.cdrop-item`, `.cdrop-item.is-active`, `.cdrop.is-open .cdrop-menu` 클래스 7종을 다크 테마 토큰(`.kpi-card` 보더/배경 재사용) 일관으로 추가. 더 이상 참조 없는 `.period-selector select`, `.detail-section`, `.table-block`, `#period-compare-target`, `.detail-row-2col`, `.detail-section.has-html-legend .detail-chart` 등 고아 스타일 일괄 정리. -135 net lines.
+
+- **Phase 1.5 — 전체 토큰 카드 non-cache/cache 라벨 위치 이동** (commit `3bf6cc2`, 마스터 미드플라이트 추가): Phase 1 머지 직전 마스터가 "NON-CACHE / CACHE 표기는 전체 토큰 텍스트가 있는 상단 오른쪽 끝에 배치" 추가 요청. `#kpi-tokens` 카드의 헤더를 `<div class="kpi-tokens-header">` flex row(space-between)로 감싸 `<h3>전체 토큰</h3>` 좌측 + `<span class="kpi-tokens-label">non-cache / cache</span>` 우측 끝 배치. 기존 숫자 아래의 `<div class="kpi-unit">non-cache / cache</div>` 제거. 다른 KPI 카드(메시지 / 캐시효율 / 추정비용)의 헤더는 무수정 — 본 변경은 `#kpi-tokens` 한정.
+
+- **Phase 2 — Script 재배선** (commit `5de0887`): script.js에서 기간/비교/자동새로고침 관련 함수 5종(`populatePeriodKeys`, `populateCompareTarget`, `applyPeriodSelection`, 기존 `renderAll`/`render` 래퍼) 삭제. 디테일 테이블 렌더러 4개(`renderByModel`, `renderBySkill`, `renderByDay`, `renderBySession`) 및 세션 바 차트 렌더러(`renderChartSessionBar`) 삭제. `AUTO_REFRESH_MS` 60초 인터벌 setup 블록과 `_autoRefreshInFlight` 플래그 일괄 제거 — 새로고침은 `#refresh-btn` 클릭만이 진입점. 기간 셀렉터 3종에 대한 이벤트 와이어링 전체 제거. 신규 함수 6개 추가 — `loadWeekly(weekKey)` (`data/periods/weekly/<key>.json` 로더), `listWeeklyKeys()` (`aggregate.json.periods_index.weekly` 기반 ISO 주차 정렬), `weekDropdownLabel(weekKey, idx)` (라벨 포맷 "이번 주 / 지난 주 / YYYY-WNN (M월 d일 주)"), `renderCustomDropdown(rootEl, options, selectedKey, onChange)` (토글 / 외부클릭 / 키보드 ↑↓Enter Esc 처리, 두 피커 공용), `enforceLeftRightOrder(state)` (right < left 가드, 위반 시 left 직전 가장 최근 과거 주로 fallback), `applyWeekSelection({left, right})` (메인 디스패처). 디스패처는 `Promise.all([loadWeekly(left), loadWeekly(right), loadAggregate()])` 후 KPI 4카드는 `renderKpi(leftData)` + `applyDeltaBadgesFromValues(rightData.total, leftData.total)` 재사용, 도넛 3개(모델/스킬/캐시)는 기존 `compareData` 파라미터로 `rightData` baseline 전달, 에이전트 바는 `renderChartAgentBar(leftData, {compareData: rightData})`로 호출, 스킬 호출 테이블 + 프롬프트 바는 left만, 일자별 토큰(`renderChartDayTokens`) + 일자별 비용(`renderChartDayCost`)은 `aggregateData`로 전달하여 주간 선택과 독립. `renderChartAgentBar` 시그니처를 `(data, opts={compareData})`로 확장 — Phase 1 마크업에 `#chart-agent-bar` 카드의 `.chart-legend` 가 없어 프로그래밍 방식으로 legend 컨테이너를 동적 생성하고 에이전트별 토큰 합계의 `left − right` delta를 ▲/▼ 색상 배지로 표기 (도넛 범례와 동일 마크업/CSS 재사용). DOMContentLoaded 부트스트랩을 aggregate 로딩 → 기본 left=keys[0](최신) / right=keys[1](차순) → 두 피커 `renderCustomDropdown` 초기화 → `applyWeekSelection` 흐름으로 전면 재작성. `refresh()`는 `POST /api/refresh` + 캐시 클리어 유지하되 종점을 `applyWeekSelection(_pickerState)`로 치환. -188 net lines.
+
+- **Phase 2.1 — Phase 2 잔여 dead code 정리** (commit `81896db`): Phase 2 후 호출 사이트가 없어진 `updateUrl(unit, key)` 함수(18행) 발견 — 본문은 이미 삭제된 `#period-compare-target` DOM id를 참조하는 stale 코드. 함수 정의 전체 삭제. 추가로 `applyPeriodSelection|populatePeriodKeys|populateCompareTarget|renderByModel|renderBySession|renderByDay|renderBySkill|renderChartSessionBar|AUTO_REFRESH_MS|period-unit|period-key|period-compare-target` 13종 패턴 전체에 대해 0 매치 확인.
+
+### 영향 파일
+
+- `monitoring/index.html`
+- `monitoring/styles.css`
+- `monitoring/script.js`
+
+(백엔드/수집기 무수정 — `collect.py`가 현재 주의 `by_day` truncation을 이미 보장, `aggregate.json.periods_index.weekly`로 드롭다운 주차 목록 공급.)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증 축/자기보호 invariant 추가 없음. 기존 UI 기능 축소 + 재구성, 코드 순삭감(~341 net lines 감소).
+
+### 수동 검증 항목 (master PENDING gate 시점)
+
+`python3 monitoring/scripts/serve.py`(또는 기존 서버) → 브라우저 접속 후:
+1. 기본 진입 — 왼쪽 = 2026-W21(이번 주), 오른쪽 = 2026-W20(지난 주). KPI 4카드 + 도넛 3개 + 에이전트 바 + 스킬 호출 테이블 + 프롬프트 바 + 일자별 토큰/비용 2차트 정상 렌더.
+2. 왼쪽을 W19로 변경 → 오른쪽 드롭다운 옵션이 W18 이하만 노출, 자동 W18로 이동, 모든 카드/차트 재계산.
+3. 오른쪽을 왼쪽과 같은 주 또는 미래 주로 선택 불가 (옵션 자체 비노출).
+4. `#refresh-btn` 클릭만 새로고침 동작, 60초 대기해도 자동 갱신 없음.
+5. 디테일 4 테이블 + 세션 Top10 카드 + 기간 셀렉터 + 비교 드롭다운 부재 확인.
+6. 일자별 토큰/비용 차트는 양쪽 주간 변경에 무반응 — `aggregate.json` 전체 누적 기반.
+7. `#kpi-tokens` 카드 헤더 우측 끝에 "non-cache / cache" 라벨 배치 확인, 숫자 아래 `kpi-unit` 부재.
+8. 에이전트 바 legend 영역에 에이전트별 ▲/▼ delta 배지 정상 표기 (Phase 1.5 마크업 미반영으로 프로그래밍 방식 동적 생성된 영역의 시각 적합성 함께 확인).
+
 ## v001.97.0
 
 > 통합일: 2026-05-21
