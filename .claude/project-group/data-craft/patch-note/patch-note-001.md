@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.365.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 23 — 프로모션 활성 client 예정 결제 표시)
+
+### 개요
+
+마스터 보고: 프로모션 활성 client 의 플랜 관리 → 결제 이력에 "예정" 행이 표시되지 않음. 원인 = PlanTabContent.upcomingPayment useMemo 가 일반 플랜의 `plansData[planType].priceKrw` 만 보고, 프로모션 활성 client (plan_type='free' 택일 정책) 는 priceKrw<=0 → undefined → 표시 X. BE+FE atomic 으로 promotion 분기 추가.
+
+### 변경
+
+**data-craft-server (HOTFIX 23 BE — `196fcfdf`)**
+- `models/promotion.model.findActiveClientPromotionWithMeta` SQL 에 `p.monthly_price` 컬럼 추가.
+- `types/promotion.types.ActiveClientPromotionWithMeta` 에 `monthlyPrice: number`.
+- `services/subscription.service.getSubscriptionStatus` 응답 `activePromotion.monthlyPrice` 노출. HOTFIX 22 BE 의 `isCollaboration` 패턴과 동일.
+
+**data-craft (HOTFIX 23 FE — `d73e12b7`)**
+- `features/subscription/model/types.ActivePromotionInfo` 에 `monthlyPrice: number`.
+- `widgets/settings-dialog/ui/PlanTabContent.upcomingPayment` useMemo 재구성:
+  - **신규 프로모션 분기**: `status.activePromotion` 존재 시 `isCollaboration ? promoMonthly × seats : promoMonthly` 계산 + planLabel `"{이름} (프로모션)"`.
+  - 일반 플랜 분기는 기존 그대로 (HOTFIX 19 의 seats 정합 유지).
+- `widgets/settings-dialog/ui/plan/PaymentHistorySection.UpcomingPaymentInfo` 에 `planLabel?: string` 추가 — 존재 시 planType + cycle 조합 대신 planLabel 그대로 렌더.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/models/promotion.model.ts`
+- `src/types/promotion.types.ts`
+- `src/services/subscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/model/types.ts`
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+- `src/widgets/settings-dialog/ui/plan/PaymentHistorySection.tsx`
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client (예: "운영 기술 지원 프로모션" 협업) 의 플랜 관리 → 결제 이력 영역 상단에 **"운영 기술 지원 프로모션 (프로모션)" + 금액 + 다음 결제일 (2026-06-20) 예정 행 표시**.
+2. 협업 프로모션 → 금액 = monthlyPrice × seats. 개인 프로모션 → monthlyPrice 단독.
+3. 일반 플랜 client → 기존 표시 유지 (HOTFIX 19 정합).
+
+### 배포
+
+BE + FE 동시 배포 권장. 한쪽씩이라도 깨지진 않음 (BE만: FE 무시 / FE만: monthlyPrice 부재로 분기 미통과).
+
 ## v001.364.0
 
 > 통합일: 2026-05-21
