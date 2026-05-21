@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.419.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149
+
+### 배경
+
+마스터가 `data-craft` FE 에 dev 환경 자동 로그인용 git-untracked `.env.local` 을 구축했으나 `pnpm dev` 실행 시 로그인 폼에 값이 자동 입력되지 않는 증상 보고. 조사 결과 `.env.local` 의 `VITE_DEV_EMAIL` / `VITE_DEV_PASSWORD` 두 줄이 키만 있고 값이 빈 상태 — 마스터가 키 복사 후 우측 값 기입을 누락한 것이 직접 원인. 코드 와이어링 (`devLoginDefaults.ts` → `SubdomainLoginForm.tsx` L44–49) 과 Vite 의 `.env.local` 자동 로드는 정상.
+
+### 페이즈 결과
+
+- **Phase 1 (chore, 커밋 없음)**: 마스터 지정 자격을 로컬 `.env.local` 의 `VITE_DEV_EMAIL` / `VITE_DEV_PASSWORD` 우측에 기입. 파일은 `.gitignore` 대상이라 git 변경 없음, WIP 커밋 비포함. 자격 평문은 본 patch-note 및 이슈 본문에 적재하지 않음 (dev.md 보안 정책 § 시크릿 절 준수).
+- **Phase 2 (feat, `a47b0354`)**: `src/pages/auth/devLoginDefaults.ts` 에 `import.meta.env.DEV` 가드를 부수효과로 추가. dev 모드에서 `VITE_DEV_EMAIL` 또는 `VITE_DEV_PASSWORD` 중 하나라도 빈 문자열이면 모듈 로드 시점 1회 `console.warn` 출력 (".env.local 의 VITE_DEV_EMAIL / VITE_DEV_PASSWORD 가 비어 있어 dev 자동 로그인 값이 주입되지 않습니다. .env.local 값을 채운 뒤 dev 서버를 재기동하세요."). prod 빌드에서는 `import.meta.env.DEV === false` 단락으로 미출력 + tree-shake. +9 / -0.
+- **Phase 3 (운영, 코드 외)**: 마스터가 `pnpm dev` 재기동하여 Vite env 재로드.
+
+### 영향 파일
+
+data-craft:
+- `src/pages/auth/devLoginDefaults.ts` (+9 / -0)
+- `.env.local` (gitignored, 커밋 비포함)
+
+### 검증
+
+- Phase 2 lint gate: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- advisor #2: 본문 인라인 검토 — 변경 9줄 트리비얼, prod-safe DEV 가드, dev.md 보안 정책 준수. 운영 snag (patch-note 위치 = Project-I2, 워크트리 node_modules 심볼릭 사전 제거, 통합 브랜치 origin 미푸시) 3건 사전 식별 및 처리.
+- 머지: `data-craft` i-dev 로 `--no-ff` 머지 완료, WIP A 워크트리/브랜치 정리 완료.
+
 ## v001.418.0
 
 > 통합일: 2026-05-21
