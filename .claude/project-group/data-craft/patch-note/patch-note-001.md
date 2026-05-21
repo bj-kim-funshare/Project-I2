@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.418.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #147 (HOTFIX 1 — BillingCycleComparison orphan 제거)
+
+### 배경
+
+본 플랜의 PENDING 보고에서 surface 한 orphan 컴포넌트 신호 처리. Phase 6c 작성 과정에서 `BillingCycleComparison` (`data-craft/src/features/subscription/ui/BillingCycleComparison.tsx`) 이 src/ 전체에서 import 되지 않는 dead 컴포넌트로 식별됨. 마스터가 옵션 (b) "컴포넌트 제거" 를 선택 — Phase 6c 통합 테스트와 기존 단위 테스트도 동반 dead 가 되므로 함께 제거.
+
+HOTFIX 34 (cycle 즉시결제 0) 의 회귀 방어는 Phase 4 (BE billing.subscription.upgrade.integration.test.ts) + Phase 6a (FE subscription-upgrade.integration.test.ts) 에 이미 핀되어 있어 본 제거로 인한 방어 손실 없음.
+
+### HOTFIX 1 결과
+
+데이터-크래프트 (`data-craft`, `763b217`) — 3-file 동반 삭제:
+
+- `src/features/subscription/ui/BillingCycleComparison.tsx` (64줄 컴포넌트, orphan).
+- `tests/features/subscription/BillingCycleComparison.test.tsx` (54줄 기존 단위 테스트, 컴포넌트 외부 사용처).
+- `tests/features/subscription/integration/billing-cycle-change.integration.test.ts` (322줄 Phase 6c 통합 테스트).
+
+총 -440 줄 정리.
+
+### 검증
+
+- 디스패치 1차: scope_expansion_needed 정상 신호 (기존 단위 테스트가 affected_files 미포함). affected_files 확장 후 재디스패치.
+- 디스패치 2차 (`763b217`): 3-file 삭제, 다른 파일 변경 0.
+- lint gate: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- advisor 핫픽스 검토: 5관점 PASS, BLOCK 없음.
+
+### Phase 변경
+
+본 패치노트 이후 #147 의 페이즈 분포에서 Phase 6c 가 제거되어 최종 페이즈 수는 7 (BE 5 + FE 2: 6a/6b). 신규 테스트 케이스 합계는 146 → 127 (= 146 - 19) 로 조정. HOTFIX 34 핀 레이어도 3 → 2 (Phase 4, 6a) 로 축소.
+
+### 영향 파일
+
+**data-craft**:
+- `src/features/subscription/ui/BillingCycleComparison.tsx` (삭제)
+- `tests/features/subscription/BillingCycleComparison.test.tsx` (삭제)
+- `tests/features/subscription/integration/billing-cycle-change.integration.test.ts` (삭제)
+
 ## v001.417.0
 
 > 통합일: 2026-05-21
