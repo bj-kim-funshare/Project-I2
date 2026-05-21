@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.394.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #142 (funshare-inc/data-craft) — 인증 페이지 5종 디자인팀 시안 리디자인 (라이트/다크)
+
+### 페이즈 결과
+- **Phase 1a (`e1635597`)**: 디자인팀 시안의 LIGHT/DARK 토큰 팔레트 20종을 `tokens.css` `:root` + `.dark` CSS 변수 페어로 이식. AuthPage 셸 (상단 바 + 중앙 슬롯 + 푸터, ThemeSwitcher/LanguageSwitcher 내장), Wordmark, Icon (lucide-react 매핑 레지스트리) 신설. Pretendard(jsdelivr CDN) + Noto Sans KR(Google Fonts) 로딩.
+- **Phase 1b (`d7191f4f`)**: 9종 폼/콘텐츠 primitive (PageHead, Field, Btn/BtnLink, Check, Lnk/LnkBtn, StepRow, StepCell, TenantBlock, SectionHead) 를 Tailwind + `--auth-*` 토큰 기반 TSX 로 신설. 배럴 12종 단일 export.
+- **Phase 2 (`af9882b4`)**: 공용 로그인 `/signin` 을 AuthPage 셸 단일 래퍼 구조로 전환. SigninPage/SigninForm/useSigninPage 의 grid 2분할 + 좌측 브랜딩 패널 제거, 신규 auth primitive 로 폼 전면 재작성. useSignin / useSigninErrorHandler / useAuthStore / 한국어 IME 필터 / 자동 로그인 / 세션 만료 알림 / 에러 모달 / tenant 파라미터 보존.
+- **Phase 3 (`6b0e6147`) + lint hotfix (`6709e950`)**: 공용 회원가입 `/signup` 을 `AuthPage(maxWidth=520)` + SectionHead × 2 (회사 정보 / 대표자 정보) + Field 로 전환. CompanyInfoSection 의 사업자번호/기업ID 조회 버튼을 Field suffix 슬롯에. AdminInfoSection 의 이메일은 EmailInput IME 보존 위해 Field 시각 수동 재현, 비밀번호 show/hide 는 trailing 패턴. useSignupForm/useEmailVerification/useBusinessNumberVerification/useCompanyIdValidation/PasswordStrengthIndicator 보존.
+- **Phase 4 (`66426bcb`) + amendment (`b5ba99c3`, `5af4d677`)**: 기업 로그인 `/login` 을 AuthPage + TenantBlock + Field + Btn + LnkBtn 으로 전환. useTenantStore.detectTenant 결과를 TenantBlock 으로 표시, useSignin + companyId mismatch 거부 로직 보존. Amendment 로 TenantBlock onError 폴백 (URL-tracked state 패턴) + "공용 로그인" 탈출 링크 복원.
+- **Phase 5 (`dd40a385`)**: 기업 회원가입 `/register` 를 AuthPage + TenantBlock + StepCell(이메일 인증 → 사용자 정보 2셀) + Field 로 전환. EmailVerificationStep / UserInfoStep / VerificationCodeInput 전면 재작성, 한국어 IME 필터·비밀번호 show/hide·5분 타이머·6자리 코드 검증 보존. 테넌트 미감지 fallback 분기 유지.
+- **Phase 6 (`fff3d6d4`)**: 비밀번호 재설정 `/reset-password` 를 AuthPage + PageHead + StepRow(이메일 → 인증코드 → 새 비밀번호 3셀) + Field 로 전환. authApi.sendVerificationCode/confirmPasswordReset, 5분 타이머, 6자리 코드 검증, data-testid 속성, i18n 키 보존. 새 비밀번호 필드에 Eye/EyeOff 토글 추가.
+- **Phase 7 (`209fbb4c`)**: 폐기 자산 5건 삭제 — `SigninLogoSection.tsx`, `signinAnimations.ts`, `signup/SignupBrandingPanel.tsx`, `subdomain-register/StepIndicator.tsx`, `subdomain-register/ErrorMessage.tsx`. 삭제 전/후 src/ 전체 grep 으로 잔존 참조 0 확인.
+
+### Lint gate
+페이즈마다 `pnpm typecheck:all && pnpm lint` 게이트. 8회 중 1회 (Phase 3) 미사용 import 1건 / 1회 (amendment) setState-in-effect 1건 — 각 1 iter 만에 통과. 최종 0 errors / 18 기존 warnings.
+
+### 영향 파일
+- data-craft:`src/app/styles/tokens.css`
+- data-craft:`src/app/styles/index.css`
+- data-craft:`src/shared/ui/auth/AuthPage.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Wordmark.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Icon.tsx` (신설)
+- data-craft:`src/shared/ui/auth/PageHead.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Field.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Btn.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Check.tsx` (신설)
+- data-craft:`src/shared/ui/auth/Lnk.tsx` (신설)
+- data-craft:`src/shared/ui/auth/StepRow.tsx` (신설)
+- data-craft:`src/shared/ui/auth/StepCell.tsx` (신설)
+- data-craft:`src/shared/ui/auth/TenantBlock.tsx` (신설)
+- data-craft:`src/shared/ui/auth/SectionHead.tsx` (신설)
+- data-craft:`src/shared/ui/auth/index.ts` (신설)
+- data-craft:`src/pages/auth/SigninPage.tsx`
+- data-craft:`src/pages/auth/SigninForm.tsx`
+- data-craft:`src/pages/auth/useSigninPage.ts`
+- data-craft:`src/pages/auth/SignupPage.tsx`
+- data-craft:`src/pages/auth/signup/CompanyInfoSection.tsx`
+- data-craft:`src/pages/auth/signup/AdminInfoSection.tsx`
+- data-craft:`src/pages/auth/SubdomainLoginPage.tsx`
+- data-craft:`src/pages/auth/SubdomainLoginForm.tsx`
+- data-craft:`src/pages/auth/SubdomainRegisterPage.tsx`
+- data-craft:`src/pages/auth/subdomain-register/EmailVerificationStep.tsx`
+- data-craft:`src/pages/auth/subdomain-register/UserInfoStep.tsx`
+- data-craft:`src/pages/auth/subdomain-register/VerificationCodeInput.tsx`
+- data-craft:`src/pages/auth/reset-password/ResetPasswordRequestPage.tsx`
+- data-craft:`src/pages/auth/SigninLogoSection.tsx` (삭제)
+- data-craft:`src/pages/auth/signinAnimations.ts` (삭제)
+- data-craft:`src/pages/auth/signup/SignupBrandingPanel.tsx` (삭제)
+- data-craft:`src/pages/auth/subdomain-register/StepIndicator.tsx` (삭제)
+- data-craft:`src/pages/auth/subdomain-register/ErrorMessage.tsx` (삭제)
+
+총 25 파일 수정 + 9 파일 신설 + 5 파일 삭제 = 28 파일.
+
+### Deferred polish (PENDING-gate 핫픽스 후보)
+- PageHead 다크 그라데이션 토큰 (`--auth-badge-gradient-start/end`) 추가
+- EmailVerificationTimer / PasswordStrengthIndicator 의 shadcn → `--auth-*` 토큰 매핑
+- Field suffix 슬롯 onClick 핸들러 API 보강
+
 ## v001.393.0
 
 > 통합일: 2026-05-21
