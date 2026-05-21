@@ -152,7 +152,7 @@ End of skill invocation.
 
 ## WIP / 머지
 
-본 스킬은 commit 을 생성하지 않는다. 변경 대상은 외부 GitHub state (이슈 코멘트) 1종뿐 — `gh issue comment` 로 mutation 하지만 로컬 repo state 비변경. CLAUDE.md §2 (main-session read-only) 와의 정합: 본 스킬의 mutation 은 외부 GitHub API 호출이며 로컬 파일 / 커밋 / 브랜치 변경 없음 — `dev-merge` 등 기존 skill 의 `gh pr create` / `gh pr merge` 패턴과 동일 부류. 본 스킬을 §2 의 "GitHub-only mutation" carve-out 으로 채택.
+본 스킬은 commit 을 생성하지 않는다. 변경 대상은 외부 GitHub state (이슈 코멘트) 1종뿐 — `gh issue comment` 로 mutation 하지만 로컬 repo state 비변경. CLAUDE.md §2 (main-session read-only) 와의 정합: 본 스킬의 mutation 은 외부 GitHub API 호출이며 로컬 파일 / 커밋 / 브랜치 변경 없음. 기존 `dev-merge` (`gh pr create` / `gh pr merge`) / `pre-deploy` Branch B 등에서 이미 적용되어 온 "로컬 repo state 비변경 + 외부 GitHub API 호출만" 패턴을 본 스킬도 동일하게 따른다. §2 의 공식 carve-out 신설은 본 SKILL.md 의 책임 범위 밖이며, 향후 CLAUDE.md §2 갱신이 필요해지면 별도 plan-enterprise-os 로 처리.
 
 ## Cloud routine 과의 관계
 
