@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.399.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 46 — 프로모션 라벨 consumed=0 표시)
+
+### 원인
+HOTFIX 44 의 `const monthsSuffix = consumed && max ? ... : ''` 가 truthy 검사. consumed=0 인 신규 프로모션 사용자 (한 번도 결제 안 된 상태) 에서 0 falsy → 폴백으로 "(프로모션)" 만 표시. 마스터 의도는 항상 표시.
+
+### 변경 — data-craft (`943ba950`)
+**`PlanTabContent.tsx`** L52:
+- 변경 전: `consumed && max ? '...' : ''`
+- 변경 후: `max != null && max > 0 ? ', ${consumed ?? 0}/${max}개월' : ''`
+- max 가 0/null/undefined 일 때만 폴백, consumed=0 은 정상 표시.
+
+### 영향 파일
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 테스트
+1. consumed=0, max=12 → "(프로모션, 0/12개월)" 표시 (이전: "(프로모션)" 폴백).
+2. consumed=3, max=12 → "(프로모션, 3/12개월)".
+3. max 누락 → "(프로모션)" 폴백 유지.
+
 ## v001.398.0
 
 > 통합일: 2026-05-21
