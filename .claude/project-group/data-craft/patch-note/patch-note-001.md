@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.383.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 33 — scheduleDowngrade 프로모션 base_plan_type 인식)
+
+### 개요
+
+마스터 보고: 프리미엄 프로모션 → 스탠다드 다운그레이드 시도 → 400 `NOT_A_DOWNGRADE`. 원인 = `scheduleDowngrade` 의 `isDowngrade(client.planType, targetPlan)` 검증이 client.plan_type='free' (프로모션 택일 정책) → standard > free 라 다운그레이드 아님으로 차단.
+
+### 변경 — data-craft-server (`0cf4ea0`)
+
+**`src/services/billingSubscription.service.ts`** `scheduleDowngrade`:
+- 클라이언트 조회 후 `activePromotionId != null` 이면 `findActiveClientPromotionWithMeta` 로 promotion meta 조회 → `basePlanType` 을 effectiveCurrentPlan 으로 사용.
+- `isDowngrade(effectiveCurrentPlan, targetPlan)` 검증.
+- log 메시지에도 `${effectiveCurrentPlan}(base)` 명시.
+
+```ts
+let effectiveCurrentPlan: PlanType = client.planType as PlanType;
+if (client.activePromotionId != null) {
+  const { findActiveClientPromotionWithMeta } = await import('../models/promotion.model');
+  const meta = await findActiveClientPromotionWithMeta(companyId);
+  if (meta?.basePlanType) {
+    effectiveCurrentPlan = meta.basePlanType as PlanType;
+  }
+}
+if (!isDowngrade(effectiveCurrentPlan, targetPlan)) {
+  throw new BadRequestError('NOT_A_DOWNGRADE');
+}
+```
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+
+### 테스트 시나리오
+
+1. 프리미엄 프로모션 활성 client → 스탠다드 다운그레이드 시도 → effectiveCurrentPlan='premium' → standard < premium → **다운그레이드 정상 예약** (이전: 400 NOT_A_DOWNGRADE).
+2. 프로모션 활성 + 같은 base 또는 상위 plan 으로 시도 → NOT_A_DOWNGRADE (정상 — 다운그레이드 아님).
+3. 일반 영구 client → 기존 동작 (activePromotionId=null) 유지.
+
+### 잔존 후속 (관련 권장)
+
+HOTFIX 24 의 effectivePlanType 통합 패턴이 BE 측에도 필요할 수 있음. 다른 plan_type 비교 검증 위치 (예: seatChange downgrade 차단, billingRenewal 등) 도 동일하게 프로모션 base 인식 필요한지 별도 점검.
+
 ## v001.382.0
 
 > 통합일: 2026-05-21
