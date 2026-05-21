@@ -1,5 +1,68 @@
 # data-craft — Patch Note (001)
 
+## v001.384.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 34 — 3 시나리오에 연간 결제/예약 옵션 추가)
+
+### 개요
+
+마스터 명시 3 시나리오에 연간 결제/예약 옵션 노출:
+1. 프로모션 → 영구 플랜 변경 (commitment 전환 시 월/연 선택).
+2. 높은 플랜 → 낮은 플랜 다운그레이드 (월/연 동시 예약 가능).
+3. 협업 플랜 인원 증가/감소 (결제 주기 동반 변경 가능).
+
+### 변경
+
+**data-craft-server (HOTFIX 34 BE — `9aa3121b`)**
+- `calculateProrationDiff` 시그니처에 `targetCycle?: BillingCycle` 추가. cycle 전환 시 신규 청구액 = 신규 사이클 정가 (월간→연간이면 priceKrw × 12 × 0.9).
+- `executeUpgradeWithDiff` 시그니처에 `targetBillingCycle?: BillingCycle`. cycle 전환 시 payment_history.billing_cycle / client.billing_cycle / plan_expires_at 갱신, pending_billing_cycle 초기화 한 트랜잭션 처리.
+- `scheduleDowngrade` 시그니처에 `targetBillingCycle?`. 전달 시 `setPendingBillingCycle` 함께 호출 → 플랜+주기 동시 예약.
+- `changeSeats` (seatChange.service.ts) 시그니처에 `targetBillingCycle?`. immediate 분기는 executeUpgradeWithDiff 위임 시 함께 전달.
+- 컨트롤러 (billing.controller.ts, seatChange.controller.ts): body / 쿼리에서 targetBillingCycle 파싱.
+
+**data-craft (HOTFIX 34 FE — `7bd73ee5`)**
+- 타입 갱신: `BillingUpgradeRequest`, `ScheduleDowngradeRequest`, `SeatChangeRequest` 에 `targetBillingCycle?: BillingCycle` 추가 (`billingApi.ts`, `seatChange.api.ts`, `types.ts`).
+- `UpgradeStepPayment.tsx`: targetCycle state + 월/연 토글 (default = status.billingCycle). 연간 라벨 "(10% 할인)". mutation/quote 호출에 targetBillingCycle 전달.
+- `UpgradeDialog.tsx`: 다운그레이드 분기에도 targetBillingCycle 전달, "다음 결제일에 {plan} {cycle} 로 변경됩니다" 안내.
+- `SeatManageDialog.tsx`: 증가/감소 분기에 결제 주기 토글 추가, immediate/next-cycle 양쪽에 targetBillingCycle 전달.
+- subscriptionQueries.ts: mutation hook 시그니처 자동 갱신.
+- ko.ts / en.ts: `billing.monthly`, `billing.yearly`, `billing.yearlyDiscount` 키 (기존 있으면 재사용).
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+- `src/services/seatChange.service.ts`
+- `src/controllers/billing.controller.ts`
+- `src/controllers/seatChange.controller.ts`
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+- `src/features/subscription/api/billingApi.ts`
+- `src/features/subscription/api/seatChange.api.ts`
+- `src/features/subscription/model/subscriptionQueries.ts`
+- `src/features/subscription/model/types.ts`
+- `src/shared/i18n/locales/ko.ts`, `en.ts`
+
+### 배포
+
+**BE + FE 동시 배포 필수**.
+
+### 잔존 (blocker)
+
+- `scheduleDowngrade` 의 `setPendingPlanType` + `setPendingBillingCycle` 두 호출이 단일 트랜잭션으로 묶이지 않음 — 중간 실패 시 부분 적용 가능성. 별도 후속 권장.
+- 연간 10% 할인은 FE 라벨에만 표시. 실제 할인 적용은 BE quote 응답 의존.
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client → 영구 premium + 연간 선택 → quote 표시 (연간 차액) → 결제 → 영구 premium yearly 로 commitment 전환.
+2. premium → standard 다운그레이드 + 월간→연간 동시 → 다음 결제일에 standard yearly 로 변경 예약.
+3. 협업 plan 인원 증가 + 연간 즉시 → 차액 결제 + cycle 전환.
+4. 동일 cycle 유지 시 기존 동작 그대로.
+
 ## v001.383.0
 
 > 통합일: 2026-05-21
