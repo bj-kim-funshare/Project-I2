@@ -100,7 +100,7 @@ gh issue view <N> --repo <github_slug> --json comments \
 ```bash
 cd <member.cwd>
 git worktree prune
-wip="review-check-safe-list-$(date +%Y%m%d-%H%M)"
+wip="review-check-safe-list-$(date +%Y%m%d-%H%M)-문서"
 wt="../$(basename "$(pwd)")-worktrees/${wip}"
 git worktree add -b "${wip}" "${wt}" origin/i-dev
 # wt 안에서 .routine-state/safe-issues.json 갱신 (없으면 신규 작성)
@@ -205,7 +205,7 @@ End of skill invocation.
 
 본 스킬은 두 종류의 쓰기를 수행한다:
 
-1. **Cross-repo safe-list 갱신** — 각 선택된 멤버 리포의 cwd 에서 그 리포의 `i-dev` 에서 분기한 WIP (`review-check-safe-list-<timestamp>`) 로 `.routine-state/safe-issues.json` 만 commit 후 `i-dev` 에 머지하고 push. 한 호출에서 여러 리포에 델타가 있으면 각 리포별 독립 WIP. CLAUDE.md §5 외부 프로젝트 통합 브랜치 (i-dev) 정책 준수. 델타 0 인 리포는 WIP 생성하지 않음.
+1. **Cross-repo safe-list 갱신** — 각 선택된 멤버 리포의 cwd 에서 그 리포의 `i-dev` 에서 분기한 WIP (`review-check-safe-list-<timestamp>-문서`) 로 `.routine-state/safe-issues.json` 만 commit 후 `i-dev` 에 머지하고 push. 한 호출에서 여러 리포에 델타가 있으면 각 리포별 독립 WIP. CLAUDE.md §5 외부 프로젝트 통합 브랜치 (i-dev) 정책 준수. 델타 0 인 리포는 WIP 생성하지 않음.
 2. **Enterprise prompt 출력** — Project-I2 cwd 의 gitignored `.claude/review-check-output/` 폴더에 main 세션 직접 Write. tracked state 비변경.
 
 CLAUDE.md §2 (main-session read-only) 와의 정합:
