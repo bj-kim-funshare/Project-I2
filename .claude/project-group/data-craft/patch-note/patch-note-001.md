@@ -1,5 +1,54 @@
 # data-craft — Patch Note (001)
 
+## v001.424.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 5 — BE SSE 라우트 effective plan 정합)
+
+### 배경
+
+HOTFIX 4 로 페이지 튕김 회귀를 해소 후 마스터 재테스트. 페이지 전환은 정상이나 console 에 SSE `/api/sse/connect` 403 Forbidden 만 계속 (재연결 시도 10회 소진).
+
+### 원인 (Explore 전수 분석 + advisor 검증)
+
+BE `/api/sse/connect` 라우트 (`src/routes/sse.ts:72-75`) 만 raw `client.plan_type` 으로 `isSSEEnabledPlan` 검사. 같은 BE 내 다른 모든 plan 관련 검사는 `getEffectivePlanLimits` 의 effective plan 사용:
+
+- `src/middlewares/plan-limit.middleware.ts` 전 케이스 (page / dataGroup / feature / fileSize / storage) — effective.
+- `src/services/subscription.service.ts` 의 `getSubscriptionStatus` 응답 — effective.
+- enterprise-502 (커밋 `e2d2ed0`, 2026-04-21) 의 promotion-aware migration 도입.
+
+FE 의 `SseProvider` 는 `effectivePlanType(subscriptionStatus)` (= 프로모션 활성 시 base_plan_type) 로 SSE 가드. → 프로모션 활성 사용자 (raw=`free`, activePromotionId 존재, effective=`premium` 등) 의 경우 FE 는 통과 시켜 SSE 연결 시도, BE 는 raw 로 거부. enterprise-502 promotion migration 에서 SSE 라우트만 누락된 회귀.
+
+### HOTFIX 5 결과
+
+데이터크래프트 서버 (`data-craft-server`, `b41b7a33`) — 1 file (`src/routes/sse.ts`, +6 / -2):
+
+- import `getEffectivePlanLimits` 추가.
+- L57 destructure 에서 `planType` 제외 (raw 무사용, `findSSEUserInfo` 모델 파일 무수정 — SELECT 절은 그대로).
+- L71-75 plan 가드를 effective plan 기준으로 교체:
+  ```ts
+  const effective = await getEffectivePlanLimits(payload.companyId);
+  const planType = effective.effectivePlanType;
+  if (!isSSEEnabledPlan(planType)) { ... 403 ... }
+  ```
+- 이후 `addConnection(..., planType, ...)` 호출은 새 effective `planType` 변수 자연 재사용 — tenant connection cap (`MAX_CONNECTIONS_PER_TENANT[planType]`), connection metadata 도 effective 기준으로 정합 (의도된 동작).
+
+### 검증
+
+- **Explore 전수 분석**: 회귀 시점 식별 (`e2d2ed0` 이후 SSE 라우트만 누락), 옵션 1 (BE effective 통합) vs 옵션 2 (FE raw 사용) vs 옵션 3 (findSSEUserInfo 쿼리 확장) 비교 → 옵션 1 권장 채택.
+- **advisor 사양 검증**: `addConnection` 의 planType 소비처 3 곳 (gating L52, tenant cap L55, 메타 L88) 모두 effective 가 정합임을 사전 확인.
+- **변경 범위 단일 파일 확인**: `git show` stat 으로 `src/routes/sse.ts` 외 변경 0건.
+- **lint gate**: `pnpm lint` PASS (0 errors).
+- **변경 금지 파일 무변경**: `models/client.model.ts` (findSSEUserInfo SELECT 보존), `services/sse/sseManager.ts`, `services/sse/sseTypes.ts` 모두 무수정.
+
+### 알려진 비용
+
+SSE 연결 1회당 `getEffectivePlanLimits` 가 추가 DB 쿼리 (~1 round-trip, `client` + 옵셔널 `client_promotion`) 수행. SSE 연결은 sparse (사용자당 ≤3, 테넌트당 plan 별 cap) 이라 비용 무시 가능.
+
+### 보류
+
+직전 마스터 지시 "잔존 처리해" (HOTFIX 3 보고의 useSignin / seedBundleData / authStore / InitBundleResponse / AuthResponseData / OnAuthUpdate / client.fetch dead 분기 등 type+dead field 일괄 정리) 는 본 SSE 회귀 처리 우선으로 보류. 본 핫픽스로 SSE 안정 확인 후 별도 핫픽스로 진행.
+
 ## v001.423.0
 
 > 통합일: 2026-05-21
