@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.411.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 53 — 5차 검증 3건 정정 + 회귀 사이클 종결 시도)
+
+### 배경 — advisor 권고
+
+5차례 audit → fix → audit 패턴이 트레드밀 (CLAUDE.md `feedback_no_prevention_treadmill.md` 명시). advisor: HOTFIX 53 후 다음 단계는 **6차 audit 아니라 통합 테스트** 로 시나리오 핀.
+
+본 hotfix 는 단순 patch 가 아니라 회귀 차단을 위한 구조 변경 포함:
+1. expireClientPromotionInTx reason 인자 — 모든 caller (6곳) 검토 후 정확한 의미 전달.
+2. plan_type invariant 단일 헬퍼 — 산재된 UPDATE 통합으로 invariant 위반 차단.
+3. snapshot_seats semantic 결정 — "결제 단위 인원수" 로 동기화 모델 채택.
+
+### 변경 — data-craft-server (`c7910ab`)
+
+**#2 — `promotion.model.ts:264` `expireClientPromotionInTx` reason 인자**:
+- `reason: 'auto-expire' | 'commitment-change' | 'cancel' | 'rollback'` 추가.
+- `'auto-expire'`: retention_consumed +1 **생략** (이미 max 도달 후 호출).
+- `'commitment-change' / 'cancel'`: HOTFIX 41 의 +1 유지.
+- `'rollback'`: 결제/DB 실패 후 활성 롤백 시 미차감.
+- 모든 caller 정확한 reason 전달.
+
+**#3 — `client.model.ts` `updateClientPlanWithInvariant` 신규 헬퍼**:
+- 마스터 정책 강제: `activePromotionId != null` 시 plan_type='free' 자동 강제.
+- 호출자가 잘못된 plan_type 전달해도 헬퍼가 invariant 보장.
+- executeUpgradeWithDiff / expireClientPromotionInTx 의 직접 UPDATE 모두 헬퍼로 통합.
+- 협업 프로모션 인원 증가 시 plan_type='premium' 오저장 잠재 버그 자가 교정.
+
+**#1 — `billingSubscription.service.ts` executeUpgradeWithDiff snapshot_seats 동기화**:
+- collab 프로모션 인원 증가 (isCommitmentTransition=false) 분기에 `UPDATE client_promotion SET snapshot_seats = ?` 추가.
+- semantic 결정: snapshot_seats = "결제 단위 인원수" (구매 시점 박제 아님). 협업 인원 변경 시 동기화 = 정합.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/models/client.model.ts` (updateClientPlanWithInvariant 신규)
+- `src/models/promotion.model.ts` (expireClientPromotionInTx reason)
+- `src/services/billingSubscription.service.ts` (헬퍼 사용 + snapshot_seats 동기화)
+- `src/services/promotion.service.ts` (caller reason 전달)
+
+### 다음 단계 권고 (advisor)
+
+본 hotfix 가 audit-driven 의 마지막. 다음은 **통합 테스트로 6~8 핵심 시나리오 핀**:
+1. 협업 프로모션 인원 증가 → 다음 cron 신 인원분 청구
+2. 협업 프로모션 → 영구 plan commitment 전환 (retention +1)
+3. cycle 변경 단독
+4. 자동 만료 (max 도달, retention +0)
+5. 다운그레이드 예약 → cron 적용
+6. 동시 결제 race
+7. PG 결제 실패 grace
+8. 프로모션 갈아타기
+
+테스트 없이 추가 audit 진행 시 트레드밀 지속 위험.
+
 ## v001.410.0
 
 > 통합일: 2026-05-21
