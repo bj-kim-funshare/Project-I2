@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.397.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 45 — ActiveClientPromotionWithMeta retention 필드 + SQL 보강)
+
+### 원인
+HOTFIX 44 의 subscription.service 가 `meta.retentionConsumedMonths` / `meta.snapshotMaxRetentionMonths` 참조했으나, `ActiveClientPromotionWithMeta` 타입과 `findActiveClientPromotionWithMeta` SQL 양쪽 모두 두 필드 미포함 → TS2339 → nodemon crash.
+
+### 변경 — data-craft-server (`ae498af`)
+**`src/types/promotion.types.ts`**: `ActiveClientPromotionWithMeta` 에 `retentionConsumedMonths: number`, `snapshotMaxRetentionMonths: number` 추가.
+
+**`src/models/promotion.model.ts`** `findActiveClientPromotionWithMeta`:
+- SQL SELECT 절에 `cp.retention_consumed_months, cp.snapshot_max_retention_months` 추가.
+- 반환 객체 매핑에 두 필드 추가.
+
+### 영향 파일
+- `src/types/promotion.types.ts`
+- `src/models/promotion.model.ts`
+
 ## v001.396.0
 
 > 통합일: 2026-05-21
