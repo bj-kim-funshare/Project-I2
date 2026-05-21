@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.391.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 40~42)
+
+### HOTFIX 40 — 결제 주기 변경 confirm 취소 테두리 제거 (`bbc22aa0`)
+**`SubscriptionActionSection.tsx`** L251 AlertDialogCancel 에 `className="border-0 shadow-none bg-transparent"` (HOTFIX 6 패턴 동일 적용).
+
+### HOTFIX 41 — 프로모션 갈아타기/취소 시 retention_consumed_months +1 차감 (`44d66b7`)
+**`src/models/promotion.model.ts`** `expireClientPromotionInTx`:
+- client UPDATE 직전에 `UPDATE client_promotion SET retention_consumed_months = retention_consumed_months + 1 WHERE id = ?` 추가.
+- 마스터 정책: 프로모션 사용 중 다른 플랜으로 전환하면 max_retention 한도에서 1개월 차감.
+- cron 자동 만료(renewSingleClient) 한도-초과 경로에서도 이미 만료 결정 후 호출이라 +1 후행은 무영향.
+
+### HOTFIX 42 — 프로모션 카드 잔여 retention 표시 (BE `7ebfc47b` + FE `7a860d92`)
+**BE — data-craft-server**:
+- `promotion.model.ts` `getConsumedRetentionForCompanyPromotion(companyId, promotionId)` 신규 — client_promotion 합산 SELECT.
+- `promotion.types.ts` PromotionSummary 에 `consumedRetentionMonths`, `remainingRetentionMonths` 추가.
+- `promotion.service.ts` getPromotionEligibility 의 모든 eligible=true 분기 (all / new_signup / unpaid_business_once) 에서 toSummary 에 consumed 주입. remaining = `Math.max(0, max - consumed)`.
+
+**FE — data-craft**:
+- `promotionApi.ts` PromotionSummary 인터페이스 동일 필드 확장.
+- `PromotionRow.tsx` consumed > 0 시 "최대 {remaining}개월 (총 {max}개월 중 {consumed}개월 사용)" 표시. 차감 0 시 기존 "최대 {max}개월" 유지.
+- ko/en `billing.promotion.retention`, `retentionWithConsumption` 키 추가.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/models/promotion.model.ts` (HOTFIX 41 + 42)
+- `src/services/promotion.service.ts` (HOTFIX 42)
+- `src/types/promotion.types.ts` (HOTFIX 42)
+
+**data-craft**
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx` (HOTFIX 40)
+- `src/features/subscription/api/promotionApi.ts` (HOTFIX 42)
+- `src/features/subscription/ui/PromotionRow.tsx` (HOTFIX 42)
+- `src/shared/i18n/locales/ko.ts`, `en.ts` (HOTFIX 42)
+
+### 테스트 시나리오
+
+1. **HOTFIX 40**: 결제 주기 변경 예약 confirm 다이얼로그 → 취소 버튼 검정 테두리 없음.
+2. **HOTFIX 41**: 프로모션 사용 중 다른 플랜 전환/취소 → 신규 client_promotion 행의 retention_consumed_months=1.
+3. **HOTFIX 42**: 차감 이력 있는 client 가 업그레이드 모달 열면 프로모션 카드에 "최대 N개월 (총 M개월 중 K개월 사용)" 표시. 차감 없는 client 는 기존 표시 유지.
+
 ## v001.390.0
 
 > 통합일: 2026-05-21
