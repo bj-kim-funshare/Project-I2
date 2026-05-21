@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.379.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 31 — executeUpgradeWithDiff 가 활성 프로모션 종료)
+
+### 개요
+
+마스터 보고: 프리미엄 프로모션 → 프리미엄 영구 플랜 변경. 첫 시도 성공 응답 받았으나 UI 가 여전히 프로모션 표시 + 새로고침 후에도 그대로. 두 번째 시도 → 400 `UPGRADE_DIFF_NOT_AN_UPGRADE`.
+
+### 원인
+
+`executeUpgradeWithDiff` 트랜잭션이 `UPDATE client SET plan_type = ?, seats = ?` 만 수행. **`active_promotion_id` 종료 처리 누락**.
+
+첫 시도 후:
+- `client.plan_type='premium'` (영구 플랜으로 갱신)
+- `active_promotion_id != null` (프로모션 활성 그대로)
+- → `/status` 응답에 activePromotion 포함 → UI 가 프로모션 표시
+- 두 번째 시도: currentPlan='premium' = target='premium' + seats 동일 → `isLevelUp=false` → NOT_AN_UPGRADE.
+
+### 변경 — data-craft-server (`51ac8585`)
+
+**`src/services/billingSubscription.service.ts`** `executeUpgradeWithDiff`:
+- client UPDATE **직전** 에 활성 프로모션 종료 로직 추가 (`executeFirstPayment` 의 `replaceActivePromotion` 패턴):
+  ```ts
+  if (activePromotionId != null) {
+    const { findActiveClientPromotionByCompany, expireClientPromotionInTx } =
+      await import('../models/promotion.model');
+    const activeCP = await findActiveClientPromotionByCompany(companyId, connection);
+    if (activeCP) {
+      await expireClientPromotionInTx(connection, {
+        clientPromotionId: activeCP.id,
+        targetStatus: 'cancelled',
+        wasCollaboration: currentPromotionIsCollaboration ?? false,
+      });
+    }
+  }
+  ```
+- `expireClientPromotionInTx` 가 `active_promotion_id=NULL` + `plan_type='free'` 로 만든 뒤, 기존 UPDATE 가 `plan_type=targetPlan + seats=targetSeatsEffective` 로 덮어써 최종 상태 확정.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client → 프리미엄으로 변경 → 비밀번호 입력 → **결제 성공 + 프로모션 종료 + plan_type='premium'**.
+2. 새로고침 → `/status` 응답: `activePromotion=null`, `planType='premium'` → UI 가 영구 프리미엄 표시.
+3. 같은 플랜으로 재시도 → NOT_AN_UPGRADE (정상 — 이미 변경됨).
+4. seats 추가 변경 → 정상 처리.
+
 ## v001.378.0
 
 > 통합일: 2026-05-21
