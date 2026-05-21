@@ -9,8 +9,8 @@
 | 저장소 | `funshare-inc/data-craft` (Routine UI 의 repo 선택 박스에 직접 지정) |
 | 제목 | `data-craft 클로즈 이슈 다관점 코드리뷰` |
 | 실행 요일 | 매일 (월~일) |
-| 실행 시각 | 한국시 (Asia/Seoul) 03:30, 15:30 |
-| Cron | `30 3,15 * * *` (TZ = Asia/Seoul) |
+| 실행 시각 | UTC 06:30, 18:30 (= 한국시 Asia/Seoul 15:30, 03:30 다음날) |
+| Cron | `30 6,18 * * *` (UTC — Claude Desktop Routine UI 가 cron 을 UTC 로 해석) |
 | 시그니처 마커 | `<!-- review-check-routine:data-craft:multi-perspective sha=<SHA> -->` |
 
 ## 환경 가정
@@ -18,6 +18,8 @@
 본 지침은 `gh` CLI 및 일반 shell 호출 가능 환경을 가정한다. Claude Desktop Routine 런타임에서 `gh` / shell 가 비가용일 경우 마스터가 동등 GitHub MCP (예: 공식 GitHub MCP) 호출로 치환할 것 — 절차의 의미는 유지됨.
 
 또한 본 routine 은 `gh api` 로 자기 저장소(`funshare-inc/data-craft`)의 `i-dev` 브랜치에 있는 `.routine-state/safe-issues.json` 을 fetch 하여 안전 확정 이슈를 후보에서 제외한다. 이 파일은 `/review-check data-craft` 스킬이 안전 확정 시 자동 갱신 / 유지 관리하며 routine 자체는 read-only. 파일 또는 `i-dev` 가 아직 존재하지 않으면(초기 상태) routine 은 빈 안전-리스트로 진행 (정상 fallback) — `/plan-enterprise data-craft` 의 bootstrap (Project-I2 의 `.claude/cloud-routines/bootstrap-safe-issues-prompt.md` 참조) 으로 초기 생성 후 다음 cycle 부터 효율화.
+
+**Cron timezone 동작 메모**: Claude Desktop Routine UI 는 cron 표현식을 UTC 로 해석한다 — UI 에 별도 timezone 설정 필드가 없다. 따라서 KST 의도 시각으로 routine 을 돌리려면 cron 의 분/시 필드를 UTC 로 역산하여 입력해야 한다 (KST = UTC + 9). 본 routine 의 의도는 KST 03:30 / 15:30 매일이므로 cron 은 UTC 06:30 / 18:30 인 `30 6,18 * * *` 가 정답. 과거 v001.92.0 ~ v001.94.0 에 `30 3,15 * * *` (TZ=Asia/Seoul 의도) 로 명시했던 것은 UI 의 UTC-only 해석을 모른 상태의 표기였으며 v001.95.0 (HOTFIX 3) 에서 정정. 향후 routine 신설 시 동일 함정 주의.
 
 ## 지침 (Claude Desktop Routine 의 prompt 본문 — 이하 paste 대상)
 
