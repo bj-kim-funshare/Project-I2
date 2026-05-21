@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.403.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #142 (funshare-inc/data-craft) HOTFIX 3 — 인증 페이지 UX 4건 묶음 핫픽스
+
+### 변경 4건
+
+**1. 기업 로그인 좌상단 "공용 로그인 페이지로" 진입 링크**
+- `src/shared/ui/auth/AuthPage.tsx` `leftHint` 타입을 `string` → `ReactNode` 확장 (기존 string 호출부 호환 유지).
+- `src/pages/auth/SubdomainLoginPage.tsx` `leftHint` 에 "기업 로그인" 텍스트 + ArrowRight 아이콘 + "공용 로그인 페이지로" LnkBtn 인라인 배치.
+- `src/pages/auth/SubdomainLoginForm.tsx` 폼 하단의 "공용 로그인" LnkBtn 블록 제거 (좌상단으로 이동했으므로 중복 제거).
+
+**2. 기업 로그인 TenantBlock 너비 정렬**
+- `src/shared/ui/auth/TenantBlock.tsx` 루트 컨테이너에 `w-full` 추가. 부모 flex column 의 형제 Field 컴포넌트들과 가로 양끝 일치 보장.
+
+**3. 공용 회원가입 이용약관 본문 충전**
+- `src/pages/auth/SignupPage.tsx` 약관 동의 섹션에 `<details>` 3개 블록 추가:
+  - 이용약관 (필수) — 서비스 이용/회원 의무/회사 책임 5~7 문장.
+  - 개인정보 처리방침 (필수) — 수집 정보/목적/보관 기간.
+  - 마케팅 정보 수신 (선택) — 이메일/SMS 수신 동의.
+- 기존 `isTermsAgreed` 체크박스 + 제출 로직 변동 없음. 약관 본문은 한국어 임시 텍스트 (legal 정식본은 추후 교체).
+
+**4. 기업 로그인 / 기업 회원가입 / 공용 로그인 — 컨텐츠 상단 정렬**
+- `src/shared/ui/auth/AuthPage.tsx` `contentAlign?: 'center' | 'top'` prop 추가 (기본 `'center'`). `'top'` 일 때 슬롯 정렬을 `items-start` + `pt-[10vh]` + `mt-0` 으로.
+- `src/pages/auth/SubdomainLoginPage.tsx`, `SubdomainRegisterPage.tsx`, `SigninPage.tsx` 에서 `<AuthPage contentAlign="top">` 전달. 나머지 페이지(`/signup`, `/reset-password`) 는 기본 `'center'` 유지.
+
+### 영향 파일
+- data-craft:`src/shared/ui/auth/AuthPage.tsx`
+- data-craft:`src/shared/ui/auth/TenantBlock.tsx`
+- data-craft:`src/pages/auth/SubdomainLoginPage.tsx`
+- data-craft:`src/pages/auth/SubdomainLoginForm.tsx`
+- data-craft:`src/pages/auth/SubdomainRegisterPage.tsx`
+- data-craft:`src/pages/auth/SigninPage.tsx`
+- data-craft:`src/pages/auth/SignupPage.tsx`
+
+총 7 파일, +80 / -27 lines.
+
+### Lint gate
+PASS (1 iter, 0 errors / 18 기존 warnings).
+
 ## v001.402.0
 
 > 통합일: 2026-05-21
