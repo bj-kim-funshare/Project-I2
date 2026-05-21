@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.92.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #48
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — data-craft / data-craft-server 클로즈 이슈 다관점 리뷰 routine 사양 2건 추가** (commit `e0be368`): `.claude/cloud-routines/` 폴더 신설 + 2개 paste-ready 문서 작성. 매일 KST 03:30 / 15:30 (cron `30 3,15 * * *` TZ=Asia/Seoul) 실행. 3 조건 OR 선정 (미리뷰 / 미해결 주의·경고 / 재리뷰 요청), 5 관점 리뷰 (의도부합·로직정합·보안·성능·유지보수), 시그니처 마커 `<!-- review-check-routine:<repo>:multi-perspective sha=<SHA> -->` 기반 dedup, 코멘트 게시 형식 (제목 / 결과 / 총평 / 권장방안 1:1), 코멘트 게시 외 모든 쓰기 동작 금지. `gh` CLI 가용성 hedge 명시.
+- **Phase 2 — review-check 신규 스킬 신설** (commit `22d426a` + amendment `b157005`): `/review-check <leader>` — 멤버 리포 multiSelect → closed 이슈에서 routine 시그니처 마커 코멘트 수집 → 직전 결과 ∈ {주의, 경고} 필터 → 권장방안 파싱 → `.claude/review-check-output/<leader>-<YYYYMMDD-HHMM>.md` 에 `/plan-enterprise` 호출용 프롬프트 작성. 생성 프롬프트에 "플랜 완료 직전 각 대상 이슈에 `gh issue comment` 로 재리뷰 요청 게시" 필수 동작 명시 — 다음 routine 실행의 재리뷰 트리거. `.claude/review-check-output/` 는 `.gitignore` 등록 (휘발성 산출물), 스킬 자체는 WIP / 머지 없음. amendment 커밋으로 SKILL.md "WIP / 머지" 절에 CLAUDE.md §2 carve-out 근거 1단락 추가 (tracked state 미변경 → sub-agent 경유 의무 비적용, 향후 산출물 tracked 전환 시 의무 부활 명시).
+
+### 영향 파일
+
+- `.claude/cloud-routines/data-craft-review.md` (NEW)
+- `.claude/cloud-routines/data-craft-server-review.md` (NEW)
+- `.claude/skills/review-check/SKILL.md` (NEW)
+- `.gitignore`
+
+### Treadmill Audit
+
+PASS — Q1 클로즈 이슈 사후 재검토 부재가 실재 (cross-package bundle / data-craft #127 4-사이클 헛수정 메모리 인용), Q2 엣지케이스 명시 완료 (sha 기반 dedup / 0건 처리 / output 폴더 부재), Q3 NOT APPLICABLE — 마스터 명시 신설로 create-custom-project-skill 카르베아웃 적용 (폐기될 기존 메커니즘 없음).
+
 ## v001.91.0
 
 > 통합일: 2026-05-20
