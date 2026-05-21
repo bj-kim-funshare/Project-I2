@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.368.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #140 (routine 안전-리스트 파일 bootstrap)
+
+### 페이즈 결과
+- **Phase 1**: data-craft 리포 i-dev 에 `.routine-state/safe-issues.json` 신규 (`{"repo": "data-craft", "safe_issues": []}`) — 커밋 `75b9ac3`.
+- **Phase 2**: data-craft-server 리포 i-dev 에 `.routine-state/safe-issues.json` 신규 (`{"repo": "data-craft-server", "safe_issues": []}`) — 커밋 `294a20e`.
+
+### 영향 파일
+- data-craft: `.routine-state/safe-issues.json`
+- data-craft-server: `.routine-state/safe-issues.json`
+
+### 배경 / 효용
+두 Claude Desktop Routine (`data-craft 클로즈 이슈 다관점 코드리뷰` / `data-craft-server 클로즈 이슈 다관점 코드리뷰`) 과 `/review-check data-craft` 는 각 멤버 리포 `i-dev` 의 `.routine-state/safe-issues.json` 을 안전-리스트로 fetch 한다. 파일 미존재 시 routine 은 빈 안전-리스트 fallback 으로 동작 가능했으나 매 실행마다 404 round-trip 발생. 본 bootstrap 으로 두 리포에 빈 안전-리스트 파일을 사전 배치 → fetch 가 200 으로 정상화. 1회성 운영 작업.
+
+### 정책 합치
+- Lint gate: data-craft PASS (0 errors, 18 warnings) / data-craft-server PASS (0 errors). data-craft-server 워크트리는 node_modules 1회 install 필요 — 환경 사이드이펙트, 파일 변경 무관.
+- 양 work repo i-dev 머지 완료 + origin push 의무 별도 단계로 포함 (마스터 명령 본문 명시).
+
 ## v001.367.0
 
 > 통합일: 2026-05-20
