@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.386.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 36 — cycle 전환 시 다음 결제일 청구 금액 안내)
+
+### 개요
+
+마스터 보고: 프리미엄 프로모션 (월간) → 프리미엄 영구 + 연간 선택 시 "추가 결제 금액이 없습니다" 만 표시. 마스터 명시: "프로모션은 무조건 월간이라서 연간으로 가면 추가 결제 즉시는 없어도 결제일 금액은 안내해야". HOTFIX 13 정책 (월→연 = 예약, 즉시 결제 X) 정합 + 다음 결제일 금액 노출.
+
+### 변경 — data-craft (`6b83a5df`)
+
+**`src/features/subscription/ui/UpgradeStepPayment.tsx`**:
+- `isCycleChange` 플래그 — `(status.billingCycle ?? 'monthly') !== targetCycle` + 빌링키 보유 + 현재 cycle 확정 조건.
+- `cycleChangeNextAmount` 계산: `plansData[selectedPlan].priceKrw × (isPerUser ? seats : 1) × (yearly ? 12 × 9/10 : 1)`.
+- `chargedAmount === 0 && isCycleChange` 분기:
+  - "추가 결제 금액이 없습니다. 다음 결제일({date})부터 {연간/월간} 결제로 변경됩니다."
+  - "다음 결제일 청구 예정 금액: {nextAmount}원 (VAT 별도)"
+  - 연간 시: "연간 결제는 10% 할인이 적용됩니다."
+- 결제 버튼 라벨: cycle 전환 + 0원 케이스 "결제 주기 변경" 으로 전환.
+- 기존 일반 업그레이드 분기 (chargedAmount > 0 또는 cycle 동일 + 0원) 동작 유지.
+
+**`src/shared/i18n/locales/{ko,en}.ts`**:
+- `billing.cycleChangeNoCharge`, `billing.cycleChangeNextDate`, `billing.cycleChangeNextAmount` 신규 키.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client (월간) → 영구 프리미엄 + 연간 선택:
+   - 즉시 결제 금액 = 0.
+   - 안내 박스: "다음 결제일부터 연간 결제 변경 + N원 청구 예정 + 10% 할인 적용".
+   - 결제 버튼 라벨: "결제 주기 변경".
+2. 일반 업그레이드 (cycle 동일) → 기존 동작 (chargedAmount > 0 표시 또는 0 안내).
+3. 프로모션 활성 + 동일 cycle 유지 → 기존 동작.
+
+### 후속
+
+- HOTFIX 34 의 BE `executeUpgradeWithDiff` 가 cycle 전환 시 plan_expires_at 갱신함 — 다음 결제일에 cron 이 새 cycle 정가 청구. FE 표시와 정합.
+- SeatManageDialog 의 cycle 전환 케이스도 동일 패턴 적용 권장 (별도 후속).
+
 ## v001.385.0
 
 > 통합일: 2026-05-21
