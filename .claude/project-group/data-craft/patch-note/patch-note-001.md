@@ -1,5 +1,69 @@
 # data-craft — Patch Note (001)
 
+## v001.425.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #149 (HOTFIX 6 — BE init.service member 로그인 effective plan 정합)
+
+### 배경
+
+HOTFIX 5 (SSE) 머지 후 마스터 재로그인 시도. SSE 정상 (`[SSE] 연결 성공` 확인) 이나 `/api/auth/init` 가 403 `PLAN_MEMBER_LOGIN_RESTRICTED` 로 차단되어 번들 데이터 로드 실패. FE 의 `useSignin.ts` 가 fallback 인증 설정 후 진입하지만 실질 데이터 없음.
+
+### 원인 (Explore 전수 분석)
+
+`PLAN_MEMBER_LOGIN_RESTRICTED` 사용처 3 곳 비교:
+
+- `data-craft-server/src/services/auth.service.ts:321` (signin) — HOTFIX 48 (커밋 `827815d`, 2026-05-21) 로 **effective plan** 기준 정합 완료. activePromotionId 있으면 `findActiveClientPromotionWithMeta` 로 basePlanType 사용.
+- `data-craft-server/src/services/auth.service.ts:663` (autoSignin) — 동일 HOTFIX 48 로 정합 완료.
+- `data-craft-server/src/services/init.service.ts:67-71` (init) — HOTFIX 48 가 init.service.ts 는 손대지 않아 여전히 **raw `client.planType`** 사용.
+
+→ HOTFIX 5 (SSE) 와 동일 root cause. enterprise-502 promotion migration (커밋 `e2d2ed0`, 2026-04-21) 이후 plan-limit.middleware / subscription.service 등은 effective 로 통합되었으나 init.service / SSE 라우트는 누락된 일관된 패턴. HOTFIX 48 이 auth 만 패치하고 init 누락.
+
+프로모션 활성 client (raw=`free`, activePromotionId 존재, effective=`premium` 등) 의 member 사용자 (isOwner=false) 가 init 단계에서 차단.
+
+### HOTFIX 6 결과
+
+데이터크래프트 서버 (`data-craft-server`, `974e093` 메인 + `5f3a4d4` lint cleanup, +14 / -3, 1 file):
+
+`src/services/init.service.ts` L64-71 — auth.service.ts L648-665 의 HOTFIX 48 패턴을 **논리 복제**. 단 `client` 객체는 기존 L61 `findClientByCompanyId` 결과 재사용 (auth.service 는 client 변수 없어 추가 fetch 하지만 init.service 는 이미 보유):
+
+```ts
+// 5) 스탠다드 미만 플랜(무료/베이직): 오너 외 로그인 차단.
+const isOwner = Boolean(user.isOwner);
+if (!isOwner) {
+  let effectivePlanType = client.planType ?? 'free';
+  if (client.activePromotionId != null) {
+    const { findActiveClientPromotionWithMeta } = await import('../models/promotion.model');
+    const meta = await findActiveClientPromotionWithMeta(user.companyId);
+    if (meta?.basePlanType) {
+      effectivePlanType = meta.basePlanType;
+    }
+  }
+  const planLevel = PLAN_LEVEL[effectivePlanType] ?? 0;
+  if (planLevel < PLAN_LEVEL['standard']) {
+    throw new ForbiddenError('PLAN_MEMBER_LOGIN_RESTRICTED');
+  }
+}
+```
+
++ Lint cleanup (`5f3a4d4`): `as PlanType` cast 제거로 unused 가 된 `PlanType` import 정리 — `import { PLAN_LEVEL, PlanType }` → `import { PLAN_LEVEL }`.
+
+### 검증
+
+- **Explore 전수 분석**: 3 사용처 비교 + 회귀 시점 식별 (HOTFIX 48 가 auth.service 만 패치, init.service 누락) + 다른 raw `PLAN_LEVEL[planType]` 패턴 없음 확인.
+- **advisor 사양 검증**: 3 가지 위험점 사전 식별 후 사양 반영 — (a) `client` 변수 재사용 (추가 fetch 금지), (b) dynamic import 유지 (auth.service 와 diff-review 일관성), (c) cast 제거 (PLAN_LEVEL 이 Record<string, number> 라 불필요).
+- **의존성 검증**: `findClientByCompanyId` 반환 row 에 `planType: string` (L16) + `activePromotionId: number | null` (L26) 둘 다 존재. `findActiveClientPromotionWithMeta` 는 auth.service 가 동일 dynamic import 로 사용 중.
+- **lint gate**: 1차 unused `PlanType` 오류 발견 → 후속 commit (`5f3a4d4`) 로 정리 → 2차 `pnpm lint` PASS (0 errors).
+- **변경 단일 파일 확인**: `git show` stat 으로 `src/services/init.service.ts` 외 변경 0건.
+
+### 잔존 후속 sweep (advisor 권고)
+
+본 플랜에서 raw→effective 회귀가 3번째 발견 (HOTFIX 5: SSE, HOTFIX 6: init, 향후 잠재). 향후 `PLAN_LEVEL\[.*planType\]` / `if.*planType.*===.*'free'` 패턴의 BE/FE 전수 sweep 권장 — 본 핫픽스 범위 외, 잔존 의제 처리 또는 별도 sweep 핫픽스에 포함 고려.
+
+### 보류
+
+직전 마스터 지시 "잔존 처리해" 는 본 회귀 처리 우선으로 보류. 본 핫픽스로 init 정상화 확인 후 별도 핫픽스로 진행.
+
 ## v001.424.0
 
 > 통합일: 2026-05-21
