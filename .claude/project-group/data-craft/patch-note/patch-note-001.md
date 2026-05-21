@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.364.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 22 — 협업 프로모션 사용자 한도 표시)
+
+### 개요
+
+마스터 보고: 프로모션 활성 client 의 CurrentPlanBadge 2×2 UsageBar 그리드에서, 협업 프로모션일 때도 "사용자 한도" 가 표시되지 않음. 원인 = 표시 조건이 base `planType === 'standard' || 'premium'` 단독 비교 → 프로모션 활성 시 plan_type='free' (택일 정책) 라 미충족. atomic BE+FE 로 해소.
+
+### 변경
+
+**data-craft-server (HOTFIX 22 BE — `c33e56e4`)**
+- `src/models/promotion.model.ts`: `findActiveClientPromotionWithMeta` SQL 에 `p.is_collaboration` 컬럼 추가.
+- `src/types/promotion.types.ts`: `ActiveClientPromotionWithMeta` 에 `isCollaboration: boolean` 필드.
+- `src/services/subscription.service.ts`: `getEffectivePlanLimits` / `getSubscriptionStatus` 의 응답 `activePromotion` 에 `isCollaboration` 전달. HOTFIX 7 의 비밀번호 미설정 마스킹 분기는 activePromotion 미건드림 — 영향 없음.
+
+**data-craft (HOTFIX 22 FE — `9c4d5700`)**
+- `src/features/subscription/model/types.ts`: `ActivePromotionInfo` 타입에 `isCollaboration: boolean` 필드 추가.
+- `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`: 사용자 한도 UsageBar 표시 조건 확장:
+  ```tsx
+  const isCollaborationActive =
+    planType === 'standard' || planType === 'premium' ||
+    activePromotion?.isCollaboration === true;
+  {isCollaborationActive && <UsageBar label="사용자" ... />}
+  ```
+
+### 영향 파일
+
+**data-craft-server**
+- `src/models/promotion.model.ts`
+- `src/types/promotion.types.ts`
+- `src/services/subscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/model/types.ts`
+- `src/widgets/settings-dialog/ui/plan/CurrentPlanBadge.tsx`
+
+### 배포 선행 조건
+
+BE + FE 동시 배포 권장 — BE 만 배포 시 FE 가 isCollaboration 무시 (기존 동작 유지). FE 만 배포 시 응답에 isCollaboration 부재 → 표시 X (기존 동작 유지). 한쪽씩 배포해도 깨지진 않음.
+
+### 테스트 시나리오
+
+1. 협업 프로모션 활성 client (예: "운영 기술 지원 프로모션") 의 플랜 관리 → CurrentPlanBadge 의 2×2 그리드 4번째 셀에 "사용자 N/M명" UsageBar 표시.
+2. 개인 프로모션 (비협업) 활성 client → 사용자 한도 미표시 (기존 동작).
+3. 일반 협업 플랜 (`standard`/`premium`) → 기존 동작 유지.
+
 ## v001.363.0
 
 > 통합일: 2026-05-20
