@@ -745,10 +745,10 @@ function renderChartAgentBar(data, opts) {
   if (compareData) {
     const card = ctx.closest('#chart-agent-bar');
     if (card) {
-      let legendEl = card.querySelector('.chart-legend');
+      let legendEl = card.querySelector('.chart-legend-agent-2col');
       if (!legendEl) {
         legendEl = document.createElement('div');
-        legendEl.className = 'chart-legend';
+        legendEl.className = 'chart-legend-agent-2col';
         card.appendChild(legendEl);
       }
       const prevMap = {};
@@ -1563,7 +1563,10 @@ async function applyWeekSelection(state) {
 
     renderChartAgentBar(leftData, { compareData: rightData });
 
-    loadSkillInvocations(leftData);
+    const weekDays = new Set((leftData.by_day || []).map(d => d.day));
+    const weekInvocations = (aggregateData.by_skill_invocation || [])
+      .filter(inv => weekDays.has((inv.start_timestamp || '').slice(0, 10)));
+    loadSkillInvocations({ by_skill_invocation: weekInvocations });
     renderChartPromptBar(leftData);
 
     renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []) });
