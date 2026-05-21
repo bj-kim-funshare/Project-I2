@@ -797,46 +797,71 @@ function renderChartAgentBar(data, opts) {
   }
 }
 
-function renderChartPromptBar(data) {
+function renderChartPromptBar(data, invocations) {
   destroyChart('promptBar');
-  const items = (data.by_prompt || []).slice(0, 30);
   const ctx = $('#chart-prompt-bar canvas');
-  if (!ctx || !items.length) return;
+  const rows = (invocations || [])
+    .map(w => {
+      const t = w.total || {};
+      const usage = (t.input || 0) + (t.output || 0);
+      const cache = (t.cache_creation_5m || 0) + (t.cache_creation_1h || 0) + (t.cache_read || 0);
+      return { w, usage, cache, total: usage + cache };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 30);
+  if (!ctx || !rows.length) return;
+  const truncate = (s) => s.length > 60 ? s.slice(0, 60) + '...' : s;
   charts.promptBar = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: items.map(p => p.prompt_preview || ''),
-      datasets: [{
-        label: '총 토큰',
-        data: items.map(p => (p.input_tokens || 0) + (p.output_tokens || 0) + (p.cache_read || 0) + (p.cache_write || 0)),
-        backgroundColor: '#6366f1',
-      }],
+      labels: rows.map(r => truncate(r.w.title_prompt || '')),
+      datasets: [
+        {
+          label: '실사용 (input+output)',
+          data: rows.map(r => r.usage),
+          backgroundColor: COLORS.noncache,
+          stack: 's',
+        },
+        {
+          label: '캐시 (creation+read)',
+          data: rows.map(r => r.cache),
+          backgroundColor: COLORS.cache,
+          stack: 's',
+        },
+      ],
     },
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      scales: { x: { ticks: { callback: (v) => fmtKMB(v) } } },
+      scales: {
+        x: { stacked: true, ticks: { callback: (v) => fmtKMB(v) } },
+        y: { stacked: true },
+      },
       plugins: {
-        legend: { display: false },
         tooltip: {
+          mode: 'nearest',
           callbacks: {
             title: (items) => {
-              const p = (data.by_prompt || [])[items[0].dataIndex];
-              return p ? p.prompt_preview : '';
+              const r = rows[items[0].dataIndex];
+              return r ? (r.w.title_prompt || '') : '';
             },
             label: (c) => {
-              const p = (data.by_prompt || [])[c.dataIndex];
-              if (!p) return fmtKMB(c.parsed.x);
+              const r = rows[c.dataIndex];
+              if (!r) return fmtKMB(c.parsed.x);
+              const t = r.w.total || {};
               return [
-                `총 토큰: ${fmtKMB(c.parsed.x)}`,
-                `input: ${fmtKMB(p.input_tokens)}`,
-                `output: ${fmtKMB(p.output_tokens)}`,
-                `cache read: ${fmtKMB(p.cache_read)}`,
-                `cache write: ${fmtKMB(p.cache_write)}`,
-                `비용: $${(p.cost_usd || 0).toFixed(4)}`,
-                `세션: ${(p.session_id || '').slice(0, 8)}`,
-                `시각: ${shortTime(p.timestamp)}`,
+                `${c.dataset.label}: ${fmtKMB(c.parsed.x)}`,
+                `총 토큰: ${fmtKMB(r.usage + r.cache)}`,
+                `input: ${fmtKMB(t.input)}`,
+                `output: ${fmtKMB(t.output)}`,
+                `cache_creation_5m: ${fmtKMB(t.cache_creation_5m)}`,
+                `cache_creation_1h: ${fmtKMB(t.cache_creation_1h)}`,
+                `cache_read: ${fmtKMB(t.cache_read)}`,
+                `비용: $${(t.cost_usd || 0).toFixed(4)}`,
+                `스킬: ${r.w.skill || ''}`,
+                `세션: ${(r.w.session_id || '').slice(0, 8)}`,
+                `시작: ${shortTime(r.w.start_timestamp)}`,
               ];
             },
           },
@@ -1567,7 +1592,7 @@ async function applyWeekSelection(state) {
     const weekInvocations = (aggregateData.by_skill_invocation || [])
       .filter(inv => weekDays.has((inv.start_timestamp || '').slice(0, 10)));
     loadSkillInvocations({ by_skill_invocation: weekInvocations });
-    renderChartPromptBar(leftData);
+    renderChartPromptBar(leftData, weekInvocations);
 
     renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []) });
     renderChartDayCost(aggregateData);
