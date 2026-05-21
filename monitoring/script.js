@@ -1433,24 +1433,6 @@ async function loadPeriodData(unit, key) {
   return r.json();
 }
 
-function updateUrl(unit, key) {
-  const params = new URLSearchParams();
-  if (unit === 'realtime') {
-    params.set('period', 'realtime');
-    const compareEl = document.getElementById('period-compare-target');
-    const compareKey = compareEl ? compareEl.value : '';
-    if (compareKey) params.set('compare', compareKey);
-  } else if (unit && unit !== 'all') {
-    params.set('period', unit);
-    if (key) params.set('key', key);
-    const compareEl = document.getElementById('period-compare-target');
-    const compareKey = compareEl ? compareEl.value : '';
-    if (compareKey) params.set('compare', compareKey);
-  }
-  const qs = params.toString();
-  history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
-}
-
 function updateLastRefreshDisplay() {
   const el = document.getElementById('last-refresh-time');
   if (!el) return;
