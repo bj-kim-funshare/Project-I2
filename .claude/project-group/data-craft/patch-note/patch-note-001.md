@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.393.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 43 — getConsumedRetention TS2339 빌드 에러 해소)
+
+### 원인
+HOTFIX 42 의 `getConsumedRetentionForCompanyPromotion` 가 `db.execute<RowDataPacket[]>(...)` 호출. data-craft-server 의 db 래퍼는 `query` 만 노출 (`execute` 없음). TS2339 빌드 에러 → nodemon crash.
+
+### 변경 — data-craft-server (`47b57e4`)
+**`src/models/promotion.model.ts`** L399:
+- `const [rows] = await db.execute<RowDataPacket[]>(...)` → `const rows = await db.query<RowDataPacket[]>(...)`.
+- 동일 파일 내 다른 함수들의 호출 패턴과 일치.
+
+### 영향 파일
+- `src/models/promotion.model.ts`
+
 ## v001.392.0
 
 > 통합일: 2026-05-21
