@@ -38,6 +38,10 @@
 - `plan-enterprise` 다단계 phase 작업 시 i-dev 가 main 보호막.
 - harness 내 `plan-enterprise`, `task-db-structure`, `task-db-data` 등 외부 프로젝트 스킬은 본 정책 자동 준수 (i-dev 통합 표준).
 
+## 정책 갱신 트리거
+
+- 코덱스 / 외부 도구 보안 검토 결과는 본 그룹 정책 갱신의 트리거가 될 수 있다 — 적용 후 즉시 `/group-policy` 로 정책에 반영한다.
+
 ## 미확정 항목
 
 없음 — 4개 정책 영역 (dev / deploy / db / group) 의 모든 결정 사항이 본 라운드로 확정되었다. 추후 추가 항목 발생 시 `/group-policy data-craft` 로 보충.
