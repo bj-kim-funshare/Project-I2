@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.396.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #144 (funshare-inc/data-craft) — 디자인 모드 화면 편집 모달 디자인 리뉴얼
+
+### 페이즈 결과
+- **Phase 1 (`6cb0056`)**: `EditPageDialog` DialogContent 폭을 `max-w-md` → `max-w-5xl` 로 확장하고 본문을 좌(폼)·우(미리보기 placeholder) 2-컬럼 grid 로 재구성. `EditPageForm` 을 `기본 정보` / `계층 및 데이터` 두 섹션으로 그룹핑하고 각 섹션에 좌측 세로 바 + 헤더 + 한 줄 부제 마크업 추가. 기존 props·상태·검증·제출 로직 무수정.
+- **Phase 2 (`8ba575a`)**: `PageEditPreview.tsx` 신규 추가. 폼 라이브 상태(`name`/`shortName`/`icon`/`parentId`/`defaultExpanded`/`isVisible`) + `editingPageId` 수령, `usePageStore` 트리 토폴로지에 편집 노드를 폼 상태로 오버레이하여 부모 재배치까지 즉시 반영. 펼친/접힌 세그먼트 토글, 편집 노드 SEL 배지, `isVisible=false` opacity-50, `useTenantStore.companyName`/`logoUrl` 헤더(+ null fallback), i18n 키 4종 신설. 모달 오른쪽 컬럼 placeholder 를 본 컴포넌트로 교체.
+- **Phase 3 (`8cfabbf`)**: `EditPageDialog` 헤더를 둥근 아이콘 박스(Pencil) + DialogTitle/DialogDescription 가로 정렬 구조로 재편. 푸터는 `justify-between` 으로 좌측 캡션 `저장하면 즉시 사이드바에 반영됩니다.` + 우측 취소/저장 그룹. `PageDialogSwitches` 는 fragment → `div.space-y-3` 래퍼 + 라벨 `text-sm` 정렬 (로직 무수정, `CreatePageDialog` 공유 사용 — 동일 컴포넌트 일관 스타일).
+
+### 영향 파일
+
+**data-craft**
+- `src/features/page-management/ui/EditPageDialog.tsx`
+- `src/features/page-management/ui/EditPageForm.tsx`
+- `src/features/page-management/ui/PageDialogSwitches.tsx`
+- `src/features/page-management/ui/PageEditPreview.tsx` (신규)
+
+### 테스트
+
+1. 디자인 모드에서 화면 편집 모달 열기 → 2-컬럼 레이아웃 (왼쪽 폼, 오른쪽 미리보기) 렌더.
+2. 화면 이름 / 짧은 이름 / 아이콘 / 부모 / 표시 여부 / 기본 펼침 변경 → 오른쪽 미리보기에 즉시 반영.
+3. 미리보기 `펼친 상태` / `접힌 상태` 토글로 두 변형 모두 렌더.
+4. 저장 / 취소 / 중복 이름 가드 / `hasChildren` 부모 비활성 / `isSelectorBox` ↔ `parentId` 상호 배제 — 기존 동작 무회귀.
+5. 생성 모달(`CreatePageDialog`) 스위치 영역 — 동일 컴포넌트 정렬 스타일 적용 확인.
+
 ## v001.395.0
 
 > 통합일: 2026-05-21
