@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.97.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #48 (HOTFIX 4)
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 6 (HOTFIX 4) — review-routine 신규 스킬 신설** (commit `03cc221` + amendment `0df9c5e`): 마스터 요청 — Claude Desktop cloud routine 의 다관점 코드리뷰를 cron 이 아닌 임의 시점에 로컬에서 수동 실행할 수 있는 스킬 신설. `/review-routine <leader>` 형태로 호출, `AskUserQuestion` multiSelect 로 멤버 리포 선택 → 각 리포에 대해 cloud routine 사양과 의미적 동치 (3 조건 OR 선정 / 5 관점 리뷰 / 안전·주의·경고 상태 결정 / 시그니처 마커 dedup / 코멘트 게시 포맷) 의 절차를 순차 수행. 시그니처 마커가 cloud routine 과 정확히 동일 (`<!-- review-check-routine:<repo>:multi-perspective sha=<SHA> -->`) 하여 양측 코멘트가 호환되며 `/review-check` 의 안전-리스트 갱신 흐름과 자연스럽게 연동. 안전-리스트 fetch / 후보 수집 / 멤버 owner 동적 추출 (`gh -C <cwd> repo view`) 도 동일. 본 스킬은 로컬 commit / 머지 없이 외부 GitHub state (이슈 코멘트) 만 mutation. amendment 커밋에서 SKILL.md "WIP / 머지" 절의 carve-out 자기-신설 문구를 약화 — 기존 `dev-merge` (`gh pr create` / `gh pr merge`) / `pre-deploy` Branch B 등에서 이미 적용되어 온 "로컬 repo state 비변경 + 외부 GitHub API 호출만" 패턴을 본 스킬도 따른다고 인용하며, §2 의 공식 carve-out 신설은 본 SKILL.md 책임 밖임을 명시 (advisor #2 권고 반영). 본 hotfix 의 patch-note 버전은 v001.96.0 + 본 라운드 = v001.97.0.
+
+### 영향 파일
+
+- `.claude/skills/review-routine/SKILL.md` (NEW)
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 스킬 신설은 마스터 명시 결정으로 `create-custom-project-skill` 카르베아웃 적용 (폐기될 기존 메커니즘 없음). Q1 (수동 트리거 부재가 실재) / Q2 엣지케이스 명시 — 멤버 리포 cwd 가 git 저장소 아님 / `i-dev` 부재 시 빈 안전-리스트 fallback / `gh issue comment` 실패 시 해당 이슈만 skip 후 다음 진행 / multiSelect 0 선택 / 후보 0건. Q3 폐기 대상 없음.
+
+### 재발 방지 메모
+
+신규 스킬의 §2 (main-session read-only) 정합 서술 시: 자기 자신을 새 carve-out 의 *정의자* 로 두지 말 것. 기존 적용 사례 (`dev-merge` / `pre-deploy` Branch B 등) 의 패턴을 *인용*하는 형태로 정합 진술하고, §2 자체의 공식 carve-out 갱신이 필요해지면 별도 plan-enterprise-os 로 처리. 단일 SKILL.md 가 CLAUDE.md 하드룰을 갱신하는 권한 범위 침범을 피하기 위함.
+
 ## v001.96.0
 
 > 통합일: 2026-05-21
