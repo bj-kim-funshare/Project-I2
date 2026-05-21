@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.401.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 47 — 프로모션 라벨 진행 중 사이클 포함)
+
+### 원인
+HOTFIX 46 이후 신규 프로모션 (consumed=0) 에서 "(프로모션, 0/12개월)" 표시. 마스터 의문: 사용 중인데 0 이라 위화감. 표시는 "현재 N개월째 사용 중" 의미로 진행 중 사이클 포함이 자연스러움.
+
+### 변경 — data-craft (`c13f2046`)
+**`PlanTabContent.tsx`**:
+```ts
+const inProgress = Math.min((consumed ?? 0) + 1, max ?? 0);
+const monthsSuffix = max != null && max > 0 ? `, ${inProgress}/${max}개월` : '';
+```
+- 표시 = `consumed (DB 누적 결제 횟수) + 1`. 진행 중 사이클 포함.
+- max 캡 — DB consumed 가 max 와 같을 수 있으니 (한도 도달 후 cron 만료 직전) +1 이 max 초과하지 않도록 Math.min.
+- BE 데이터 (retention_consumed_months) 는 무수정 — DB 는 결제 갱신 완료 횟수 그대로 보유.
+
+### 영향 파일
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 표시 진화
+| 시점 | consumed (DB) | 표시 |
+|------|--------------|------|
+| 구매 직후 (첫 결제 cron 전) | 0 | 1/12 |
+| 첫 결제 cron 후 | 1 | 2/12 |
+| 11번째 결제 후 | 11 | 12/12 |
+| 12번째 cron 시도 (한도 초과) | 11 → 만료 | (만료 후 활성 cp 없음) |
+
 ## v001.400.0
 
 > 통합일: 2026-05-21
