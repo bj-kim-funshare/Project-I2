@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.382.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 32 — isLevelUp 프로모션 commitment 전환 허용)
+
+### 개요
+
+HOTFIX 31 (활성 프로모션 종료 추가) 머지 후에도 마스터 시도가 `UPGRADE_DIFF_NOT_AN_UPGRADE` 차단. 원인 = 이전 부분 적용으로 client.plan_type='premium' 이지만 active_promotion 잔존. isLevelUp 검증이 currentPlan='premium' = target='premium' + seats 동일이라 차단. **프로모션 활성 + 영구 동일 base plan 전환** 은 commitment 변경 의미가 있으므로 허용 필요.
+
+### 변경 — data-craft-server (`40341e5`)
+
+**`src/services/billingSubscription.service.ts`** `executeUpgradeWithDiff` L650-657:
+```ts
+const isCommitmentChange =
+  activePromotionId != null &&
+  (PLAN_LEVEL[targetPlan] ?? 0) >= (PLAN_LEVEL[currentPlan] ?? 0);
+const isLevelUp =
+  (PLAN_LEVEL[targetPlan] ?? 0) > (PLAN_LEVEL[currentPlan] ?? 0) ||
+  (targetPlan === currentPlan && targetSeats > currentSeats) ||
+  isCommitmentChange;
+if (!isLevelUp) throw new BadRequestError('UPGRADE_DIFF_NOT_AN_UPGRADE');
+```
+
+프로모션 활성 client 가 영구 플랜으로 전환할 때:
+- target plan level ≥ current plan level (다운 아님).
+- 항상 commitment 변경 의미 (프로모션 종료).
+- → 허용 (HOTFIX 31 의 expireClientPromotionInTx 가 활성 프로모션 자연 정리).
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+
+### 회귀 시나리오 처리
+
+- 일반 영구 플랜 client 의 동일 plan + 동일 seats 변경: activePromotionId=null → isCommitmentChange=false → 기존대로 NOT_AN_UPGRADE 차단 유지.
+- 프로모션 활성 + 다운그레이드 (PLAN_LEVEL[target] < PLAN_LEVEL[current]): isCommitmentChange=false → 차단 유지. 다운그레이드는 별도 흐름.
+- 프로모션 활성 + 동일 base plan + 인원 유지: 통과 → 영구 플랜 전환 + 차액 0원 결제 가능.
+
+### 테스트 시나리오
+
+1. 프로모션 활성 client → 동일 base 영구 플랜으로 전환 (인원 유지) → **결제 통과 + 프로모션 종료 + plan_type 갱신**.
+2. 첫 시도 부분 적용 후 재시도 → 통과 (이전 부분 상태 복구 가능).
+3. 일반 영구 client → 동일 plan + 동일 seats → NOT_AN_UPGRADE (기존).
+
 ## v001.381.0
 
 > 통합일: 2026-05-21
