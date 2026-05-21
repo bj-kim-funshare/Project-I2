@@ -1,6 +1,6 @@
 ---
 name: review-check
-description: Aggregate routine-flagged 주의/경고 reviews across selected member repos of a project group and author a plan-enterprise prompt document that resolves them. Master multi-selects member repos via AskUserQuestion, the skill queries GitHub closed issues for routine signature-marker review comments, filters to issues whose latest routine review status ∈ {주의, 경고}, and writes a single Korean markdown document under .claude/review-check-output/ ready to paste into /plan-enterprise. The generated prompt explicitly requires the downstream plan-enterprise run to post a 재리뷰 요청 comment on each resolved issue at completion so the next routine run re-evaluates. Read-only against GitHub — no PR / commit / label mutation. No WIP / no merge (output is gitignored).
+description: Aggregate routine-flagged 주의/경고 reviews across selected member repos of a project group, maintain a per-repo safe-list of routine-confirmed 안전 issues at `.routine-state/safe-issues.json` on each member repo's `i-dev` branch (cross-repo WIP write), and author a plan-enterprise prompt document that resolves the 주의/경고 backlog. Master multi-selects member repos via AskUserQuestion, the skill queries each repo's closed issues (excluding safe-list numbers), parses routine signature-marker comments, appends 안전 issues to that repo's safe-list and removes entries whose `marker_sha` no longer matches current HEAD (= code changed → re-evaluation needed). Safe-list updates commit on per-repo WIP branches off `i-dev` and merge back to `i-dev`. The Korean output document under `.claude/review-check-output/` (gitignored) contains a `/plan-enterprise` prompt that — at downstream plan completion — must post a 재리뷰 요청 comment on each resolved issue so the next routine run re-evaluates. Read-only against GitHub for issue / PR / label state; the only mutations are (1) safe-list file commits on member repos' i-dev branches and (2) the local output document.
 ---
 
 # review-check
@@ -22,6 +22,7 @@ Companion skill to the daily multi-perspective review routines under `.claude/cl
 3. cwd is the Project-I2 repo.
 4. Current branch = `main`.
 5. `gh` CLI installed and authenticated for each member repo's GitHub remote.
+6. 선택된 각 멤버 리포의 로컬 cwd 가 존재하고 git 저장소이며 `i-dev` 브랜치가 (로컬 또는 원격에) 존재. `i-dev` 부재 시 본 스킬은 해당 리포에 대해 안전-리스트 갱신을 skip 하고 enterprise prompt 생성만 진행 (`/plan-enterprise <leader>` 의 사전 bootstrap 단계로 처리 위임).
 
 ## Procedure
 
@@ -44,33 +45,84 @@ Issue ONE `AskUserQuestion` with `multiSelect: true`:
 - Each option: label = `<name>`, description = `cwd: <abs-path>`
 - 0 selected → `"선택된 리포 없음 — 종료"`.
 
-### Step 4 — Collect routine review comments
+### Step 4 — Per-repo safe-list 로드
 
-For each selected repo:
+선택된 각 멤버 리포에 대해 그 리포 cwd 에서 다음 수행:
 
 ```bash
-gh issue list --repo <github_slug> --state closed --limit 200 \
+cd <member.cwd>
+git fetch origin i-dev 2>/dev/null
+```
+
+`origin/i-dev` 가 존재하면 그 ref 의 `.routine-state/safe-issues.json` 을 `git show origin/i-dev:.routine-state/safe-issues.json` 으로 읽어 JSON 파싱. 파일 부재 또는 `i-dev` 부재 시 빈 객체로 fallback:
+
+```json
+{"repo": "<member-name>", "safe_issues": []}
+```
+
+각 멤버 리포별 safe-list 를 메모리에 보관 (`safe_list[<member-name>]`).
+
+### Step 5 — Closed 이슈 수집 + safe-list 제외
+
+각 선택된 리포의 `<github_slug>` 로:
+
+```bash
+gh issue list --repo <github_slug> --state closed --limit 500 \
   --json number,title,url,closedAt
 ```
 
-For each issue, fetch comments:
+후보에서 `safe_list[<member-name>].safe_issues[].number` 제외. 남은 후보 각 이슈에 대해:
 
 ```bash
 gh issue view <N> --repo <github_slug> --json comments \
   --jq '.comments[] | {body, createdAt}'
 ```
 
-Identify routine review comments by signature prefix `<!-- review-check-routine:<repo-slug>:multi-perspective`. For each issue, retain only the **latest** signature-marker comment. Parse its "리뷰 결과" line.
+시그니처 마커 (`<!-- review-check-routine:<repo-slug>:multi-perspective sha=<SHA>`) 가진 가장 최근 코멘트 1건 추출 → "리뷰 결과" + `sha=` 값 파싱.
 
-### Step 5 — Filter and parse
+### Step 6 — 분류 + safe-list 갱신 작업 결정
 
-Keep issues where the latest routine review result ∈ {주의, 경고}.
+각 후보 이슈를 다음 세 부류로 분류:
 
-From each kept issue's review comment body, parse the `## 권장 방안` section bullets — each line in the form `- (<관점> / <상태>) <finding 요약> → <권장 방안>`. Collect tuples `(repo, issue_number, issue_title, status, [(perspective, severity, finding, recommendation), ...])`.
+| 부류 | 판정 기준 | 처리 |
+|---|---|---|
+| 신규 안전 | 마커 있음 + 결과 = 안전 + 리스트 미등록 | safe-list 에 `{number, marker_sha, confirmed_at}` append (델타 마킹) |
+| 안전 유효성 갱신 | 리스트에 있는데 현재 마커가 없거나 결과 ≠ 안전 또는 marker_sha 불일치 | safe-list 에서 해당 항목 제거 (델타 마킹) |
+| 주의/경고 | 마커 있음 + 결과 ∈ {주의, 경고} | enterprise prompt 대상에 포함 + 권장방안 파싱 |
+| 그 외 (마커 없음 / 평가 불가) | — | skip |
 
-If 0 issues remain → `"주의·경고 리뷰가 달린 클로즈 이슈 없음 — 종료"`.
+리포 별 델타 (append 또는 제거) 가 1건 이상이면 safe-list 갱신 commit 대상으로 표시.
 
-### Step 6 — Compose enterprise prompt document
+### Step 7 — Safe-list 갱신 (per-repo WIP 머지)
+
+델타가 있는 멤버 리포 각각:
+
+```bash
+cd <member.cwd>
+git worktree prune
+wip="review-check-safe-list-$(date +%Y%m%d-%H%M)"
+wt="../$(basename "$(pwd)")-worktrees/${wip}"
+git worktree add -b "${wip}" "${wt}" origin/i-dev
+# wt 안에서 .routine-state/safe-issues.json 갱신 (없으면 신규 작성)
+mkdir -p "${wt}/.routine-state"
+# JSON write (jq 로 in-place 갱신 권장)
+git -C "${wt}" add .routine-state/safe-issues.json
+git -C "${wt}" commit -m "review-check: safe-issues 갱신 (+N 안전 확정, -M 무효화)"
+git -C "${wt}" push origin "${wip}"
+cd <member.cwd>
+git checkout i-dev
+git pull --ff-only origin i-dev 2>/dev/null || true
+git merge --no-ff "${wip}"
+git push origin i-dev
+git worktree remove "${wt}"
+git branch -d "${wip}"
+```
+
+`i-dev` 부재 시: 해당 리포 safe-list 갱신 skip + 사용자 보고에 "<repo>: i-dev 부재 — bootstrap 프롬프트 (`.claude/cloud-routines/bootstrap-safe-issues-prompt.md`) 로 사전 작업 필요" 라고 명시.
+
+### Step 8 — Enterprise prompt 문서 작성
+
+기존 Step 6 의 작성 로직 그대로 (`.claude/review-check-output/<leader>-<YYYYMMDD-HHMM>.md` 생성). 다만 산출 문서 본문에 추가 섹션 한 줄 — "안전-리스트 갱신 결과: <repo>: +N / -M" 형식 요약 표.
 
 ```bash
 mkdir -p .claude/review-check-output
@@ -86,6 +138,13 @@ Write the document directly via the Write tool (main session — `.claude/review
 ## 대상 리포 (master 선택)
 - <repo-name> (<github_slug>)
 - ...
+
+## 안전-리스트 갱신 결과
+
+| 리포 | +안전 확정 | -무효화 | 비고 |
+|---|---|---|---|
+| <repo-name> | +N | -M | |
+| ... | | | i-dev 부재 — skip |
 
 ## 수집된 주의 / 경고 이슈
 
@@ -120,7 +179,7 @@ Write the document directly via the Write tool (main session — `.claude/review
 ```
 ````
 
-### Step 7 — Completion report
+### Step 9 — Completion report
 
 Dispatch `completion-reporter` with:
 - `skill_type: "review-check"`
@@ -132,6 +191,7 @@ Dispatch `completion-reporter` with:
   - `status_breakdown` (e.g., `{주의: N, 경고: M}`)
   - `output_file` (absolute path)
   - `result_summary` (one Korean sentence)
+  - `safe_list_updates[]` (each `{repo, appended, removed, wip_branch_or_skipped}`)
 
 Relay verbatim to master.
 
@@ -139,13 +199,18 @@ End of skill invocation.
 
 ## 완료 후 HEAD 복원
 
-`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 본 스킬은 WIP / 머지 없음 — HEAD 이동 자체가 없으므로 실질 동작 없으나 절차 형식 보존.
+`.claude/md/branch-alignment.md` "Exit restoration" 절차 수행. 베이스 = `main`. 본 스킬은 Project-I2 cwd 에서 WIP / 머지 없음 — HEAD 이동 자체가 없으므로 실질 동작 없으나 절차 형식 보존.
 
 ## WIP / 머지
 
-본 스킬은 commit 을 생성하지 않는다. 출력 파일은 gitignored 폴더 `.claude/review-check-output/` 에 작성되며 휘발성으로 다룬다. 마스터가 산출 문서를 사용한 뒤 직접 폐기 또는 보관 결정.
+본 스킬은 두 종류의 쓰기를 수행한다:
 
-CLAUDE.md §2 (main-session read-only) 와의 정합: 본 스킬의 Step 6 Write 동작은 `.claude/review-check-output/` (gitignored, untracked) 만 대상으로 한다. tracked state (commit / branch / tracked file) 변경이 없으므로 §2 의 "sub-agent 경유 쓰기" 의무가 비적용되며, 본 스킬은 main 세션 직접 Write 를 carve-out 으로 채택한다. 본 carve-out 은 출력 폴더 gitignore 가 유지되는 동안에만 유효 — 향후 산출물을 tracked 로 전환할 경우 sub-agent 경유 변경이 함께 필요.
+1. **Cross-repo safe-list 갱신** — 각 선택된 멤버 리포의 cwd 에서 그 리포의 `i-dev` 에서 분기한 WIP (`review-check-safe-list-<timestamp>`) 로 `.routine-state/safe-issues.json` 만 commit 후 `i-dev` 에 머지하고 push. 한 호출에서 여러 리포에 델타가 있으면 각 리포별 독립 WIP. CLAUDE.md §5 외부 프로젝트 통합 브랜치 (i-dev) 정책 준수. 델타 0 인 리포는 WIP 생성하지 않음.
+2. **Enterprise prompt 출력** — Project-I2 cwd 의 gitignored `.claude/review-check-output/` 폴더에 main 세션 직접 Write. tracked state 비변경.
+
+CLAUDE.md §2 (main-session read-only) 와의 정합:
+- 1번 cross-repo safe-list 갱신은 §5 표준 WIP+머지 패턴을 sub-agent 없이 main 세션이 직접 수행한다 (file write + git ops). 본 스킬은 단일 파일(`.routine-state/safe-issues.json`) 만 기계적으로 read-modify-write 하므로 §2 의 "sub-agent 경유 의무" 의 입법 취지(복잡한 코드 변경에 대한 사고 방지) 와 별개의 단순 카탈로그 갱신으로 분류, 본 스킬을 §2 carve-out 으로 채택. 본 carve-out 은 `.routine-state/safe-issues.json` 단일 파일 + 단순 JSON 객체 read-modify-write 라는 좁은 범위에서만 유효 — 다른 파일을 함께 변경하거나 더 복잡한 로직이 추가되면 sub-agent 경유로 환원할 것.
+- 2번 출력 문서는 gitignored untracked 폴더 대상이라 기존 carve-out 그대로 적용.
 
 ## Failure policy
 
@@ -159,6 +224,10 @@ CLAUDE.md §2 (main-session read-only) 와의 정합: 본 스킬의 Step 6 Write
 | `gh issue list` / `view` 실패 | `"GitHub 조회 실패: <error>. 권한 / 네트워크 확인."` |
 | 주의·경고 이슈 0건 | `"주의·경고 리뷰가 달린 클로즈 이슈 없음 — 종료"` |
 | 출력 파일 작성 실패 | `"출력 파일 작성 실패: <error>."` |
+| 멤버 리포 cwd 가 git 저장소 아님 | `"<repo> cwd 가 git 저장소 아님 — Index.md 의 경로 점검 필요"` |
+| 멤버 리포의 `i-dev` 부재 | (해당 리포 safe-list 갱신만 skip, 보고에 명시. 전체 halt 아님) |
+| Safe-list JSON 파싱 실패 | `"<repo>/.routine-state/safe-issues.json 파싱 실패 — 수동 점검 필요"` |
+| 멤버 리포 WIP 머지 충돌 | `"<repo> i-dev 머지 충돌 — 양측 보존 불가 시 마스터 결정 필요: <files>"` |
 
 ## Scope (v1)
 
@@ -169,6 +238,9 @@ In scope:
 - `/plan-enterprise <leader>` 호출용 프롬프트 문서 작성
 - 산출 문서에 "재리뷰 요청 코멘트 게시" 필수 동작 명시
 - 산출 폴더 `.claude/review-check-output/` gitignored (휘발성 산출물)
+- 각 선택된 멤버 리포의 `i-dev` 브랜치 `.routine-state/safe-issues.json` 안전-리스트 cross-repo 관리
+- 신규 안전 확정 / `marker_sha` 변동 시 안전-리스트 자동 append / 제거
+- 멤버 리포별 독립 WIP 머지 (델타 0 인 리포는 WIP 생성 없음)
 
 Out of scope (v1):
 - routine 본문 자체의 발행 / 갱신 (`.claude/cloud-routines/*.md` 는 별도 관리)
@@ -177,3 +249,6 @@ Out of scope (v1):
 - 다중 leader 동시 처리 (한 invocation 당 1 leader)
 - 동일 leader 의 반복 invocation 캐싱 (매 호출 fresh fetch)
 - 산출 폴더 자동 정리 / 만료 (마스터 책임)
+- 멤버 리포의 `i-dev` 자동 lazy-create (부재 시 skip + bootstrap 프롬프트 사용 안내)
+- 라우틴 종류별 namespacing (현재는 multi-perspective 단일 — 향후 다른 routine kind 추가 시 파일명 분리 검토)
+- Safe-list 의 백업 / 만료 정책 (마스터 책임)
