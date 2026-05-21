@@ -1,5 +1,46 @@
 # data-craft — Patch Note (001)
 
+## v001.407.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 51 — 3차 검증 6건 일괄 정정)
+
+### 변경
+
+**BE — data-craft-server (`21987b4`)**
+- **#1 (BLOCK)** `executeUpgradeWithDiff` (billingSubscription.service.ts) 두 UPDATE 분기 모두에 `pending_plan_type = NULL, pending_billing_cycle = NULL` 추가. 업그레이드 직후 잔존 예약이 다음 cron 에 오적용되는 문제 차단.
+- **#9** `findExpiredClients` (billingScheduler.service.ts) WHERE 조건 확장: `(plan_type != 'free' OR active_promotion_id IS NOT NULL)`. SELECT 에 active_promotion_id 추가. processExpiredPlans 루프에서 activePromotionId 비NULL 시 `forceExpireClientPromotion` 먼저 호출. 자동갱신 OFF + 프로모션 만료 client 가 무한 활성 잔존하는 매출 누락 차단.
+
+**FE — data-craft (`8105c595` + 보완 `19ae9d21`)**
+- **#3** UpgradeStepPayment cycle 토글: activePromotion / pendingPlanType / pendingBillingCycle 중 하나라도 있으면 토글 숨김.
+- **#4** SeatManageDialog cycle 토글: 동일 가드.
+- **#5/#6** 신규 BE 에러 코드 6개 i18n 매핑 + `billingErrorMessages.ts` 유틸 신규:
+  - `CYCLE_CHANGE_BLOCKED_BY_PROMOTION` / `_BY_PENDING_PLAN` / `_WITH_PLAN_CHANGE_NOT_SUPPORTED`
+  - `SAME_BILLING_CYCLE` / `PAYMENT_ORDERID_MISMATCH` / `SEAT_CHANGE_IMMEDIATE_BLOCKED_CYCLE_PENDING`
+- 보완: 부모 mutation onError 3 곳에 `resolveBillingError` 연결:
+  - UpgradeDialog.upgradeMutation
+  - PlanLimitExceededDialog.upgradeMutation
+  - SubscriptionActionSection.scheduleCycleChangeMutation
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/billingSubscription.service.ts`
+- `src/services/billingScheduler.service.ts`
+
+**data-craft**
+- `src/features/subscription/lib/billingErrorMessages.ts` (신규)
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+- `src/features/subscription/ui/PlanLimitExceededDialog.tsx`
+- `src/features/subscription/ui/SeatManageDialog.tsx`
+- `src/widgets/settings-dialog/ui/plan/SubscriptionActionSection.tsx`
+- `src/shared/i18n/locales/ko.ts`, `en.ts`
+
+### 제외된 finding
+- **#2/#8** (PG long-lock) — 마스터 제외 (토스 일반 응답 빠름, 빈도 낮음).
+- **#7** (cancel audit) — 마스터 제외 (orderId mismatch 자체가 드물고, 토스 명세서로 수동 추적 가능).
+
 ## v001.406.0
 
 > 통합일: 2026-05-21
