@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.417.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #148 (data-craft-server 보안 결함 5건 일괄 해소 — Codex 정적 검토 후속)
+
+### 배경
+
+Codex 보안 검토(주 세션 정적 검증) 로 확인된 `data-craft-server` 보안 결함 5건과 high advisory 의존성 1건(nodemailer DoS) 을 한 플랜에 묶어 해소. 결함 우선순위 P0 → P1 → P2 → chore 순으로 6 페이즈 고정. 단일 work repo, 통합 브랜치 `data-craft-server:i-dev`. origin push 보류.
+
+### 페이즈 결과 (`data-craft-server` 6 페이즈)
+
+- **Phase 1** `706e6fe` + follow-up `a3463a2` — [P0] 인증 미들웨어 사용자 상태 검증 보강. `auth.middleware.ts` light 분기 `LEFT JOIN → INNER JOIN ... AND u.company_id = c.company_id AND u.is_deleted = 0` 으로 강화, full 분기 WHERE 절에 `company_id` + `is_deleted = 0` 추가. 두 분기 모두 owner 가 아닌 사용자에 대해 `is_active = 1 AND is_approved = 1` 검증 (`UnauthorizedError('USER_NOT_FOUND' | 'USER_NOT_ACTIVE' | 'USER_NOT_APPROVED')`). 새 코드 3종을 `normalAuthFailures` 배열에 추가하여 정상 거부가 warn 레벨로 로그되도록 보정. sliding token 재발급(line 191)은 검증 통과 후에만 실행됨이 자동 보장.
+- **Phase 2** `e0f6600` + lint fix `becb828` — [P0] 파일 업로드 path traversal 차단. `storage.ts` 에 `isValidCategory` (hyphen-lowercase 64자) / `isValidIdentifier` (한글·공백·점·콜론 허용, `/` `\` `..` 차단) 두 헬퍼 추가. `ensureClientFolder` / `ensureClientFolderAsync` 끝에 `baseRoot` 기준 `path.relative` containment 최종 방어선 삽입 (`BadRequestError('INVALID_UPLOAD_PATH')`). `file.ts` 의 `POST /` 업로드 핸들러가 `MISSING_REQUIRED_FIELDS` 검사 직후 두 헬퍼로 조기 거부. `account.ts` / `profile.ts` 는 category 가 정적 상수라 변경 불필요.
+- **Phase 3** `bec2a35` — [P1] Builder CUD RBAC 적용. `builder.ts` 의 Page CUD(6 라우트) / Form CUD(3) / Widget CUD(5) 총 14개에 `forceIncludeAuth + permissionCheckMiddleware` 삽입. 권한 키 매핑: Page → `design_page_edit`, Form → `design_page_edit` OR `design_section_edit` (some 통과), Widget → `design_widget_edit`. 기존 `PERMISSION_KEYS` 재사용으로 DB 마이그레이션 없음. GET 라우트 / start-page 는 현행 유지 (`setStartPageService` 의 service-layer owner 가드로 충분).
+- **Phase 4** `423e089` — [P2] SSE / 로깅 마스킹 / findSSEUserInfo 보강. `sse.ts` 의 `?token=` query fallback 완전 제거 (Authorization Bearer 헤더 전용). 신규 `src/utils/url-mask.ts` 의 `maskSensitiveQuery` 헬퍼로 token/access_token/refresh_token 등 민감 키 값을 `***` 로 치환, `logger.middleware.ts` 의 세 곳 URL 로깅 지점에 모두 적용. `findSSEUserInfo` SQL JOIN 에 `u.company_id = c.company_id AND u.is_deleted = 0` 추가, `isActive`/`isApproved` 컬럼 SELECT + `SSEUserRow` 확장. SSE 라우트도 owner 가 아닌 사용자에 대해 active/approved 검증.
+- **Phase 5** `4e6f576` — [P2] /storage 공개 범위 축소. `app.ts` 의 `req.path.includes('/files/company-logo/')` substring 매칭 블록을 명시 라우트 `app.use('/storage/:clientFolder/files/company-logo', ...)` 로 교체. `clientFolder` 화이트리스트 (`/^[^/\\]+$/` + `..` 차단) + `express.static` root 를 해당 폴더 하위로 좁힘. Cross-Origin-Resource-Policy 헤더 유지. 회사 로고 외 `/storage` 요청은 기존 인증 게이트로.
+- **Phase 6** `c7fbe86` — [chore] 의존성 high advisory 정리. `nodemailer ^6.9.13 → ^7.0.13` (DoS GHSA-rcmh-qjqh-p98v 해소), `@types/nodemailer ^6.4.15 → ^8.0.0` 동반. `createTransport` / `sendMail` 호출은 호환. `jsonwebtoken` 직접 의존성은 진입 시 이미 `^9.0.2` — Codex audit 의 `jsonwebtoken <=8.5.1` 보고는 `eslint-formatter-github → @octokit/app` 전이(devDep) 였음.
+
+### 영향 파일
+
+`data-craft-server`:
+- `src/middlewares/auth.middleware.ts` (Phase 1 + follow-up)
+- `src/routes/file.ts`, `src/utils/storage.ts` (Phase 2)
+- `src/routes/builder.ts` (Phase 3)
+- `src/routes/sse.ts`, `src/middlewares/logger.middleware.ts`, `src/models/client.model.ts`, `src/utils/url-mask.ts` (신규, Phase 4)
+- `src/app.ts` (Phase 5)
+- `package.json`, `pnpm-lock.yaml` (Phase 6)
+
+### 운영 가이드
+
+- **role 부여 점검 필요**: Phase 3 의 builder CUD RBAC 적용 후, owner 가 아닌 사용자가 page/form/widget 수정 작업을 수행하려면 해당 role 에 `design_page_edit` / `design_section_edit` / `design_widget_edit` 권한이 부여되어 있어야 함. 본 변경 직전까지는 회사 소속만으로 통과했으므로 기존 role 구성에 따라 일부 사용자가 build 후 403 받을 수 있음. 운영자는 사전에 role 매핑을 점검.
+- **SSE 클라이언트 호환**: FE 는 본 변경 이전부터 Authorization Bearer 헤더 전용이므로 영향 없음. 외부 통합이 `?token=` query 를 사용했다면 헤더 전환 필요.
+- **회사 로고 무인증 접근 URL**: `/storage/<clientFolder>/files/company-logo/<file>` 패턴만 무인증 허용. 다른 storage 경로는 인증 필수.
+
+### Manual 회귀 시나리오 권장
+
+- 비활성·삭제 사용자 토큰으로 보호 API 호출 → 401 `USER_NOT_ACTIVE` / `USER_NOT_APPROVED` / `USER_NOT_FOUND`.
+- 업로드 시 `category=../etc` 또는 `identifier=../../secret` 주입 → 400 `INVALID_CATEGORY` / `INVALID_IDENTIFIER`.
+- 비-owner + `design_page_edit` 미보유 사용자가 page CUD → 403 `PERMISSION_DENIED`.
+- SSE `/api/sse/connect?token=...` (Authorization 헤더 없이) → 401.
+- `/storage/<other-client>/files/company-logo/../sensitive` substring 우회 시도 → 404.
+
+### 잔존 follow-up (별도 이슈 분리 권장)
+
+- **xlsx@0.18.5 마이그레이션**: GHSA-4r6h-8v6p-xvw6 + GHSA-5pgg-2g8v-p4x9. npm 레지스트리에 fix 부재 → SheetJS CE 공식판 마이그레이션. 본 plan 명시적 제외.
+- **express → path-to-regexp**: 런타임 전이 advisory. express 업그레이드 동반 작업 필요.
+- **devDep 전이 advisory**: minimatch ×3 / picomatch ×2 (nodemon, typescript-eslint), vite ×2 + rollup (vitest), jsonwebtoken@8.5.1 + jws@3.2.2 (eslint-formatter-github → @octokit/app). 런타임 영향 없음, devDep 업그레이드 사이클로 처리.
+- **Phase 2 refinement**: `ensureClientFolder*` 의 `mkdir → containment check` 순서를 `containment check → mkdir` 로 재배치하면 traversal 시도 시 빈 escape 디렉터리 잔존도 차단. 실제 파일 write 는 이미 차단됨, 우선순위 낮음.
+
+### advisor 검증
+
+- advisor #1 (plan 시점): Intent / Logic / Group Policy / Evidence / Command Fulfillment 5관점 모두 PASS (1차 blind spot 4건 grep 으로 확정 후 재검증 통과).
+- advisor #2 (완료 시점): 동일 5관점 모두 PASS. xlsx + path-to-regexp 등 follow-up 분리는 plan 명시 사항으로 Command Fulfillment 인정.
+
 ## v001.416.0
 
 > 통합일: 2026-05-21
