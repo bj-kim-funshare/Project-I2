@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.388.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 38 — isCycleChange 프로모션 활성 client 정합)
+
+### 개요
+
+마스터 보고: HOTFIX 36 머지됐는데도 프리미엄 프로모션 → 프리미엄 연간 전환 시 "결제 금액 없음" 만 표시되고 다음 결제일 청구 예정 금액 안내 안 나옴.
+
+### 원인
+
+`UpgradeStepPayment.isCycleChange = hasBillingKey && status?.billingCycle != null && status.billingCycle !== targetCycle`. 프로모션 활성 client 의 `status.billingCycle` 이 null/undefined 일 수 있어 `!= null` 조건에서 false → isCycleChange=false → cycle 전환 분기 미통과 → 다음 결제일 안내 누락.
+
+### 변경 — data-craft (`0b9b31b7`)
+
+**`src/features/subscription/ui/UpgradeStepPayment.tsx`** L107-112:
+```ts
+const currentCycle: BillingCycle = status?.activePromotion
+  ? 'monthly'  // 마스터 정책: 프로모션은 월 고정
+  : (status?.billingCycle ?? 'monthly');  // null fallback
+const isCycleChange = hasBillingKey && currentCycle !== targetCycle;
+```
+
+- status.billingCycle 가 null/undefined 여도 'monthly' fallback.
+- 프로모션 활성 client 는 무조건 monthly 로 간주 (HOTFIX 37 정합).
+- isCycleChange 가 프로모션 → 연간 전환 케이스를 정상 통과 → cycle 전환 안내 (HOTFIX 36) 분기 작동.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeStepPayment.tsx`
+
+### 테스트 시나리오
+
+1. 프리미엄 프로모션 활성 client → 영구 프리미엄 + 연간 선택 → "추가 결제 금액 없음" + **다음 결제일 청구 예정 금액 + 10% 할인 안내** 표시 (이전: 다음 결제일 안내 누락).
+2. 일반 영구 client 의 월→연 전환 → 기존 동작 유지.
+3. 동일 cycle → 기존 동작 그대로.
+
 ## v001.387.0
 
 > 통합일: 2026-05-21
