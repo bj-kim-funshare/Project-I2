@@ -1,5 +1,78 @@
 # data-craft — Patch Note (001)
 
+## v001.415.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #146 (HOTFIX 3 — 잔존 follow-up 일괄 처리)
+
+### 배경
+
+본 플랜의 PENDING 보고에서 surface 한 잔존 3건 + 마스터가 추가 발견한 stale 주석 2건을 한 hotfix 로 묶어 종결.
+
+원래 surface 된 3건:
+- (A) print 엔진 iframe 리팩토링 — Phase 4 의 sub/external viewer `window.open` 호출에 noopener 적용 불가했던 부분 (새 창의 `document.write` + `print()` 호출 의존).
+- (B) `auth.types.ts` (server) 의 optional `refreshToken?: string` 키 cleanup — Phase 9 amendment 가 controller/service 의 body 노출은 완전 차단했으나 타입 표면 잔존.
+- (C) `tests/bug-detection/qa-001-p08-signin-dev-autofill.test.ts` stale guard + JSDoc `@example` 자격 평문 (`Test1234!@`) 정리.
+
+추가 발견 2건:
+- (D) `data-craft-server/db.sql/01-tables.sql:30` 의 `subdomain` 컬럼 schema COMMENT 가 stale (`company_id.datacraft.co.kr`). DB 정규화 (별도 세션 `acadc86`) 완료 후 actual 값(= companyId) 과 어긋남.
+- (E) `data-craft/src/shared/types/auth.types.ts:31` 의 `subdomain` 필드 주석에 stale `abc-corp.datacraft.co.kr` 예시.
+
+### HOTFIX 3 결과
+
+#### FE (`data-craft`, `f6811f5c` + `a5aaedfd`)
+
+**(A) print 엔진 iframe 통일**:
+- `packages/fs-sub-data-viewer/src/features/print/engines/BrowserPrintEngine.ts` — `window.open` 패턴 → hidden iframe + `srcdoc = sanitizePrintHtml(html)` + `onafterprint` / `matchMedia` cleanup + 60s timeout fallback. `fs-data-viewer` 의 기존 패턴과 동일.
+- `packages/fs-sub-data-viewer/src/features/print/hooks/usePrintExecution.ts` — `printHtml` 콜백 iframe 패턴으로 교체. `checkPopupBlocked` probe 함수는 외부 호출처 grep 0건 확인 후 제거 (iframe 패턴에서는 popup blocker 의미 없음).
+- `packages/fs-external-data-viewer/src/features/print/engines/BrowserPrintEngine.ts` — 동일 패턴 적용.
+- `packages/fs-external-data-viewer/src/features/print/hooks/usePrintExecution.ts` — 동일 패턴 적용.
+- 사후 grep: print 디렉토리 내 `window.open` 잔존 0건.
+
+**(C) stale guard + JSDoc 정리**:
+- `tests/bug-detection/qa-001-p08-signin-dev-autofill.test.ts` — Phase 1 직후 stale 해진 `Test1234!@` regex guard 를 일반화된 패턴 단언으로 교체 (automode 분류기 제약상 파일 삭제 대신 내용 일반화).
+- `src/pages/auth/subdomain-register/registerValidation.ts` + `src/pages/auth/signup/signupValidation.ts` — JSDoc `@example` 평문 `Test1234!@` → `Password1!` 로 교체.
+- 사후 grep: src/ + tests/ 에서 `starbox918@naver.com` 및 `Test1234!@` 잔존 0건.
+
+**(E) FE auth.types 주석 정리** (`a5aaedfd`):
+- `src/shared/types/auth.types.ts:31` — `SignupResponse.subdomain` 주석에서 `(예: abc-corp.datacraft.co.kr)` 표현 제거, DB 정규화 (acadc86) 완료 후 `subdomain == companyId` 임을 명시.
+
+#### BE (`data-craft-server`, `ba66f15`)
+
+**(B) `src/types/auth.types.ts` — response 타입 봉인**:
+- `AuthResponseData` / `LightAuthResponseData` 의 optional `refreshToken?: string` 키 2개 삭제. response body 의 JSON 에 절대 포함되지 않음을 타입 표면에서도 봉인.
+- `AutoSigninRequest.refreshToken` / `RefreshRequest.refreshToken` 은 **request DTO** 의 필수 입력 필드 (Phase 9 amendment 후에도 body fallback 가능성을 위한 input 정의) 라 보존.
+
+**(D) schema COMMENT 정리**:
+- `db.sql/01-tables.sql:30` — `client.subdomain` COMMENT 의 `(company_id.datacraft.co.kr)` 표현 → `(= company_id, legacy suffix 제거됨)`.
+- 사후 grep: data-craft-server 전체 (`.ts`, `.sql`, `.md`) 에서 `datacraft.co.kr` 잔존 0건. response 타입 내 `refreshToken?: string` 0건.
+
+### 영향 파일 (총 11)
+
+**data-craft (8 files, +198 −151)**:
+- `packages/fs-sub-data-viewer/src/features/print/{engines/BrowserPrintEngine.ts, hooks/usePrintExecution.ts}`
+- `packages/fs-external-data-viewer/src/features/print/{engines/BrowserPrintEngine.ts, hooks/usePrintExecution.ts}`
+- `tests/bug-detection/qa-001-p08-signin-dev-autofill.test.ts`
+- `src/pages/auth/{subdomain-register/registerValidation.ts, signup/signupValidation.ts}`
+- `src/shared/types/auth.types.ts`
+
+**data-craft-server (2 files, +1 −3)**:
+- `src/types/auth.types.ts`, `db.sql/01-tables.sql`
+
+### post-merge 검증
+
+- data-craft `pnpm typecheck:all` → 8 tasks successful.
+- data-craft `pnpm lint` → 0 errors, 18 warnings (baseline 유지).
+- data-craft-server `pnpm lint` → 0 errors.
+
+### advisor
+
+본 hotfix 는 단순 마무리 작업 (코드/주석/타입/문서 정합) 이라 별도 advisor 호출 생략. 사후 grep 0건 검증 + post-merge typecheck/lint pass 가 evidence.
+
+### 본 플랜 전체 종결 상태
+
+본 v001.415.0 머지로 plan #146 의 원 6안건 + Phase 9 자체 발견 + 잔존 follow-up 5건까지 모두 종결. legacy 잔재 (`.datacraft.co.kr`, `funshare-inc.github.io`, 자격 평문, body 채널 토큰 등) 모두 0건 grep 통과. dev.md 보안 정책에 baked-in (`be8cdc5`). DB 데이터까지 정규화 완료 (`acadc86`).
+
 ## v001.414.0
 
 > 통합일: 2026-05-21
