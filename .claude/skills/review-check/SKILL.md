@@ -145,6 +145,8 @@ End of skill invocation.
 
 본 스킬은 commit 을 생성하지 않는다. 출력 파일은 gitignored 폴더 `.claude/review-check-output/` 에 작성되며 휘발성으로 다룬다. 마스터가 산출 문서를 사용한 뒤 직접 폐기 또는 보관 결정.
 
+CLAUDE.md §2 (main-session read-only) 와의 정합: 본 스킬의 Step 6 Write 동작은 `.claude/review-check-output/` (gitignored, untracked) 만 대상으로 한다. tracked state (commit / branch / tracked file) 변경이 없으므로 §2 의 "sub-agent 경유 쓰기" 의무가 비적용되며, 본 스킬은 main 세션 직접 Write 를 carve-out 으로 채택한다. 본 carve-out 은 출력 폴더 gitignore 가 유지되는 동안에만 유효 — 향후 산출물을 tracked 로 전환할 경우 sub-agent 경유 변경이 함께 필요.
+
 ## Failure policy
 
 | Cause | Output |
