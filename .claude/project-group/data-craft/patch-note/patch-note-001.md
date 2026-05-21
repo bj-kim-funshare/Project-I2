@@ -1,5 +1,54 @@
 # data-craft — Patch Note (001)
 
+## v001.374.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #126 (HOTFIX 27 — 로그인 화면 무한 새로고침 긴급 해소)
+
+### 개요
+
+마스터 보고 — 로그인 화면에서 브라우저가 무한 새로고침. 원인: HOTFIX 24 에서 `SseProvider` (앱 최상위 마운트) 에 `useSubscriptionStatus` 추가. 로그인 전엔 인증 미보유 → `/api/subscription/status` 401 응답 → 401 인터셉터가 logout/redirect → SseProvider 재마운트 → 다시 401 → 무한 루프.
+
+### 원인
+
+`useSubscriptionStatus` hook 에 `enabled` 가드 부재. 인증 안 된 상태에서도 호출 시도.
+
+### 변경 — data-craft (`dcfdc62e`)
+
+**`src/features/subscription/model/subscriptionQueries.ts`**:
+- `useSubscriptionStatus` 에 `enabled: !!accountInfo` 가드 추가:
+  ```ts
+  const isAuthenticated = useAuthStore((state) => state.accountInfo != null);
+  return useQuery({
+    queryKey: subscriptionKeys.status(),
+    queryFn: subscriptionApi.getSubscriptionStatus,
+    enabled: isAuthenticated,
+    ...QUERY_TIER.FRESH,
+  });
+  ```
+- `useAuthStore` import 추가.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/model/subscriptionQueries.ts`
+
+### 효과
+
+- 로그인 화면 (accountInfo=null) 진입 → `useSubscriptionStatus` 자동 비활성 (`enabled: false`) → /status 호출 안 함 → 무한 루프 해소.
+- 로그인 완료 후 accountInfo 세팅 → enabled=true → 자동 fetch.
+- 로그아웃 후 accountInfo=null → 자동 비활성.
+
+### 테스트 시나리오
+
+1. 브라우저 캐시 비운 상태 → 로그인 페이지 진입 → **무한 새로고침 없음**.
+2. 로그인 완료 → /status 정상 호출 → 모든 플랜 기능 정상.
+3. 로그아웃 → 다시 로그인 화면 → 새로고침 없음.
+
+### 회귀 분석
+
+HOTFIX 24 의 SseProvider effectivePlanType 도입이 트리거. SseProvider 는 App 최상위 마운트라 로그인 화면에서도 활성. 이전 HOTFIX 24 가 머지된 직후부터 본 증상 발생.
+
 ## v001.373.0
 
 > 통합일: 2026-05-20
