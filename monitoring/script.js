@@ -452,8 +452,11 @@ function renderChartDayTokens(data, opts) {
   const chartKey = (opts && opts.chartKey) || 'dayTokens';
   const canvasSel = (opts && opts.canvasSel) || '#chart-day-tokens canvas';
   const compareData = (opts && opts.compareData) || null;
+  const periodMode = (opts && opts.periodMode) || 'day';
   destroyChart(chartKey);
-  const days = (data.by_day || []);
+  const days = periodMode === 'week'
+    ? aggregateByWeek(data.by_day || [], ['input', 'output'])
+    : (data.by_day || []);
   const labels = days.map(d => d.day);
   const ctx = $(canvasSel);
   if (!ctx || !days.length) return;
@@ -464,7 +467,9 @@ function renderChartDayTokens(data, opts) {
   ];
 
   if (compareData) {
-    const cdays = (compareData.by_day || []);
+    const cdays = periodMode === 'week'
+      ? aggregateByWeek(compareData.by_day || [], ['input', 'output'])
+      : (compareData.by_day || []);
     datasets.push(
       { label: 'input (비교)', data: cdays.map(d => d.input || 0), borderColor: COLORS.input, backgroundColor: COLORS.input + '99', borderDash: [5, 5], stack: 'c', fill: 'origin' },
       { label: 'output (비교)', data: cdays.map(d => d.output || 0), borderColor: COLORS.output, backgroundColor: COLORS.output + '99', borderDash: [5, 5], stack: 'c', fill: '-1' },
@@ -484,7 +489,7 @@ function renderChartDayTokens(data, opts) {
       legend: { position: 'bottom' },
     },
   };
-  const chartPlugins = skillCountsByDay ? [makeDayTokensSkillCountPlugin(skillCountsByDay)] : [];
+  const chartPlugins = (skillCountsByDay && periodMode === 'day') ? [makeDayTokensSkillCountPlugin(skillCountsByDay)] : [];
   charts[chartKey] = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -1629,7 +1634,7 @@ async function applyWeekSelection(state) {
     loadSkillInvocations({ by_skill_invocation: weekInvocations });
     renderChartPromptBar(leftData, weekInvocations);
 
-    renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []) });
+    renderChartDayTokens(aggregateData, { skillCountsByDay: computeSkillCountByDay(aggregateData.by_skill_invocation || []), periodMode: __periodMode.dayTokens });
     renderChartDayCost(aggregateData);
 
     updateLastRefreshDisplay();
