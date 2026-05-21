@@ -1,5 +1,80 @@
 # data-craft — Patch Note (001)
 
+## v001.379.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #141 (자동 로그인 30분 만에 풀리는 버그 — Grace Window 도입)
+
+### 개요
+
+마스터/QA 보고: 자동 로그인 ON 상태에서 ~30분 자리비움 후 돌아오면 로그아웃 (정상은 14일). 근본 원인 = 회전된 토큰의 짧은 유예 창(Grace Window) 부재. `auth.service.ts.refresh` 가 직전 토큰을 즉시 폐기 → 같은 토큰으로 거의 동시에 들어온 정당한 재요청 (멀티탭 / 네트워크 재시도 / 슬립 복귀) 이 "이미 폐기" 401 로 거절 → FE clearTokens → 로그아웃.
+
+해결: 회전 직후 60초 grace window 도입 (업계 표준 Auth0/Cognito 와 동일 패턴). 추가로 동시 갱신 lock 을 Promise-based 로 전환하여 race window 0 화.
+
+### 사전 작업 — DDL (선행 task-db-structure)
+
+`refresh_token` 테이블에 `parent_token_hash VARCHAR(64) NULL` 컬럼 + `idx_refresh_token_parent (parent_token_hash, created_at)` 복합 인덱스 추가. data_craft_test 환경 적용 완료.
+
+### 변경 — data-craft-server
+
+**Phase 1 (`12a04af`)** — `src/services/auth.service.ts`, `src/services/token.service.ts`, `src/models/refreshToken.model.ts`:
+- `hashToken` 헬퍼 export. `RefreshTokenMeta` 에 `parentTokenHash?: string | null` 옵션. INSERT 쿼리에 `parent_token_hash` 컬럼 포함.
+- `refresh` 경로에서 회전 직전 토큰의 hash 를 `parentTokenHash` 로 계산하여 새 토큰 row 에 기록. 최초 발급 경로(signin/autoSignin/initBundle) 는 null.
+
+**Phase 2 (`89f15e4` + lint hotfix `225f82d`)** — `src/services/auth.service.ts`, `src/services/token.service.ts`, `src/models/refreshToken.model.ts`:
+- `findGraceChildToken(parentTokenHash, windowSeconds)` 쿼리 추가 (`WHERE parent_token_hash = ? AND created_at > NOW() - INTERVAL ? SECOND AND is_revoked = 0 AND expires_at > NOW()`).
+- `REFRESH_GRACE_WINDOW_SECONDS = 60` 상수.
+- `verifyRefreshTokenSignature` (DB 조회 없는 JWT 서명 전용 검증) 추가.
+- `refresh` 함수: `pendingRefreshTokens` 충돌 시 / `REFRESH_TOKEN_REVOKED` catch 시 grace 경로로 fallback → 자식 row 의 token_hash 를 parent 로 새 토큰 페어 발급 (옵션 A — 새 회전 1번, 손자 row).
+
+**Phase 3 (`e134f5b`)** — `src/services/auth.service.ts`:
+- `[GRACE-HIT]` (userId, tokenHashPrefix, parentHashPrefix, ip, ua, elapsedMs), `[GRACE-MISS]` (reason), `[GRACE-SKIP-LOCK]` (이후 advisor hotfix 로 DEDUP-LOCK 으로 변경) 구조화 로그.
+- token_hash 앞 8자만 노출 (PII 보호).
+
+**Phase 4 (`15991d6`)** — `src/config/constant.ts`, `.env`:
+- access token TTL 을 env-driven override 로 전환. dev/test = `TOKEN_EXPIRES_ACCESS` (기본 15m), production = `TOKEN_EXPIRES_ACCESS_PROD` (미설정 시 `TOKEN_EXPIRES_ACCESS_PROD_NOT_CONFIGURED` throw).
+- QA 가 `TOKEN_EXPIRES_ACCESS=1m` 토글로 30분 대기 없이 grace 시나리오 재현 가능.
+
+**advisor #2 hotfix (`94da586`)** — `src/services/auth.service.ts`:
+- advisor #2 가 lock-skip → 즉시 grace 조회 시 자식 row 가 아직 INSERT 안 된 race 차단.
+- `pendingRefreshTokens` 를 `Map<string, true>` → `Map<string, Promise<RefreshResponse>>` 로 전환.
+- 후속 요청은 진행 중 Promise 를 그대로 await 받아 동일 결과 공유 → race window 0.
+- `[GRACE-SKIP-LOCK]` → `[GRACE-DEDUP-LOCK]` 의미 명확화.
+
+### 변경 — data-craft
+
+**Phase 5 (`9d2ac67`)** — `.claude/manual-test/auto-login-grace-window-test.md` (신규):
+- 5종 매뉴얼 테스트 시나리오 체크리스트 (단일 idle / 멀티탭 동시 새로고침 / 네트워크 일시 단절 / 슬립 복귀 시뮬레이션 / 14일 경계 보안 회귀).
+- BE 로그 `[GRACE-HIT]` / `[GRACE-MISS]` / `[GRACE-DEDUP-LOCK]` 관측 가이드 포함.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/services/auth.service.ts`
+- `src/services/token.service.ts`
+- `src/models/refreshToken.model.ts`
+- `src/config/constant.ts`
+- `.env`
+
+**data-craft**
+- `.claude/manual-test/auto-login-grace-window-test.md` (신규)
+
+### 테스트 시나리오 (요약)
+
+QA: `.claude/manual-test/auto-login-grace-window-test.md` 참고. 핵심:
+
+1. **단일 탭 idle 복귀** — `TOKEN_EXPIRES_ACCESS=1m` 토글 → 2분 idle → 클릭 → `/auth/refresh` 200 + 로그인 유지.
+2. **멀티탭 동시 새로고침** — 같은 origin 두 탭 동시 새로고침 → 한쪽 회전, 다른 쪽 `[GRACE-HIT]` 또는 `[GRACE-DEDUP-LOCK]` 응답 → 양쪽 로그인 유지.
+3. **14일 경계 보안 회귀** — DB 의 `expires_at` 지난 토큰은 grace 와 무관하게 401 (절대 만료 우선).
+
+### 의도적 1차 제외 (효과 측정 후 별도 플랜)
+
+- FE refresh 실패 분류 (network/5xx/timeout 시 토큰 보존)
+- 멀티탭 토큰 회전 sync (tokenSync.ts 의 회전 토큰 broadcast)
+- AuthProvider 자체 refreshAccessToken 함수의 fs-api 큐드 핸들러 통합
+
+업계 경험치상 grace window 단독으로 본 증상 ~95% 해소 → 잔여 5% 가 진단 로그로 확인되면 후속 플랜.
+
 ## v001.378.0
 
 > 통합일: 2026-05-21
