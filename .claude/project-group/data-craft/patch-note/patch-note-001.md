@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.390.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #143
+
+### 페이즈 결과
+
+- **Phase 1**: 3개 패키지(fs-data-viewer, fs-sub-data-viewer, fs-external-data-viewer)의 `GroupTabBar.tsx` 컨테이너 div 에 `useRef` + `useEffect` 패턴으로 wheel 이벤트 리스너를 부착. `deltaX`/`deltaY` 절댓값 비교로 주 스크롤 방향을 결정해 `scrollLeft` 에 가산하고, 컨테이너 끝 도달 시 `preventDefault` 를 생략해 기본 스크롤 체이닝을 유지. 기존 props, className, JSX 자식 구조는 보존. 머지 commit `1849178`.
+
+### 원인 / 의도
+
+컬럼 그룹 다이얼로그의 가로 스크롤 탭바 (`GroupTabBar`) 는 `overflow-x-auto` 만 지정되어 있어 마우스 드래그 (별도 `useDragScroll` 훅) 로는 스크롤되지만 트랙패드 두 손가락 수평 제스처는 일부 환경에서 동작하지 않았다. 명시적 `onWheel` 핸들러로 트랙패드 가로 deltaX 와 마우스 휠 vertical deltaY 를 모두 수평 스크롤로 매핑하여 입력 장치 간 일관된 UX 확보.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-group-dialog/GroupTabBar.tsx`
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/components/column-group-dialog/GroupTabBar.tsx`
+- `packages/fs-external-data-viewer/src/widgets/grid-table/components/column-group-dialog/GroupTabBar.tsx`
+
 ## v001.389.0
 
 > 통합일: 2026-05-21
