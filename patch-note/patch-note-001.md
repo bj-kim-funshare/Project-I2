@@ -1,5 +1,20 @@
 # 아이OS — Patch Note (001)
 
+## v001.99.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #51
+> 대상: 아이OS
+
+### 페이즈 결과
+- **Phase 1**: `.claude/scripts/statusline.sh` L1 의 `🕐 5h` 와 `📅 7d` 표기에 10-칸 ▓░ bar 부가. 기존 percentage·reset 시간 표기는 그대로 유지. 헤더 주석 v1.3 → v1.4 bump.
+
+### 영향 파일
+- `.claude/scripts/statusline.sh`
+
+### Treadmill Audit
+NOT APPLICABLE — 신규 규칙/훅/에이전트/스킬/검증 축 추가 없음. 기존 한도 표기에 시각 게이지 부가하는 표시 개선만 수행.
+
 ## v001.98.0
 
 > 통합일: 2026-05-21
