@@ -1,5 +1,82 @@
 # data-craft — Patch Note (001)
 
+## v001.416.0
+
+> 통합일: 2026-05-21
+> 플랜 이슈: #147 (결제·프로모션 도메인 통합 테스트 8 시나리오 자동화 — #126 후속)
+
+### 배경
+
+이슈 #126 (잔여기간 비례 즉시 차액 결제 통합) 페이즈 6 + HOTFIX 1~54 완료 시점에서 7차 audit 사이클 종결. 추가 audit 대신 통합 테스트로 8 핵심 시나리오를 핀하여 향후 회귀가 audit 라운드가 아니라 vitest fail 로 즉시 드러나도록 전환. HOTFIX 28~53 의 분기 결정 (commitment 전환 / retention 차감 시점 / PG cancel / snapshot 동기화 / UI 잔여 표시) 을 통합 테스트가 fail-on-regression 핀하여 audit 트레드밀 종결.
+
+### 페이즈 결과
+
+#### BE (`data-craft-server`, 5 페이즈)
+
+- **Phase 1 (`869e11f`)**: Shared billing fixture `src/tests/__fixtures__/billing.fixtures.ts` 신설 (+149). row factory (`makeClient`, `makePromotion`, `makeClientPromotion`), `mockTossPaymentResponse` 동적 생성기, `createMockConnection` vi.fn() 래퍼, `expectTxCommit` / `expectTxRollback` 트랜잭션 헬퍼. Phase 2~5 가 import.
+- **Phase 2 (`f78fd65`)**: `src/services/integration/charge.pg-failure.integration.test.ts` (+270, 13 케이스). 시나리오 7 (PG 실패 grace + SEC-SRV-45 cancel). HOTFIX 49 (`cancelPayment(paymentKey, 'SEC_ORDERID_MISMATCH')` 호출 인자) 핀.
+- **Phase 3 (`69a5023`)**: `src/services/integration/billing.scheduler.expiry.integration.test.ts` (+297, 12 케이스). 시나리오 4 (자동 만료 retention +0). HOTFIX 41 위임, 51 (`findExpiredClients` active_promotion + `pending_*` 초기화), 53 (`forceExpireClientPromotion` 단일 위임) 핀.
+- **Phase 4 (`d30af96`)**: `src/services/integration/billing.subscription.upgrade.integration.test.ts` (+881, 24 케이스). 시나리오 1/2/3 + Phase 3 blocker 이관 (`scheduleDowngrade`). HOTFIX 28, 29, 31, 32, 33-호출, 34, 39, 48, 49, 52, 53 (11 건) 핀.
+- **Phase 5 (`274ae74`)**: `src/services/integration/billing.renewal.promotion.integration.test.ts` (+757, 25 케이스). 시나리오 6/8 + Phase 3 blocker 이관 (HOTFIX 33-cron / 41 reason 심층). HOTFIX 33-cron, 41 (reason='auto-expire' 직접 핀 + negative-pin), 53 (snapshot 동기화).
+
+#### FE (`data-craft`, 3 페이즈)
+
+- **Phase 6a (`9e6ab7d`)**: `tests/features/subscription/integration/subscription-upgrade.integration.test.ts` (+526, 24 케이스). `UpgradeStepPayment`. HOTFIX 34 (cycle 변경 `chargedAmount=0` + 다음 결제일 안내), 49 (`requestBillingAuth` USER_CANCEL/PAY_PROCESS_CANCELED 무음 + `billingErrorMessages` 매핑) 핀.
+- **Phase 6b (`0c0598d`)**: `tests/features/subscription/integration/promotion-purchase-flow.integration.test.ts` (+706, 29 케이스). `PromotionPurchaseDialog` + `PromotionRow`. HOTFIX 28 (협업 `min_users` floor), 30 (`usePaymentPasswordGate` paymentPassword 전달), 42~47 (`PromotionRow` `consumedRetentionMonths` 표시 분기 — 6건), 49 (보너스 재핀) 핀.
+- **Phase 6c (`ed1e336`)**: `tests/features/subscription/integration/billing-cycle-change.integration.test.ts` (+322, 19 케이스). `BillingCycleComparison`. HOTFIX 34 (YEARLY_DISCOUNT_RATE=0.9, `yearlyTotal`/`savingsAmount`/`yearlyMonthly` floor, `Math.max(userCount,1)` 엣지) 4 플랜 × isPerUser 분기 핀.
+
+### HOTFIX 28~53 최종 분포
+
+| HOTFIX | 핀 위치 | 메커니즘 |
+|---|---|---|
+| 28 | Phase 4 + 6b | seat change 통과 + `min_users` floor UI |
+| 29 | Phase 4 | `snapshot_monthly_price` 기반 차액 |
+| 30 | Phase 6b (Phase 4 서비스 없음 신호) | `usePaymentPasswordGate` paymentPassword 전달 |
+| 31 | Phase 4 | `reason='commitment-change'` 인자 |
+| 32 | Phase 4 (BE 표면), 6a 기핀 명시 | isLevelUp commitment (FE 표면 없음) |
+| 33-cron | Phase 5 (Phase 3 이관) | `renewSingleClient` `pendingPlanType` 적용 |
+| 33-호출 | Phase 4 | `scheduleDowngrade` 트랜잭션 |
+| 34 | Phase 4, 6a, 6c | cycle 즉시결제 0 (3 레이어 핀) |
+| 39 | Phase 4 (BE), 6a 기핀 명시 | cycle 전환 즉시결제 0 |
+| 41 | Phase 3 (위임), Phase 5 (심층) | auto-expire retention +0 |
+| 42~47 | Phase 6b | `PromotionRow` `consumedRetentionMonths` 표시 |
+| 48 | Phase 4 | `findActiveClientPromotionWithMeta` basePlanType `isDowngrade` |
+| 49 | Phase 2, 4, 6a, 6b | `cancelPayment` + USER_CANCEL/PAY_PROCESS_CANCELED |
+| 51 | Phase 3 | `findExpiredClients` active_promotion + `pending_*` 초기화 |
+| 52 | Phase 4 (BE), 6b 기핀 명시 | `isCommitmentTransition` (FE 표면 없음) |
+| 53 | Phase 3, 4, 5 | `updateClientPlanWithInvariant` + snapshot 동기화 |
+
+### 산출물
+
+- BE 5 페이즈: +2354 줄, 74 케이스, 5 신규 파일 (fixture 1 + integration test 4).
+- FE 3 페이즈: +1554 줄, 72 케이스, 3 신규 파일.
+- 총: +3908 줄, **146 케이스**, 8 신규 파일.
+- aggregated vitest run: BE 74/74 pass, FE 72/72 pass.
+- 양 repo lint gate 8회 모두 PASS (0 errors).
+
+### advisor 검증
+
+- advisor #1 (계획 형성): 5 관점 PASS, BLOCK 없음. Phase 6 6a/6b/6c 분할 + Phase 5 의도적 경량 + 자가검증 ritual 옵션 (A) 채택.
+- advisor #2 (완료): 5 관점 PASS, BLOCK 없음. 정적 검사로 reason-arg 핀 tautological 아님 확인 (Phase 5 line 700-718 의 강한 `toBe('auto-expire')` + negative-pin). Dynamic ritual 은 tautological redundancy 로 skip.
+
+### Post-merge 잔여 (마스터 결정 사항)
+
+- **`BillingCycleComparison` orphan 신호**: `data-craft/src/features/subscription/ui/BillingCycleComparison.tsx` 가 `src/` 전체에서 import 되지 않음. Phase 6c 의 HOTFIX 34 계산 핀은 (a) 사용처 도입 시 가치 살아남, (b) 컴포넌트 제거 시 Phase 4·6a 의 HOTFIX 34 핀으로 충분하여 6c 가 dead test 가 됨. 마스터 판단 필요 (본 플랜 외).
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/tests/__fixtures__/billing.fixtures.ts` (신규)
+- `src/services/integration/charge.pg-failure.integration.test.ts` (신규)
+- `src/services/integration/billing.scheduler.expiry.integration.test.ts` (신규)
+- `src/services/integration/billing.subscription.upgrade.integration.test.ts` (신규)
+- `src/services/integration/billing.renewal.promotion.integration.test.ts` (신규)
+
+**data-craft**:
+- `tests/features/subscription/integration/subscription-upgrade.integration.test.ts` (신규)
+- `tests/features/subscription/integration/promotion-purchase-flow.integration.test.ts` (신규)
+- `tests/features/subscription/integration/billing-cycle-change.integration.test.ts` (신규)
+
 ## v001.415.0
 
 > 통합일: 2026-05-21
