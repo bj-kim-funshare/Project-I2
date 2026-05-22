@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.447.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158 (hotfix 1)
+
+### 배경
+
+v001.446.0 의 advisor #2 Command Fulfillment BLOCK 잔여 — data-craft FE 사전 존재 빌드 TS 오류 — 를 핫픽스 페이즈로 일괄 수선. 마스터 결정으로 진입. **스코프 실제치 명시**: 마스터는 advisor 요약 기준 "TS 오류 4건" 으로 인지했으나 worktree 에서 `pnpm build` 재확인 결과 17개 사이트 / 14개 파일 — 6개 카테고리로 분류하여 일괄 수선. mobile 빌드 실패는 별도 hotfix #2 로 분리.
+
+### 카테고리별 수선 (commit `b7a1e3ee` · +16/-22 across 10 files)
+
+1. **TS1484 (verbatimModuleSyntax type-only import)** — 3 사이트. `PinDots.tsx`, `PinStatusRow.tsx`, `PinTitle.tsx` 에서 `PinTone` / `PinStatusKind` 를 `import type` 으로 분리.
+2. **TS2345 (Page ↔ BuilderPage `isVisible` 옵셔널 불일치)** — 8 사이트 호출지 대신 `isPageEffectivelyHidden` 시그니처를 `PageLike { isVisible?: boolean; parentId?: string | null }` 로 완화하여 양쪽 타입에서 호출 가능하게 통일. 호출자 5개 사이트 (page-navigation 4 + tabs-widget 1) 사전 grep 으로 contract 확장 영향 없음 확인.
+3. **TS2769 (`usePaymentPasswordGate` overload mismatch)** — `PaymentPasswordSetupStep.onComplete` 가 `()→void` 로 변경된 이후 `handleSetupComplete` 시그니처 불일치 해소. 설정 완료 후 input 모드로 전환하여 사용자가 새 비밀번호를 다시 입력하는 흐름으로 변경.
+4. **TS2322 (`PlanTabContent.billingCycle`)** — 프로모션 union 분기에서 `billingCycle: 'monthly' as const` 로 `BillingCycle` literal union 으로 좁힘.
+5. **TS2322 (`requestRowLinkTargetRow` / `requestRowLinkGroupRows` prop drift)** — `FsExternalDataViewerProps` / `FsSubGridViewerProps` 에 존재하지 않는 prop 2개를 호출지 (`ExternalViewer.widget.tsx`, `SubViewer.widget.tsx`) 에서 제거. **사전 안전 검증**: 두 패키지 (`packages/fs-external-data-viewer`, `packages/fs-sub-data-viewer`) 소스를 grep 한 결과 receiver 0건 — React 가 미정의 prop 을 silent drop 하던 dead code 였음. 런타임 동작 변화 0. 단 callback 의 *의도된 기능* (서버에 row-link target/group rows 요청) 자체가 수신 측에 연결되어 있지 않은 상태이므로, 그 기능을 살리려면 패키지 Props 추가 + 핸들러 배선이 별도 이슈로 필요.
+6. **TS2345 (TabContentSelector i18n `t(key, undefined)`)** — 두 번째 인자가 `string | undefined` 인 호출을 `if undefined → t(key)` else `t(key, defaultValue)` 분기로 교체.
+
+### 영향 파일
+
+- `src/entities/page/model/isPageEffectivelyHidden.ts` (Cat 2 — 사후 스코프 확장 승인, 호출지 8건 대신 함수 시그니처 1건 수정으로 변경 최소화)
+- `src/features/page-management/ui/PageEditPreview.tsx` (Cat 2)
+- `src/features/subscription/lib/usePaymentPasswordGate.ts` (Cat 3)
+- `src/features/subscription/ui/payment-pin/{PinDots,PinStatusRow,PinTitle}.tsx` (Cat 1)
+- `src/widgets/external-viewer-widget/ui/ExternalViewer.widget.tsx` (Cat 5)
+- `src/widgets/property-drawer/ui/property-editors/TabContentSelector.tsx` (Cat 6)
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx` (Cat 4)
+- `src/widgets/sub-viewer-widget/ui/SubViewer.widget.tsx` (Cat 5)
+
+### 검증
+
+- `pnpm typecheck:all` exit 0
+- `pnpm lint` exit 0 (0 errors, 18 warnings)
+- `pnpm build` exit 0 (캐시 비우고 full rebuild 재확인, 15.43s)
+
+### advisor 결과 (hotfix 5관점)
+
+- Intent / Logic / Group Policy / Evidence / Command Fulfillment 모두 PASS. 본 hotfix 의 Command Fulfillment = data-craft `pnpm build` exit 0 충족. mobile 은 hotfix #2 범위.
+
+### 미해결 후속
+
+- **mobile 빌드 실패** (`packages/fs-form-builder-mobile/src/form-builder/ui/TextNumberFieldRenderer.tsx` 의 `@/shared/ui` 미해석) — hotfix #2 진입 예정.
+- **row-link 콜백 기능 미연결** — `requestRowLinkTargetRow` / `requestRowLinkGroupRows` 가 호출지에서 사라졌으나 본래 의도였던 서버 요청 흐름은 패키지에 핸들러가 없어 미동작 상태. 별도 이슈로 추적 필요.
+
 ## v001.446.0
 
 > 통합일: 2026-05-22
