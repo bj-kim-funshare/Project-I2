@@ -1,5 +1,13 @@
 # data-craft — Patch Note (001)
 
+## v001.445.0
+
+> 통합일: 2026-05-22
+
+### 변경 파일
+
+- (data-craft-server) (추가) AGENTS.md
+
 ## v001.444.0
 
 > 통합일: 2026-05-22
