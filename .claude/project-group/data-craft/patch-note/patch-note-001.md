@@ -1,5 +1,98 @@
 # data-craft — Patch Note (001)
 
+## v001.434.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #152 (인증 sweep 잔존 위반 일괄 해소 — BE/FE web/mobile 11 phase)
+
+### 배경
+
+2026-05-21 #146 (Codex 보안 6안건 풀스택) + #149 HOTFIX 1~10 가 data-craft 인증 토큰 채널을 cookie+header 정책으로 강제 전환한 직후 마스터 호소: 로그인 / 로그아웃 / 자동로그인 / 자동로그아웃 / 다중탭 로그아웃 / 결제 / 프로모션 / 플랜별 구독 시나리오 회귀. 4-sub-agent 전수 감사 + 2-Explore 정밀 추적으로 잔존 위반 위치를 file:line 까지 좁힘. 4 진원지 + V2-V6 + BE P1/P2 일괄 해소를 본 plan 으로 정리.
+
+### 페이즈 결과 (10 phase + 1 cleanup, work_repo 3개)
+
+#### BE (data-craft-server, Phase 1-3 + 10)
+
+- **Phase 1** (`008d977`) — [P0] `logoutAllController` 의 `res.clearCookie('refreshToken', { path: '/api/auth' })` 한 줄 추가 (logoutController 정합). `promotion.routes.ts` 4 라우트 (`/eligibility` l.30, `/quote` l.43, `/purchase` l.70, `/cancel` l.100) + `subscription.ts:36 /status` 에 `forceIncludeAuth` 미들웨어 prepend (`subscription.ts:41` 정합 패턴). **다중탭 로그아웃 + 프로모션/플랜 stale 두 갈래 즉시 해소.**
+- **Phase 2** (`a2c24c0`) — `src/utils/effectivePlan.ts` 신규 헬퍼 추출 (`resolveEffectivePlan` 순수 계산, `wasExpired` 플래그). `init.service.ts` + `auth.middleware.ts` full-path 모두 헬퍼 위임. promotion 활성 client 가 init 응답에서 `free` 로 표시되던 회귀 차단. light-path 인라인은 본 phase 범위 밖 유지.
+- **Phase 3** (`736c292`) — cookie 6 site (signin l.85, refresh l.167, autoSignin l.195, init l.26, logout clearCookie l.545, logoutAll clearCookie 신규) 위에 host-only 의도 주석 1줄씩 추가. cross-subdomain 분리 시 `domain: '.datacraft.ai.kr'` 명시 필요 신호. 동작 변경 0.
+- **Phase 10** (`6798945`) — `/refresh` + `/auto-signin` 에 `authLimiter` 적용 (brute-rotate 차단). `requirePaymentPassword.ts` 검증 통과 직후 `delete req.body.paymentPassword` (raw 비밀번호 service-layer raw 전파 봉인). `debug-chain.ts` per-route productionGuard 미들웨어 (옵션 B) — POST/GET 두 라우트 독립 가드, production 빌드 활성화 방지.
+
+#### FE web (data-craft, Phase 4-6)
+
+- **Phase 4** (`00f446a`) — `authStore.ts:15` 모듈 레벨 분리 closure (`createMemoryTokenStorage()`) 제거. 4 site (initialState/setAuth/clearAuth/updateAccessToken) 모두 `getTokenStorage()` 인라인 호출 통일 → fs_api 공유 storage 단일 진실 출처. SettingsFooter / ExceededItemList 의 dead clear 패턴은 본 plan 시작 전 HOTFIX 10 phase 19 (`d7117e3e`) 에서 선행 정리 완료.
+- **Phase 5** (`5d4f7c0`) — `BillingSuccessPage.tsx:236` partial `updateAccount({ planType, planExpiresAt })` 제거. Phase 1 의 `forceIncludeAuth` 적용 후 `setAuthUpdateCallback` 이 full fresh account 를 store 에 반영하므로 partial overwrite 가 `activePromotionId:null` 같은 promotion 정리 필드를 stale 로 덮을 race 차단. `useAuthStore` import + `updateAccount` 선언도 본 파일 유일 사용처라 함께 정리.
+- **Phase 6** (`6b738de`) — Phase 4 의 `setAuth` 3-arg 전환 이후 회귀 검증력 0 이 된 `authStore-refreshToken.test.ts` (127 줄) + 패치 완료 보안 항목의 `it.fails()` red-test `sec-f04-localstorage-xss.test.ts` (43 줄) 삭제. 다른 test 에서 import 0건 확인.
+
+#### Mobile (data-craft-mobile, Phase 7-9 + 11)
+
+- **Phase 7** (`bcb56d8`) — `@dcm/fs-api-mobile` 패키지 sweep (정책 9 인프라 격리 유지, fs-api 통합 없음). 5 core 파일 + 2 barrel re-export + 1 consumer (`packages/fs-form-builder-mobile/src/shared/lib/apiClient.ts`) + 1 dead test 삭제. `createLocalStorageTokenStorage` → `createMemoryTokenStorage`. 모든 fetch 호출에 `credentials: 'include'` 추가. body `{refreshToken}` 및 응답 `x-refresh-token` 헤더 read 전수 제거. cookie 단일 채널 정합.
+- **Phase 8** (`2a0eb84`) — `apps/web/src/mobile/auth/authClient.ts` (정책 9 격리 유지). `refresh()` body `{ refreshToken }` 제거 (매개변수 `_refreshToken` prefix). `autoSignin()` body `{ accessToken }` 제거 → `Authorization: Bearer` 헤더 전환 (logout 정합). private `request()` fetch 옵션에 `credentials: 'include'` 추가 — 8 API (signin/refresh/logout/autoSignin/sendVerificationCode/confirmPasswordReset/checkCompanyId/getTenantInfo) 자동 적용.
+- **Phase 9** (`f82cf23`) — `SecureTokenStorage` (IndexedDB+AES-GCM) → 인스턴스 메모리 `_accessToken` 보관 교체. `getRefreshToken()` 항상 null (cookie 채널 이관). `sessionEngine.hydrate()` 전면 재작성 — 메모리 access token 부재 시 `client.refresh('')` 로 cookie 기반 1회 복원 + JWT claim 세션 상태 복원 (web HOTFIX 7 동등 패턴). refresh/signin 의 refreshToken 분기/guard 모두 제거, `setTokens(_, null)` 통일.
+- **Phase 11** (`42c9815`) — Phase 9 byproduct cleanup. `dexieSchema.ts` + `cryptoUtil.ts` 미사용 모듈 + 그 test 2개 (`secureTokenStorage.test.ts` IDB 영속 검증 + `cryptoUtil.test.ts` AES-GCM 라운드트립) 삭제 (총 -242 줄). `types.ts` TokenStorage 인터페이스 주석 정정 (구 IDB+AES-GCM → memory closure + cookie 위임).
+
+### 통합 머지 (Step 9.1)
+
+3 work_repo `i-dev` 머지 (페이즈 첫 등장 순):
+- data-craft-server: WIP `plan-enterprise-152-auth-sweep-작업-data-craft-server` → i-dev (BE 4 phase 통합)
+- data-craft: WIP `plan-enterprise-152-auth-sweep-작업-data-craft` → i-dev (FE web 3 phase 통합)
+- data-craft-mobile: WIP `plan-enterprise-152-auth-sweep-작업-data-craft-mobile` → i-dev (mobile 4 phase 통합)
+
+### 영향 파일
+
+**data-craft-server** (10 files, +101/-47):
+- `src/controllers/auth.controller.ts`, `src/controllers/init.controller.ts`
+- `src/routes/promotion.routes.ts`, `src/routes/subscription.ts`, `src/routes/auth.ts`, `src/routes/debug-chain.ts`
+- `src/middlewares/auth.middleware.ts`, `src/middlewares/requirePaymentPassword.ts`
+- `src/services/init.service.ts`
+- `src/utils/effectivePlan.ts` (신규)
+
+**data-craft** (4 files, +6/-185):
+- `src/entities/auth/model/authStore.ts`
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+- `tests/entities/auth/authStore-refreshToken.test.ts` (삭제)
+- `tests/security/sec-f04-localstorage-xss.test.ts` (삭제)
+
+**data-craft-mobile** (14 files, +64/-547):
+- `packages/fs-api-mobile/src/core/{token,client.auth,client.fetch,interceptor,tokenRefresh,index}.ts`
+- `packages/fs-api-mobile/src/index.ts`
+- `packages/fs-form-builder-mobile/src/shared/lib/apiClient.ts`
+- `packages/fs-api-mobile/src/api/__tests__/token.test.ts` (삭제)
+- `apps/web/src/mobile/auth/{authClient,secureTokenStorage,sessionEngine,types}.ts`
+- `apps/web/src/mobile/auth/{dexieSchema,cryptoUtil}.ts` (삭제)
+- `apps/web/src/mobile/auth/__tests__/{secureTokenStorage,cryptoUtil}.test.ts` (삭제)
+
+### 운영 검증 (post-merge 권장 수동 시나리오)
+
+- **BE**: cURL 로 `/api/auth/logout-all` 호출 후 응답 헤더에 `Set-Cookie: refreshToken=; ... Max-Age=0` 확인. `/api/promotion/purchase` 응답 body 에 `account`/`user` full auth 키 포함 확인 (light response 아님).
+- **FE web**: 로그인 → 새로고침 → cookie 자동 복원 → 다른 탭 로그아웃 → 본 탭 자동 로그아웃 동작. 프로모션 구매 직후 sidebar/badge plan 표시 즉시 갱신. 결제 → BillingSuccessPage 이동 → 새 plan 표시 + `activePromotionId` 클리어.
+- **Mobile (WebView)**: 빌드 후 로그인 → reload → cookie 자동 복원 (`sessionEngine.hydrate()` 1회 `/api/auth/refresh` 호출). DevTools network 탭에서 refresh body 비어있는지 확인. Flutter WebView cookie persistence 정상 동작 확인 (운영 환경 한정).
+
+### 별도 후속 follow-up (본 plan scope 외 — `/plan-enterprise` 분리 권장)
+
+다음 항목은 audit enumeration 외 execution byproduct 또는 광범위 sweep 으로, runtime impact 0 (외부 hot path 0) 임을 확인 후 별도 plan 으로 분리:
+
+- `src/shared/api/core/` dead tree (token.ts, client.auth.ts, index.ts, api/__tests__/token.test.ts) — `createLocalStorageTokenStorage` 잔존하나 외부 `@/shared/api` import 0건 (`apps/`, `packages/`) grep 확정. module-load side effect 만 (null read), runtime regression vector 0.
+- `tokenSync.ts` + 4 site re-export (`packages/fs-api-mobile/src/{core/index,index}.ts`, `packages/fs-form-builder-mobile/src/shared/lib/apiClient.ts`, `src/shared/api/index.ts`) — `startTokenSync` 실 호출 0건 dead. mobile WebView 단일 탭이라 runtime impact 0.
+
+마스터 후속 명령 권장:
+
+```
+/plan-enterprise data-craft, src/shared/api dead tree (token storage + client + auth API 트리) 일괄 정리 + startTokenSync dead re-export 4 site 정리 (#152 후속)
+```
+
+### plan 외 제외 항목 (정합 사유 명시)
+
+- V1 (`packages/fs-api/src/core/interceptor.ts:96-100` x-refresh-token) — 감사 보고 false positive. 현 코드는 `accessToken` 만 body read, x-refresh-token 잔존 없음.
+- `AuthResponseData.accessToken` / `LightAuthResponseData.accessToken` / `RefreshResponse.auth.accessToken` 잔존 — 정책 의도 = "서버→클라 body 발급, 클라→서버 Bearer 헤더 송신". 코드 현황이 정합. 정책 문구는 group-policy 차원 별도.
+- `usePlanExpiryNotification` — `effectivePlanType()` 정합 확인 (정상).
+- SSE `credentials: 'include'` 미적용 (sseClient.ts:239) — Bearer 단독 의도된 설계.
+
+### advisor 검증
+
+- **advisor #1 (계획 시점, 4 권고)**: (A) Phase 7 파일 경로 정정 (`packages/fs-api-mobile/src/core/`), (B) Phase 4 (rate limiter) → Phase 10 으로 재배치 (mobile sweep 락아웃 방지), (C) 모바일 phase split (7+8+9), (D) 정책 9 격리 유지 확정 (package.json description evidence). 모두 v2 반영.
+- **advisor #2 (완료 시점, 5관점)**: Intent / Logic / Group Policy / Evidence / Command Fulfillment 모두 PASS. Phase 7 scope expansion 은 background-session effective consent (issue #152 코멘트 12건 가시화), 3 deferred items 는 audit enumeration 외 byproduct + runtime regression vector 0 evidence + follow-up plan prompt 본 문서 명시로 Command Fulfillment 충족.
+
 ## v001.433.0
 
 > 통합일: 2026-05-22
