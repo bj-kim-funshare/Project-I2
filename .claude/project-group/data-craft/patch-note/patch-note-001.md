@@ -1,5 +1,73 @@
 # data-craft — Patch Note (001)
 
+## v001.437.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156
+
+### 배경
+
+디자인 팀이 "데이터 뷰어 > 대시보드 뷰 > 보드 위젯 상세 설정" 화면의 새 시안을 카드 위젯 1종에 대해서만 제공 (zip Variant A — 상단 탭 분리형). 시안 패턴 (3탭 데이터/스타일/크기 + 시안 atom 컨트롤 + 모달 chrome) 을 나머지 6종 위젯 (bar-h, bar-v, line, pie, scatter, gauge, user-list) 에도 동일 적용. 기능 100% 보존 제약 — 신규 config 필드 추가 / 삭제 금지.
+
+### 페이즈 결과 (9 phase, 2 lint hotfix)
+
+- **Phase 1**: 위젯 설정 공통 폼 atom 8종 신설 — Segmented · Slider · NumberStepper · IconGridPicker · ColorSwatchRow · BorderEdgePicker · FieldRow · PaneSection (TypeScript + Tailwind + DashboardTokens). 신규 8 파일 + common/index.ts.
+- **Phase 2**: 위젯 상세 설정 모달 3탭 (데이터·스타일·크기) 구조 재편 — 어댑터 모드 (위젯 Settings 시그니처 미변경 / 데이터 탭에 통째 라우팅 / 스타일 탭 placeholder). i18n 4언어 (ko/en/zh/ja) 3 키 (widgetDataLabel · widgetStyleLabel · widgetStyleSplitPending) 추가. WidgetSizeInput 격자 미리보기 + 인접 위젯 제한 경고 시안 viz. Lint hotfix 1 — WidgetSizeInput useEffect derived-state 안티패턴 (`react-hooks/set-state-in-effect`) 회피 (derived state 제거, prop 직접 사용).
+- **Phase 3**: CardSettings 데이터/스타일 탭 분할 (시안 1:1 기준점). `CardSettingsData` (측정항목·집계·sparkline) + `CardSettingsStyle` (제목·값/단위·아이콘·테두리/여백 4 PaneSection). `_shared/{Title,Icon,Border}SettingsSection` 의 내부 button-row → Segmented/IconGridPicker/ColorSwatchRow/BorderEdgePicker/Slider atom 으로 교체 (외부 시그니처 보존). `WIDGET_STYLE_SPLIT_TYPES` Set 에 'card' 등록 / dispatcher 분기.
+- **Phase 4**: BarChartSettings 분할 (bar-h·bar-v 공용). `BarChartSettingsData` (레이블·값컬럼 다중·집계·시리즈 색 — 시리즈 색은 valueColumn 행과 결합도 높아 데이터 탭 잔류) + `BarChartSettingsStyle` (colorScheme · showBorder + _shared 3종). Lint hotfix 1 — Style 의 미사용 `columnModelList` prop 정리.
+- **Phase 5**: LineChartSettings 분할 — Phase 4 패턴 그대로.
+- **Phase 6**: PieChartSettings 분할.
+- **Phase 7**: ScatterChartSettings 분할.
+- **Phase 8**: GaugeSettings 분할. `ThresholdEditor` 는 색상 중심 (행별 ColorSwatchPicker) 으로 판단되어 스타일 탭 배치.
+- **Phase 9**: UserListSettings 분할 (가장 복잡, 492줄). `UserListSettingsData` (사용자 다중선택 + 컬럼 슬롯) + `UserListSettingsStyle` (레이아웃·테두리). `hasUserTypeColumn` 가드 양 탭 유지. `migrateUserListConfig` 의 `safeUserListConfig` 가 dispatcher 두 슬롯 모두에 동일 전달.
+
+### 디자인 vs 기능 충돌 해소 규칙 (lock)
+
+- 시안 컨트롤은 모두 현행 `TitleConfig` / `IconConfig` / `BorderConfig` 와 backing field 1:1 매칭 (`entities/dashboard/types.ts` verified). 시안 viz + 현행 필드.
+- 시안에 없으나 현행에 있는 필드 (Card 의 `showBorder` / `contentAlign` / `iconPlacement` 3-way / unit / unitPosition 등) **삭제 금지** — 가장 가까운 스타일 탭 PaneSection 안에 보존.
+- 신규 config 필드 추가 금지.
+
+### 100% 기능 보존 검증
+
+7 위젯 모두 `config.*` 참조 집합이 분할 직전 ↔ 직후 **identical** 로 확인 (advisor #2 직전 자동 grep diff). 시안 viz 만 채용, config 표면 변경 0.
+
+### 영향 파일
+
+**data-craft (22 files)**:
+
+신규 (8):
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/Segmented.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/Slider.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/NumberStepper.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/IconGridPicker.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColorSwatchRow.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/BorderEdgePicker.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/FieldRow.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/PaneSection.tsx`
+
+수정 (14):
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/index.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsModal.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsPanel.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsTabs.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSizeInput.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/index.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/CardSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/BarChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/LineChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/PieChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/ScatterChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/GaugeSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/UserListSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/_shared/TitleSettingsSection.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/_shared/IconSettingsSection.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/_shared/BorderSettingsSection.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts`
+
 ## v001.436.0
 
 > 통합일: 2026-05-22
