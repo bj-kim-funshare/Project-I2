@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.434.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #155 HOTFIX 1 (RegisterCardSection 노출 조건 단순화)
+
+### 배경
+
+v001.433.0 (phase 1) 에서 프로모션 사용자 누락을 메우기 위해 `currentPlan !== 'free' || status?.activePromotion` 으로 확장했으나, 마스터 추가 지시: "결제 수단 등록은 결제 수단이 없으면 어떤 경우에도 나타나야 한다". free 플랜 + 프로모션 없음 사용자 또한 이전에 카드 등록 이력이 있었을 수 있고, 어떤 케이스든 카드 없음 상태에서 등록 진입로가 일관되게 노출되는 것이 사용자 모델에 부합. 가드 조건 자체를 제거하여 단순 if/else 로 축약.
+
+### 페이즈 결과
+
+- **Phase 2 (HOTFIX 1)**: `src/widgets/settings-dialog/ui/PlanTabContent.tsx` 의 빌링 정보 분기를 `hasBillingKey && status?.cardInfo ? <BillingInfoSection> : <RegisterCardSection>` 단순 이항으로 축약 (`dff0c7ea`, +3/-3). 상단 주석도 "카드 있으면 관리 UI, 없으면 무조건 등록 유도" 로 갱신. `pnpm typecheck:all && pnpm lint` 통과 (errors 0, warnings 18 — 모두 pre-existing).
+
+### 영향 파일
+
+- `data-craft`:
+  - `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 운영 주의 (manual_test_scenarios)
+
+1. **카드 등록 상태 (어느 플랜이든)**: BillingInfoSection 노출 — 기존 동작 유지.
+2. **카드 없음 + free 플랜 + 프로모션 없음**: RegisterCardSection 노출 (v001.433.0 까지는 null 분기였던 케이스, 이제 노출).
+3. **카드 없음 + 유료 플랜**: RegisterCardSection 노출 (회귀 없음).
+4. **카드 없음 + free + 활성 프로모션**: RegisterCardSection 노출 (v001.433.0 의 보강 분기, 이제는 단순 분기로 흡수).
+
+### 후속 권장 (post_action_hints)
+
+- v001.433.0 의 보강 조건은 v001.434.0 의 단순화에 흡수되어 더 이상 의미를 가지지 않음 (단순 else 가 더 넓은 집합). 향후 동일 컴포넌트의 노출 정책을 재검토할 때, "카드 부재 = 등록 진입로 노출" 의 invariant 를 기준으로 분기 추가 가능 여부를 판단할 것.
+- BillingInfoSection 의 노출 조건 `hasBillingKey && status?.cardInfo` 은 그대로 유지 — 두 필드가 BE 에서 동일 source (`findActiveBillingByCompanyId`) 로 산출되므로 일관성 보장.
+
 ## v001.433.0
 
 > 통합일: 2026-05-22
