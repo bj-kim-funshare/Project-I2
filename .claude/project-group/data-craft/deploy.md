@@ -46,7 +46,7 @@ projects:
 - `data-craft-mobile` 은 **플러터 셸 안착 전까지 한시적 gh-pages 배포** (마스터 명시). 안착 후 Flutter WebView Shell 번들 형태로 재정의 예정 — 재정의 시 본 문서 갱신.
 - 모바일 빌드 산출물 = `apps/web/dist/` (확정 — 루트 `pnpm build` 시 apps/web 에 dist 생성).
 - 모바일 GitHub owner 는 개인 계정 `bj-kim-funshare` (나머지 3개는 조직 `funshare-inc`).
-- ⚠️ **모바일 코드 경고**: `vite.config.ts` 의 `base: '/'` 가 gh-pages project pages 와 비호환. `/data-craft-mobile/` 로 변경 필요 (정책 외 — 코드 수정 사안. `plan-enterprise` 또는 수동 핫픽스).
+- 모바일 base 처리 (v001.449.0 검증 확정): `apps/web/vite.config.ts` 가 `base: mode === 'production' ? '/data-craft-mobile/' : '/'` 로 조건부 base 적용 중. 프로덕션 빌드 시 `dist/index.html` 에 `/data-craft-mobile/...` 경로로 출력되어 gh-pages project pages 호환. 루트 `vite.config.ts` 의 `base: '/'` 는 `pnpm dev` (포트 5174) 용으로 별개 — 빌드 산출물에 영향 없음.
 - `data-craft-server` — AWS EC2 (또는 유사). Docker 미사용. **부분 자동 타겟**. `pre-deploy` 가 자동 수행: (1) main 기준 검증, (2) `pnpm build`, (3) `main` → `aws-deploy` 브랜치 fast-forward push. 이후 마스터가 EC2 인스턴스에 SSH 접속하여 `git pull && pnpm build && pm2 restart` 수동 실행 (AWS 측이 `aws-deploy` 브랜치를 pull).
 
 ## 배포 우선순위

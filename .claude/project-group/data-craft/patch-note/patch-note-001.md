@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.449.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158 (hotfix 3)
+
+### 배경
+
+마스터 "이제 배포 가능 상태인지 검증해" 요청에 따라 4개 멤버 빌드 게이트 + 배포 정합성을 인라인 검증. 검증 중 `deploy.md` 의 "⚠️ 모바일 코드 경고" (v001.447 이전 시점 등록) 가 outdated 메타데이터임이 드러나 정정.
+
+### 검증 결과
+
+- 4개 멤버 빌드: data-craft-server ✅ / data-craft (typecheck:all + lint + build) ✅ / data-craft-mobile (typecheck + build) ✅ / data-craft-ai-preview (npm run build) ✅ (본 hotfix 에서 인라인 확인).
+- 모바일 base 처리: fresh build 결과 `apps/web/dist/index.html` 가 `/data-craft-mobile/manifest.json`, `/data-craft-mobile/assets/...` 로 출력 — gh-pages project pages 호환 확인.
+- 배포 정합성: 3개 repo (server / data-craft / mobile) 의 i-dev 가 main 보다 ahead (각각 2 / 5 / 4 커밋), behind 카운트는 GitHub PR 머지 토폴로지에서 비롯 (content 누락 아님). **deploy_command 가 `git checkout main` 으로 시작하므로 실제 배포 전 i-dev → main 머지 + origin push 필요** — 이는 본 플랜 권한 범위 밖 (`dev-merge` + 마스터 push 키워드).
+
+### 수정 사항 (단일 파일)
+
+`.claude/project-group/data-craft/deploy.md` 의 "⚠️ 모바일 코드 경고" 줄을 현 상태 반영 문장으로 교체. 코드 변경 0건 — 정책 doc 만 정정.
+
+### 잔여 후속 (배포 실행을 위한 다음 단계)
+
+1. `/dev-merge data-craft` (3개 repo i-dev → main).
+2. 마스터가 명시 push 키워드로 origin/main push (또는 dev-merge 가 머지 후 자동 push 하는 정책이면 그 흐름 따름).
+3. `/pre-deploy data-craft` 호출 — 4 타겟 build + deploy 일괄.
+4. `data-craft-server` 의 경우 EC2 SSH 수동 `git pull && pnpm build && pm2 restart` 단계 남음 (deploy.md 정책대로 부분 자동).
+
+### 알려진 한계 (v001.447 / v001.448 부터 잔존)
+
+- mobile vite alias 의 pnpm hoisting 의존.
+- fs-*-mobile 패키지 `@/` 사용 패턴.
+- mobile `pnpm lint` 61 사전 존재 issues.
+- row-link 콜백 (`requestRowLinkTargetRow` / `requestRowLinkGroupRows`) 기능 미연결.
+
 ## v001.448.0
 
 > 통합일: 2026-05-22
