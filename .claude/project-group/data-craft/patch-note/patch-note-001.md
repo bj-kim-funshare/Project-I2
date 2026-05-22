@@ -1,5 +1,51 @@
 # data-craft — Patch Note (001)
 
+## v001.429.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: funshare-inc/data-craft#151 (칸반 디자인 모드 — 열 제목 변경 시 자동 색상 보존 버그 픽스)
+
+### Phase 1 — rename 시 자동 색상 명시 보존 + hash util 공유화
+
+`data-craft` 3 file (`b52c3b46`, +23 / -13)
+
+#### 배경
+마스터 보고: 데이터 뷰어 → 칸반 뷰 → 디자인 모드에서 칸반 열 제목을 변경하면, 사용자가 건드리지 않은 해당 열의 원형 색상 표기가 자동으로 다른 색으로 바뀌는 회귀.
+
+#### 원인
+`packages/fs-data-viewer/src/widgets/kanban-board/kanban-board/useKanbanBoard.ts:75-91` 의 `getGroupColor` 가 다음 우선순위로 색상을 산출:
+1. `viewerModel.kanbanColumnColors?.[groupName]` 저장 값 채택
+2. 부재 시: 제목 문자열 hash → `KANBAN_CONFIG.GROUP_COLORS[hash % N]` 자동 산출
+
+그리고 `packages/fs-data-viewer/src/features/kanban/handlers/kanban-reorder-handlers.ts:357-364` 의 `handleColumnRenamed` (c) 색상 키 이전 블록이 다음 가드로 감싸져 있었음:
+```ts
+if (viewerModel.kanbanColumnColors?.[oldName]) { ... }
+```
+→ 사용자가 색상 피커로 명시 색상을 지정하지 않은 (= 자동 색상 상태) 열에서는 이 블록 통째로 스킵 → 다음 렌더링 시 `getGroupColor(newName)` 가 새 hash 로 다른 인덱스 → 다른 색.
+
+#### 수정
+1. **신규 util** `packages/fs-data-viewer/src/widgets/kanban-board/kanban-board/group-color.ts` 에 `computeAutoGroupColor(name)` 함수를 일원화 (UNCLASSIFIED 분기 + 기존 hash 알고리즘 + `KANBAN_CONFIG.GROUP_COLORS` 인덱싱).
+2. `useKanbanBoard.ts` `getGroupColor` 의 inline hash 본문을 util 호출로 교체 (UNCLASSIFIED / savedColor 우선순위 유지, `useCallback` deps 불변).
+3. `kanban-reorder-handlers.ts` `handleColumnRenamed` (c) 블록을 무조건 분기로 변경:
+   - `savedColor = viewerModel.kanbanColumnColors?.[oldName]`
+   - `color = savedColor ?? computeAutoGroupColor(oldName)` — 부재 시 현재 표시 색상 산출
+   - `newColors[trimmed] = color` + `saveChange(createKanbanColumnColorChange(trimmed, color))`
+   - oldName 키는 존재할 때만 (`savedColor !== undefined`) delete
+
+BE change 타입 = `Put` 단일 (`viewerSettingsChangeHelpers.ts:142-154`) — 신규 키 첫 Put 안전 (같은 파일 L271 picker 경로가 동일 패턴 사용 중).
+
+#### 행동 변화 (의도)
+rename 마다 자동 색상이 명시 색상으로 승격되어 `kanbanColumnColors` record 가 점진 증가. 이는 "보이던 색상 = 저장된 색상" 일관성을 회복하는 정상 동작.
+
+#### 잔존 후속 / 비기능 노트
+- **인쇄 뷰 동일 hash 인라인 복제**: `packages/fs-data-viewer/src/features/print/views/kanban/useKanbanPrint.ts:395-400` 가 같은 hash → `KANBAN_CONFIG.GROUP_COLORS` 알고리즘을 inline 복제 중. 본 phase 의 rename UI 픽스 범위 밖 (read-only render 경로 분리) — 추후 리팩터링 시 `computeAutoGroupColor` 호출로 일원화 권장.
+- **빈 문자열 엣지 케이스**: `kanbanColumnColors[oldName] === ""` 가 가능할 경우 새 코드가 `""` 을 새 키로 migrate → `getGroupColor` 가 falsy 판정으로 hash 폴백 (= 버그가 newName 으로 이동). 현재 picker 가 빈 값을 기록하지 않으므로 실 발생 없음. 코드 변경 불요.
+
+#### 검증
+- lint gate: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- 수동 시나리오 (마스터 재현용): 디자인 모드 진입 → 색상 피커를 한 번도 만지지 않은 열의 제목 변경 → 원형 색상이 그대로 유지되는지 확인.
+- 회귀: 명시 색상 지정 열 rename → 명시 색상 유지 / customDataList / kanbanColumnOrder / cellValue 갱신 정상.
+
 ## v001.428.0
 
 > 통합일: 2026-05-22
