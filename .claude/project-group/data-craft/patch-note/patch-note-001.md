@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.440.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 3
+
+### 배경
+
+v001.439.0 머지 후 마스터 검증 — 카드 위젯 sparkline 추세선 정상 렌더 확인 (분기 누적 코드 변경량 +550.0% 녹색 우상향 7개월). 디자인 참고 (Code Commits 카드) 와 비교 시 추세선 아래 **연한 배경 (filled area)** 가 없는 차이. 마스터가 같은 색상 저-opacity area fill 추가 요청.
+
+### HOTFIX 결과
+
+#### HOTFIX 3 — sparkline Area fill 도입 (`5070c6c`, data-craft)
+
+`CardWidget.tsx` 의 sparkline 렌더를 recharts `LineChart`+`Line` 에서 `AreaChart`+`Area` 로 교체:
+
+- import: `LineChart, Line` → `AreaChart, Area`.
+- Area props: `type='monotone'`, `stroke={sparklineColor}`, `strokeWidth={2}`, `fill={sparklineColor}`, `fillOpacity={0.15}`, `isAnimationActive={false}`.
+- 추세선 stroke 두께·색상·dot 동작 (없음) 그대로 보존. sparklineColor 계산식 (증감율 +/-/0 → 녹/적/회, null → 인디고) 그대로.
+- 영역 fill 은 sparklineColor 와 동일 hex 에 fillOpacity 0.15 적용 — 추세선 아래 자연스럽게 옅게 깔리는 효과.
+
+변경 +7/-6, 1 file. 다른 카드 위젯 로직 (값 계산 / 헤더 / 인라인 아이콘 / 단위 / contentAlign 등) 미수정. lint PASS.
+
+### 영향 파일
+
+**data-craft (1 file, +7/-6)**:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+
 ## v001.439.0
 
 > 통합일: 2026-05-22
