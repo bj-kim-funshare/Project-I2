@@ -1,5 +1,59 @@
 # data-craft — Patch Note (001)
 
+## v001.444.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #154 (Phase 1-7 / 14 부분 마일스톤)
+
+### 배경
+
+마스터 명령: data-craft 와 data-craft-server 두 저장소의 모든 주석을 현재 코드·로직·아키텍처에 맞게 최신화. 코드 무수정 — 주석만 작업. 운영 옵션: 감사 후 어긋난 주석 수정 + 비자명한 WHY 가 필요한 곳에 한정 보충 (CLAUDE.md "Don't add comments" 정책 준수).
+
+본 엔트리는 **14 페이즈 중 Phase 1-7 (data-craft FE 측) 의 부분 마일스톤** 머지 시점. Phase 8-14 (fs-external-data-viewer + data-craft-server) 와 advisor #2 종합 검증, 최종 마무리 patch-note 는 별도 후속 엔트리로 분리.
+
+### 운영 결정 (Phase 1-7 누적 — 후속 Phase 공통 적용)
+
+- **JSX `{/* */}` / trailing `// ...` (코드부 무변경) / `/* dead-code */` 블록 통째 삭제**: 의미상 주석으로 인정 (코드 무수정 hard guard 의 carve-out).
+- **트레일링 주석 처리 강화**: `code, // ...` 제거 시 앞 쉼표/세미콜론/괄호 절대 변경 금지. 단순 `s/\/\/.*$//` 패턴 금지, line-by-line read+edit 또는 정규식 capture group 필수.
+- **`@사용처` 일괄 삭제 정책**: CLAUDE.md "Don't reference... callers" 와 정합.
+- **이력 추적 prefix 제거** (Enterprise NNN / Phase N / PHASE-N / normal-NNN / HOTFIX-NNN / zone-NN / enterprise-NNN / 변경 N): WHY 본문은 보존, prefix 만 제거.
+- **self-guard 의무**: phase-executor 가 커밋 직전 자체 guard 실행, 의심 라인 0 확보 후 커밋.
+
+### Phase 결과
+
+| Phase | 영역 | 커밋 | 변경 |
+|-------|------|------|------|
+| 1 | 소형 8 패키지 (fs-api, fs-shared, 3 explorer, fs-file-attachment, fs-data-link, fs-relation-builder) | `3345b19d` + `c6a0fe94` | 58 파일, -486/+19, 신규 2 |
+| 2 | fs-data-viewer entities/+shared/ | `69ef16f8` + `bd469266` | 10 파일, -23/+11 |
+| 3 | fs-data-viewer widgets/ | `17eb6163` + `09945975` | 9 파일, -57/+19, 신규 1 |
+| 4 | fs-data-viewer features/+app/+pages/+잔여 | `978b2ccf` + `635a230e` + `4e2f6f7a` | ~157 파일, -842/+147 (@사용처 sweep 120) |
+| 5 | fs-sub-data-viewer entities/+shared/ | `8f0c1cb4` + `5b23ede5` | 186 파일, -845/+143, 신규 4 |
+| 6 | fs-sub-data-viewer widgets/ | `64a27c59` + `e8aeca9a` + `d9aea808` | 166 파일, -100/+57 |
+| 7 | fs-sub-data-viewer features/+app/+pages/+잔여 (+widgets 누락 2건) | `3119a08e` + `73710c25` + `965ad66f` | 231 파일, -1170/+335 |
+
+**누계**: ~817 파일, -3523/+731 lines, 신규 주석 7개 (전체 5% 가이드라인 충분 통과).
+
+### 발견된 code bug (본 플랜 범위 외 — 별도 처리 권장)
+
+- `packages/fs-data-viewer/src/entities/grid/grid-json.ts` L429: `json['dataViewerTitle'] ?? json['dataViewerTitle']` — 동일 키 tautological nullish coalescing. 원래 필드 마이그레이션 패턴 (`gridTitle ?? dataViewerTitle`) 이었을 가능성. 본 플랜은 코드 무수정으로 미수정. 별도 PR 권장.
+- `packages/fs-sub-data-viewer/src/features/print/views/grid/useGridPrint.ts` L88: `TODO: Phase 2+ 서브그리드 인쇄 구현` — 실제 미구현 기능 / 주석 처리된 코드 블록 존재.
+- `packages/fs-sub-data-viewer/src/features/grid/hooks/grid-history/applyUpdates.ts` L48: 하위 호환 별칭 (Phase 03 이후 제거 예정) 미제거 상태.
+
+### 후속
+
+- **Phase 8-14**: `fs-external-data-viewer` 3 phase + `data-craft-server` 3 phase + 루트/잔여 1 phase. 마스터 deploy 사이클 완료 후 재개 신호 시 동일 WIP 패턴 (`plan-enterprise-154-comment-refresh-작업-data-craft` 신규 생성 / `plan-enterprise-154-comment-refresh-작업-data-craft-server` lazy) 으로 이어서.
+- **Step 8 advisor #2**: Phase 14 종료 후 5-perspective 종합 검증.
+- **Step 11 PENDING 게이트**: 플랜 전체 완료 후 마스터에게 `플랜 완료` / `핫픽스` / `중단` 입력 대기.
+
+### 영향 파일
+
+상위 영향 영역 (자세한 파일 리스트는 머지 커밋 `d340717b` 의 stat 참조):
+
+**data-craft (817 files)**:
+- `packages/fs-api/` 외 소형 7 패키지
+- `packages/fs-data-viewer/src/` 전 영역 (entities/shared/widgets/features/app/pages/index)
+- `packages/fs-sub-data-viewer/src/` 전 영역
+
 ## v001.443.0
 
 > 통합일: 2026-05-22
