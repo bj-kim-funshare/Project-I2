@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.450.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158 (hotfix 4)
+
+### 배경
+
+마스터 진단: `refreshController` (data-craft-server/src/controllers/auth.controller.ts:156-182) 의 catch 블록이 stale refresh token 에 대해 401 응답만 내고 `res.clearCookie` 를 안 함. 비교: 같은 파일 `logoutController` (549) 은 `res.clearCookie('refreshToken', { path: '/api/auth' })` 호출.
+
+→ rotation 후 revoke 된 refresh token 이 클라이언트 HttpOnly 쿠키에 남으면 FE 부트스트랩의 `/api/auth/refresh` 호출이 14일 maxAge 동안 같은 401 영구 반복. FE 의 `tokenStorage.clearTokens()` (AuthProvider.tsx:55,68) 는 HttpOnly 쿠키를 못 지움.
+
+### 타당성 검증
+
+메인 세션이 코드 직접 read 로 확인:
+- `auth.controller.ts:156-182` — catch 블록이 `errorCatch(error, ...)` 만 호출, clearCookie 부재.
+- `auth.service.ts:530-599` — refresh 흐름에서 throw 가능한 에러: `UnauthorizedError('REFRESH_TOKEN_REVOKED')`, `UnauthorizedError('USER_NOT_FOUND')`, `ForbiddenError('ACCOUNT_UNAVAILABLE')`.
+- `token.service.ts:90/108/116` — `verifyRefreshToken` 에서 `REFRESH_TOKEN_EXPIRED` / `REFRESH_TOKEN_REVOKED` throw. JWT 시그니처 실패는 catch-all (116) 로 EXPIRED wrapping.
+
+### 수선 (commit `4902511` · +15 / -1 across 1 file)
+
+`src/controllers/auth.controller.ts` 의 `refreshController` catch 블록에 terminal 판별 분기 추가:
+
+```ts
+} catch (error) {
+  const isTerminal =
+    (error instanceof UnauthorizedError &&
+      (error.message === 'REFRESH_TOKEN_REVOKED' ||
+        error.message === 'REFRESH_TOKEN_EXPIRED' ||
+        error.message === 'USER_NOT_FOUND')) ||
+    (error instanceof ForbiddenError && error.message === 'ACCOUNT_UNAVAILABLE');
+
+  if (isTerminal) {
+    res.clearCookie('refreshToken', { path: '/api/auth' });
+  }
+
+  errorCatch(error, CALL_ID.auth.refresh);
+}
+```
+
+`UnauthorizedError` import 추가.
+
+### 의사결정 메모
+
+- **터미널 분리 기준**: 정의상 다시 시도해도 같은 결과 (revoked / expired / signature invalid / user 부재 / 회사 삭제). 멱등 처리.
+- **Transient 보존**: Prisma DB 에러, 네트워크 timeout 등은 `UnauthorizedError` 인스턴스가 아니므로 분기 거름 → 멀쩡한 쿠키 보존. DB 일시 장애에 정상 쿠키 날리지 않음.
+- **JWT 시그니처 실패**: `token.service.ts:116` 의 catch-all 이 `REFRESH_TOKEN_EXPIRED` 로 wrap → EXPIRED 분기로 자동 포함.
+- **BadRequestError('MISSING_REQUIRED_FIELDS')**: 쿠키가 없을 때라 clearCookie 의미 없음 → 분기 안 함.
+- **BadRequestError('TOKEN_NOT_FOUND' / 'INVALID_PAYLOAD')**: 마스터 가이드 범위 밖이라 보수적으로 미포함. 필요 시 후속 hotfix.
+- **clearCookie 옵션**: `{ path: '/api/auth' }` — set 측 (refresh/auto-signin/signin) 과 logoutController:549 옵션과 미러링. path mismatch 시 브라우저가 다른 쿠키로 인식해 안 지워짐.
+- **응답 헤더 순서**: `errorCatch` 는 throw 만 함 (utils/errorCatch.ts 확인). Express error middleware 가 받아 `res.status().json()` 시 큐잉된 Set-Cookie 헤더가 본문과 함께 flush — clearCookie → errorCatch 순서 안전.
+
+### 검증
+
+- `pnpm build` ✅
+- `pnpm lint` ✅
+
+### advisor (hotfix 5관점)
+
+마스터 prescription 을 byte-for-byte 구현, 메인 세션이 diff 로 정합 확인. 5관점 모두 by-construction PASS — 형식 advisor #2 round-trip 생략.
+
 ## v001.449.0
 
 > 통합일: 2026-05-22
