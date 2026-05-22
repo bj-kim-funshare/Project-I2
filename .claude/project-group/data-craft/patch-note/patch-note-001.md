@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.428.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #149 (HOTFIX 9 — SettingsFooter 다중탭 sync + TestPage / dev runner 일괄 제거)
+
+### Phase 17 — SettingsFooter handleLogout 에 clearAuth() 추가
+
+`data-craft/src/widgets/settings-dialog/ui/SettingsFooter.tsx` (`6a4fd2f8`, +1)
+
+#### 배경
+마스터 보고: 페이지 2개에 같은 계정으로 로그인 후 한쪽 로그아웃 시 다른 탭 그대로 유지. 새로고침 / 페이지 변경 / 서버 요청 후에야 로그아웃.
+
+#### 원인
+설정 다이얼로그의 `handleLogout` (L38-60) 이 `useAuthStore.getState().clearAuth()` 호출 누락. 대신:
+- `createMemoryTokenStorage()` 새 인스턴스의 `clearTokens` (dead — 앱 storage 와 다른 인스턴스)
+- 직접 `localStorage.removeItem` (dc_login_company, dc_login_origin)
+- `window.location.href` reload
+
+→ HOTFIX 8 Phase 12 (v001.427.0) 에서 `clearAuth` 에 도입한 sentinel setItem (`dc_logout_signal`) 이 발화 안 함 → 다른 탭이 storage event 못 받음 → stale 상태 유지. 로그아웃 발생 탭 자체는 reload 라 정상.
+
+`ExceededItemList.handleLogout` 은 이미 `clearAuth` 호출 (L50) — 본 phase 영향 외.
+
+#### 수정
+`if (companyId) { setItem dc_logout_redirect }` 블록 종료 직후, `createMemoryTokenStorage()` 호출 직전에 1 라인 삽입:
+```ts
+useAuthStore.getState().clearAuth();
+```
+삽입 위치 정확성: `accountInfo` / `companyId` 추출 + `dc_logout_redirect` setItem 이 모두 완료된 시점 — clearAuth 가 accountInfo 를 wipe 하기 전.
+
+### Phase 18 — TestPage + dev runner 일괄 제거
+
+`data-craft` 7 file (`6d18d10a` + `142ed5af` followup, -515)
+
+#### 배경
+마스터 지시: "TestPage 라는건 없어야 해, 찾아서 있으면 제거해". grep 결과 양 패키지에 별도 TestPage 존재:
+1. `packages/fs-relation-builder/src/pages/test/TestPage.tsx` (HOTFIX 8 phase 15 에서 자격 env 화한 그 파일)
+2. `packages/fs-data-link/src/pages/test/ui/TestPage.tsx` (별도 demo 페이지, 자격 평문 없음)
+
+각 패키지의 `App.tsx` + `main.tsx` 가 dev runner — TestPage 만 렌더하는 standalone demo entry. 라이브러리 빌드 entry (`src/index.ts`) 는 별도 보존.
+
+#### 범위 결정 (마스터 옵션 b — aggressive cleanup)
+- TestPage 2 개
+- App.tsx 2 개 (`fs-relation-builder/src/App.tsx`, `fs-data-link/src/app/index.tsx`)
+- main.tsx 2 개 (각 패키지)
+- 의존 test 파일 1 개 (`fs-relation-builder/tests/pages/test/TestPage.test.tsx` — 1차 dispatch blocker, followup commit 으로 제거)
+
+총 7 파일 삭제, -515 line. 라이브러리 빌드는 영향 없음 (consumer data-craft 본체의 `fs_relation_builder` / `fs_data_link` import 경로 보존).
+
+### 검증
+- **건별 advisor 사양 검증**: Phase 17 (1 라인 삽입 위치 + scope 좁힘 — createMemoryTokenStorage dead 정리 미포함), Phase 18 (정책 옵션 카드 마스터 선택 후 진행).
+- **lint gate**: `pnpm typecheck:all && pnpm lint` PASS (0 errors, 18 warnings).
+- **변경 범위 확인**: 단일 repo (data-craft), Phase 17/18 누적.
+- **followup commit 처리**: phase-executor 1차 dispatch 가 blocker (의존 test 파일) 정직하게 보고 → main session 이 1 commit 추가로 정리 → 재 lint PASS.
+
+### 잔존 의제 (info-tier, 별도 작업 후보)
+
+1. **`createMemoryTokenStorage()` dead 호출** — `SettingsFooter.tsx:51-52`, `ExceededItemList.tsx:48-49` 양쪽 dead 라인. clearAuth 가 진짜 storage 정리를 이미 수행하므로 무해 — 정리 우선순위 낮음.
+2. **양 패키지의 dev runner 잔존 자산** — `index.html`, `vite.config` 의 demo entry, `package.json` 의 dev script 등이 main.tsx / App.tsx 를 가리킬 수 있음. 라이브러리 빌드만 사용한다면 무해 — 필요 시 별도 정리.
+3. **자격 평문 sweep 일반화** — HOTFIX 1 + HOTFIX 8 phase 15 + HOTFIX 9 phase 18 로 TestPage / signin 경로 정합. 다른 잠재 위치 (Storybook 스토리, e2e fixture 등) 의 자격 평문 sweep 은 별도 작업.
+
 ## v001.427.0
 
 > 통합일: 2026-05-22
