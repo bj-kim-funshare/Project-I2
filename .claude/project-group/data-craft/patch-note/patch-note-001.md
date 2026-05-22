@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.438.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 1
+
+### 배경
+
+v001.437.0 머지 후 마스터 브라우저 dev 서버 진입 시 Vite import-analysis 오류 발생:
+
+```
+[plugin:vite:import-analysis] Failed to resolve import "@/shared/config/theme/dashboard-tokens" from "packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/PaneSection.tsx"
+```
+
+원인: Phase 1 의 신규 atom 8 파일이 `import { DashboardTokens } from '@/shared/config/theme/dashboard-tokens'` 형태로 작성되었으나, fs-data-viewer 패키지의 Vite 설정에 해당 alias 가 없음. TypeScript 는 tsconfig paths 로 통과했으나 Vite 런타임에서 실패. 기존 widget-settings 의 다른 파일들 (`WidgetSettingsPanel.tsx`, `WidgetSettingsTabs.tsx`) 은 모두 relative import (`../../../shared/...`) 사용.
+
+### HOTFIX 결과
+
+#### HOTFIX 1 — atom 8 파일 alias 교정 (`2766c2e`, data-craft)
+
+8 파일에서 `from '@/shared/config/theme/dashboard-tokens'` → `from '../../../../shared/config/theme/dashboard-tokens'` (common/ 위치 기준 4 levels up) 으로 단순 치환:
+
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/Segmented.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/Slider.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/NumberStepper.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/IconGridPicker.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColorSwatchRow.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/BorderEdgePicker.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/FieldRow.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/PaneSection.tsx`
+
+변경: +8 / -8, 8 files. import 외 코드 로직·시그니처 변경 없음. lint PASS (0 errors). grep 확인 — common/ 디렉토리에 남은 `@/` import 0건.
+
+### 영향 파일
+
+**data-craft (8 files, +8/-8)**: 위 8 파일 (import 라인만).
+
 ## v001.437.0
 
 > 통합일: 2026-05-22
