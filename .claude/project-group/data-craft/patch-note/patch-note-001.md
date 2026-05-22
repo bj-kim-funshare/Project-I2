@@ -1,5 +1,95 @@
 # data-craft — Patch Note (001)
 
+## v001.427.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #149 (HOTFIX 8 — 인증 정밀 sweep, 7 phase, 양 repo, 건별 advisor 검증)
+
+### 배경
+
+마스터 지시 "인증 관련 덜 작업된 부분 정밀 검사 + 각 건마다 advisor 검증". code-inspector 정밀 sweep 결과 BLOCK 2 / WARN 7 / INFO 4. 마스터 결정으로 전 범위 처리, 7 phase 분할 + 각 phase 전 advisor 사양 검증 + 각 phase 후 lint PASS.
+
+### Phase 별 결과
+
+#### Phase 11 — BE authMiddleware (full+light) effective plan 정합 (BLOCK)
+
+`data-craft-server/src/middlewares/auth.middleware.ts` (`dcd8739f`, +29/-4)
+
+매-요청 미들웨어가 변수명만 `effectivePlanType` 이고 실제 `client.planType` (raw) 만 사용 → promotion 활성 client 의 `req.planType='free'` → 모든 protected route 의 `isEndpointAllowedForPlan` 거부. HOTFIX 5/6 가 signin/autoSignin 멤버 가드만 정합, 매-요청 미들웨어 누락 — 본 phase 가 가장 큰 BLOCK 해소.
+
+수정: full path + light path 양쪽 SELECT 에 `active_promotion_id AS activePromotionId` 추가, expiry → promotion 순서로 effective 계산. `req.account.planType` 는 wire format 보존 (만료 처리된 raw), `req.planType` (게이트) 만 effective. inline 복제 (helper 추출 금지 — advisor 결정).
+
+#### Phase 12 — FE 다중탭 logout sentinel (WARN)
+
+`data-craft/{packages/fs-api/src/core/tokenSync.ts, src/entities/auth/model/authStore.ts, src/app/providers/AuthProvider.tsx}` (`b5d201a0`, +14/-4)
+
+`startTokenSync` 가 localStorage 의 'accessToken' 키 변화 감시 — in-memory 토큰 이관 후 그 키를 set/remove 하는 코드 0건 → storage 이벤트 절대 발화 안 함 → 다중탭 로그아웃 sync 완전 dead. 탭 A 로그아웃 시 탭 B 가 stale access token 으로 잠시 권한 유지 (보안성).
+
+수정: `tokenSync.ts` 의 기본 감시 키를 `dc_logout_signal` 로 변경, guard 를 `event.newValue !== null` (sentinel 기록 감지) 로 inversion. `clearAuth` 에서 `tokenStorage.clearTokens()` 직후 `localStorage.setItem('dc_logout_signal', String(Date.now()))` 추가. `AuthProvider` 의 `startTokenSync` 호출에 `accessTokenKey: 'dc_logout_signal'` 명시. `accessTokenKey` 필드명 자체는 외부 API 호환을 위해 보존 (rename 금지). window.storage 이벤트 same-tab 미발화 보장 (spec 확인) → self-trigger 없음.
+
+#### Phase 13 — FE usePlanExpiryNotification effective source (WARN)
+
+`data-craft/src/features/notification/api/usePlanExpiryNotification.ts` (`d1a0b5b8`, +5/-6)
+
+`accountInfo?.planType` (raw) 사용 → promotion 활성 사용자가 'free' 로 평가 → L67 `if (planType === 'free' || !planExpiresAt) return [];` 즉시 종료 → 만료 임박 알림 노출 안 됨.
+
+수정: `useSubscriptionStatus()` + `effectivePlanType()` 으로 source 교체. BE 응답 shape (init.service `account.planType` raw) 는 변경 안 함 — FE 가 raw / effective 두 channel 의도적 분리 (accountInfo=wire format, subscriptionStatus=effective). advisor 권고 채택: 본 phase 범위 BE-touch 미포함.
+
+#### Phase 14 — BE approveUser seats effective (WARN, 마스터 정책 결정 후)
+
+`data-craft-server/src/services/auth.service.ts` (`516da37`, +27/-12)
+
+`approveUser` (L960-976) 가 raw `lockedClient.planType === 'standard' || === 'premium'` 만 검사 → promotion 활성 client 의 seats 한도 우회. 마스터 정책 결정: "promotion = 기능 + seats 모두 적용 (effective 정합)" (옵션 a).
+
+수정: SELECT FOR UPDATE 에 `active_promotion_id AS activePromotionId` 추가 (row lock 안에서 effective 계산), `findActiveClientPromotionWithMeta` 로 basePlanType 조회 후 effective 변수에 반영, 동일 literal `=== 'standard' || === 'premium'` 비교 형식 보존 (enterprise = unlimited seats 의도). seats 검사 본문 (userCount 쿼리, rollback, throw) 변경 없음.
+
+#### Phase 15 — FE dead refresh 경로 + TestPage env (WARN)
+
+`data-craft/{packages/fs-api/src/core/interceptor.ts, packages/fs-api/src/core/client.fetch.ts, packages/fs-relation-builder/src/pages/test/TestPage.tsx}` (`50c1ffe8`, +9/-16)
+
+`'refreshToken' in authData` body dead 분기 + `x-refresh-token` 헤더 dead 처리 — BE 가 발행 안 함에도 코드 잔존 → 정책 (refresh token = HttpOnly cookie 단일 채널) 함정. `onAuthUpdate` payload 의 `refreshToken` 필드도 dead.
+
+수정: 양 파일 두 path (body + 204 header) 모두 단순화 — `tokenStorage.setTokens(authData.accessToken, null)` 직접. payload 의 refreshToken 필드 제거. `TestPage.tsx` 의 `admin@test.com` / `password123` 평문 → `import.meta.env.VITE_DEV_EMAIL` / `VITE_DEV_PASSWORD` 로 교체 (dev.md 보안 정책 § `.env.local` 외 자격 적재 금지 정합, HOTFIX 1 패턴 확장).
+
+#### Phase 16 FE — type / dead field / setAuth 시그니처 일괄 정리 (INFO)
+
+`data-craft` 9 파일 (`66d8c984`, +8/-22)
+
+타입 제거 + 모든 reader cleanup 동일 commit (tsc clean 보장):
+
+- `SigninResponse.refreshToken?` (src/shared/types/auth.types.ts + packages/fs-api/src/types/requests/auth.ts) 제거.
+- `InitBundleResponse.auth.refreshToken?` (packages/fs-api/src/types/requests/auth.ts) 제거.
+- `AuthResponseData.refreshToken?` (packages/fs-api/src/types/api.types.ts) 제거.
+- `OnAuthUpdate.refreshToken?` payload field (packages/fs-api/src/types/config.types.ts) 제거.
+- `setAuth` 시그니처 4-arg → 3-arg (`refreshToken: string | null` 인자 제거, authStore interface + 구현 + 두 caller 동기화).
+- read 사이트: useSignin L79/L95, seedBundleData L39, packages/fs-api/src/api/auth.ts (signin/autoSignin/init 반환 매핑 L56/L83/L120).
+- 테스트 mock: packages/fs-api/src/api/__tests__/auth.test.ts L79/L88/L143.
+- `updateAccessToken` (authStore L220-222) — `getRefreshToken()` dead read 제거 → `setTokens(accessToken, null)`.
+
+#### Phase 16 BE — dead DTO 제거 (INFO)
+
+`data-craft-server/src/types/auth.types.ts` (`d9f76b61`, +0/-10)
+
+`RefreshRequest` + `AutoSigninRequest` 인터페이스 삭제. HOTFIX 3 로 컨트롤러가 쿠키 채널 전환된 후 사용처 0건. BE/FE 전체 grep 결과 선언 외 import 없음 확인 후 안전 삭제.
+
+### 검증
+
+- **각 phase 전 advisor 사양/위험 검증**: 7회 (BLOCK 2 / WARN 4 / INFO 1 / 정책결정 1).
+- **각 phase 후 lint PASS**: FE `pnpm typecheck:all && pnpm lint`, BE `pnpm lint` — 모두 0 errors.
+- **변경 범위 git show stat 확인**: 각 phase 의 변경 파일이 사양과 일치.
+- **양 repo 머지 완료**: data-craft 15 files +36/-48, data-craft-server 3 files +56/-26.
+
+### 알려진 잔존 / 트레이드오프 (patch-note 에 flag — 본 핫픽스 범위 외)
+
+1. **Phase 14 race window**: `findActiveClientPromotionWithMeta` 가 트랜잭션 connection 외부에서 실행 — `activePromotionId` 자체는 FOR UPDATE 로 잠금되어 race window 좁음. Phase 11 / auth.service L655 와 동일 패턴 — advisor 승인 트레이드오프.
+2. **handleExpiredPlan 의 stale promotion**: `subscription.service.handleExpiredPlan` 이 `active_promotion_id` 정리 안 함 → 만료된 paid plan + 잔존 promotion 시 effective 가 promotion basePlanType 으로 복구. 정책 결정 필요 시 별도 작업.
+3. **dev 환경 자격 ergonomic**: TestPage 가 `.env.local` 의 `VITE_DEV_*` 사용 — main signin (devLoginDefaults) 과 같은 자격이라 분리된 test 계정 불가. 별도 test 자격이 필요하면 후속 작업.
+
+### 회귀 시점 분석 (참고)
+
+- **enterprise-502 (커밋 e2d2ed0, 2026-04-21)** promotion-aware migration 의 누락 패턴 — plan-limit.middleware / subscription.service 만 정합, SSE / init / authMiddleware / approveUser 누락. HOTFIX 5/6/8 시리즈로 일괄 보강.
+- **HOTFIX 2 (v001.421.0)** 의 응답 shape 오기입 회귀는 HOTFIX 4 에서 정정, 본 sweep 단계까지 잔존 흔적 (interceptor / client.fetch dead 분기, OnAuthUpdate payload refreshToken 필드, type 필드 다수) 모두 정리됨.
+
 ## v001.426.0
 
 > 통합일: 2026-05-21
