@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.443.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 6
+
+### 배경
+
+마스터 검증 — 보드 본체는 sparkline 정상 표시되나, **위젯 상세 설정 모달의 라이브 미리보기에서는 추세선이 안 나옴**. 회귀 surface.
+
+### 원인
+
+`WidgetPreviewPane.tsx:89-96` 은 `WidgetRenderer` 에 `preprocessedRows` 만 전달하고 `aggregationData` 는 미전달 (미리보기는 BE 호출 없는 client-only 경로). `CardWidget.tsx:189-193` 의 sparkline 계산이 `aggregationData?.sparkline` 만 의존 → 미리보기에서 항상 `serverGrouped` undefined → null 반환 → 추세선 미렌더. 기존 코드 주석에 "Setting 모드: 미표시" 로 의도 표기되어 있었으나, 미리보기 UX 상 sparkline 동작이 보여야 자연.
+
+### HOTFIX 결과
+
+#### HOTFIX 6 — sparkline 클라이언트 fallback 계산 (`accc0e1`, data-craft)
+
+`CardWidget.tsx` 의 sparkline IIFE 에 분기 추가:
+
+- `aggregationData?.sparkline` 있음 → 기존 서버 fold 경로 (rawDate → columnId → 집계결과). 변경 없음.
+- 없음 → `preprocessedRows` 직접 순회, 날짜 컬럼 raw 값을 `Date.parse` 로 파싱, 최근 N 개월 YYYY-MM 버킷 그룹화 + `config.aggregation` 따른 5종 집계 (sum/avg/count/min/max) — `displayData` 의 client 집계 패턴 차용.
+
+후처리 (정렬, oldest/newest changeRate, `result.length <= 1` null) 와 반환 shape 동일. sparklineColor / area fill / 시각 로직 미수정.
+
+변경 +56/-18, 1 file. lint PASS.
+
+### 영향 파일
+
+**data-craft (1 file, +56/-18)**:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+
 ## v001.442.0
 
 > 통합일: 2026-05-22
