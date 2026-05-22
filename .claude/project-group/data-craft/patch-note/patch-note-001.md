@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.430.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: funshare-inc/data-craft#150 (캘린더 뷰 인쇄 부록 — 간트형 카드 레이아웃 전환)
+
+### Phase 1 — 캘린더 부록을 간트형 카드 레이아웃으로 교체
+
+`data-craft` 3 file (merge `d4e076d` + cleanup `82aef7e`, +197 / -183)
+
+#### 배경
+마스터 보고: 데이터 뷰어 → 캘린더 뷰 인쇄 시 본문 달력 뒤 부록이 "선택된 행 (n개)" 제목 + 테이블 형식. 간트 뷰 인쇄의 부록 패턴(`일정 상세 (총 n개)` + 페이지당 카드 1개)과 동일하게 통일하길 원함.
+
+#### 원인 (= 기존 동작 위치)
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts:364-408` `buildCalendarAppendixTable` — 표 마크업.
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.ts:123-162` `buildSelectedRowsAppendix` — 위 표 빌더 호출.
+- 캘린더는 행별 화면 색상(`getEventColor(viewerModel, rowField)` — `widgets/calendar/types.ts` 의 EVENT_COLORS 팔레트)을 보유하나 인쇄 부록에는 미반영.
+
+#### 수정
+1. **공용 CSS export** `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts` 에 `getAppendixCardStyles()` 신설. 기존 간트 측 `useGanttPrint.ts` `generateGanttStyles()` 내부의 `.gantt-appendix-*` CSS 룰 블록 전체를 이 함수로 이전 (룰 순서·내용 동일).
+2. **신규 빌더** `buildCalendarAppendixCards(rows, columns, viewerModel, cellFormatter)` — 마크업/페이지 구조(`gantt-appendix-page` / `-card` / 3열 label-value 그리드 / 5행 divider)는 `buildGanttAppendixCards` 와 동일 클래스 재사용. 색상 스워치만 `getEventColor(viewerModel, row.rowField)` 결과를 인라인 `background:` 로 적용. 제목 `일정 상세 (총 N개)`, 헤더 `{idx+1} · #{rowId}` (간트와 동일).
+3. **호출 교체** `useCalendarPrint.ts` `buildSelectedRowsAppendix` 의 `buildCalendarAppendixTable(...)` → `buildCalendarAppendixCards(...)`.
+4. **스타일 정리** `generateCalendarStyles()` 의 `.calendar-appendix*` 표 전용 룰(L222-260) 제거, 끝에 `getAppendixCardStyles()` 주입.
+5. **간트 측 동일성 보장** `useGanttPrint.ts` `generateGanttStyles()` 의 부록 CSS 블록을 `getAppendixCardStyles()` 호출로 교체 — 룰 텍스트가 동일하게 출력되므로 간트 인쇄 출력 변화 없음.
+6. **기존 빌더 제거** `buildCalendarAppendixTable` 제거. 후속 cleanup commit (`82aef7e`) 에서 공용 CSS 내 더 이상 사용되지 않는 `.calendar-appendix` 룰 4줄도 제거.
+
+#### 행동 변화 (의도)
+- 캘린더 인쇄 부록이 표에서 페이지당 1장 카드(노션형 3열 label-value)로 전환. 각 카드 헤더 스워치는 해당 행의 캘린더 이벤트 색상과 일치.
+- 빈 선택 시 부록 미출력, 컬럼 일부 해제 시 카드 내부가 선택 컬럼만 표시 — 기존 컬럼 선택 로직 그대로.
+- 간트 인쇄 출력은 변화 없음.
+
+#### 잔존 후속 / 비기능 노트
+- ESLint 18 warning (lint gate 통과, 본 변경과 무관한 기존 베이스라인).
+- 시각 검수(캘린더 인쇄 미리보기 + 간트 인쇄 회귀 비교)는 마스터 수동 확인 필요.
+
+---
+
 ## v001.429.0
 
 > 통합일: 2026-05-22
