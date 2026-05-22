@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.433.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #155 (플랜 관리 RegisterCardSection 프로모션 분기 누락 수정)
+
+### 배경
+
+프리미엄 프로모션 사용자 (`client.planType='free'` + `activePromotion` 활성) 가 플랜 관리 탭에서 결제 수단을 삭제하면 "결제 수단 등록" (RegisterCardSection) 컴포넌트가 나타나지 않음. 원인 — `src/widgets/settings-dialog/ui/PlanTabContent.tsx:137` 의 노출 조건이 `currentPlan !== 'free'` 단독이라 `client.planType='free'` 인 프로모션 사용자를 누락. 카드 삭제 후 `hasBillingKey=false` + `currentPlan='free'` 양쪽 분기 모두 탈락 → `null` 렌더. 회귀가 아니라 RegisterCardSection 도입 시점 (6de83cfc, 2026-03-25 HOTFIX-01) 부터 프로모션 케이스가 미반영된 상태로 출시된 누락 버그 — 프로모션 기능이 이후 별도로 들어왔으나 본 조건이 갱신되지 않음.
+
+### 페이즈 결과
+
+- **Phase 1**: `src/widgets/settings-dialog/ui/PlanTabContent.tsx` 의 RegisterCardSection 노출 조건을 `currentPlan !== 'free' || status?.activePromotion` 으로 확장하고 상단 주석을 동시 갱신 (`78949beb`, +2/-2). `status` 는 이미 `useSubscriptionStatus()` 로 바인딩되어 있어 추가 import 불필요. `pnpm typecheck:all && pnpm lint` 통과 (errors 0, warnings 18 — 모두 pre-existing).
+
+### 영향 파일
+
+- `data-craft`:
+  - `src/widgets/settings-dialog/ui/PlanTabContent.tsx`
+
+### 운영 주의 (manual_test_scenarios)
+
+1. **프리미엄 프로모션 + 카드 등록 상태**: 플랜 관리 탭에서 카드 정보 (BillingInfoSection) 가 정상 노출되는지 확인.
+2. **프리미엄 프로모션 + 카드 삭제 직후**: "결제 수단 등록" (RegisterCardSection) 이 즉시 노출되는지 확인 (본 fix 의 핵심 시나리오).
+3. **free 플랜 + 프로모션 없음 + 카드 없음**: RegisterCardSection 미노출 유지 — 기존 동작 회귀 없음.
+4. **유료 플랜 (standard 등) + 카드 없음**: RegisterCardSection 노출 유지 — 기존 동작 회귀 없음.
+
+### 후속 권장 (post_action_hints)
+
+- BE `subscription.service.ts` 가 만료된 프로모션에 대해 `activePromotion=null` 로 정확히 응답하는지 정합성 확인 (현재 정책상 만료 전까지 active, 만료 후 null — 정상). 프로모션 만료 시점 사용자가 카드 없으면 자동으로 본 분기 탈락 → null 렌더 (의도된 동작).
+- `accountInfo.planType` 갱신 흐름은 본 버그와 무관 — 카드 삭제 시 `useDeleteCard.onSuccess` 가 `subscriptionKeys.status()` 만 invalidate. 프로모션 사용자의 `client.planType` 은 BE 가 별도로 'standard/premium' 으로 승격하지 않으므로 'free' 유지.
+
 ## v001.432.0
 
 > 통합일: 2026-05-22
