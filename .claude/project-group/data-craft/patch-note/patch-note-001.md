@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.439.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 2
+
+### 배경
+
+v001.438.0 머지 후 마스터 검증 결과 — 보드 뷰의 카드 위젯들에서 Sparkline 사용 ON 인데도 추세선이 렌더링되지 않는 회귀 surface (이미지 2장: "분기 누적 코드 변경량" 카드 "2.5M 라인" 단독 표시, 라이브 프리뷰도 동일). 본 플랜의 페이즈 분할 자체는 무관 — 더 깊은 layer (FE↔BE protocol key fold) 의 잠재 결함이 plan #156 의 새 모달에서 노출된 것.
+
+### 원인 분석 (DB 직접 조회 + protocol trace 검증)
+
+admin@funshare.co.kr 계정의 viewer 358 에 대해 read-only MySQL 조회 + FE/BE 코드 trace 로 다음 사실 확정:
+
+1. **BE 집계는 정상**: `data_craft_test` 의 group_id=1653 / column_id=8285 (코드 변경량) / group_by 8316 (날짜) 시뮬레이션 결과 7개월 grouped aggregation 정확히 반환 — `2025-11-01:100000`, `2025-12-01:250000`, ..., `2026-05-01:650000` (sum=2,450,000 = 카드 표시 "2.5M 라인" 과 일치).
+2. **날짜 컬럼 raw 값은 ISO 형식**: `2025-11-01`~`2026-05-01` 7건 → `Date.parse` 정상.
+3. **회귀 지점 — BE 응답 key mangling**:
+   - FE (`buildWidgetBatchParams.ts:73`) 가 sparkline 별도 batch widgetId 를 `${widget.id}__sparkline` (언더스코어 2개) 로 전송.
+   - BE controller (`viewerPaging.get.ts:422`) 가 응답 객체에 `snakeToCamelDeep` (`utils/normalizeKeys.ts:17-20`, regex `_([a-z])` → 대문자 치환) 을 무차별 적용.
+   - 응답 키 `w01__sparkline` → `w01_Sparkline` (두 번째 `_s` 가 `S` 로 치환).
+   - FE (`FsDashboard.tsx:255-261`) 의 fold 루프 `if (key.endsWith('__sparkline'))` 매칭 실패 → `aggregationData.sparkline` 미설정 → `CardWidget.tsx:189-193` 의 `if (!serverGrouped) return null` 진입 → 추세선 미렌더.
+
+### HOTFIX 결과
+
+#### HOTFIX 2 — sparkline batch widgetId separator 교체 (`0561040`, data-craft)
+
+가장 작은 fix 채택 — FE separator 토큰을 BE 의 snakeToCamel regex 에 매칭되지 않는 마침표로 교체. BE 무수정:
+
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/buildWidgetBatchParams.ts:73` — `${widget.id}__sparkline` → `${widget.id}.sparkline`
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx:256-257` — `endsWith('__sparkline')` / `slice(0, -'__sparkline'.length)` 두 군데 동기화.
+
+마침표는 snakeToCamel regex `_([a-z])` 에 매칭되지 않아 BE 응답에서 보존됨. widget id 자체에 마침표 없는 한 (UUID/짧은 식별자) 충돌 없음. 변경 +3/-3, 2 files. import / 시그니처 / config 표면 변경 0. lint PASS.
+
+L186 의 deprecated 경로 `:sparkline:` 토큰은 응답 fold 와 무관한 내부 캐시 키이므로 손대지 않음.
+
+### 영향 파일
+
+**data-craft (2 files, +3/-3)**:
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/buildWidgetBatchParams.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx`
+
 ## v001.438.0
 
 > 통합일: 2026-05-22
