@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.442.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 5
+
+### 배경
+
+마스터 추가 요청 — 카드 상세 설정 모달에서 sparkline 추세선의 색상을 사용자가 선택할 수 있는 옵션 추가. 색 후보 추려서 몇 개만 제공. 추세 배경 (area fill) 도 같은 색상 추종.
+
+### HOTFIX 결과
+
+#### HOTFIX 5 — sparkline 색상 선택 (`9799d70`, data-craft)
+
+타입 / 렌더 / 설정 UI 3 파일 변경:
+
+- `entities/dashboard/types.ts` — `SparklineConfig` 에 optional `color?: string` 필드 추가. 기존 저장본 (undefined) → 자동 동작 보존, 백워드 호환.
+- `widgets/dashboard/widgets/CardWidget.tsx` — `sparklineColor` 계산식을 `config.sparklineConfig?.color ?? (기존 증감율 자동 계산)` 으로 수정. area fill 은 `fill={sparklineColor}` 그대로라 색 변경 시 자동 추종.
+- `widget-settings/settings/CardSettings.tsx` — `CardSettingsData` 의 "추세 표시" PaneSection 안 (sparkline 토글 disabled block) 에 "자동" 버튼 + ColorSwatchRow (Phase 1 atom) 7색 팔레트 추가. sparkline OFF 시 기존 opacity/pointerEvents 패턴 따라 자동 비활성화.
+
+색상 팔레트 (7색): 인디고 / 녹색 / 청색 / 보라색 / 주황색 / 적색 / 회색. + "자동" 옵션 (undefined 저장 → 증감율 기반 녹/적/회/인디고 동작).
+
+`changeRateColor` (증감율 텍스트 색) 은 사용자 색 지정과 무관하게 기존 증감율 기반 유지.
+
+변경 +42/-7, 3 files. BE 무수정, config 마이그레이션 불필요. lint PASS.
+
+### 영향 파일
+
+**data-craft (3 files, +42/-7)**:
+- `packages/fs-data-viewer/src/entities/dashboard/types.ts`
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/CardSettings.tsx`
+
 ## v001.441.0
 
 > 통합일: 2026-05-22
