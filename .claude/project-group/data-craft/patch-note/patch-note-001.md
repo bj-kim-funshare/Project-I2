@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.432.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #153 (빌더 layout 저장 403 핫픽스 — fs-api includeAuth 누락)
+
+### 배경
+
+데이터 뷰어 모드를 그리드뷰 → 대시보드로 전환 후 "뷰를 구성중입니다" 상태에서 레이아웃 빌더 헤더 "저장" 버튼 클릭 시 `POST /api/builder/pages/:id/layout` 이 403 PERMISSION_DENIED 로 거부됨 (user=6 오너 계정). 근본 원인 — `data-craft-server` 의 `authMiddleware` 풀-인증 분기는 `?includeAuth=true` 쿼리스트링으로만 발동되며, 라우터-레벨 `forceIncludeAuth` 미들웨어는 글로벌 `authMiddleware` 이후에 실행되어 dead code 임 (이미 `#33 hotfix-2` 에서 동일 결론, "FE 측 fix" 컨벤션 확립). `fs_api` 의 `savePageLayout` 가 `{ includeAuth: true }` 옵션을 누락하여 `req.user` 가 hydrate 되지 않고 `permissionCheckMiddleware` 의 `req.user?.isOwner` 가 falsy → 오너든 권한자든 무조건 403.
+
+### 페이즈 결과
+
+- **Phase 1**: `packages/fs-api/src/api/builder.layout.ts` 의 `savePageLayout` 가 `apiClient.post(..., request, { includeAuth: true })` 형태로 호출하도록 수정 (`35addb6d`, +2/-1). `pnpm --filter fs_api build` 로 dist 재생성. `pnpm typecheck:all && pnpm lint` 통과 (errors 0, warnings 18 — 모두 pre-existing).
+
+### 영향 파일
+
+- `data-craft`:
+  - `packages/fs-api/src/api/builder.layout.ts`
+
+### 운영 주의 (manual_test_scenarios)
+
+1. **사전 DB 정합 확인**: `SELECT id, is_owner FROM user WHERE id = 6;` 가 `is_owner = 1` 인지 확인. 0 이면 본 fix 만으로 user=6 의 403 은 해소되지 않음.
+2. **머지 후 main working tree 의 dist 재빌드 필수**: 본 fix 는 worktree 안에서 `pnpm --filter fs_api build` 를 실행했지만 main working tree (`/Users/starbox/Documents/GitHub/data-craft`) 의 dist 는 stale. 머지 후 dev 기동 전에 반드시 `pnpm --filter fs_api build` 를 main working tree 에서 실행 — 그렇지 않으면 stale dist 가 로드되어 403 이 재현됨.
+3. 오너 user=6 로그인 → 페이지 374 의 데이터 뷰어 그리드뷰 → 대시보드 전환 → "뷰를 구성중입니다" 상태에서 헤더 "저장" 클릭 → 200 OK + "레이아웃이 저장되었습니다." 토스트. 네트워크 탭의 요청 URL 이 `/api/builder/pages/374/layout?includeAuth=true` 형태인지 확인.
+4. (선택) 비-오너 권한 보유 계정으로 동일 시나리오 반복 → 200.
+5. (선택) 무권한 계정으로 동일 시나리오 → 403 (의도된 동작).
+
+### 후속 권장 (post_action_hints)
+
+동일 클래스 잠재 결함이 fs_api 의 다른 builder write 함수 14개에 잔존 — `createPage` / `updatePage` / `deletePage` / `duplicatePage` / `reorderPages` / `setPageStart` / `createForm` / `updateForm` / `deleteForm` / `createFormWidget` / `updateFormWidget` / `deleteFormWidget` / `reorderFormWidgets` / `bulkFormWidgets`. 모두 `{ includeAuth: true }` 누락. 본 플랜은 minimal scope 로 미포함. 마스터가 같은 클래스의 다른 버튼/액션을 보고하면 별 핫픽스로 처리. 일관성 확보를 위한 sweep 픽스를 한 번에 진행하길 원하면 후속 plan-enterprise 1건으로 일괄 처리 가능.
+
 ## v001.431.0
 
 > 통합일: 2026-05-22
