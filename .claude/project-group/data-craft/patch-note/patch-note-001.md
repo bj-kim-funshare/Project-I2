@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.448.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158 (hotfix 2)
+
+### 배경
+
+v001.447.0 의 잔여 BLOCK — data-craft-mobile `pnpm build` 실패 — 를 핫픽스로 수선. 사전 존재 구조적 path-alias 충돌이 표면화. 테스트 제거와 무관.
+
+### 원인
+
+`apps/web/vite.config.ts` 에 `@` alias 가 없는 상태에서 `packages/fs-{form-builder,data-link,relation-builder}-mobile/src/...` 내부 파일이 `@/shared/...`, `@/entities/...` 등을 import. 그 결과 Rollup 이 모듈을 resolve 못해 빌드 fail. 패키지 자체 `tsconfig.json` 의 path alias 는 vite 가 무시. 영향 ~93 사이트 (form-builder 51 + relation-builder 33 + data-link 9).
+
+### 수선 (commit `880d66f1` · +36 / -0 across 1 file)
+
+`apps/web/vite.config.ts` 에 `packageInternalAliasPlugin` 추가 — 호출지 ~93건 일괄 수정 대신 단일 vite 플러그인 도입.
+
+```ts
+function packageInternalAliasPlugin() {
+  // importer 가 packages/fs-*-mobile/src/ 하위인 경우만 @/ 를 그 패키지의 src/ 로 재매핑
+  // fs.existsSync 동기 탐색: directory index → .ts/.tsx/.js/.jsx
+}
+```
+
+추가로 `zustand` 와 `@tanstack/react-query` 의 명시 alias 도입 — pnpm 비호이스팅으로 root `node_modules` 에 없어 alias 로 실제 설치 위치 고정.
+
+### 검증
+
+- `pnpm typecheck` exit 0 (dev.md 의 mobile `lint_command` 정책 게이트 — 통과)
+- `pnpm build` exit 0 (캐시 비우고 uncached full rebuild, 12.63s, 5,417 modules transformed, PWA precache 927 entries)
+
+### advisor 결과 (hotfix 5관점)
+
+- Intent / Logic / Group Policy / Evidence / Command Fulfillment 모두 PASS.
+- **Command Fulfillment** = data-craft-mobile build exit 0 충족. 마스터 원 명령 "다음 배포가 실패했어, 해결해" 의 잔여 BLOCK 도 본 핫픽스로 해소.
+
+### 알려진 한계 / 후속 사항
+
+1. **pnpm hoisting 의존 alias** — zustand / @tanstack/react-query 의 alias 가 pnpm 의 현재 비호이스팅 경로에 고정됨. pnpm 이 재설치 시 다른 store 경로를 선택하거나 hoisting 정책이 바뀌면 alias 가 깨질 수 있음. 견고한 후속 조치 (apps/web/package.json 에 명시 dep 추가) 권장.
+2. **fs-form-builder-mobile / fs-data-link-mobile / fs-relation-builder-mobile 의 `@/` 사용 패턴** — 패키지 내부에서 root-style alias 를 쓰는 것은 패키지 분리 원칙에 어긋남. 장기적으로는 패키지 내부 import 를 상대 경로 또는 `@dcm/<pkg-name>/...` sub-path alias 로 통일하는 리팩토링 권장.
+3. **lint pre-existing** — `pnpm lint` 는 61 issues (react-hooks/set-state-in-effect, react-refresh/only-export-components 등) 사전 존재. dev.md mobile `lint_command` 가 `pnpm typecheck` 이므로 정책 게이트와는 무관. 별도 후속 정리 대상.
+4. **row-link 콜백 기능 미연결** (v001.447.0 부터 잔존) — `requestRowLinkTargetRow` / `requestRowLinkGroupRows` 가 호출지에서 제거됐으나 본래 의도된 기능은 패키지 핸들러 부재로 미동작. 별도 이슈로 추적 필요.
+
+### 플랜 종합 결과
+
+마스터 원 명령 `/plan-enterprise data-craft, 다음 배포가 실패했어, 해결해` 의 모든 빌드 게이트가 통과 상태:
+- data-craft-server: `pnpm build` exit 0
+- data-craft: `pnpm typecheck:all && pnpm lint && pnpm build` 모두 exit 0
+- data-craft-mobile: `pnpm typecheck && pnpm build` 모두 exit 0
+- data-craft-ai-preview: 사전 클린 (테스트/devDep/CI test job 0건)
+
+다음 `/pre-deploy data-craft` 호출 시 4개 타겟 모두 build 통과 예상.
+
 ## v001.447.0
 
 > 통합일: 2026-05-22
