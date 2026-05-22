@@ -1,5 +1,65 @@
 # data-craft — Patch Note (001)
 
+## v001.436.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #152 HOTFIX 1 + 2 (외부 검증 보고서 F1/F2/S2 흡수)
+
+### 배경
+
+plan #152 머지 후 별도 세션의 #146 + #148 23 항목 전수 검증 보고서가 3 가지 확정 결함을 surface (F1 button-widget noopener / F2 tenantDetector JSDoc / S2 effective plan 4 site 인라인). main session 정합 검토 결과 — F1 P1 신규 (보안), F2 P3 신규 (정합성), S2 부분 신규 (plan #152 Phase 2 의 helper 추출 후 auth.service 3 site + light-path 1 site 잔존). 무시 가능 분류 (interceptor sliding-token dead, InitBundleResponse 네이밍 footgun) 는 본 HOTFIX 범위 외.
+
+### HOTFIX 결과
+
+#### HOTFIX 1 — FE button-widget noopener + tenantDetector JSDoc (`0446318`, data-craft)
+
+- `src/widgets/button-widget/ui/useButtonWidget.ts:132` — features 문자열에 `noopener,noreferrer` 추가. plan #146 P4 가 link cell 3곳만 sweep 한 surface coverage gap (button-widget popup 흐름) 의 tab-nabbing 결함 봉인.
+- `src/shared/lib/tenantDetector.ts` — JSDoc 4 site + 인라인 주석 2 site (총 6 site) 의 `datacraft.com` → `datacraft.ai.kr` 정렬. 함수 본문 `parts[1] === 'datacraft'` 조건은 운영 *.datacraft.ai.kr 에서 정합 동작이라 변경 없이 유지 (외부 보고서 4건 vs 실제 6건 확인). load-bearing 함수 (`getLoginPath.ts:23`, `tenantStore.ts:111` prod-reachable) 의 문서 정합 회복.
+- 변경: +7 / -7, 2 files.
+
+#### HOTFIX 2 — BE effective plan helper 4 site 통합 (`7d6dedd`, data-craft-server)
+
+plan #152 Phase 2 가 `src/utils/effectivePlan.ts` 의 `resolveEffectivePlan` 추출 후 2 site (auth.middleware full-path + init.service) 만 위임 완료. 본 HOTFIX 가 잔존 4 site 통합:
+
+- `src/services/auth.service.ts:309` signin → 헬퍼 위임
+- `src/services/auth.service.ts:651` autoSignin → 헬퍼 위임
+- `src/services/auth.service.ts:970` approveUser seat check → 헬퍼 위임
+- `src/middlewares/auth.middleware.ts:203` light-path → 헬퍼 위임 (full-path 일관)
+
+`findActiveClientPromotionWithMeta` 동적 import 잔존 0건 (helper 안에서만 호출). 변경: +35 / -40, 2 files.
+
+#### HOTFIX 2 blocker (마스터 인지 — 본 HOTFIX 범위 외)
+
+signin / autoSignin 은 원래 만료 체크가 없던 경로 (`planExpiresAt: null` 전달 → `wasExpired=false` 보장). init.service 및 auth.middleware full-path 는 만료 체크 포함. **3 경로 간 만료 체크 격차** 가 의도된 설계인지 확인 필요. 본 HOTFIX 는 동작 변경 0 원칙으로 현행 유지. 의도된 설계가 아니라면 별도 HOTFIX 또는 plan 으로 검토.
+
+### 영향 파일
+
+**data-craft (2 files, +7/-7)**:
+- `src/widgets/button-widget/ui/useButtonWidget.ts`
+- `src/shared/lib/tenantDetector.ts`
+
+**data-craft-server (2 files, +35/-40)**:
+- `src/services/auth.service.ts`
+- `src/middlewares/auth.middleware.ts`
+
+### 외부 검증 보고서 평가 결과
+
+본 HOTFIX 가 흡수한 3 finding 외 보고서의 다른 항목:
+
+- **이미 해결됨**: SettingsFooter / ExceededItemList `createMemoryTokenStorage()` dead 호출 (`d7117e3e` HOTFIX 10 phase 19), fs-api `InitBundleResponse.auth.refreshToken optional` (grep 0건 확인)
+- **plan #152 검증과 중복**: interceptor sliding-token dead path (양 검증 모두 dead 분류), S1 InitBundleResponse 네이밍 footgun (plan #152 BE 검증 V1)
+- **ops 권고 유지**: S3 promotion 캐시 부재, S4 refresh body 정책 lint rule, setup-dev-env.sh 회전 안내 평문 — 본 plan 외 ops 권고 그대로
+
+### 운영 검증 시나리오
+
+- button-widget popup 실행: 새 창에서 `window.opener === null` 확인 (DevTools console 에서 `console.log(window.opener)` → null 출력).
+- tenant 파싱: `xxx.datacraft.ai.kr` 호스트에서 로그인 시 companyId='xxx' 정상 추출 (동작 변경 0 확인).
+- effective plan 산출: promotion 활성 client signin / autoSignin / approveUser seat / 보호 라우트 진입 4 경로 모두 동일 effective plan 결과 (helper 단일 소스).
+
+### advisor 검증
+
+본 HOTFIX 는 외부 검증 보고서의 확정 결함 흡수 + helper 통합 cleanup 으로, 신규 동작 변경 없음 + lint/typecheck PASS + 변경 범위가 작아 advisor 호출 생략. evidence: 사후 grep 0건 (`datacraft.com` / `findActiveClientPromotionWithMeta` 동적 import 잔존 0건) + lint PASS.
+
 ## v001.434.0
 
 > 통합일: 2026-05-22
