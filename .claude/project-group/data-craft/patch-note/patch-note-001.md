@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.441.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #156 HOTFIX 4
+
+### 배경
+
+v001.440.0 머지 후 마스터 디자인 추가 미세 조정 요청 — sparkline 추세선이 현재 monotone 곡선으로 부드럽게 그려지는데, 데이터 포인트 간 **직선 (linear) 연결** 로 표현되도록 변경 요청.
+
+### HOTFIX 결과
+
+#### HOTFIX 4 — sparkline 추세선 보간 monotone → linear (`ceb01ff`, data-craft)
+
+`CardWidget.tsx:383` 의 `<Area type="monotone" .../>` 의 `type` 속성을 `"monotone"` → `"linear"` 로 단일 변경. recharts 의 `type='linear'` 는 데이터 포인트 간 직선 연결 (curve interpolation 없음). 다른 속성 (dataKey / stroke / strokeWidth / fill / fillOpacity / isAnimationActive) 모두 보존.
+
+변경 +1/-1, 1 file. 다른 로직 일절 미수정. lint PASS.
+
+### 영향 파일
+
+**data-craft (1 file, +1/-1)**:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/CardWidget.tsx`
+
 ## v001.440.0
 
 > 통합일: 2026-05-22
