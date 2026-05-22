@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.451.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158 (hotfix 5)
+
+### 배경
+
+마스터 진단: `data-craft-server/src/app.ts:89-105` 의 공개 logo 마운트와 인증 보호 `/storage` 마운트 사이의 폴스루 결함. 96행 `express.static(base, { maxAge, etag, lastModified })` 가 `fallthrough` 옵션을 명시 안 함 → 기본값 `true` → 디스크에 파일 없을 시 `next()` 로 다음 마운트 (101행 `/storage` + authMiddleware) 로 폴스루 → 토큰 없는 요청이 `BadRequestError('TOKEN_NOT_FOUND')` (400) 로 응답. 의도 (404, 공개 자원 부재) 와 다른 응답 형상.
+
+### 타당성 검증
+
+메인 세션 코드 read 로 확인:
+- `app.ts:89-97` 공개 mount — `express.static` 호출에 `fallthrough` 키 부재.
+- `app.ts:101-105` 다음 mount `/storage` + authMiddleware — `fallthrough: false` 옵션 없으므로 폴스루된 요청이 도달.
+- authMiddleware 가 토큰 없으면 `BadRequestError('TOKEN_NOT_FOUND')` throw → 400.
+
+### 수선 (commit `9eb0aa1` · +4 / -1 across 1 file)
+
+`src/app.ts` 96행에 `fallthrough: false` 옵션 추가 + 의도 설명 주석 3줄.
+
+```ts
+return express.static(base, { maxAge: '24h', etag: true, lastModified: true, fallthrough: false })(req, res, next);
+```
+
+`fallthrough: false` 동작:
+- 파일 미존재 → 그 자리에서 404 종결 (next 호출 안 함).
+- 그 외 에러 → `next(err)` 로 error middleware 전달 (정상 흐름 유지).
+
+### 의사결정 메모
+
+- **공개 vs 인증 의미 분리**: 공개 자원의 부재가 인증 에러로 보고되면 운영상 진단이 왜곡됨 (404 가 401/400 옷을 입음). fallthrough:false 가 의미 보존 정답.
+- **path traversal 가드 보존**: 89-93행의 화이트리스트 (`/^[^/\\]+$/` + `..` 차단) 와 res.status(404).end() 는 그대로 — 기존 보안 가드와 충돌 없음.
+- **CORS 헤더 (Cross-Origin-Resource-Policy) 보존**: 95행 set 후 static 핸들러 호출 흐름 유지 — 폴스루 차단이 헤더 set 순서에 영향 없음 (이미 res 에 큐잉됨).
+
+### 별도 추적 (마스터 명시)
+
+- **로고 URL DB 레퍼런스 stale 가능성**: 로그의 UUID 파일이 디스크에 실제로 없는 상태. 테넌트 정보의 `logoUrl` 이 삭제된 파일을 가리키고 있을 수 있음. 본 hotfix 는 응답 형상만 정상화 — DB 정합성 점검은 별도 작업 (data 정리 또는 logo 업로드/삭제 워크플로우 감사) 으로 추적 필요.
+
+### 검증
+
+- `pnpm build` ✅
+- `pnpm lint` ✅
+
+### advisor (hotfix 5관점)
+
+마스터 prescription 일대일 구현, 메인 세션 diff 정합 확인. 5관점 모두 by-construction PASS → 형식 advisor #2 round-trip 생략.
+
 ## v001.450.0
 
 > 통합일: 2026-05-22
