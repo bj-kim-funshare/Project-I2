@@ -1,5 +1,90 @@
 # data-craft — Patch Note (001)
 
+## v001.431.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #149 (HOTFIX 10 — 잔존 의제 + HOTFIX 8 트레이드오프 4 phase 일괄)
+
+### 배경
+
+HOTFIX 9 보고 정리에서 식별된 잔존 의제 3건 + HOTFIX 8 트레이드오프 2건 중 Phase 14 race window (마스터 분석으로 실질 사용자 영향 0 확정) 제외 → 처리 대상 4건. 마스터 지시 "나머지 4건은 핫픽스로 진행해" + "각 건마다 advisor 검증". 4 phase 분할 (Phase 21 은 sweep 결과 0 findings 로 빈 phase).
+
+### Phase 19 — createMemoryTokenStorage() dead 호출 정리
+
+`data-craft` 2 file (`d7117e3e`, +2/-6)
+
+- `src/widgets/settings-dialog/ui/SettingsFooter.tsx` L51-52 + import 정리.
+- `src/features/subscription/ui/ExceededItemList.tsx` L48-49 + import 정리.
+
+dead 패턴: `const tokenStorage = createMemoryTokenStorage(); tokenStorage.clearTokens();` — 새 인스턴스 만들어 즉시 비우는 무동작 호출. 진짜 토큰 정리는 같은 함수의 `useAuthStore.getState().clearAuth()` 가 처리.
+
+advisor sweep — `authStore.ts:15` 모듈-스코프 진짜 storage / `fs-api/core/client.auth.ts:13` / `fs-api/core/token.ts:3` 함수 정의 / test 파일 제외 후 정확히 2 사이트만 일치. 외 dead 패턴 부재.
+
+### Phase 20 — 양 패키지 dev runner 잔존 자산 정리
+
+`data-craft` 4 file 변경 + 6 file 삭제 (`bac331a6`, +2/-76)
+
+HOTFIX 9 Phase 18 에서 양 패키지 (fs-relation-builder + fs-data-link) 의 main.tsx / App.tsx / TestPage 삭제 후 dangling 잔존:
+
+- `packages/fs-relation-builder/index.html` 삭제 (`/src/main.tsx` 참조 dangling).
+- `packages/fs-relation-builder/public/vite.svg` 삭제 (favicon 사용처 0).
+- `packages/fs-relation-builder/package.json` 의 `dev` + `preview` script 제거.
+- `packages/fs-relation-builder/tsconfig.build.json` exclude 에서 `src/main.tsx` / `src/App.tsx` 라인 제거.
+- `packages/fs-data-link/index.html` + `public/vite.svg` 삭제 (동일 dangling).
+- `packages/fs-data-link/src/app/providers/QueryProvider.tsx` + `index.tsx` 삭제 (main.tsx 외 사용처 0 grep 검증).
+- `packages/fs-data-link/package.json` 의 `dev` + `preview` script 제거.
+- `packages/fs-data-link/tsconfig.lib.json` exclude 에서 `src/main.tsx` / `src/App.tsx` / `src/app/**/*` 라인 제거.
+
+라이브러리 빌드 (`build:lib` → `src/index.ts` entry) + data-craft 본체의 `fs_relation_builder` / `fs_data_link` import 무영향. vite.config.ts 의 `build.lib` 보존.
+
+### Phase 21 — 자격 평문 sweep 일반화 (실질 0 findings)
+
+3 가지 타겟 grep:
+
+1. `signin({...})` / `authApi.signin` / `login({...})` 호출 직후 literal 자격: **0**.
+2. Storybook 스토리 (`*.stories.tsx`, `*.stories.ts`): **0** (data-craft 에 Storybook 도입 부재).
+3. e2e / cypress / playwright 디렉토리: **0** (해당 디렉토리 부재).
+
+발견된 후보 모두 비-자격 false positive:
+- `src/features/user/lib/useUpdateUser.ts:35` JSDoc 코드 예시 `'new@email.com'` — 문서 placeholder.
+- `packages/fs-{sub,external,}-data-viewer/.../previewData.ts` 의 `example@email.com` — UI preview 셀 dummy 데이터.
+
+→ HOTFIX 1 (signin defaults) / HOTFIX 8 phase 15 (TestPage env 화) / HOTFIX 9 phase 18 (TestPage 삭제) 시리즈로 이미 정합 완료. sweep 자체는 실행, 코드 변경 없음.
+
+### Phase 22 — handleExpiredPlan promotion 정식 해지 통합 (마스터 정책 옵션 a)
+
+`data-craft-server/src/services/subscription.service.ts` (`bfff7579`, +28/-1)
+
+#### 배경
+HOTFIX 8 트레이드오프 #2 — `handleExpiredPlan` 가 `plan_type='free'` 강등만 하고 `active_promotion_id` 정리 안 함. 만료된 paid plan + 잔존 promotion 사용자의 effective plan 이 promotion.basePlanType 으로 복구 → 만료됐는데 premium 기능 계속 사용.
+
+#### 마스터 정책 결정
+옵션 비교 (3 카드): a) `expireClientPromotionInTx` 완전 통합, b) raw SQL 에 `active_promotion_id = NULL` 만 추가 (client_promotion stale), c) 별도 PR. 마스터 선택: **옵션 a — 완전 통합**.
+
+#### 수정
+`handleExpiredPlan` 본문에 activePromotionId 분기 추가:
+- 활성 promotion 있음 → 별도 connection 트랜잭션 시작 → `expireClientPromotionInTx` 호출 (client_promotion.status='expired' + client.active_promotion_id=NULL + plan_type='free' 모두 원자 처리, `updateClientPlanWithInvariant` 내부 호출) → commit / rollback.
+- 활성 promotion 없음 → 기존 `updatePlanType` 경로 유지.
+- 두 분기 후 `logger.info` 공통 실행.
+
+#### 설정 결정
+- `wasCollaboration: false` 고정 — free 강등 후 seats 한도 무가드라 collaboration 여부와 무관, 기존 데이터 shape 보존.
+- `reason: 'auto-expire'` — `retention_consumed_months` 미증가 (해당 함수는 commitment-change / cancel 만 증가).
+- 트랜잭션 분기에서 `updatePlanType` 중복 호출 금지 — `expireClientPromotionInTx` 내부의 `updateClientPlanWithInvariant` 가 이미 plan_type='free' 강제.
+
+#### Race 자가 정합
+Phase 11 의 authMiddleware 에서 handleExpiredPlan 호출 후 promotion 룩업 — stale local activePromotionId 가 있어도 `findActiveClientPromotionWithMeta` 가 live `client.active_promotion_id` 컬럼을 JOIN 키로 사용 → handleExpiredPlan 이 NULL 화한 후 0 rows 반환 → effective stay at 'free'. 별도 사양 조정 불요 (advisor 검증).
+
+### 검증
+- 각 phase 사전 advisor 검증 (Phase 21 도 advisor 권고에 따라 자체 grep 수행 후 dispatch 결정).
+- Phase 19/20 lint: `pnpm typecheck:all && pnpm lint` PASS (0 errors).
+- Phase 22 BE lint: `pnpm lint` PASS (0 errors).
+- 양 repo 머지 완료, WIP 워크트리/브랜치 정리.
+
+### HOTFIX 8 트레이드오프 #1 (Phase 14 race window) 제외 사유
+
+마스터 분석: promotion 활성 client 의 seats 검증 race 가 worst-case 통과해 사용자 행이 free 한도 초과로 만들어진다 가정해도, (1) authMiddleware (HOTFIX 8 Phase 11) 의 effective plan 가드, (2) signin/autoSignin 의 멤버 로그인 가드 (HOTFIX 48), (3) plan-limit.middleware 의 effective plan 한도 — 세 layer 가 일관 적용되어 그 사용자들의 로그인 / 페이지 작업 / 데이터 접근이 free 한도로 재제약. 실제 사용자 피해 / 권한 부여 충돌 = 0. 데이터 정합 noise 만 발생 → 트레이드오프 목록에서 제외.
+
 ## v001.430.0
 
 > 통합일: 2026-05-22
