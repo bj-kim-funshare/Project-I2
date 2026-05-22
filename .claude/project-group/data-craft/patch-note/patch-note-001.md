@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.446.0
+
+> 통합일: 2026-05-22
+> 플랜 이슈: #158
+
+### 배경
+
+마스터 명령: `/plan-enterprise data-craft, 다음 배포가 실패했어, 해결해` → 직전 `/pre-deploy data-craft` 가 `data-craft-server` `pnpm build` 단계에서 `src/tests/__fixtures__/billing.fixtures.ts` 의 `expect()` (vitest 전역) 미해결로 TS2304 실패. 마스터 추가 지시: 테스트 현재 운용 안 하니 4개 멤버 레포 전체에서 vitest/jest 인프라를 다 걷어내는 쪽으로 진행. `data-craft-ai-preview` 는 사전 확인 결과 이미 클린이라 페이즈 없음.
+
+### 페이즈 결과
+
+- **Phase 1 (data-craft-server)** — `8d70ccb` · 124 files / +1 / -17,473. `src/tests/`, `src/**/__tests__/`, `tests/` (복수, root), `vitest.config.ts` 일괄 git rm. `package.json` 의 `test`/`test:watch` 스크립트 + vitest/@vitest/coverage-v8/supertest/@types/supertest devDep 제거 후 `pnpm install`. `.github/workflows/pr-ci.yml` 의 `test:` job 블록 삭제. **API 테스터 HTML (`test/` 단수) + `i-work-station/test/` 보존**. `pnpm build` exit 0, `pnpm lint` exit 0 검증 — 직전 배포 실패 원인 해소.
+- **Phase 2 (data-craft)** — `021d8748` (sweep) + `738f277b` (TypeId fixup) · 875 files / +273 / -121,226. root + 모든 `packages/*/src/` 의 `__tests__/`, `tests/`, `*.test.{ts,tsx}` 약 860개 일괄 삭제. vitest.config.ts 7개 + jest.config.js 1개 제거. 모든 영향 `package.json` 정리 + `pnpm-lock.yaml` 재생성. `.github/workflows/pr-ci.yml` 정리. **사후 스코프 확장**: vitest 제거의 기계적 결과로 `tsconfig.json`/`tsconfig.node.json` (vitest/globals types 제거), `vite.config.ts` (vitest/config → vite, test 블록 제거), `clipboardSerializers.ts` (삭제된 테스트 헬퍼 TypeId import → 원본 literal union 20종 인라인 복원) 도 메인 세션 7c 검증 후 승인. typecheck:all ✅ / lint ✅ (0 errors).
+- **Phase 3 (data-craft-mobile)** — `182cc5e6` · ~290 files / +155 / -32,976. data-craft-mobile root + 7개 mobile package 에서 vitest 인프라 일괄 제거. tsconfig.json/vite.config.ts 도 Phase 2 와 동일 패턴으로 사후 승인 수정. **`apps/flutter-shell/test/` (Dart Flutter 테스트) 보존**. `.github/workflows/mobile-build.yml` 에 test job 없음 (no-op). typecheck ✅.
+
+### 영향 파일
+
+- **data-craft-server**: `src/tests/`, `src/**/__tests__/`, `src/**/*.test.ts`, `tests/`, `vitest.config.ts`, `package.json`, `pnpm-lock.yaml`, `.github/workflows/pr-ci.yml` (124 files / -17,473 lines).
+- **data-craft**: `tests/`, `src/widgets/**/__tests__/`, `packages/*/src/{__tests__,__fixtures__,tests}/`, `packages/*/src/**/*.{test,spec}.{ts,tsx}`, `packages/*/vitest.config.ts`, `packages/fs-relation-builder/jest.config.js`, `vitest.config.ts`, root + 7개 `packages/*/package.json`, `pnpm-lock.yaml`, `.github/workflows/pr-ci.yml`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`, `packages/fs-data-viewer/src/features/grid/hooks/grid-clipboard/clipboardSerializers.ts` (875 files / -121,226 lines).
+- **data-craft-mobile**: root + `packages/*/src/{__tests__,tests}/`, `packages/*/src/**/*.test.{ts,tsx}`, `packages/*/vitest.config.ts`, `vitest.setup.ts`, root + 7개 `packages/*/package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `vite.config.ts` (~290 files / -32,976 lines).
+
+### advisor 결과
+
+- **#1 (계획)**: 5관점 PASS — Intent / Logic / Group Policy / Evidence / Command Fulfillment.
+- **#2 (완료)**: 4관점 PASS + **Command Fulfillment BLOCK**. 사전 존재 (i-dev baseline) 빌드 실패가 두 군데 남아 있어 `/pre-deploy` 재호출 시 다시 막힐 것 — data-craft FE 의 `src/widgets/property-drawer/...`, `PlanTabContent.tsx`, `SubViewer.widget.tsx`, `Tabs.widget.tsx` 의 TS 오류 + data-craft-mobile 의 `fs-form-builder-mobile/.../TextNumberFieldRenderer.tsx` 의 `@/shared/ui` 미해석. 본 페이즈와 무관. 마스터 결정: **핫픽스로 처리** — 본 엔트리 봉인 후 PENDING gate 에서 hotfix 페이즈 진입하여 별도 패치 엔트리 발행 예정.
+
+### 정책 enforcement 손실 고지
+
+`data-craft-server/src/tests/brand-residue-guard.test.ts`, `snake-residue-guard.test.ts` 등은 단순 기능 테스트가 아니라 "Zero-Builder 브랜드 잔재", "snake_case 잔재" 등을 막던 컨벤션 가드. 삭제 결과 향후 회귀를 막던 자동 검출 장치가 함께 사라짐 (마스터 "테스트 일괄 제거" 지시 범위 내).
+
 ## v001.445.0
 
 > 통합일: 2026-05-22
