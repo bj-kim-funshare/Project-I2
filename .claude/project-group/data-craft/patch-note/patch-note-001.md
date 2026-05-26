@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.470.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #172 (핫픽스2)
+
+### 배경
+
+핫픽스1(v001.469.0) 이후에도 progress 타입(체크리스트 완료율) value 컬럼 차트가 뷰/디자인 모드에서 여전히 빈 데이터였던 잔존 결함 해소. 핫픽스1 은 value 컬럼 행 fetch 를 추가했으나, 위젯이 클라이언트 폴백 분기 자체에 진입하지 못하는 상류 지점을 놓쳤다.
+
+### 원인 (핫픽스1 이 못 잡은 상류 지점)
+
+서버(`data-craft-server/src/services/viewer/viewer.paging.aggregation.ts:147-148`)는 groupBy 위젯의 집계 결과를 **항상** `{ groupedAggregation: <agg> }` 로 래핑한다. 서버 groupBy 미지원 타입(progress/rating/timer·수식·분포) value 컬럼은 `<agg>` 가 빈 객체 `{}` → FE 가 `{ groupedAggregation: {} }` 수신. 차트 위젯의 `if (aggregationData?.groupedAggregation)` 가 빈 `{}` 에도 **truthy** 라 server 분기로 진입 → 0개 그룹 → 빈 차트 → "표시할 데이터가 없습니다". 클라이언트 폴백이 실행되지 않아, 핫픽스1 의 row fetch 가 무의미했다.
+
+### 페이즈 결과
+
+- **Phase 3 / 핫픽스2 (fix, `1a66dd8`)**: `FsDashboard.tsx` `calcDispatcher` 의 rawResult 폴딩 지점에서 폴딩 결과의 `groupedAggregation` 이 빈 객체면 그 키를 제거(원본 불변, 복사본 삭제). → 위젯의 기존 falsy 체크가 false → 클라이언트 계산 폴백 진입 → 핫픽스1 이 확보한 progress 값 컬럼 행으로 정상 렌더. 단일 지점·FE-only·BE 무수정. 1개 파일 +19/-1.
+
+### 누적 의존성
+
+progress 등 서버 groupBy 미지원 타입 value 컬럼 차트가 뷰/디자인 모드에서 동작하려면 **세 가지가 누적되어야** 함: v001.467.0(dataKey 재발신 순서) + v001.469.0(미지원 타입 value 컬럼 행 fetch) + v001.470.0(빈 groupedAggregation 제거).
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 19 warnings).
+- 수동: progress 타입(체크리스트 완료율) value 컬럼 막대/선형/파이 위젯 상세설정 저장 후 뷰/디자인 모드에서 데이터 정상 표시(빈 메시지 소멸) 확인 (마스터 시각 검증 필수).
+
+### 비고 (후속 플래그)
+
+- **mixed-column 변종(범위 밖)**: simple+미지원 value 컬럼 혼재 차트는 groupedAggregation 이 비어있지 않아 server 분기 유지 → 미지원 시리즈 묵음 누락. 위젯별 컬럼 단위 폴백 필요한 별도 후속.
+- **empty-filter 동작**: 필터로 매칭 행이 0건이면 서버도 `{}` 반환 → 클라이언트 폴백이 0행 계산 → 동일 빈 메시지. 회귀 아님(원래도 빈 데이터).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx`
+
 ## v001.469.0
 
 > 통합일: 2026-05-26
