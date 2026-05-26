@@ -978,6 +978,148 @@ def period_state_to_json(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _iter_parent_assistant_skills(
+    records: list[dict[str, Any]],
+    initial_sticky: str,
+    initial_master: str,
+) -> list[tuple[dict[str, Any], str]]:
+    """Replay sticky-skill attribution over a sequence of records (parent or sub-agent JSONL).
+
+    Returns a list of (assistant_record, resolved_skill) tuples — one entry per assistant
+    record that has a usage block.  The resolution logic mirrors the main accumulation loop
+    exactly, including:
+      - master-prompt skill-open / plain-prompt close / gated-revert rules (lines 1090-1128)
+      - attributionSkill override applied before the resolved skill is captured
+
+    This is used by Pass A of _build_tooluse_skill_map to extract tool_use-id → skill
+    mappings without touching any accumulation state.
+
+    NOTE: This function intentionally does NOT contain any accumulation side-effects.
+    """
+    sticky_skill: str = initial_sticky
+    master_declared_skill: str = initial_master
+    active_skill_start_ts: str | None = None
+
+    out: list[tuple[dict[str, Any], str]] = []
+
+    for rec in records:
+        rec_type = rec.get("type")
+
+        if _is_master_prompt(rec):
+            msg = rec.get("message") or {}
+            content = msg.get("content")
+            text = _extract_content_text(content)
+            ts = rec.get("timestamp")
+            skill_name, _ = _parse_skill_command(text)
+            if skill_name is not None:
+                sticky_skill = skill_name
+                master_declared_skill = skill_name
+                active_skill_start_ts = ts
+            else:
+                if ts != active_skill_start_ts:
+                    if master_declared_skill in _GATED_SKILLS:
+                        text_stripped = text.lstrip()
+                        if text_stripped.startswith("플랜 완료") or text_stripped.startswith("핫픽스 완료"):
+                            sticky_skill = "메인 세션"
+                            master_declared_skill = "메인 세션"
+                        else:
+                            sticky_skill = master_declared_skill
+                    elif master_declared_skill in _KNOWN_SKILLS:
+                        sticky_skill = "메인 세션"
+                        master_declared_skill = "메인 세션"
+                    else:
+                        sticky_skill = master_declared_skill
+            continue
+
+        if rec_type == "assistant":
+            msg = rec.get("message") or {}
+            usage = msg.get("usage") or {}
+            if not usage:
+                continue
+            raw_skill = rec.get("attributionSkill")
+            if raw_skill:
+                sticky_skill = raw_skill
+            out.append((rec, sticky_skill))
+
+    return out
+
+
+def _build_tooluse_skill_map(all_jsonls: list[Path]) -> dict[str, str]:
+    """Build a map from Agent tool_use id to the skill active at dispatch time.
+
+    Two-pass algorithm with fixpoint for nested sub-agents:
+
+    Pass A.1 — parent JSONLs only: replay sticky-skill attribution (initial "메인 세션"),
+      record Agent tool_use block ids → resolved skill.
+
+    Pass A.2 — fixpoint over sub-agent JSONLs: repeatedly resolve sub-agents whose
+      meta.toolUseId is already in the map, walk their records under the resolved skill,
+      add any inner Agent tool_use ids they emit.  Repeat until no new resolutions occur.
+
+    Sub-agents still unresolved after fixpoint (parent JSONL absent / pre-I-OS era)
+    are omitted from the map; callers fall back to "unknown".
+    """
+    tooluse_to_skill: dict[str, str] = {}
+
+    def _record_agent_tool_uses(rec: dict[str, Any], skill: str) -> None:
+        """Add any Agent tool_use block ids in an assistant record to the map."""
+        msg = rec.get("message") or {}
+        content = msg.get("content")
+        if not isinstance(content, list):
+            return
+        for block in content:
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "tool_use"
+                and block.get("name") in ("Agent", "Task")
+            ):
+                tool_use_id = block.get("id", "")
+                if tool_use_id:
+                    tooluse_to_skill[tool_use_id] = skill
+
+    # Pass A.1: scan parent JSONLs
+    parent_jsonls = [p for p in all_jsonls if not is_subagent_jsonl(p)]
+    for path in parent_jsonls:
+        records = parse_jsonl(path)
+        if not records:
+            continue
+        for rec, skill in _iter_parent_assistant_skills(records, "메인 세션", "메인 세션"):
+            _record_agent_tool_uses(rec, skill)
+
+    # Pass A.2: fixpoint over sub-agent JSONLs
+    # Build list of (path, meta) for all sub-agent JSONLs not yet resolved.
+    sub_jsonls = [p for p in all_jsonls if is_subagent_jsonl(p)]
+    # Track which sub-agent paths are unresolved (their toolUseId not yet in map)
+    unresolved: list[tuple[Path, dict[str, Any]]] = []
+    for path in sub_jsonls:
+        meta = read_subagent_meta(path)
+        unresolved.append((path, meta))
+
+    # Iterate until no new resolutions
+    changed = True
+    while changed and unresolved:
+        changed = False
+        still_unresolved: list[tuple[Path, dict[str, Any]]] = []
+        for path, meta in unresolved:
+            tool_use_id = meta.get("toolUseId") or ""
+            if tool_use_id and tool_use_id in tooluse_to_skill:
+                # This sub-agent is now resolvable
+                seed_skill = tooluse_to_skill[tool_use_id]
+                records = parse_jsonl(path)
+                if records:
+                    # Walk its records under the seed skill to find any inner dispatches.
+                    # Sub-agents have no master prompts, so sticky_skill stays as seed_skill
+                    # unless an attributionSkill override appears.
+                    for rec, skill in _iter_parent_assistant_skills(records, seed_skill, seed_skill):
+                        _record_agent_tool_uses(rec, skill)
+                changed = True
+            else:
+                still_unresolved.append((path, meta))
+        unresolved = still_unresolved
+
+    return tooluse_to_skill
+
+
 def collect() -> dict[str, Any]:
     if not SESSION_DIRS[0].exists():
         return {"error": f"session dir not found: {SESSION_DIRS[0]}", "generated_at": datetime.now(timezone.utc).isoformat()}
@@ -1021,6 +1163,11 @@ def collect() -> dict[str, Any]:
         else:
             # Parent JSONLs absent (e.g. data-craft) — fall back to sub-agent JSONLs only.
             all_jsonls.extend(sub_jsonls)
+
+    # Pass A: build toolUseId → skill map before the main accumulation loop.
+    # This is a read-only pre-pass over all JSONLs; it does not mutate any accumulators.
+    tooluse_to_skill: dict[str, str] = _build_tooluse_skill_map(list(all_jsonls))
+
     for jsonl_path in sorted(all_jsonls):
         records = parse_jsonl(jsonl_path)
         if not records:
@@ -1059,11 +1206,14 @@ def collect() -> dict[str, Any]:
 
         model_counts: dict[str, int] = defaultdict(int)
 
-        # For sub-agent JSONLs: attributionSkill comes from the records themselves.
+        # For sub-agent JSONLs: seed sticky_skill from tooluse_to_skill map (Pass A).
+        # Falls back to "unknown" when the parent link is absent (pre-I-OS era, lost parent).
         # For parent JSONLs: sticky attribution logic tracks master-declared skill.
         if _is_subagent:
-            sticky_skill: str = "unknown"
-            master_declared_skill: str = "unknown"
+            _subagent_tool_use_id = _subagent_meta.get("toolUseId") or ""
+            _seeded_skill: str = tooluse_to_skill.get(_subagent_tool_use_id, "unknown")
+            sticky_skill: str = _seeded_skill
+            master_declared_skill: str = _seeded_skill
             active_skill_start_ts: str | None = None
         else:
             # Sticky skill attribution: Claude Code runtime tags attributionSkill only on
