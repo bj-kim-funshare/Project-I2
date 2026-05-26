@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.460.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #168
+
+### 배경
+
+데이터 뷰어 → 캘린더 뷰를 인쇄할 때 캘린더 본문의 일정 카드가 화면과 달리 전부 파란색으로만 출력되던 문제 해소. 인쇄 HTML 빌더가 일정별 색상 함수를 호출하지 않고 고정 CSS의 하드코딩 파란색에만 의존하던 것이 원인.
+
+### 페이즈 결과
+
+- **Phase 1 (fix, `d245bda`)**: 인쇄 캘린더 본문 이벤트 카드가 일정별 색상을 반영하도록 수정. `useCalendarPrint.ts` 에 `getEventColor` 임포트 추가, `generateCalendarGridHtml` 의 이벤트 렌더 지점에서 각 이벤트마다 `getEventColor(viewerModel, event.rowField)` 결과를 인라인 `style="background:<color>; color:#fff;"` 로 적용. 고정 CSS `.calendar-event` 의 하드코딩 파란 배경(`#e3f2fd`)·파란 좌측 보더(`#2196f3`) 제거. 화면 EventChip 및 인쇄 부록 카드의 기존 `getEventColor` 인라인 패턴과 일관.
+
+### 검증
+
+- fs-data-viewer 패키지 fresh `tsc --noEmit` = 0 errors. `pnpm lint` 잔존 경고 18건은 전부 i-dev 베이스라인 동일·변경 파일 0건(no-regression PASS).
+- 수동: 데이터 뷰어 캘린더 뷰 인쇄 미리보기에서 각 일정 카드가 화면과 동일한 일정별 색으로 표시되는지 확인 (마스터 검증).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/views/calendar/useCalendarPrint.ts`
+
 ## v001.459.0
 
 > 통합일: 2026-05-26
