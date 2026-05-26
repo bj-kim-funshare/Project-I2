@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.452.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #161
+
+### 페이즈 결과
+- **Phase 1** (`fc235d8`): 공유 `Field` 컴포넌트(`src/shared/ui/auth/Field.tsx:85`) 의 트레일링 슬롯 래퍼 className 을 `flex items-center pr-[10px]` → `flex items-center px-[10px]` 로 변경. 오른쪽 패딩만 있던 슬롯이 좌우 10px 대칭이 되어, 콘텐츠 크기인 비밀번호 보기(eye) 토글 버튼이 슬롯 왼쪽에 치우치던 외관을 좌우 대칭 중앙 정렬로 교정.
+
+### 배경
+공용 로그인(`SigninForm`) · 기업 로그인(`SubdomainLoginForm`) 의 비밀번호 필드에서 eye 아이콘이 영역 중앙이 아닌 왼쪽으로 치우쳐 보임. 근본 원인은 폼 쪽 버튼이 아니라 공유 `Field` 트레일링 래퍼의 오른쪽-전용 패딩(`pr-[10px]`). eye 버튼은 `display: inline-flex` + 단일 17×17 SVG 라 콘텐츠 크기 → 폼 inline style 정렬 추가는 픽셀 무변화(no-op) 임을 advisor 검증으로 확인하고, 한 곳(공유 래퍼) 을 좌우 대칭으로 고치는 방식을 master 가 승인.
+
+### 영향 범위
+공유 컴포넌트 변경이므로 `Field` 트레일링 사용처 전체에 적용 — eye 아이콘: 로그인 2곳, 회원가입(`UserInfoStep`·`AdminInfoSection`), 비밀번호 재설정(`ResetPasswordRequestPage`) 모두 일관 중앙 정렬. 비-eye: `VerificationCodeInput` 의 타이머 텍스트 ~10px 우측 이동(무해). settings-dialog 의 trailing 은 `PermissionCard`/`Select` 경유로 auth `Field` 와 무관 — 미영향.
+
+### 검증
+- lint gate `pnpm typecheck:all && pnpm lint` ✅ (0 errors, 18 기존 warnings)
+- advisor #1(계획) · #2(완료) 5관점 PASS, BLOCK 없음.
+
+### 영향 파일
+- data-craft:src/shared/ui/auth/Field.tsx
+
 ## v001.451.0
 
 > 통합일: 2026-05-22
