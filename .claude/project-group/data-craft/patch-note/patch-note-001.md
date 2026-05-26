@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.461.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #169
+
+### 배경
+
+데이터 뷰어 → 그리드뷰에서 "행 그룹"을 켠 상태로 그룹 헤더의 그룹 선택 체크박스("행 그룹 선택 상자")로 행을 선택해 **선택 행 삭제** 또는 **열 일괄 입력**을 실행하면 UI에 즉시 반영되지 않고 새로고침해야 보이던 문제 해소. 서버 페이징 레이어가 비그룹핑용 flat 캐시(`rowCacheRef`)와 그룹핑용 `groups` state(`useServerGrouping`)를 분리 보유하는데, 일부 변경 통지 함수가 `groups` state 를 동기화하지 않은 것이 원인. 선행 봉합(enterprise-492 HOTFIX-001)은 셀 in-place 업데이트(`updateCellInLoadedRow`)에만 `setGroups` 패치를 적용했고 삭제 경로와 그룹 기준 열 변경 케이스는 누락되어 있었다.
+
+### 페이즈 결과
+
+- **Phase 1 (fix, `5da9a32`)**: `notifyRowDeleted`(`useServerPagingOrchestrator.ts`)의 `deletedRowFields` 분기에 `setGroups` 동기화 추가 — 각 그룹 `rows`에서 삭제 행 제거, 제거 개수만큼 `rowCount` 감소, `rowCount`가 0이 된 그룹 제거. enterprise-492 HOTFIX-001과 동일한 immutable ref-replace + `changed` 가드 패턴. 그룹핑 모드 선택 행 삭제 즉시 반영.
+- **Phase 2 (fix, `33ccae3`)**: 그룹 기준 열 일괄 입력 잔여 결함 수정. 일반 열은 HOTFIX-001 in-place 패치로 이미 반영되나, 변경 열이 그룹 기준 열(`rowGroupingColumnField`)이면 행이 새 그룹으로 이동해야 하는데 셀만 in-place 패치되어 옛 그룹에 잔존했다. `onBatchInputSaved`(`FsDataViewerRouter.tsx`)에 `needsGroupRefetch` 플래그 추가 — 그룹 기준 열인 경우 콜백 끝에서 `triggerRerender()` 대신 `handleViewRefresh()`(수동 새로고침과 동일 remount→그룹 재조회) 호출. enterprise-475 자동기록(log/lastUpdate) `saveChange` 디스패치는 early-return 하지 않고 항상 실행되도록 보존(회귀 방지).
+
+### 검증
+
+- data-craft lint gate(`pnpm typecheck:all && pnpm lint`) = 0 errors (잔존 경고 18건은 i-dev 베이스라인 동일, 변경 파일 0건 — no-regression PASS).
+- 수동: 행 그룹 활성화 → 그룹 헤더 체크박스로 그룹 선택 → 선택 행 삭제 시 새로고침 없이 즉시 사라지고 그룹 카운트 감소(빈 그룹 제거) 확인. 그룹 기준 열 일괄 입력 시 행이 올바른 그룹으로 즉시 이동 확인. 일반 열 일괄 입력 무회귀 확인.
+
+### 알려진 후속 / 주의
+
+- 그룹 기준 열 일괄 입력의 재조회 경로에서, 자동기록(log/lastUpdate) `saveChange` 큐 flush 와 `handleViewRefresh` 재조회 간 비동기 경합 가능성(speculative) — 재조회가 먼저 끝나면 자동기록 컬럼이 일시적으로 stale 표시될 수 있음. 실제 보고 시 큐 flush 후 재조회 순서 보장으로 보강 예정.
+- `notifyRowAdded`(행 추가)도 동일 클래스 `groups` 미동기 결함이 있으나 사용자 미보고·도달성 미확인으로 본 플랜 제외. 발생 시 핫픽스 처리.
+- `group.rowCount`(서버 총개수) vs 로드분 정합: 부분 로드 그룹에서 삭제 시 카운트가 서버 실제값과 미세 어긋날 수 있으나 다음 재조회에서 자기 교정(허용).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/server-paging/useServerPagingOrchestrator.ts`
+- `packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx`
+
 ## v001.460.0
 
 > 통합일: 2026-05-26
