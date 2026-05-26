@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.459.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #167
+
+### 배경
+
+설정 → 권한 관리 → 권한 그룹 편집 모달과 디자인 모드 권한에 모여 있던 4개 문제 해소. 페이지별 접근 권한의 부모/자식 비대칭 UX, 빌더 CUD 403 회귀, 디자인 모드 권한 통합.
+
+### 페이즈 결과
+
+- **Phase 1 (BE, `5cba4df`)**: 빌더 CUD 라우트 권한을 `design_page_edit` 단일 키로 통합(폼 CUD에서 `design_section_edit` 제거, 위젯 CUD `design_widget_edit`→`design_page_edit`). 페이지/폼/위젯/layout CUD 13개 라우트에서 죽은 `forceIncludeAuth` 제거(글로벌 authMiddleware 이후 실행되어 무효인 코드 — #33 hotfix-2에서 확정된 패턴). `PERMISSION_KEYS` 12→10개.
+- **Phase 2 (FE, `dc2d644`)**: 빌더 CUD fs-api 호출 13개(페이지 5 + 폼/위젯 8)에 `{ includeAuth: true }` 적용. 서버 authMiddleware 풀 인증 경로로 `req.user.permissions`가 적재되어 **오너 포함 전원 403 회귀 해소**(`bec2a35` #148 phase 3가 BE-only로 들어가며 FE가 includeAuth를 안 보낸 게 원인).
+- **Phase 3 (FE, `17b7f59` + `a83e653`)**: 디자인 모드 `design_section_edit`·`design_widget_edit`를 `design_page_edit`으로 통합 흡수·제거. 앱 `role.types.ts`·`permissionLabels`·`permissionHierarchy` 및 fs-api `entities.ts` 양쪽 `PermissionKey`에서 제거(타입 정합). 소비처 8개에서 `canEditSection`/`canEditWidget`을 단일 `canEditPage`로 통합, 게이팅 조건 의미 보존. SystemPermissionTree는 hierarchy 파생으로 토글 자동 제거.
+- **Phase 4 (FE, `cd2cc9b`)**: 페이지별 접근 권한 `handleToggle` 부모/자식 연동 — 자식 선택 시 미선택 부모 자동 추가, 부모 해제 시 직속 자식 일괄 해제.
+
+### 검증
+
+- data-craft: `pnpm typecheck:all` 8/8 + 루트 앱 `tsc -p tsconfig.app.json` 0 errors + `pnpm lint` 0 errors.
+- data-craft-server: eslint 변경 파일 0 errors, 잔존 키 참조 0.
+
+### 영향 파일
+
+data-craft-server:
+- `src/routes/builder.ts`
+- `src/types/roles.types.ts`
+
+data-craft:
+- `packages/fs-api/src/api/builder.layout.ts`
+- `packages/fs-api/src/api/builder.form.ts`
+- `packages/fs-api/src/types/entities.ts`
+- `src/shared/types/role.types.ts`
+- `src/features/role/lib/permissionLabels.ts`
+- `src/features/role/lib/permissionHierarchy.ts`
+- `src/widgets/settings-dialog/ui/PageAccessList.tsx`
+- `src/widgets/layout-canvas/ui/WidgetContainer.tsx`
+- `src/widgets/layout-canvas/ui/AreaControls.tsx`
+- `src/widgets/layout-canvas/ui/SubAreaControls.tsx`
+- `src/widgets/layout-canvas/ui/FloatingSectionBanner.tsx`
+- `src/widgets/layout-canvas/ui/LayoutCanvas.tsx`
+- `src/widgets/property-drawer/ui/PropertyDrawer.tsx`
+- `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx`
+- `src/widgets/floating-ai-button/ui/FloatingAIButton.tsx`
+
+### 병렬 후속 (별도 /task-db-data)
+
+`role_permission` 정리: `design_section_edit`/`design_widget_edit`만 가진 역할에 `design_page_edit` 부여 후 두 키 행 삭제. (코드는 본 플랜에서 완료, DB 행 정리는 병렬 task-db-data.)
+
+### 머지 커밋
+
+- data-craft-server i-dev: `b3dd4fe`
+- data-craft i-dev: `364c94b8`
+
 ## v001.458.0
 
 > 통합일: 2026-05-26
