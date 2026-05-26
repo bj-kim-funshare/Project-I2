@@ -1,5 +1,26 @@
 # 아이OS — Patch Note (001)
 
+## v001.105.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #54
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — collect.py 2-pass 서브에이전트 스킬 귀속 (commit `22865df`)**: 모니터링 "스킬 점유 파이"에서 서브에이전트 토큰이 전부 `unknown` 으로 분류되던 버그 수정. 원인 — `collect.py` 가 서브에이전트 JSONL 의 `sticky_skill` 을 하드코딩 `"unknown"` 으로 초기화하고, 서브에이전트 레코드에 `attributionSkill` 이 없어 끝까지 유지됨. 파이는 토큰 합 정렬이라 서브에이전트가 토큰을 많이 쓰는 주에 `unknown` 이 과반(2026-W22 **57.5%**)을 차지. 해법 — `agent-<id>.meta.json` 의 `toolUseId` 가 부모 세션의 `Agent`/`Task` tool_use 레코드(=sticky 스킬 창 보유)와 일치하는 점을 이용. 명시적 2-pass: Pass A 가 부모 JSONL 선스캔으로 `{toolUseId → skill}` 맵 구축(기존 sticky 상태 머신 충실 재현), Pass B 가 서브에이전트 초기 스킬을 맵에서 시드. 중첩 서브에이전트는 fixpoint 루프로 해소. 부모 JSONL 소실(pre-I-OS) 시 `"unknown"` 폴백 보존.
+- **Phase 2 — 데이터 재생성 + README 문서화 (commit `1dbcee2`)**: `collect.py` 재실행으로 전체 집계 재생성. **경험적 검증 — 2026-W22 `unknown` 토큰 점유율 57.5% → 0% (by_skill 에서 완전 소멸)**, 이동처는 plan-enterprise (24.8%→68.8%), plan-enterprise-os (4.5%→7.9%), dev-merge/patch-confirmation 신규 출현 = 실제 디스패치 스킬. 전체(aggregate) `unknown` 은 6.3% → 3.8% (잔존분 = pre-I-OS 부모 JSONL 소실 서브에이전트, 구조적 데이터 경계). `monitoring/README.md` 에 toolUseId 귀속 모델·fixpoint·잔존 unknown 정책 영문 명문화.
+
+### 영향 파일
+
+- `monitoring/scripts/collect.py`
+- `monitoring/README.md`
+- `monitoring/data/hourly.json` (재생성; `aggregate.json`·`periods/**` 는 gitignore — `collect.py` 가 source of truth, 로컬 재생성)
+
+### Treadmill Audit
+
+NOT APPLICABLE. 본 변경은 신규 제약 메커니즘(규칙/훅/에이전트/스킬/검증축/자기-보호 invariant) 추가가 아니라 **기존 모니터링 집계 분류 로직의 버그 수정**이다. `feedback_no_prevention_treadmill.md` 3 질문은 제약 *추가* 에 적용되며 본 건은 해당 없음 — 가짜 trade-out 을 만들지 않는다. 후속 후보(별도 refactor 호출): `_iter_parent_assistant_skills` 가 메인 루프 sticky 로직을 verbatim 복제 → divergence 위험, 공통 헬퍼 추출 고려.
+
 ## v001.104.0
 
 > 통합일: 2026-05-26
