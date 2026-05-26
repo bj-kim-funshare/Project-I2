@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.469.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #172 (핫픽스1)
+
+### 배경
+
+대시보드 차트 위젯(세로/가로 막대·선형·파이)에서 value(측정) 컬럼이 "체크리스트 완료율" 같은 progress 타입일 때, 상세설정 미리보기에는 정상 표시되지만 뷰/디자인 모드에서는 "표시할 데이터가 없습니다" 가 뜨던 버그 해소. (v001.467.0 의 dataKey 재발신 수정과는 별개의 근본 원인이었음.)
+
+### 원인
+
+차트 위젯은 항상 `groupByColumnId`(라벨 컬럼)로 서버 집계를 요청하는데, 서버(`data-craft-server/src/models/aggregation/aggregation.engine.ts` ~L108)는 groupBy 가 지정되면 special(rating/timer/progress)·formula·distribution 타입을 집계에서 제외하고 simple 타입만 GROUP BY 처리한다. 따라서 progress 등 미지원 타입 value 컬럼은 서버가 `{}` 를 반환 → `groupedAggregation` undefined → 위젯은 이미 클라이언트 폴백 분기로 진입하지만, 뷰/디자인 모드 row fetch 가 label/x/y 컬럼만 가져오고 value 컬럼 행은 안 가져와 `preprocessedRows` 에 값이 없어 빈 데이터. 미리보기는 전체 위젯 컬럼(value 포함)을 가져와 클라이언트 계산하므로 정상.
+
+### 페이즈 결과
+
+- **Phase 2 / 핫픽스1 (fix, `746d9bf`)**: `serverAggregationSupport.ts` 신규 — 서버 groupBy 미지원 value 타입 Set + 판별 함수(출처: `data-craft-server` `aggregation.types.ts` 의 SPECIAL+FORMULA+DISTRIBUTION 합집합, 주석에 동기 출처 명기). `FsDashboard.tsx` Write 모드 row fetch 루프에서 bar-vertical/bar-horizontal/line 위젯의 `valueColumns`·pie 위젯의 `valueColumnField` 가 미지원 타입이면 해당 컬럼을 fetch 대상(`labelColumnIds`)에 추가 → 클라이언트 폴백 경로에 value 행 데이터 확보 → 미리보기와 동일 렌더. BE 무수정 (FE 클라이언트 폴백 방식, 마스터 선택). 2개 파일 +53/-0.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 19 warnings).
+- 수동: 데이터 뷰어 → 대시보드 → progress 타입(예: 체크리스트 완료율) value 컬럼 막대/선형/파이 위젯을 상세설정 저장 후 뷰 모드/디자인 모드에서 데이터 정상 표시(빈 메시지 소멸) 확인 (마스터 검증).
+
+### 비고 (후속 플래그)
+
+- **mixed-column 변종 (범위 밖)**: 한 차트 위젯에 simple 타입 + 미지원 타입 value 컬럼이 함께 있으면, 서버가 simple 쪽 `groupedAggregation` 을 반환 → FE 가 서버 분기로 가서 미지원 타입 시리즈가 묵음 누락(빈 메시지는 아님). 같은 근본 원인의 변종이나 본 핫픽스 범위 밖 — 위젯별 컬럼 단위 폴백이 필요한 별도 후속.
+- **타입 셋 수동 동기**: `serverAggregationSupport.ts` 의 타입 합집합은 BE `aggregation.types.ts` 와 수동 동기. 서버가 새 미지원 타입 추가 시 FE 도 함께 갱신 필요(주석에 출처 명기).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/serverAggregationSupport.ts` (신규)
+
 ## v001.468.0
 
 > 통합일: 2026-05-26
