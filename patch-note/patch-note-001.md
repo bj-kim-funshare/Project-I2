@@ -1,5 +1,23 @@
 # 아이OS — Patch Note (001)
 
+## v001.104.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #53
+> 대상: 아이OS
+
+### 페이즈 결과
+
+- **Phase 1 — autoMode.allow gh-issue carve-out 추가 (commit `8b75230`)**: `.claude/settings.json` 의 `autoMode.allow` 배열에 영어 산문 carve-out 1개 추가. 내용 — `plan-enterprise` / `plan-enterprise-os` 스킬이 issue-as-source-of-truth 절차의 일부로 실행하는 `gh issue create` / `gh issue comment` / `gh issue close` (leader repo 또는 harness repo 대상) 인가. 안전 근거: 추적 메타데이터 게시일 뿐 코드 머지 아님 + 플랜 자체가 ExitPlanMode 승인 통과 + 이슈 작업이 issue-as-source-of-truth 핵심 단계. 권한은 스킬명 + 절차 단계에 바인딩(b73de27 의 DB carve-out 형식 모방)해 hostile read 가 두 스킬 밖 `gh issue` 로 확대 해석하지 못하게 함. 기존 4개 배열 원소(`$defaults` + carve-out 3개)는 byte-for-byte 보존, `permissions.allow` 미수정. 배경: 잡 세션(autoMode)에서 `permissions.allow`(대화형 전용)가 적용되지 않아 분류기가 `gh issue` 작업을 비결정적으로 차단하던 문제(2026-05-26 data-craft #161 관측) 해소.
+
+### 영향 파일
+
+- `.claude/settings.json`
+
+### Treadmill Audit
+
+NOT APPLICABLE. 본 변경은 신규 제약 메커니즘(규칙/훅/에이전트/스킬/검증축/자기-보호 invariant) 추가가 아니라 **기존 autoMode 게이트를 완화**하는 carve-out 1건 추가다. `feedback_no_prevention_treadmill.md` 3 질문은 제약 *추가* 에 적용되며 완화는 Q3(폐기 1건) trade-out 대상이 아니므로 가짜 trade-out 을 만들지 않는다.
+
 ## v001.103.0
 
 > 통합일: 2026-05-21
