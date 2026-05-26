@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.457.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #154 (Phase 12-13 / 14 부분 마일스톤 3)
+
+### 배경
+
+주석 최신화 플랜 (#154) 의 세 번째 부분 마일스톤. data-craft-server BE 측 Phase 12-13 완료분 머지. 마지막 Phase 14 (middlewares/utils/config/types/index.ts/app.ts) + advisor #2 종합 검증 + 최종 마무리는 다음 사이클로 이연.
+
+전체 14 페이즈 중: Phase 1-7 (v001.444.0) + Phase 8-11 (v001.454.0) = data-craft FE 전체 / Phase 12-13 (본 엔트리) = data-craft-server BE 대부분. 남은 것은 BE Phase 14 단 1개.
+
+### Phase 결과 (12-13)
+
+| Phase | 영역 | 커밋 | 변경 |
+|-------|------|------|------|
+| 12 | data-craft-server services/+models/ | `658f2c05` + `44a505c` | ~82 파일 |
+| 13 | data-craft-server controllers/+routes/+schemas/ | `a28bcb79` | 22 파일, -53/+50 |
+
+**누계 (12-13)**: 머지 diff 104 파일 -469/+448. @사용처 전량 소거, Enterprise NNN/Phase N/PHASE-N/normal-NNN/HOTFIX/Critical-NNN/BUG-P-NNN/plan-enterprise #NNN/변경 N 이력 prefix 제거 (WHY 본문 보존). SQL 템플릿 내부 주석 / 코드 객체키 (enterprise: 500) / SEC-SRV 보안 식별자 / 제품 티어명 carve-out 보존. aggregation·paging 계산 WHY 주석 보존.
+
+### 비고
+
+- `schemas/v2/social/README.md` 의 enterprise-408/Phase 0 이력 prefix 는 .md 문서 파일이라 본 플랜 (코드 주석) 범위 외 — 보존.
+
+### 후속 (마지막)
+
+- **Phase 14**: data-craft-server `src/middlewares/` + `src/utils/` + `src/config/` + `src/types/` + `src/index.ts` + `src/app.ts`.
+- **재개 절차**: data-craft-server i-dev 가드 → `plan-enterprise-154-comment-refresh-작업-data-craft-server` WIP lazy 재생성 (최신 i-dev 기준) → Phase 14 → **Step 8 advisor #2** (5-perspective 종합) → 최종 patch-note → **Step 11 PENDING 게이트**.
+
+### 영향 파일
+
+**data-craft-server (104 files)**: `src/services/`, `src/models/`, `src/controllers/`, `src/routes/`, `src/schemas/` 전 영역. 상세는 머지 커밋 `22b7558` stat 참조.
+
 ## v001.456.0
 
 > 통합일: 2026-05-26
