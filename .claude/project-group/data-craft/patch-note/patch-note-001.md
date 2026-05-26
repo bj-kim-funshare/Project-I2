@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.467.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #172
+
+### 배경
+
+데이터 뷰어 → 대시보드 뷰에서 보드 위젯의 상세 설정을 변경·저장해도, 상세 설정 미리보기에는 데이터가 정상 표시되는데 뷰 모드와 디자인 모드에서는 "표시할 데이터가 없습니다" 가 나오던 버그 해소. 원인은 초기 fetch 레이스가 아니라, 위젯 config 변경 시 서버 배치 집계 재발신을 판정하는 `dataKeyChanged` 가 self-comparison 으로 항상 false 가 되어 재집계가 발신되지 않은 것.
+
+### 페이즈 결과
+
+- **Phase 1 (fix, `598623a`)**: `FsDashboard.tsx` Write 모드(뷰/디자인) 데이터 로드 effect 에서 `prevWidgetDataKeysRef.current = currentDataKeys` 조기 할당을 제거하고, emission 루프 전에 `const prevWidgetDataKeys = prevWidgetDataKeysRef.current` 로 이전 키맵을 캡처. 루프의 `dataKeyChanged` 비교가 올바른 이전 맵을 참조하게 되어 초기 로드 이후 config 변경 시에도 `queueRequestCalc` 재발신이 정상 발생 → `widgetDataMap` 갱신 → 빈 상태 해소. ref 재할당은 루프 완료 후로 이동(바로 위 `filtersChanged`/`prevFiltersKeyRef` 와 동일한 compute-then-reassign 대칭). `getWidgetDataKey` 의미는 유지하여 색상 등 표시 전용 설정 변경 시 불필요 재집계 없음. 1개 파일 +3/-2.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 기존 warning 18개 그대로).
+- 수동: 데이터 뷰어 → 대시보드 → 보드 위젯 상세설정 변경·저장 후 뷰 모드/디자인 모드에서 데이터가 정상 표시되는지(빈 상태 메시지 소멸), 색상 등 표시 전용 설정만 바꿨을 때 불필요한 재집계가 늘지 않는지 확인 (마스터 검증).
+
+### 비고 (후속 플래그)
+
+- **early-return staleness (무해)**: `widgetEmissions.length === 0 && !hasUserListWidget` early-return 경로에서는 루프 후 ref 재할당이 스킵되어 다음 run 의 이전 키맵이 stale 로 남을 수 있으나, emission 대상 위젯이 0개인 상황이라 무해 — 위젯이 추가/완성되면 다음 run 에서 dataKeyChanged=true 로 정상 emit.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx`
+
 ## v001.466.0
 
 > 통합일: 2026-05-26
