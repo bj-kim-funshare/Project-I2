@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.465.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #168 (핫픽스2)
+
+### 배경
+
+간트 뷰 인쇄(MONTH 모드)에서 월 구분선이 헤더와 본문이 정렬되지 않던 문제 해소. 헤더의 최우측 월(예: 5월) 우측 경계가 차트 우측 테두리보다 32px 안쪽에서 끝나 본문 행/프레임과 어긋났다.
+
+### 페이즈 결과
+
+- **Phase 4 / 핫픽스2 (fix, `4a05512`)**: 원인은 `computeUsablePx` 가 진행률 라벨 잘림 방지용 우측 여백(#129 HOTFIX 13/14, -8→-32)을 **타임라인 전체** 폭에서 빼던 것 — 헤더 월 셀·본문 그리드·구분선이 모두 32px 좁아져 차트 테두리와 어긋났다. 여백을 "타임라인 전체"에서 "막대 렌더 우측 끝"으로 이전: `computeUsablePx` 의 `-32` 제거(타임라인이 차트 폭을 가득 채움) + `BAR_SAFETY_PX=32` 상수 신설(주석에 #129 H13/14 근거 명시) + DAY 모드(`canvasWidth` 기준)·MONTH 모드(`usablePx` 기준) 막대 우측 끝 클램프로 라벨 잘림 방지 invariant 유지. `printHtmlBuilder.ts` 단일 파일 +18/-3.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors).
+- 수동: 간트 뷰 인쇄(MONTH 모드) 미리보기에서 최우측 월 우측 경계가 차트 테두리·본문과 정렬되는지, 최우측 막대 진행률 라벨이 잘리지 않는지 확인 (마스터 검증).
+
+### 비고 (후속 플래그)
+
+- **정확도 트레이드오프(의도적 수용)**: `BAR_SAFETY_PX` 캡은 타임라인 우측 끝 32px 안에 끝나는 막대의 시각적 길이를 최대 32px 단축시킨다. MONTH 모드는 일 단위 px 가 작아 무시 가능하나, DAY 모드 단일-셀 막대가 최우측 셀에 위치하면 가시적 축소가 생길 수 있다. #129 H13/14 라벨 잘림 방지 invariant 를 위한 의도적 표현 변화이며, 추후 진행률 라벨을 막대 외부로 빼는 리렌더가 도입되면 `BAR_SAFETY_PX` 자체가 제거 후보.
+- **mid-divider 라운딩 드리프트(미수정 플래그)**: MONTH 모드 mid-divider 는 `Math.round((midOffsetDays/totalDays)*usablePx)`(일 비율)로, boundary divider 는 누적 `e.width`(반올림 폭)로 계산 — 1~2px 어긋날 수 있음. 권위 기준은 `e.width`. 본 핫픽스 범위 외, 추후 정리 후보.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
 ## v001.464.0
 
 > 통합일: 2026-05-26
