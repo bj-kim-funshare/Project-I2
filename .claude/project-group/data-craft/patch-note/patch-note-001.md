@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.458.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #154 (Phase 14 / 14 + 플랜 전체 완료)
+
+### 배경
+
+주석 최신화 플랜 (#154) 의 **마지막 페이즈 (14) 머지 + 플랜 전체 완료**. data-craft (FE) + data-craft-server (BE) 두 저장소 전 소스의 주석을 현재 코드·로직·아키텍처에 맞게 감사·최신화 완료. 코드 무수정 (주석 only) 정책을 14 페이즈 전 구간 hard guard 로 강제.
+
+### Phase 14 결과
+
+| Phase | 영역 | 커밋 | 변경 |
+|-------|------|------|------|
+| 14 | data-craft-server middlewares/+utils/+config/+types/+index.ts+app.ts | `28bfa5e7` | 20 파일, -212/+208 |
+
+@사용처 1건 (sensitiveFieldMask.ts) + enterprise-NNN/PHASE-N/normal-NNN/HOTFIX/BUG-P-NNN 이력 prefix 제거. **SEC-SRV-14/49/50/52 보안 식별자 보존** (me-393-zone/DRAFT 래퍼만 제거). constant.ts message 스트링 리터럴 내 Enterprise NNN 24건 코드 값 carve-out 보존.
+
+### 플랜 전체 완료 요약 (14 페이즈)
+
+| 마일스톤 | 페이즈 | 패치노트 | 머지 커밋 |
+|----------|--------|----------|-----------|
+| FE 소형+뷰어 | 1-7 | v001.444.0 | data-craft `d340717b` |
+| FE external 뷰어+루트 | 8-11 | v001.454.0 | data-craft `f55e326c` |
+| BE services/models/controllers/routes/schemas | 12-13 | v001.457.0 | data-craft-server `22b7558` |
+| BE middlewares/utils/config/types/index/app | 14 | v001.458.0 (본 엔트리) | data-craft-server `b20a784` |
+
+### 변경 규모 breakdown (정직한 분모)
+
+전체 ~1,100 파일 수정의 성격별 분해:
+- **stale 참조 sweep (~대부분)**: `@사용처` 일괄 삭제 + Enterprise NNN / Phase N / PHASE-N / normal-NNN / HOTFIX / enterprise-NNN / 변경 N 이력 추적 prefix 제거. CLAUDE.md "Don't reference callers" / "Don't add comments" 정책 정합. WHY 본문은 전량 보존.
+- **의미 불일치 정정 (~30-60건)**: 코드와 어긋난 주석 갱신 / 죽은 주석 삭제 (예: camelCase rename 잔존, ConnectionLine 거리 오설명, fs_api import 금지 모순 헤더, tokenSync JSDoc 기본키 오기, v3.19.0 stale TODO 등).
+- **신규 WHY 주석 (7건)**: 비자명 제약·인비전트 지점 최소 보충 (5% 가이드라인 충분 통과).
+
+> **운영 노트 — 정책 ratification**: stale 참조 sweep 은 마스터의 option-2 ("감사 후 어긋난 것 수정 + WHY 보충") 위에 메인 세션이 CLAUDE.md 근거로 추가한 운영 결정. v001.444.0 / v001.454.0 / v001.457.0 세 마일스톤 패치노트에 정책이 명시된 채 컨펌-머지-배포 사이클을 통과해 ratify 됨.
+
+### 운영 결정 (전 페이즈 공통)
+
+- carve-out: JSX `{/* */}` / trailing `// ...` (코드부 무변경) / `/* dead-code */` 블록 통째.
+- 트레일링 주석 제거 시 앞 쉼표/세미콜론/괄호 절대 변경 금지 (단순 `s/\/\/.*$//` 금지).
+- SQL 템플릿 내부 주석 / 코드 객체키 / SEC-SRV 보안 식별자 / 제품 티어명 / i18n 번역 값 carve-out.
+- self-guard 의무 + 메인 세션 per-phase comment-only diff guard (Phase 14 는 270 hit 전수 검증 → 진짜 코드 변경 0건 확인).
+
+### 검증 / 잔여
+
+- **빌드 검증 이연 (master decision Z)**: per-phase lint 게이트는 워크트리 node_modules 미존재로 면제. FE + BE Phase 12-13 은 외부 배포 사이클에서 빌드 통과 확인됨. **BE Phase 14 변경 (.d.ts 영향 가능한 JSDoc 수정 포함) 은 아직 빌드/타입체크 미경유 — 다음 배포 사이클에서 검증 필요**.
+- **cosmetic 잔여**: fs-external-data-viewer features/app 의 이력 prefix ~9건 (Phase 10 캡 소진). 주석 정확성 무영향.
+- **별도 PR 권장 code bug** (주석 범위 외): `grid-json.ts` L428 `json['dataViewerTitle'] ?? json['dataViewerTitle']` tautology. 주석이 아니라 코드-half 의 결함 — "주석만" 정책상 미수정, 완전한 주석↔코드 정합은 이 코드 수정 후 달성.
+
+### 영향 파일
+
+**data-craft-server (Phase 14, 20 files)**: `src/middlewares/`, `src/utils/`, `src/config/`, `src/types/`, `src/index.ts`, `src/app.ts`. 상세는 머지 커밋 `b20a784` stat 참조.
+
 ## v001.457.0
 
 > 통합일: 2026-05-26
