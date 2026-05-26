@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.463.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #170
+
+### 배경
+
+공용·기업 인증 화면(로그인/회원가입)의 좌측 상단 브랜드 마크가 기존 "M"자형 인라인 SVG 아이콘으로 표시되던 것을, 마스터 제공 이미지(데이터플로우/스키마 다이어그램)로 교체. 브랜드 헤더는 단일 공유 컴포넌트 `Wordmark` 가 렌더하므로 공용(`SigninPage`/`SignupPage`)·기업(`SubdomainLoginPage`/`SubdomainRegisterPage`) 4개 화면에 일괄 반영된다.
+
+### 페이즈 결과
+
+- **Phase 1 (feat, `1b56152`)**: `Wordmark` 의 인라인 M SVG 를 마스터 제공 PNG 로 교체. PNG 를 `<img>` 로 직접 쓰면 다크 모드에서 검정 아이콘이 사라지므로, PNG 의 알파 채널을 **CSS mask** 로 사용하고 `background-color: var(--auth-ink-1)` 로 채워 기존 M 과 동일한 테마 적응(라이트=검정/다크=흰색)을 보존했다. `size` prop·부모 div·gap·"DataCraft" 텍스트 span 은 변경하지 않음.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors). 루트 앱 `tsc -p tsconfig.app.json` exit 0 (PNG import 해소 확인).
+- 수동(마스터 검증 필요): `/signin`·`/signup`·서브도메인 로그인/회원가입 화면 좌상단 마크가 교체되고 라이트/다크 양쪽에서 보이는지, 17px 슬롯에서 다이어그램 디테일이 과밀하지 않은지 확인.
+
+### 영향 파일
+
+data-craft:
+- `src/assets/auth-wordmark-mark.png` (신규)
+- `src/shared/ui/auth/Wordmark.tsx`
+
 ## v001.462.0
 
 > 통합일: 2026-05-26
