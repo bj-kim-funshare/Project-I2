@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.474.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #173 (핫픽스1)
+
+### 배경
+
+v001.472.0 으로 프리미엄 프로모션→프리미엄 전환 자체는 정상화됐으나, 전환 직후 업그레이드 모달의 프로모션(eligibility 기반) 표시가 즉시 갱신되지 않고 새로고침해야 반영되던 후속 버그 해소.
+
+### 원인
+
+`useUpgrade` 뮤테이션의 `onSuccess` 가 `subscriptionKeys.status()` 만 무효화하고 `promotionKeys.all`(promotion eligibility 쿼리)은 무효화하지 않았다. 프로모션 구매/취소 뮤테이션은 두 키를 모두 무효화하는데 업그레이드 경로만 누락 → `usePromotionEligibility` 결과가 stale 로 남아 새로고침 전까지 모달의 프로모션 UI 가 갱신되지 않았다.
+
+### 페이즈 결과
+
+- **Phase 3 (핫픽스1, FE)**: `useUpgrade` onSuccess 에 `queryClient.invalidateQueries({ queryKey: promotionKeys.all })` 한 줄 추가 (구매/취소 뮤테이션과 동일 패턴 미러). 전환 직후 모달이 새로고침 없이 즉시 갱신.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/model/subscriptionQueries.ts`
+
+### 검증 결과
+
+- data-craft lint (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors). 루트 앱 `tsc -p tsconfig.app.json --noEmit`: 패키지 dist 빌드 후 exit 0. `promotionKeys` 의 forward 참조는 onSuccess 클로저 런타임 실행이라 TDZ 무관(타입체크 PASS 확인).
+
+### 알려진 후속 부채 (별도 plan 권장)
+
+- 동일 비대칭이 `useScheduleDowngrade` / seat-change / cycle-change 등 다른 뮤테이션에도 존재(이들도 `status()` 만 무효화). 보고된 업그레이드 증상과 무관하므로 본 핫픽스 범위 외 — eligibility 에 영향을 주는 경로라면 별도 plan 으로 일괄 정리 권장.
+
 ## v001.473.0
 
 > 통합일: 2026-05-26
