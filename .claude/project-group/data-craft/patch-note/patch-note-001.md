@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.475.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #173 (핫픽스2)
+
+### 배경
+
+v001.474.0(핫픽스1)로 전환 직후 프로모션 표시가 즉시 갱신되도록 한 뒤 드러난 후속 버그 해소. 프리미엄→프로모션 전환(프로모션 구매) 후 새로고침 없이 같은 업그레이드 모달에서 곧바로 프리미엄으로 재전환하면, 전환 완료 즉시 프로모션 결제 다이얼로그가 자동으로 열리던 문제.
+
+### 원인
+
+`UpgradeDialog` 의 `promotionPurchaseOpen` 상태가 프로모션 구매 성공 후 false 로 리셋되지 않았다. `PromotionPurchaseDialog` 의 `onSuccess={() => onOpenChange(false)}` 는 부모 다이얼로그의 open prop 만 닫고(handleOpenChange 를 거치지 않으며 컴포넌트도 언마운트되지 않음) 내부 `promotionPurchaseOpen` 은 true 로 잔존. 이후 같은 세션에서 프리미엄으로 업그레이드하면 핫픽스1에서 추가된 promotionKeys 무효화로 eligibility 가 재페치되어 `eligible=true` 가 되고, 렌더 가드 `{eligibility?.eligible && <PromotionPurchaseDialog open={promotionPurchaseOpen}/>}` 가 마운트되며 stale-true 인 open 때문에 결제창이 자동으로 열렸다. 새로고침을 끼우면 컴포넌트 재마운트로 false 초기화되어 미발생.
+
+### 페이즈 결과
+
+- **Phase 4 (핫픽스2, FE)**: `UpgradeDialog` 두 지점에 `setPromotionPurchaseOpen(false)` 리셋 추가 — (1) `handleOpenChange` 닫힘 분기(다이얼로그가 어떤 경로로 닫혀도 리셋), (2) `PromotionPurchaseDialog` `onSuccess`(구매 성공 직후 소스 리셋). 이후 재전환 시 stale-true 잔존 제거.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+
+### 검증 결과
+
+- data-craft lint (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors). 루트 앱 `tsc -p tsconfig.app.json --noEmit`: 패키지 dist 빌드 후 exit 0.
+
+### 알려진 후속 부채 (별도 plan 권장)
+
+- `PlanLimitExceededDialog.tsx` 도 동일한 `promotionPurchaseOpen` 패턴을 가지며 동일 stale-true 잠재 가능 — 보고된 UpgradeDialog 경로와 별개라 본 핫픽스 범위 외. 동일 패턴 일괄 정리 시 함께 처리 권장.
+
 ## v001.474.0
 
 > 통합일: 2026-05-26
