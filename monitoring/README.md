@@ -44,6 +44,10 @@ python3 monitoring/scripts/collect.py    # data/aggregate.json 갱신
 
 - **모델별**: claude-opus-4-7 / claude-sonnet-* / claude-haiku-* 등 모델별 토큰 합계 + 추정 비용.
 - **스킬별**: JSONL 의 `attributionSkill` 필드로 분류. 페르소나 축은 §D-1 폐기 결정에 따라 빼두었음.
+
+  **Sub-agent attribution model**: `collect.py` uses a 2-pass algorithm to re-attribute sub-agent JSONL usage to the dispatching skill rather than bucketing it as "unknown". Pass 1 scans all parent session JSONLs to build a `{toolUseId → resolved_skill}` map: each sub-agent's `agent-<id>.meta.json` carries a `toolUseId` that matches an `Agent`/`Task` tool-use record in the parent session, which in turn has an `attributionSkill` from the parent's active skill window. Pass 2 seeds each sub-agent's initial `sticky_skill` from that map instead of hard-coding `"unknown"`. A fixpoint loop expands the map iteratively to resolve nested sub-agents (sub-agents that themselves spawn sub-agents).
+
+  **Residual "unknown" bucket**: sub-agents whose parent JSONL is unavailable (pre-I-OS era sessions, prior to 2026-05-10) or whose nested dispatch chain does not converge within the fixpoint loop remain classified as "unknown". This residual is expected and represents a structural data-loss boundary, not a classification defect.
 - **세션별**: sessionId (jsonl 파일명 UUID) 기준, 최근 50 개.
 - **일자별**: 머신 로컬 자정 기준 일자별 합계.
 
