@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.472.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #173
+
+### 배경
+
+설정 → 플랜 관리에서 "프리미엄 프로모션" 사용자가 "프리미엄"으로 결제하면 성공 모달은 뜨지만 플랜이 계속 프로모션으로 남고, 새로고침해도 바뀌지 않던 버그 해소.
+
+### 원인
+
+업그레이드 결제는 `POST /api/subscription/billing/upgrade` → `executeUpgradeWithDiff()` 를 탄다. 이 함수의 프로모션 종료 판정이 `isCommitmentTransition = activePromotionId != null && targetPlan !== effectiveCurrentPlan` 한 줄에 의존하는데, 프리미엄 프로모션은 `base_plan_type='premium'` 이라 `effectiveCurrentPlan='premium'`. 프리미엄(`targetPlan='premium'`) 결제 시 `targetPlan === effectiveCurrentPlan` 이 되어 판정이 false → 프로모션 미종료, `active_promotion_id` 유지 → `updateClientPlanWithInvariant` 가 택일 정책상 `plan_type='free'` 강제. 결제·payment_history 는 정상 기록되어 FE 는 성공 모달을 띄우지만, `GET /subscription/status` 는 여전히 `activePromotion≠null` + `effectivePlanType='premium'(프로모션 base)` 를 반환해 프로모션 배지가 잔존한다. 의도 명시 플래그 `replaceActivePromotion` 는 첫-결제 경로(`executeFirstPayment`)에만 구현돼 있었고 업그레이드 경로·FE 양쪽에서 미사용 상태였다.
+
+### 페이즈 결과
+
+- **Phase 1 (BE)**: `executeUpgradeWithDiffController` 가 `req.body.replaceActivePromotion` 을 읽어 서비스에 전달. `executeUpgradeWithDiff` 가 옵션을 수용하고 판정을 `activePromotionId != null && (targetPlan !== effectiveCurrentPlan || replaceActivePromotion === true)` 로 확장 → 플래그 true 시 동일 티어 프로모션도 commitment 전환(프로모션 종료 → 영구 플랜 확정). 플래그 미전송/false 시 기존 동작 보존.
+- **Phase 2 (FE)**: `BillingUpgradeRequest` 에 `replaceActivePromotion?: boolean` 추가, `UpgradeDialog.handleDirectPayment` 업그레이드 경로에서 `status?.activePromotion != null` 일 때 플래그 전송. 배지는 `useUpgrade` onSuccess 의 status 쿼리 invalidate 로 재조회되어 자동 갱신. React Compiler lint 2건(조건부 spread 제거, useCallback 의존성에 `status` 추가) 동반 교정.
+
+### 회귀 안전성
+
+collab 프로모션 동일-등급 인원 증가는 `/seats/change` → `seatChange.service.ts` 가 `executeUpgradeWithDiff` 를 내부 호출하되 `replaceActivePromotion` 를 전달하지 않으므로(undefined→false) `isCommitmentTransition=false` 유지 → 프로모션 존속 + snapshot_seats 갱신 경로 보존. FE upgradeMutation 은 플랜-등급 다이얼로그(UpgradeDialog·PlanLimitExceededDialog) 전용이라 인원-증가 경로와 무관.
+
+### 영향 파일
+
+**data-craft-server**
+- `src/controllers/billing.controller.ts`
+- `src/services/billingSubscription.service.ts`
+
+**data-craft**
+- `src/features/subscription/api/billingApi.ts`
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+
+### 검증 결과
+
+- data-craft-server lint (`pnpm lint`): exit 0.
+- data-craft lint (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors). 루트 앱 `tsc -p tsconfig.app.json --noEmit`: 패키지 dist 빌드 후 exit 0.
+
+### 범위 외 (동일 클래스 후속 후보)
+
+- `BillingSuccessPage.tsx` 신규 구독 콜백(`/billing/payment` → `executeFirstPayment`, BE 는 이미 플래그 지원) — FE 플래그 전송 미적용. 보고된 증상과 다른 플로우.
+- `PlanLimitExceededDialog.tsx` 업그레이드 — 동일 한 줄 패턴이나 보고된 설정→플랜 관리 진입과 별개. 마스터 판단으로 후속 확장 가능.
+
 ## v001.471.0
 
 > 통합일: 2026-05-26
