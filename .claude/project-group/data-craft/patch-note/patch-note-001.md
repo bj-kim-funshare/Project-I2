@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.468.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #171
+
+### 배경
+
+데이터 뷰어 → 간트 뷰에서 미분류 작업 리스트 패널(타임라인 헤더 Info 버튼으로 토글)이 여는 버튼과 무관하게 컨테이너 우상단(`absolute right-4 top-14`)에 고정으로 떠서, 버튼과 패널의 위치가 분리되어 보이던 문제 해소. 마스터 요구: 패널이 해당 버튼 위치에 나타나도록 앵커링.
+
+### 페이즈 결과
+
+- **Phase 1 (fix, `7d76745f`)**: `GanttUnclassifiedPanel` 의 부모-relative 고정 배치를 `createPortal(document.body)` 기반 fixed 팝오버로 전환. `FsGanttChart` 에서 `unclassifiedButtonRef` 를 생성해 `FsGanttTimeline` 의 Info 버튼에 연결하고, 같은 ref 를 패널에 `anchorElement` 로 전달. 패널은 `getBoundingClientRect` 기준 버튼 바로 아래·우측 정렬(`right: window.innerWidth - rect.right`) 위치에 렌더하고, capture-phase `scroll`/`resize` 리스너로 위치를 추적하며 버튼이 뷰포트 밖이면 숨김. 포털 전환에 따라 `maxHeight` 기준이 부모(`100%`)→뷰포트로 바뀌는 점을 `calc(100vh - …)` 동적 계산으로 교정. 편집 모드 이탈 시 버튼이 언마운트되어 앵커가 사라지는 것을 `isEditMode` 동기 useEffect(패널 닫기)로 방지. fs-sub-data-viewer 의 `AggregationPopover` 패턴을 차용(아래 방향). 4개 파일 +86/-16.
+  - lint hotfix 2회: (1) `isEditMode` 사용-전-선언(TS2448/TS2454) → useEffect 를 선언 이후로 이동, (2) `react-hooks/set-state-in-effect` eslint → `AggregationPopover` 컨벤션대로 disable 주석 적용.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 기존 warning 19개 그대로).
+- advisor 계획/완료 2회 PASS (Intent/Logic/Group Policy/Evidence/Command Fulfillment).
+- 수동(마스터 검증 권장): 데이터 뷰어 → 간트 뷰(편집 모드) → 타임라인 헤더 Info 버튼 클릭 → 패널이 버튼 바로 아래 우측정렬로 뜨는지, 창 리사이즈 시 따라오는지, ESC/외부클릭 닫힘, 미분류 0건/대량(100+ "더 보기") 케이스 정상 동작 확인.
+
+### 비고
+
+- 동시 진행된 #172(v001.467.0, `FsDashboard.tsx`)와 파일 디스조인트 — 충돌 없이 i-dev 머지.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/gantt-chart/timeline/types.ts`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/timeline/FsGanttTimeline.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/gantt-chart/FsGanttChart.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/unclassified/GanttUnclassifiedPanel.tsx`
+
 ## v001.467.0
 
 > 통합일: 2026-05-26
