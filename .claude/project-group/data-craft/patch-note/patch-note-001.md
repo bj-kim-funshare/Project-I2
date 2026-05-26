@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.466.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #168 (핫픽스3)
+
+### 배경
+
+간트 뷰 인쇄 DAY 모드(한 달 이내 기간)에서, 1~2일만 포함하는 좁은 월 컬럼의 전체 라벨 "2026년 5월" 이 컬럼 너비를 초과해 줄바꿈되면서 헤더 UI 가 깨지던 문제 해소. 좁은 컬럼은 연도를 생략하고 "5월" 만 표기하도록 변경. (핫픽스2의 프레임 정렬과는 무관한 별개 버그로, 동일 DAY 모드 인쇄에서 함께 노출됐을 뿐임.)
+
+### 페이즈 결과
+
+- **Phase 5 / 핫픽스3 (fix, `f721fe0`)**: `printHtmlBuilder.ts` `renderDayMode` 의 월 그룹 셀 라벨을 `g.count >= 3` 이면 `YYYY년 M월`, 아니면 `M월` 단축으로 분기 (MONTH 모드 라벨 미변경). `useGanttPrint.ts` 의 `.gantt-print-month-cell` CSS 에 `white-space:nowrap; overflow:hidden` 추가 — 어떤 폭에서도 셀이 다중 행으로 넘치지 않도록 방어 (MONTH 모드 셀에도 전파, 의도된 방어 동작). 2개 파일 +7/-1.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors).
+- 수동: 간트 뷰 인쇄 DAY 모드(한 달 이내)에서 끝자락 1~2일 월 컬럼이 "5월" 단축 표기로 줄바꿈 없이 표시되는지 확인 (마스터 검증).
+
+### 비고 (후속 플래그)
+
+- **임계값 결합**: 단축 분기 임계값 `g.count >= 3` 은 DAY_WIDTH 최소 20px(3일=60px)면 12px 폰트 풀 라벨이 들어간다는 가정. DAY_WIDTH 하한이 20 미만으로 낮아지면 임계값을 올려야 함 (코드 주석에도 명시).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+- `packages/fs-data-viewer/src/features/print/views/gantt/useGanttPrint.ts`
+
 ## v001.465.0
 
 > 통합일: 2026-05-26
