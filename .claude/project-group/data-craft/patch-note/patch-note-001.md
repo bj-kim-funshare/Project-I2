@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.471.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #172 (핫픽스3)
+
+### 배경
+
+대시보드 위젯의 "제목 아이콘" 기능을 설정·저장해도 실제 위젯(보드뷰 및 위젯 본체)에 아이콘이 표시되지 않던 버그 해소.
+
+### 원인
+
+아이콘 피커(`IconGridPicker`)는 짧은 **별칭** 이름(`bar`/`pie`/`line`/`star`/`people` 등)을 config 에 저장하지만, 렌더러(`WidgetContainer` 의 `IconSlot`)는 `LucideIcons[iconConfig.name]` 로 **lucide-react export 이름(PascalCase, `BarChart3` 등)** 을 조회했다. 별칭은 어떤 export 와도 일치하지 않아 `undefined` → `IconSlot` 이 `null` 반환 → 아이콘 미표시. 피커 타일은 미리 인스턴스화한 ReactNode(`<BarChart3/>`)로 그리므로 선택 UI 에선 아이콘이 보여, "설정·저장은 정상"으로 보였다.
+
+### 페이즈 결과
+
+- **Phase 4 / 핫픽스3 (fix, `f91a0ab`)**: 별칭→lucide 컴포넌트 **단일 매핑** `widgetIconMap.ts`(`WIDGET_ICON_MAP`) 신규. `IconSlot` 이 이 맵에서 직접 컴포넌트를 조회하도록 변경(`LucideIcons` 전체 임포트 제거), `IconGridPicker` 의 `ICON_POOL` 도 같은 맵에서 생성하여 선택 UI 와 렌더가 항상 동일 출처를 공유 → 별칭/이름 불일치 재발 차단. 저장된 config 별칭은 그대로 사용(데이터 마이그레이션 불필요). FE-only. 3개 파일 +36/-44.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 19 warnings).
+- 수동: 위젯 상세 설정에서 제목 아이콘 선택·저장 후 보드뷰/위젯 본체에 아이콘이 표시되는지 확인. (shape trace 근거상, 수정 전에는 설정 다이얼로그의 위젯 미리보기 본체에서도 아이콘이 안 보이고 피커 타일에서만 보였어야 함 — 마스터 시각 확인 권장.)
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/widgetIconMap.ts` (신규)
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/WidgetContainer.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/IconGridPicker.tsx`
+
 ## v001.470.0
 
 > 통합일: 2026-05-26
