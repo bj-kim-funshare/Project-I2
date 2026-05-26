@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.473.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #172 (핫픽스4)
+
+### 배경
+
+게이지 보드 위젯에서 값이 B/M/K 축약 없이 전체 숫자(예: `316,530,000`)로 표시되어 게이지 UI 영역을 초과(오버플로우)하던 버그 해소.
+
+### 원인
+
+게이지 위젯이 값을 `gaugeData.value.toLocaleString()` 로 표시 — 카드/파이 위젯이 쓰는 compact 축약(`formatCompactNumber`, 예: 316.5M)을 적용하지 않았다. 대형 숫자가 게이지 SVG 영역(~120px)을 넘어 UI 가 깨졌다.
+
+### 페이즈 결과
+
+- **Phase 5 / 핫픽스4 (fix, `8fbdaa2`)**: `GaugeWidget.tsx` 세 가지 형태(semicircle/circle/linear)의 값 표시를 `formatCompactNumber(gaugeData.value)` 로 교체. 동일 모듈(`dashboard-data-utils.ts`)에 이미 export 된 헬퍼 사용. 1개 파일 +4/-4.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors, 19 warnings).
+- 수동: 대형 값을 가진 게이지 위젯이 `316.5M` 형태로 축약되어 UI 초과 없이 표시되는지 확인.
+
+### 비고 (후속 플래그)
+
+- **min/max 라벨(범위 밖)**: 게이지의 min/max 범위 라벨(예 `0 - 100`)은 본 핫픽스 미수정. 사용자가 대형 min/max 를 설정하면 동일 오버플로우 가능 — 같은 클래스의 후속.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
 ## v001.472.0
 
 > 통합일: 2026-05-26
