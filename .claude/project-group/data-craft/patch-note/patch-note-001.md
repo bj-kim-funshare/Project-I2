@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.455.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: funshare-inc/data-craft#163
+
+### 배경
+
+배포된 data-craft SPA 가 `http://localhost:8000` 으로 API/스토리지를 호출해, 로컬 백엔드가 없는 QA 환경에서 `ERR_CONNECTION_REFUSED` 로 로그인이 실패하던 문제. 근본 원인은 빌드 머신의 gitignore 된 `.env.local`(`VITE_API_BASE_URL` / `VITE_BASE_STORAGE_URL` = `http://localhost:8000`)을 Vite 가 production 빌드(`vite build`, `PROD=true`)에서도 로드해 번들에 박는 것. 기존 폴백 `VITE_* || (PROD ? PRODUCTION_* : DEVELOPMENT_FALLBACK_URL)` 은 env 값이 truthy localhost 라 `||` 가 단락되어 CloudFront 폴백이 발동하지 않았다.
+
+### 페이즈 결과
+
+- **Phase 1** (`abd2042`): `src/shared/config/env.ts` 에 `resolveUrl(envValue, prodUrl)` 헬퍼 도입. `import.meta.env.PROD` 일 때 envValue 가 비어있거나 `localhost` / `127.0.0.1` / `0.0.0.0` 패턴이면 prodUrl(CloudFront) 을 강제하고, 아니면 envValue 채택. dev(`PROD=false`)는 `envValue || DEVELOPMENT_FALLBACK_URL` 기존 동작 유지. `API_BASE_URL` 과 `BASE_STORAGE_URL` 두 export 에 동일 적용. `PRODUCTION_API_URL` / `PRODUCTION_STORAGE_URL` = `https://d3u7b7cxusjkuc.cloudfront.net` 상수 유지. 실측 검증: `.env.local`(localhost) 보유 상태로 `pnpm build` 시 활성 export 가 `resolveUrl("http://localhost:8000", PRODUCTION_API_URL)` 형태로 컴파일되어 런타임에 CloudFront 로 해소됨을 grep 으로 확인 (기존 깨진 번들엔 cloudfront 상수 0개 → 본 번들 2개).
+
+### 동작 변화 주의
+
+- `validateEnv()` 는 미수정. 단, 가드가 PROD 에서 항상 값을 채우므로 `VITE_API_BASE_URL` / `VITE_BASE_STORAGE_URL` 미설정 시 발생하던 PROD 경고 로그가 더는 출력되지 않는다 (의도된 부작용). dev 모드의 경고 동작은 변동 없음.
+
+### 후속 (QA 환경 실해제)
+
+본 패치는 가드 코드를 `i-dev` 에 안착시키는 데까지다. QA 환경에서 실제 로그인 복구는 별도 단계 필요: `i-dev → main` 머지 → `pre-deploy data-craft` (재빌드 + gh-pages 재배포).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/shared/config/env.ts` (Phase 1)
+
 ## v001.454.0
 
 > 통합일: 2026-05-26
