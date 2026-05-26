@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.454.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #154 (Phase 8-11 / 14 부분 마일스톤 2)
+
+### 배경
+
+주석 최신화 플랜 (#154) 의 두 번째 부분 마일스톤. data-craft FE 측 잔여 페이즈 (8-11) 완료분 머지. data-craft-server BE 측 (Phase 12-14) + advisor #2 종합 검증 + 최종 마무리는 다음 사이클로 이연.
+
+전체 14 페이즈 중: Phase 1-7 (v001.444.0 머지 완료) + Phase 8-11 (본 엔트리) = **data-craft FE 전체 완료**. 남은 것은 data-craft-server BE 3 페이즈.
+
+### Phase 결과 (8-11)
+
+| Phase | 영역 | 커밋 | 변경 |
+|-------|------|------|------|
+| 8 | fs-external-data-viewer entities/+shared/ | `fc00b586` | 185 파일, -660/+234 |
+| 9 | fs-external-data-viewer widgets/ | `038eae2a` | 168 파일, -463/+375 |
+| 10 | fs-external-data-viewer features/+app/+pages/+잔여 | `540ae697` + `ee72a9ac` + `8094d1fa` | ~145 파일, -1389/+685 |
+| 11 | data-craft 루트 (vite.config.ts) | `e728baad` | 1 파일, -6/+6 |
+
+**누계 (8-11)**: ~500 파일, 머지 diff -1833/+966. @사용처 전량 소거, Enterprise/Phase/PHASE-N/normal-NNN/HOTFIX/enterprise-NNN/변경 N 이력 prefix 제거 (WHY 본문 보존).
+
+### 잔여 (Phase 10 캡 소진 — cosmetic, 주석 정확성 무영향)
+
+fs-external-data-viewer features/app 의 iter 1 보존 파일에 이력 prefix ~9건 잔존 (Phase 03 deadline 주석 / batch-row-delete PHASE-24/26 / app Enterprise 025·110). i18n 번역 값 + DocumentEditor normal-161 코드 키는 carve-out (보존 정상). 마스터 명령의 핵심 (주석↔코드 정확성) 에는 영향 없는 cosmetic 잔여 — 후속 sweep 가능.
+
+### 발견된 code bug (본 플랜 범위 외 — 별도 처리 권장, v001.444.0 에서 이미 보고됨)
+
+- `grid-json.ts` L428: `json['dataViewerTitle'] ?? json['dataViewerTitle']` tautology (외부 #158 빌드수선에서도 미수정 확인).
+
+### 후속
+
+- **Phase 12-14**: data-craft-server `src/services/`+`models/` / `controllers/`+`routes/`+`schemas/` / `middlewares/`+`utils/`+`config/`+`types/`+`index.ts`.
+- **재개 절차**: data-craft-server i-dev local-vs-origin 가드 → `plan-enterprise-154-comment-refresh-작업-data-craft-server` WIP lazy 재생성 (현재 빈 상태로 정리됨, 재개 시 최신 i-dev 기준 신규) → Phase 12 부터.
+- **Step 8 advisor #2** + **Step 11 PENDING 게이트**: Phase 14 종료 후.
+
+### 영향 파일
+
+**data-craft (~500 files)**: `packages/fs-external-data-viewer/src/` 전 영역 (entities/shared/widgets/features/app/pages) + 루트 `vite.config.ts`. 상세 파일 리스트는 머지 커밋 `f55e326c` 의 stat 참조.
+
 ## v001.453.0
 
 > 통합일: 2026-05-26
