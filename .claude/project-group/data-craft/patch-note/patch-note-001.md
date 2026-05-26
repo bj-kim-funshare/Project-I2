@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.456.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: funshare-inc/data-craft#165
+
+### 배경
+
+데이터 뷰어 → 대시보드 뷰 → 디자인 모드의 "보드 위젯 상세 설정"을 인-페이지 방식에서 모달(Radix Dialog) 방식으로 전환(#138 / #156)한 뒤 발생한 사용 불가 결함 3건을 복구. 모달 전환 의도는 유지하고 결함만 외과적으로 수정.
+
+### 페이즈 결과
+
+- **Phase 1** (`d9a76cb3`): 빈 위젯(`type==='unset'`)일 때 `WidgetSettingsPanel`이 380px 좌측 패널 + 미리보기 2패널·3탭을 건너뛰고 `WidgetSelector`를 모달 콘텐츠 전체 폭(`flex-1 p-6` + `h-full`)으로 렌더하도록 분기. 선택기가 ~83px 셀에 갇혀 한글 라벨이 세로로 줄바꿈되던 문제 해소. `WidgetSettingsTabs`의 죽은 `unset` 케이스·`onUpdateWidgetType` prop·관련 import 정리, `WidgetSelector` 고정 height·중복 `role="dialog"`/닫기 버튼 제거. 위젯 타입 확정 후의 2패널 경로는 100% 유지.
+- **Phase 2** (`c75badaa`): 모달 내 옵션 Select 드롭다운이 안 보이던 문제 수정. **진단(가설)**: 저장소에 z-index 사다리 파일이 둘 — `Select.tsx`는 `selectDropdown`(10600), 모달 `Dialog.tsx`는 `NESTED_MODAL_CONTENT`(12000)를 사용해 body-portal 드롭다운이 모달 뒤로 페인트됨(클릭 차단 아님). 같은 config에 미사용 전용 상수 `NESTED_MODAL_DROPDOWN`(12100)이 이미 존재한 점이 강한 정황 증거. widget-settings 하위 5개 `SelectContent`에 `style={{ zIndex: NESTED_MODAL_DROPDOWN }}` per-caller override 적용(공통 `Select.tsx` 기본값 미변경 → 27+ 글로벌 호출처 회귀 회피). 런타임 표시 확인은 마스터 수동 테스트로 위임.
+- **Phase 3** (`ba22a9db`): 크기 탭 "크기 설정"의 가로/세로 입력 컨테이너를 `flex gap-3` → `flex flex-col gap-3`으로 변경. 380px 패널에서 NumberStepper 2개가 가로로 넘쳐 가로 스크롤이 발생하던 문제 해소.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsPanel.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsTabs.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-selector/WidgetSelector.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColumnSelector.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/AggregationSelector.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/BarChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/LineChartSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/settings/GaugeSettings.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSizeInput.tsx`
+
+### 검증 한계 (마스터 수동 테스트 권장)
+
+lint(typecheck + eslint) PASS만으로는 UI/상호작용 결함을 잡을 수 없음. 다음 수동 시나리오 권장: (a) 빈 위젯 클릭 → 선택기가 모달 전체 폭에 한글 한 줄로 표시, (b) 위젯 타입 선택 후 데이터 탭에서 컬럼/집계 Select 클릭 → 드롭다운이 모달 위에 표시·선택 가능, (c) 크기 탭에서 가로 스크롤 없이 가로/세로 세로 배치.
+
 ## v001.455.0
 
 > 통합일: 2026-05-26
