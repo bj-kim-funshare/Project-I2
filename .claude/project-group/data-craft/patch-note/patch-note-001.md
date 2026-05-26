@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.462.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #168 (핫픽스1)
+
+### 배경
+
+v001.460.0 에서 캘린더 뷰 인쇄 색상을 고친 데 이어, 동일 유형의 문제가 간트 뷰 인쇄에도 있었음. 간트 막대가 화면과 달리 인쇄 시 전부 빨강색으로만 출력되던 문제 해소.
+
+### 페이즈 결과
+
+- **Phase 2 / 핫픽스1 (fix, `d659708`)**: 간트 인쇄 막대 색상이 일정별 색을 반영하도록 수정. 원인은 인쇄 경로(`printHtmlBuilder.ts`)가 `BAR_COLORS[(colorIndex ?? 0) % len]` 로 저장 색상이 없을 때 index 0(=`barPalette[0]` red500)으로 폴백하던 것. 화면 렌더러 `getBarColorForTimeline` 와 동일하게 — 저장 colorIndex 존재 시 그 색, 미존재 시 `getBarColor(row.rowField)` 행 식별자 안정 해시로 폴백하도록 3개 지점(DAY 모드 / MONTH 모드 / 간트 부록 카드) 수정 + `getBarColor` 임포트 추가.
+
+### 검증
+
+- `pnpm typecheck:all && pnpm lint` exit 0 (0 errors).
+- 수동: 간트 뷰 인쇄 미리보기에서 각 막대가 화면과 동일한 행별 색으로 표시되는지(전부 빨강이 아님) 확인 (마스터 검증).
+
+### 비고 (후속 플래그)
+
+화면 `getBarColorForTimeline` 는 3단 폴백(저장색 → `timeline.colorIndex` → rowField 해시)인데 인쇄 데이터 흐름은 중간 tier(`timeline.colorIndex`)를 추출하지 않는다. "전부 빨강" 증상과 무관하며, 해당 경로 사용 시 팔레트 내 색상 차이만 남는 잠재 항목.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`
+
 ## v001.461.0
 
 > 통합일: 2026-05-26
