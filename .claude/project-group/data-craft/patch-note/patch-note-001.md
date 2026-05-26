@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.453.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #162
+
+### 페이즈 결과
+- **Phase 1** (`b949ae6c`): 데이터 뷰어 그리드 뷰의 진행률·세계시간·국가 셀 핸들러 훅 `handleClick` 에 `isFocused && !isOverlayOpen → openOverlay()` 분기를 추가. 포커스된 셀을 단일 클릭하면 오버레이가 열리도록 교정 (기존엔 포커스 상태에서도 더블 클릭해야 열렸음).
+
+### 배경
+그리드 셀 상호작용 표준 규약은 — 미포커스 단일 클릭 → 포커싱 / 더블 클릭 → 열림 / **포커스 상태 단일 클릭 → 열림**. 날짜·롱텍스트·싱글셀렉트·코드 셀은 `if (isFocused && !isOpen) openOverlay()` 패턴으로 이미 올바르게 구현돼 있었으나, 진행률·세계시간·국가 셀 3종의 `handleClick` 은 미포커스 시 포커싱만 하고 포커스 상태 단일 클릭 분기가 누락되어 더블 클릭에만 반응했다. 정답 참조: `date-cell/useDateHandlers.ts`.
+
+### 수선 상세
+- **진행률** (`useProgressCellHandlers.ts`): `handleClick` 이 `useCallback` 이므로 deps 에 `isOverlayOpen, openOverlay, mode` 추가. 기존 `handleDoubleClick`/`handleKeyDown` 와 동일한 `isWriteMode(mode) && !isSettingMode(mode)` 가드를 미러하여 열림.
+- **국가** (`useNationCellHandlers.ts`): `handleClick` 상단의 `isReadOnly`·`isSettingMode` 조기 반환이 가드 역할을 하므로 분기만 삽입.
+- **세계시간** (`useWorldTimeCell.ts`): `openOverlay` 가 내부에서 `isSettingMode` 가드를 보유하므로 분기만 삽입.
+- 세 파일 모두 `handleDoubleClick` 은 무수정 (더블 클릭 = 열림 동작은 정상이었음).
+
+### 검증
+- lint gate `pnpm typecheck:all && pnpm lint` ✅ (0 errors, warnings only)
+- advisor #1(계획) · #2(완료) 5관점 PASS, BLOCK 없음.
+
+### 영향 파일
+- data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/FsGridProgressCellRenderer/useProgressCellHandlers.ts
+- data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/FsGridNationCellRenderer/useNationCellHandlers.ts
+- data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/useWorldTimeCell.ts
+
 ## v001.452.0
 
 > 통합일: 2026-05-26
