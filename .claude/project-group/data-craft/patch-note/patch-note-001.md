@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.476.0
+
+> 통합일: 2026-05-26
+> 플랜 이슈: #173 (핫픽스3)
+
+### 배경
+
+핫픽스2(v001.475.0) 이후에도 업그레이드(프로모션→프리미엄) 직후 사용자가 열지 않은 프로모션 결제 다이얼로그가 자동으로 노출되는 현상이 지속됨. 핫픽스1·2는 `promotionPurchaseOpen` 상태 리셋(trigger 추정)에 의존했으나 재현이 계속돼, trigger 메커니즘에 의존하지 않는 구조적 차단으로 전환.
+
+### 원인
+
+`UpgradeDialog` 의 PromotionPurchaseDialog **마운트 가드가 `eligibility?.eligible` 단독**이었다. 핫픽스1에서 추가한 promotionKeys 무효화로 업그레이드 직후 eligibility 가 재페치되어 `eligible` 이 true 로 뒤집히면, 사용자의 오픈 의도(`promotionPurchaseOpen`)와 무관하게 다이얼로그가 DOM 에 마운트되어 노출됐다.
+
+### 페이즈 결과
+
+- **Phase 5 (핫픽스3, FE)**: 렌더 가드를 `eligibility?.eligible` 에서 `step === 'select' && promotionPurchaseOpen && eligibility?.eligible` 로 강화. 프로모션 구매는 항상 select 단계의 PromotionRow 클릭(= promotionPurchaseOpen=true)으로만 진입하므로 정상 흐름은 유지되며, 업그레이드 직후(step='complete')에는 trigger 와 무관하게 렌더 자체가 차단된다.
+
+### 영향 파일
+
+**data-craft**
+- `src/features/subscription/ui/UpgradeDialog.tsx`
+
+### 검증 결과
+
+- data-craft lint (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors). 루트 앱 `tsc -p tsconfig.app.json --noEmit`: 패키지 dist 빌드 후 exit 0.
+- 구조적 차단이라 런타임 trigger 미규명 상태에서도 증상(업그레이드 직후 자동 노출)을 막음 — 실제 결제 흐름 마스터 수동 확인 권장.
+
+### 알려진 후속 부채 (별도 plan 권장)
+
+- `PlanLimitExceededDialog.tsx` 도 동일한 `eligibility?.eligible` 단독 마운트 가드 — 동일 패턴 잠재. 본 핫픽스 범위 외, 일괄 정리 권장.
+- 핫픽스1·2(promotionPurchaseOpen 리셋, promotionKeys 무효화)는 본 가드와 별개로 정상 동작에 유효하므로 유지.
+
 ## v001.475.0
 
 > 통합일: 2026-05-26
