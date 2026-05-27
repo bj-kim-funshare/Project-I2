@@ -49,7 +49,7 @@ When master prompts the main session **without** invoking a skill: main session 
 
 **Completion reporter** (`completion-reporter`): read-only + Sonnet because report-text formatting is a low-reasoning-burden task where consistency of output template matters more than judgment depth. Formats standardized Korean completion reports for skills based on a structured payload and the contract doc `.claude/md/completion-reporter-contract.md`.
 
-**Advisor fallback** (`advisor-fallback`): read-only stand-in invoked when the built-in `advisor()` tool is structurally unavailable (systemic failure); governed by `.claude/md/advisor-fallback-protocol.md`.
+**Advisor fallback** (`advisor-fallback`): read-only stand-in invoked when the built-in `advisor()` tool is structurally unavailable (systemic failure); governed by `.claude/md/advisor-fallback-protocol.md` — every advisor() call-site must carry a reference to this protocol, including any added in the future.
 
 **Advisor model = main-or-stronger (API 가드, 2026-05-13)**: Anthropic API enforces that the advisor model cannot be weaker than the main session model — Sonnet advisor + Opus main returns `400 ... 'cannot be used as an advisor when the request model is ...'`. The 2026-05-13 attempt at a Sonnet-advisor cost-saving inversion was reverted the same day after the guard was hit at runtime. Operational rule: advisor mirrors the main session's tier from above. If master drops main to Sonnet, advisor may drop to Sonnet in tandem.
 

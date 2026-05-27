@@ -5,6 +5,12 @@ Loaded on-demand; do not load unless the call-site is within a skill's advisor g
 
 ---
 
+## 0. Applicability
+
+This protocol applies to **every** `advisor()` call-site in the harness — all current ones and any call-site added in the future. Every advisor() call-site MUST include a reference to this protocol adjacent to the call; omitting it is a defect, not an omission.
+
+---
+
 ## 1. System-failure definition
 
 A **system failure** is a catchable tool error or exception returned by `advisor()` — the observable signal is a thrown/returned error from the tool invocation itself (e.g., API error, timeout with an error surface, tool unavailable). The main session keys exclusively on this positive error signal.
@@ -56,7 +62,7 @@ The call-site's existing verdict-parsing logic is unchanged. A fallback verdict 
 
 ## 5. Transparency
 
-When a verdict was delivered by the fallback agent (not by `advisor()`), the skill must include the string `(advisor-fallback 경유)` in its report or issue comment. This makes the fallback path auditable.
+When a verdict was delivered by the fallback agent (not by `advisor()`), the skill must include the string `(advisor-fallback 경유)` in its report or issue comment. This makes the fallback path auditable. In addition, the dispatching skill MUST set `advisor_source: "advisor-fallback"` in its `completion-reporter` data payload (per `.claude/md/completion-reporter-contract.md`) so the audit trail is emitted as a structured field, not just prose.
 
 ---
 
