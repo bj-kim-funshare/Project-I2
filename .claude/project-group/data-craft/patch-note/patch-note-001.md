@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.485.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스1)
+
+### 배경
+
+v001.480.0 (#177) 에서 텍스트 / 긴 텍스트 타입 셀에 적용한 "행 높이 기반 멀티라인 클램프 + 잘림 시에만 hover 툴팁" 동작을 마스터 요청에 따라 나머지 값 타입 셀에도 동일 적용: **숫자(number) / 링크(link) / 전화번호(phone) / 이메일(email) / 통화(currency) / 코드(code)**. 기존엔 이 타입들이 한 줄 고정(`truncate`)이거나 잘림 여부와 무관하게 툴팁이 떴다.
+
+### 핫픽스 결과 (누적 Phase 5)
+
+- **핫픽스1-A** (`319d1d3b`): 숫자·링크·전화번호·이메일·통화 5개 렌더러(모두 `useBaseCellRenderer` 기반)에 텍스트 셀과 동일 패턴 적용 — `useMaxLines(containerRef)` 로 행 높이 기반 멀티라인 클램프(`-webkit-box`/`WebkitLineClamp`/`wordBreak`), 표시 span 에 `contentRef`, 외곽 div 에 `useEllipsisTooltip` 의 onMouseEnter/onMouseLeave + `{tooltip}`. 숫자 셀의 기존 `truncate` 제거(`min-w-0 max-w-full` 유지). 링크 셀의 파란색/underline 스타일 보존. 잘린 경우에만 툴팁 노출.
+- **핫픽스1-B** (`ced0ae7e`): 코드(code) 셀 — 자체 커스텀 훅/`<pre>` 구문강조 구조. `<pre>` 의 `truncate` 를 멀티라인 클램프(`whiteSpace:pre-wrap` + line-clamp)로 교체하고 `useMaxLines(cellRef)` 적용. 자체 툴팁(`CodeTooltipContent`, 구문강조)은 **유지**하되 `useCodeCellHandlers` 의 hover 타이머 콜백에 `scrollHeight - clientHeight > 1` 잘림 게이트를 추가해 실제 잘린 경우에만 노출.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/widgets/cell-renderers/`:
+- `FsGridNumberCellRenderer.tsx`
+- `FsGridPhoneCellRenderer.tsx`
+- `FsGridLinkCellRenderer/FsGridLinkCellRenderer.tsx`
+- `FsGridEmailCellRenderer/FsGridEmailCellRenderer.tsx`
+- `FsGridCurrencyCellRenderer/FsGridCurrencyCellRenderer.tsx`
+- `code-cell/FsGridCodeCellRenderer.tsx`
+- `code-cell/useCodeCellHandlers.ts`
+
+(공유 훅 `useMaxLines` / `useEllipsisTooltip` 는 v001.480.0 에서 도입된 것을 재사용 — 신규 파일 없음.)
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors**. (메인 세션 직접 실행 — gate-runner 신뢰 불가 이력.)
+- 루트 앱 tsc (`tsc -p tsconfig.app.json`, 패키지 dist 빌드 후): exit 0 — 공개 API 무변경(렌더러 내부 수정만)으로 앱 영향 없음.
+- 수동 테스트 권장: 6개 타입 각각 ① 행 높이 확대 시 멀티라인 + 짧은 행 단일 라인, ② 잘릴 때만 툴팁 노출 / 안 잘리면 미노출, ③ 코드 셀 구문강조 툴팁 유지 + 편집 다이얼로그 회귀 없음.
+
+### 절차 노트
+
+- percent(백분율) 타입은 마스터 요청 목록에 없어 의도적 제외 — 필요 시 별도 요청.
+- advisor #2(핫픽스) 정상 실행, `BLOCK` 없음.
+- 코드 셀 `useCodeCellEffects` 의 scroll/blur dismiss·cellKey 리셋 이펙트는 `setShowTooltip(false)` 를 무조건 호출(긴 텍스트 Phase 3 이전 상태와 동일) — idempotent·무해하여 스코프 축소 위해 본 핫픽스에서 미정리(flag-only).
+- WIP origin push 는 분류기 차단으로 생략, 로컬 i-dev / main 머지로 완료(표준 종료점 동일).
+
 ## v001.484.0
 
 > 통합일: 2026-05-27
