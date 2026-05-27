@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.496.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #188
+
+### 배경
+
+설정 → 플랜 관리 → "플랜 업그레이드" 모달 Step1 의 프로모션 행은, 사용자가 현재 프로모션을 사용 중일 때 이름 + "현재 적용 중" 배지만 보이는 축소 형태로 렌더되어 가격·규격·유지기간·종료일·상세기능이 숨겨졌다. 마스터 요청에 따라 활성 프로모션 행도 미구매(eligible) 행과 동등하게 전체 내용을 계속 표시하고, 색상을 indigo 계통에서 파란색(blue) 계통으로 바꾸되, 구매 버튼은 활성 상태이므로 표시하지 않고 "현재 적용 중" 배지를 유지한다. 활성 프로모션의 상세 데이터가 BE 응답(`/subscription/status` 의 activePromotion)에 부족했기에 BE 응답 필드를 먼저 확장했다(DB 무변경 — 필요한 컬럼은 이미 존재).
+
+### 페이즈 결과
+
+- **Phase 1** (`f5fcee1`, feat, data-craft-server): `/subscription/status` 의 activePromotion 응답을 eligibility `PromotionSummary` 와 동등한 전체 필드로 확장. `findActiveClientPromotionWithMeta` SQL SELECT 에 `p.display_end_at`·`cp.snapshot_detail_features` 추가(나머지 snapshot_*_limit 은 이미 SELECT 중), `ActiveClientPromotionWithMeta` 인터페이스 + activePromotion 객체에 `pageLimit·groupLimit·storageLimit·fileSizeLimit·displayEndAt(ISO)·remainingRetentionMonths(계산)·detailFeatures` 7필드 추가. 기존 7필드 불변(후방호환), DB 마이그레이션 없음.
+- **Phase 2** (`1513e58`, feat, data-craft): `ActivePromotionInfo` 에 BE 신규 7필드를 optional 로 추가(배포 시점 어긋남 대비). `PromotionRow` 에 `PromotionLike` 중간 타입을 도입해 PromotionSummary·ActivePromotionInfo 모두 수용하고 `{!isCurrent}` 콘텐츠 가드를 제거 — 활성 행에서도 가격·규격·유지기간·종료일·상세기능이 표시되며 각 항목은 값 부재 시 안전 미표시. 활성 행 색상을 indigo → blue 계통으로 전환(테두리/배경/배지/하단 구분선, dark 대응). `UpgradeStepSelect` 의 인라인 축소 div 를 `<PromotionRow isCurrent>` 호출로 교체. eligible 행의 주황 구매 버튼은 변경하지 않음.
+
+> advisor 완료 검증: PASS (advisor-fallback 경유 — advisor() 과부하로 3회 재시도 후 fallback).
+
+### 영향 파일
+
+**data-craft-server (BE)**
+- src/models/promotion.model.ts
+- src/services/subscription.service.ts
+- src/types/promotion.types.ts
+
+**data-craft (FE)**
+- src/features/subscription/model/types.ts
+- src/features/subscription/ui/PromotionRow.tsx
+- src/features/subscription/ui/UpgradeStepSelect.tsx
+
 ## v001.495.0
 
 > 통합일: 2026-05-27
