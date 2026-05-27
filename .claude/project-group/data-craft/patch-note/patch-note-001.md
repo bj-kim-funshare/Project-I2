@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.487.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #183 (핫픽스1)
+
+### 배경
+
+v001.483.0에서 통합한 "데이터 탐색기"의 3탭(뷰어/서브/외부) 구성을 마스터 요청에 따라 4탭으로 재편. 외부 데이터 탐색기가 폼 데이터와 일반 데이터를 한 목록에 섞어 보여주던 것을 두 탭으로 분리하고, 탭 명칭을 명확한 그룹명으로 변경하며 각 탭의 목록 헤더 타이틀을 탭명과 동일하게 맞췄다.
+
+### 페이즈 결과
+
+- **Phase 4 / 핫픽스1** (`184c5be`): 통합 탐색기를 3탭 → 4탭으로 분리 — `데이터 뷰어 그룹` / `서브 데이터 뷰어 그룹` / `폼 데이터 그룹` / `일반 데이터 그룹`. 외부 데이터 탐색기를 `dataType` 기준으로 분리(`form` 탭 = `dataType === 'form'`, `general` 탭 = `dataType !== 'form'` = single/multi). `FsExternalDataExplorer`에 `dataTypeFilter`('form'|'general') + `headerTitle` prop 추가(목록 클라이언트 필터, 폼 탭은 생성 버튼 숨김 — 신규 외부 생성은 single=general이라 폼 목록에 안 보임). `fs-data-viewer-explorer`/`fs-sub-data-viewer-explorer`에도 `headerTitle` 오버라이드 추가. 앱 래퍼 3종이 `headerTitle`(+ external은 `dataTypeFilter`)을 전달하고, `DataExplorerWidget`이 i18n 탭 라벨을 탭명과 헤더 타이틀 양쪽에 사용. 헤더 타이틀은 `ExplorerHeader`의 `<h1>{headerTitle ?? t.title}`로 렌더됨. i18n 키 `dataExplorer.tabs` = viewer/sub/form/general(기존 external 키 제거). 이전 3탭 시절 저장된 `initialTab='external'`은 3개 경로(`resolveInitialTab`, `WidgetRegistryProvider` 방어 등록, `migrateExplorerType`)에서 모두 `'general'`로 정규화 — 서버 라운드트립·인메모리 양쪽 커버.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/data-explorer-widget/ui/DataExplorer.widget.tsx`
+- `src/widgets/viewer-explorer-widget/ui/ViewerExplorer.widget.tsx`
+- `src/widgets/sub-viewer-explorer-widget/ui/SubViewerExplorer.widget.tsx`
+- `src/widgets/external-viewer-explorer-widget/ui/ExternalViewerExplorer.widget.tsx`
+- `src/app/providers/WidgetRegistryProvider.tsx`
+- `src/entities/widget/model/widgetCrudActions.ts`
+- `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+- `packages/fs-data-viewer-explorer/src/components/FsDataViewerExplorer.tsx`, `.../src/types/props.ts`
+- `packages/fs-sub-data-viewer-explorer/src/components/FsSubGridDataExplorer.tsx`, `.../src/types/subGridExplorerProps.ts`
+- `packages/fs-external-data-viewer-explorer/src/components/FsExternalDataExplorer.tsx`, `.../src/types/externalExplorerProps.ts`
+
+### 검증 결과
+
+- `pnpm typecheck:all` 8/8, 루트 앱 `tsc -p tsconfig.app.json` 신규 오류 0(잔존 8건 선존), `eslint` 0 errors.
+- `ExplorerHeader` `<h1>`이 `headerTitle`로 타이틀 렌더 확인. 잔존 `dataExplorer.tabs.external` 참조 없음.
+- advisor 핫픽스 완료 검증 PASS (5관점).
+
+### 알려진 후속 / 노트 (차단 아님)
+
+- `general` 탭은 `dataType !== 'form'` 기준이라 향후 `DataGroupType` enum 확장 시 새 타입이 일반 탭으로 귀속됨(데이터 손실 아님, 이동 가능). 의도된 관대 기준.
+- 폼 데이터 생성은 폼 빌더 등 별도 경로 — 탐색기 폼 탭에서는 생성 미제공(생성 버튼 숨김).
+
 ## v001.486.0
 
 > 통합일: 2026-05-27
