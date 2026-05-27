@@ -103,6 +103,7 @@ Advisor scope: **same as `.claude/skills/new-project-group/SKILL.md` §Advisor v
 - Cross-references between areas are checked against the **post-modification** state of both sides (e.g., if a port changed in dev and deploy's build_command happens to reference that port indirectly).
 
 Advisor blockers → halt and report to master before any disk write. Non-blocker concerns are surfaced but proceed.
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the collected policy file paths (`.claude/project-group/<leader>/{dev,deploy,db,group}.md`) as the durable artifact paths; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 > **리더 저장소 컨벤션 보존 가드**: dev 영역 수정 응답이 `targets[]` 첫 항목의 `name` 을 변경하려 하거나, 첫 항목을 제거/이동시키면 advisor 가 blocker 로 차단한다 (리더 저장소 식별 불가). 첫 항목 == leader 컨벤션은 그룹 등록 시점에 LOCK 되며 이후 수정 불가; 변경 필요 시 그룹 폐기 + 재등록 (`/new-project-group`).
 

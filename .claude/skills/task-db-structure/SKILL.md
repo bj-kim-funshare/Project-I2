@@ -83,6 +83,7 @@ This skill changes real databases. The full pipeline includes paired migration +
 6. Advisor returns prose. The dispatcher parses for the **literal token `BLOCK:`** at the start of any line (case-sensitive). Token presence → halt and report. Absence → proceed.
 
    This is a tight contract — advisor must explicitly write `BLOCK: <reason>` when it wants to halt. Soft worries are reported but do not halt. The token rule is documented for advisor's awareness in the dispatcher's advisor invocation prompt.
+   If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same checklist and the migration + rollback SQL file paths as the durable artifact paths; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 ## Phase 3 — WIP commit (no PR — master 2026-05-12 결정)
 
