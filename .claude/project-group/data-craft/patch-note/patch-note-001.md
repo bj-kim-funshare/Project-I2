@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.486.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #185
+
+### 배경
+
+데이터 뷰어의 "백분율"(`percent`) 타입 셀에 100을 초과하는 값을 입력하면 값이 저장되지 않고 사라지던 문제(sub/external 뷰어는 공백 저장, 메인 데이터 뷰어는 이전 값 복원 — 빈 셀이면 결과적으로 공백)를 마스터 요청에 따라 **100 으로 클램프 저장**되도록 개선.
+
+### 페이즈 결과
+
+- **Phase 1** (`f4b5580`, fix): 세 뷰어 패키지(fs-data-viewer / fs-sub-data-viewer / fs-external-data-viewer)의 `usePercentCellHandlers.ts` `validateAndSave()` else 분기에 "유효 숫자이며 100 초과" 케이스(`else if (!isNaN(percentValue) && percentValue > 100)`)를 추가하여 `'100'` 으로 저장·표시(`saveCellValueWithChange({ newValue: '100' })` + `setValue('100')`). NaN/음수 처리는 각 패키지 기존 동작(fs-data-viewer 이전값 복원, sub/external 공백) 그대로 유지하며 분기 통합/리팩터링 없음. 정상 범위(0~100) 저장 경로와 `handleChange` 입력 필터는 무변경.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/*/src/widgets/cell-renderers/FsGridPercentCellRenderer/`:
+- `fs-data-viewer/.../usePercentCellHandlers.ts`
+- `fs-sub-data-viewer/.../usePercentCellHandlers.ts`
+- `fs-external-data-viewer/.../usePercentCellHandlers.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 21 pre-existing warnings).
+- 패키지 내부 로직 변경, export 타입 변동 없음 → 루트 앱 `tsc -p tsconfig.app.json` 무관.
+- advisor #1 / #2 모두 `BLOCK` 없음 (5관점 PASS).
+- 수동 테스트 권장: 세 뷰어 각각 백분율 셀에 `150` 입력 후 blur/Enter → `100` 저장 확인. `50` → `50` 유지, 빈 입력 → 공백 유지.
+
+### 절차 노트
+
+- 클립보드 붙여넣기 경로(`fs-data-viewer/.../grid-clipboard/clipboardSerializers.ts`, percent → generic `numberConverter`)는 클램프 미적용 — 마스터 명령은 셀 직접 입력에 한정되므로 스코프 외, **후속 후보** 기록.
+- 음수 입력 클램프(→0)는 마스터 명령에 없어 미포함.
+- WIP origin push 는 WIP 브랜치 한정 정상 절차(작업 WIP push). 통합 브랜치(i-dev / main)는 push 하지 않고 로컬 머지로 종료(표준 종료점).
+
 ## v001.485.0
 
 > 통합일: 2026-05-27
