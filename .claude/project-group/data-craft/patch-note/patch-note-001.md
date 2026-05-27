@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.488.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스2)
+
+### 배경
+
+v001.485.0 (#177 핫픽스1) 의 숫자/통화 셀 멀티라인 적용 이후 마스터가 보고한 3건:
+1. **포커스 테두리 밀림**: 숫자/통화 셀에서 긴 값 편집 시 포커스 테두리가 셀 밖으로 밀려 깨짐.
+2. **긴 값 0(뒷자리) 손상 저장**: 숫자/통화 셀에 16자리 초과 값 입력 시 하위 자릿수가 0 으로 뭉개져 저장됨.
+3. **코드 셀 정렬**: 코드 타입 셀이 좌상단 정렬로 출력 — 다른 셀처럼 중앙 정렬 요청.
+
+### 원인
+
+- **버그1**: 편집 모드 `<input>` 폭을 `Math.max(value.length,2)ch` 동적 폭으로 지정 → 긴 값에서 셀 폭 초과 오버플로, 포커스 ring(외곽 div)과 어긋남. (기존 동작, 멀티라인과 무관)
+- **버그2 (BE 아님 — FE 정밀도)**: 편집 버퍼 `value` 가 `formatValue(cellValue)` 로 시드되는데, 숫자 `formatValue`(`parseFloat().toLocaleString()`)·통화 `formatToKoreanCurrency`(`Math.floor(parseFloat())`)가 **JS Number(IEEE-754, 유효숫자 ~16자리)를 왕복**시켜 16자리 초과 하위 자릿수를 0 으로 손실. 손실된 문자열이 그대로 저장됨. **BE 조사 결과 data-craft-server 는 셀 값을 `data_values.value_data text` (generic EAV TEXT) 로 무손실 저장하며 Number 변환 없음 → BE 무관, Roadmap-1 FE-only lock 유지.**
+- **버그3**: 코드 셀 외곽 div 에 flex 중앙 정렬 미적용(`<pre>` block 좌상단).
+
+### 핫픽스 결과 (누적 Phase 6)
+
+- **핫픽스2-A** (`1479b67f`): 신규 공유 유틸 `shared/lib/addThousandSeparators.ts` (parseFloat/Number 미사용, 순수 문자열 천단위 그룹핑 — 정밀도 무손실). 숫자 셀 `formatValue` 와 통화 `formatToKoreanCurrency` 를 이 유틸로 교체(숫자=소수부 보존, 통화=`truncateDecimal` 로 정수 표시). 통화 `handleChange` 도 동일 포맷터 경유로 자동 수정.
+- **핫픽스2-B** (`15db4589`): 숫자/통화 편집 `<input>` 의 `dynamicWidth`(ch) 제거 + `flex-1 min-w-0` 적용 → 셀 폭 내 flex 충전, 긴 값은 input 내부 스크롤(포커스 테두리 정상). 코드 셀 외곽 div 에 `flex items-center justify-center`, `<pre>` 에 `text-center` 추가 → 다른 셀과 동일 중앙 정렬.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/`:
+- `shared/lib/addThousandSeparators.ts` (신규)
+- `widgets/cell-renderers/FsGridNumberCellRenderer.tsx`
+- `widgets/cell-renderers/FsGridCurrencyCellRenderer/currencyFormatters.ts`
+- `widgets/cell-renderers/FsGridCurrencyCellRenderer/FsGridCurrencyCellRenderer.tsx`
+- `widgets/cell-renderers/code-cell/FsGridCodeCellRenderer.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors** (메인 세션 직접 실행).
+- 루트 앱 tsc (`tsc -p tsconfig.app.json`, 패키지 dist 빌드 후): exit 0.
+- 수동 테스트 권장: ① 숫자/통화 셀 16자리 초과 값 입력·저장 후 전체 자릿수 보존 확인, ② 긴 값 편집 시 포커스 테두리 정상, ③ 코드 셀 중앙 정렬.
+
+### 절차 노트
+
+- **버그2 BE 조사 정정**: 초기 가설은 BE BIGINT 오버플로였으나, 조사 결과 BE 는 TEXT 무손실 저장으로 무관 — 원인은 FE parseFloat 왕복. 수정은 FE 단독, Roadmap-1 FE-only lock 유지.
+- **통화 포맷 음수+소수 의미 미세 변경**: 기존 `Math.floor(-3.7)=-4`(−∞ 방향) → 신규 문자열 절삭 `-3`(0 방향). KRW 는 정수가 일반적이라 실무 영향 없음. 발견성 위해 명시.
+- advisor #2(핫픽스2) no-BLOCK.
+- WIP origin push 는 분류기 차단으로 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.487.0
 
 > 통합일: 2026-05-27
