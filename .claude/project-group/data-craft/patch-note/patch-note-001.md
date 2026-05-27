@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.491.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스3)
+
+### 배경
+
+긴 텍스트(longText) / 코드(code) 타입 셀의 편집 모달 키보드 UX 변경 요청:
+1. 저장 단축키를 **Shift+Enter → Cmd/Ctrl+S** 로 변경.
+2. **ESC = 저장 없이 닫기**(값 저장 안 함)로 의미 명확화.
+3. 모달 문구도 위에 맞게 수정.
+
+### 핫픽스 결과 (누적 Phase 7)
+
+- **핫픽스3-A** (`792dbf66`): i18n 문구 수정. 4개 로케일(ko/en/ja/zh)의 `cells.codeKeyboardShortcuts` 와 `cellRenderer.longText.shortcutHint` 두 키를 `Shift+Enter: 저장 | ESC: 취소` → `Cmd/Ctrl+S: 저장 | ESC: 저장 없이 닫기`(로케일별 번역)로 교체. 신규 공통 키 `common.closeWithoutSave`(ko '저장 없이 닫기' 등) 추가(types.ts + 4 로케일). 듀얼 위젯용 `shortcutHint`(`Enter: 저장 | ESC: 닫기`, 문자열 상이)는 의도적으로 미변경.
+- **핫픽스3-B** (`bee4eb58`): 저장 단축키 분기를 `Shift+Enter` → `(metaKey||ctrlKey) && (s||S)` + `preventDefault`(브라우저 저장 다이얼로그 차단)로 교체 — 긴 텍스트 키보드 훅, EditDialog 의 document capture 리스너 + textarea onKeyDown, 코드 키보드 훅 4개 지점 모두. ESC → handleCancel(기존부터 값 저장 없이 닫음) 로직은 무변경 유지. 보조 버튼 라벨 `t.common.cancel` → `t.common.closeWithoutSave`(EditDialog + CodeEditDialog).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/`:
+- `shared/config/i18n/types.ts`
+- `shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+- `widgets/cell-renderers/long-text-cell/useLongTextCellKeyboard.ts`
+- `widgets/cell-renderers/long-text-cell/EditDialog.tsx`
+- `widgets/cell-renderers/code-cell/useCodeCellKeyboard.ts`
+- `widgets/cell-renderers/code-cell/CodeEditDialog.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors** (메인 세션 직접 실행).
+- 루트 앱 tsc (`tsc -p tsconfig.app.json`, 패키지 dist 빌드 후): exit 0.
+- 수동 테스트 권장: ① 긴 텍스트/코드 모달에서 Cmd/Ctrl+S 로 저장(브라우저 저장창 안 뜸), ② ESC 로 값 저장 없이 닫힘, ③ 모달 하단 문구/버튼 라벨이 새 동작 반영, ④ 한/영/일/중 로케일 문구 확인.
+
+### 절차 노트
+
+- **Cmd+S 폴백**: 일부 브라우저 확장/스크린리더가 Cmd/Ctrl+S 를 React 핸들러 도달 전 가로채면 페이지 저장으로 빠질 수 있음(긴 텍스트는 document capture 리스너로 강하게 방어, 코드는 bubble 단계). 단축키가 가로채여 저장이 안 되는 경우의 폴백은 **모달 하단의 "저장" 버튼**. Shift+Enter 는 마스터 지시("변경")에 따라 제거됨.
+- `common.closeWithoutSave` 는 신규 공통 키 — 향후 다른 다이얼로그에서도 재사용 가능.
+- 듀얼 위젯 `shortcutHint` 미변경(의도적 스코프 경계).
+- advisor #2(핫픽스3) no-BLOCK. WIP origin push 는 분류기 차단으로 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.490.0
 
 > 통합일: 2026-05-27
