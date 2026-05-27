@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.480.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177
+
+### 배경
+
+데이터 뷰어(그리드 뷰)에서 "텍스트"(text) 타입 셀이 행 높이가 충분해도 항상 한 줄만 표시되던 문제. "긴 텍스트"(longText) 타입은 행 높이에 맞춰 여러 줄로 값을 보여주고 말줄임표 처리하지만 일반 텍스트 타입은 그렇지 않았다. 추가로 hover 툴팁 동작을 양 타입 모두 "실제로 잘린 경우에만" 노출하도록 정리: 긴 텍스트 셀은 전부 보일 때 툴팁 미노출, 일반 텍스트 셀은 잘릴 때 툴팁 노출(기존엔 툴팁 자체가 없었음).
+
+### 페이즈 결과
+
+- **Phase 1** (`9ad5e5a`, refactor): 긴 텍스트 셀 렌더러의 인라인 라인-측정 로직(`useLayoutEffect`+`ResizeObserver` 로 `maxLines` 산출)을 공유 훅 `useMaxLines(ref)` 로 1:1 분리하고 `hooks` 배럴에 export. `FsGridLongTextCellRenderer` 가 이를 소비하도록 리팩터 — 동작 무변경.
+- **Phase 2** (`dbdc558`, feat): `FsGridTextCellRenderer` read 모드 span 의 `truncate`(단일 라인 고정)를 `useMaxLines(containerRef)` 기반 멀티라인 클램프(`-webkit-box`/`WebkitLineClamp:maxLines`/`overflow:hidden`/`wordBreak:break-word`)로 교체. `maxLines===1`(짧은 행)이면 단일 라인+말줄임표로 기존과 시각 동일. 편집 모드 input 은 단일 라인 유지. (원 요청 충족)
+- **Phase 3** (`bb5a3c3`, refactor+feat): 긴 텍스트 셀에 흩어져 있던 hover 툴팁 로직을 신규 공유 모듈 `cell-tooltip/` 로 추출 — `useEllipsisTooltip` 훅이 `scrollHeight - clientHeight > 1` 로 실제 클램프 여부를 판정해 **잘린 경우에만** 툴팁을 노출(게이트 내장). `TooltipContent`(300자/10줄 프리뷰 유지)를 `CellTooltipContent` 로 이동. 긴 텍스트 셀이 채택 → 전부 보이면 툴팁 미노출. 다이얼로그/키보드/편집 흐름 무변경. (추가 요청 1 충족)
+- **Phase 4** (`83c2c13`, feat): `FsGridTextCellRenderer` 가 공유 `useEllipsisTooltip` 훅을 채택 → 말줄임표로 잘린 텍스트 셀 hover 시 툴팁 노출, 잘리지 않으면 미노출. (추가 요청 2 충족)
+- **Phase 4 lint hotfix** (`462506b`): Phase 3 도입 후 표면화된 eslint 에러 2건 수정 — (1) `useEllipsisTooltip` cellKey 리셋 이펙트의 의도된 동기 setState 에 `react-hooks/set-state-in-effect` disable 디렉티브, (2) `handleMouseEnter` 제거로 미사용된 `useLongTextCellHandlers` 의 `cellValue` prop 제거.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/` 단일 패키지:
+- `features/grid/hooks/useMaxLines.ts` (신규)
+- `features/grid/hooks/index.ts`
+- `widgets/cell-renderers/cell-tooltip/useEllipsisTooltip.tsx` (신규)
+- `widgets/cell-renderers/cell-tooltip/CellTooltipContent.tsx` (신규 — 기존 long-text-cell/TooltipContent.tsx 이동)
+- `widgets/cell-renderers/FsGridTextCellRenderer.tsx`
+- `widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx`
+- `widgets/cell-renderers/long-text-cell/useLongTextCell.ts`
+- `widgets/cell-renderers/long-text-cell/useLongTextCellHandlers.ts`
+- `widgets/cell-renderers/long-text-cell/useLongTextCellEffects.ts`
+- `widgets/cell-renderers/long-text-cell/TooltipContent.tsx` (삭제 — cell-tooltip 로 이동)
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 최종 exit 0 — **0 errors, 20 warnings**(기존 baseline). gate-runner(Haiku) 보고가 Phase 3(false PASS)·Phase 4(false FAIL)에서 신뢰 불가하여 메인 세션이 직접 실행해 확정.
+- 루트 앱 tsc (`tsc -p tsconfig.app.json`, 메모리 `feedback_data_craft_lint_gate_root_app` 프로토콜): 워크스페이스 패키지 dist 빌드 후 exit 0 — 루트 앱이 삭제/이동된 심볼(TooltipContent 등)을 참조하지 않음 확인. i-dev baseline 도 clean 대조.
+- 수동 테스트 권장 (마스터): ① 텍스트 셀 행 높이 확장 시 멀티라인 + 짧은 행 단일 라인, ② 긴 텍스트 전부 보일 때 툴팁 미노출 / 잘릴 때 노출, ③ 텍스트 셀 잘릴 때 툴팁 노출, ④ 긴 텍스트 편집 다이얼로그·키보드 회귀 없음.
+
+### 범위 / 절차 노트
+
+- **범위**: `packages/fs-data-viewer` 단일 패키지만. 동일 패턴이 있는 형제 뷰어 패키지 `fs-sub-data-viewer`, `fs-external-data-viewer`(+ 각 explorer)는 마스터 요청("데이터 뷰어/그리드 뷰") 범위 밖으로 **의도적 제외** — 동일 개선 필요 시 별도 plan.
+- **advisor**: advisor #1(계획 검증)은 Anthropic API overload 4회 재시도 실패로 5관점 정식 미실행 — advisor 가 전체 확장 플랜을 검토해 `BLOCK` 없이 진행 권고 + 마스터 ExitPlanMode 승인으로 진행. advisor #2(완료 검증)는 정상 실행, `BLOCK` 없음.
+- **WIP push 운영 deviation**: 이번 세션 auto-mode 분류기가 WIP 브랜치 origin push 를 차단(i-dev push 금지 정책 오적용). 마스터 지시("기존 방식 절차를 지켜") 하에 워크트리 로컬에서 작업·커밋·검증 후 로컬 i-dev 머지로 진행 — 표준 종료점(로컬 i-dev 머지, origin 미push)과 동일, WIP origin 백업만 생략된 환경적 deviation.
+
 ## v001.479.0
 
 > 통합일: 2026-05-27
