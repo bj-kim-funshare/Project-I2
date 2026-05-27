@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.501.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #192
+
+### 페이즈 결과
+- **Phase 1**: 서버 페이징 meta 변환 `serverToViewerMetaResult`가 `subGrids`를 의도적으로 누락하던 결함 수정. `subGridConverter.buildSubGridModel`을 import해 `viewerSetting.subGridSharedConfig`에서 `subGrids`를 채우도록 변경(루트앱 정상본 `src/features/viewer/lib/serverToViewerMetaResult.ts` 미러링, 신규 로직 없음). FE 뷰어 모델에 `subGridModel.subGridField`가 전달되어 **(1) 서브그리드 열기 시 토글만 바뀌고 안 열리던 증상**과 **(2) 서브 그룹 id 표기가 사라지던 증상**이 동시 해소. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+- data-craft:`packages/fs-data-viewer-explorer/src/lib/converter/pagingConverter.ts`
+
+### 비고
+- **원인은 #183(탐색기 3종 통합, 오늘 작업·미배포)이 아님** — 앱이 렌더하는 `fs_data_viewer_explorer` 패키지(v1.x부터 배포된 경로)의 `serverToViewerMetaResult`가 처음부터 `subGrids`를 누락한 결함. prod·dev 공통이라 코드 배포 없이도 prod에서 발생. BE 및 공유 DB(`data_craft_test`)는 정상 확인.
+- **prod 복구는 본 수정의 배포 필요** (plan-enterprise는 i-dev 머지까지). dist는 gitignore이며 앱은 vite alias로 dist를 소비 → 로컬 dev 반영 위해 `pnpm --filter fs_data_viewer_explorer build`로 dist 재빌드 완료. prod는 배포 빌드 시 dist 재생성.
+- 부차(별도 후속): 최초 404(group 1674, `use_sub_grid=1`·서브그리드 미생성)는 본 수정으로 FE가 열기 요청을 안 보내 체감 해소되나, BE의 404→빈결과 방어는 미포함.
+
 ## v001.500.0
 
 > 통합일: 2026-05-27
