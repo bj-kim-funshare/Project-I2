@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.490.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #183 (핫픽스2)
+
+### 배경
+
+v001.487.0(핫픽스1)에서 4탭 분리를 적용했으나 마스터 수동 테스트에서 두 증상이 보고됨: (문제1) 탭명은 "데이터 뷰어 그룹"인데 목록 타이틀은 옛 "데이터 뷰어"로 표시, (문제2) 폼/일반 탭 양쪽에 폼·일반 그룹이 모두 노출(필터 미작동). 진단 결과 **코드 결함이 아니라 패키지 dist staleness** 였다 — 앱은 explorer 패키지를 빌드된 `dist`(gitignored, 루트 `vite.config.ts` alias)로 소비하는데, 핫픽스1의 `headerTitle`·`dataTypeFilter` 소스 변경이 dist에 반영되지 않아(검증이 `typecheck:all`=`tsc --noEmit`만 수행, dist emit 안 함) 런타임이 구 dist를 로드. 더불어 마스터가 탭별 아이콘 추가를 요청.
+
+### 페이즈 결과
+
+- **Phase 5 / 핫픽스2** (`64cd000`): 통합 탐색기 4탭 각 탭명 앞에 lucide-react 아이콘 추가 — `LayoutGrid`(데이터 뷰어 그룹) / `Layers`(서브 데이터 뷰어 그룹) / `FileText`(폼 데이터 그룹) / `Database`(일반 데이터 그룹). 각 `TabsTrigger` 내부 `inline-flex items-center gap-1.5` span으로 아이콘(`h-4 w-4`, `aria-hidden`)+레이블 배치. 탭 value·필터·headerTitle 로직 무변경(앱 src only).
+- **문제1·2 해소 (dist 재빌드)**: 핫픽스1 소스는 정상임을 확인(`FsDataViewerExplorer`/`FsSubGridDataExplorer`/`FsExternalDataExplorer` 모두 `headerTitle` 전달, external `filteredGrids`=`dataTypeFilter` 적용, `ExplorerHeader` `<h1>{headerTitle ?? t.title}` 렌더). `pnpm build:packages`(turbo, tsup `clean:true`)로 3개 패키지 dist 재생성 시 dist에 `dataTypeFilter`·top-level `headerTitle` prop 포함 확인, 루트 앱 `tsc -p tsconfig.app.json` 0 errors. → 타이틀 통합·폼/일반 근본 분리 동작.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/data-explorer-widget/ui/DataExplorer.widget.tsx` (탭 아이콘 — 본 핫픽스2 코드 변경)
+- (핫픽스1 소스 무변경 / dist 재빌드로 반영: `packages/fs-data-viewer-explorer`, `packages/fs-sub-data-viewer-explorer`, `packages/fs-external-data-viewer-explorer` 의 dist — gitignored)
+
+### ⚠️ 운영 필수 — 패키지 dist 재빌드
+
+문제1·2는 dist staleness 였으므로, 본 변경 확인 시 **`pnpm build:packages` 실행 후 dev 서버 재기동** 필수(dist는 gitignored라 머지/체크아웃만으로는 갱신 안 됨). 본 작업에서 마스터 작업 체크아웃(i-dev)의 dist는 이미 재빌드 완료. 단, 탭 아이콘(핫픽스2)은 앱 src 변경이라 vite가 직접 소비 → 재빌드 불필요(둘은 별개).
+
+### 검증 결과
+
+- `pnpm build:packages` 10/10 성공, 재빌드 후 루트 앱 `tsc -p tsconfig.app.json` **0 errors**.
+- 재빌드 dist에 `dataTypeFilter`(external) + top-level `headerTitle`(viewer/sub/external 3종) 포함 확인.
+- `eslint` 0 errors. advisor 핫픽스 완료 검증 PASS.
+- 절차 학습 메모리(`feedback_data_craft_lint_gate_root_app`)에 "패키지 src 변경 phase 는 `typecheck:all` 외 `pnpm build:packages` 로 dist 재생성 검증 + 머지 후 마스터 체크아웃 재빌드" 반영.
+
 ## v001.489.0
 
 > 통합일: 2026-05-27
