@@ -1,5 +1,56 @@
 # data-craft — Patch Note (001)
 
+## v001.481.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #178
+
+### 배경
+
+기업 테마 설정이 **회사(기업) 단위로 공유**되던 방식을 **사용자별 개인 테마 시스템으로 마이그레이션**. 표면적으로는 "권한자만 조작 가능하고 조작 시 전 조직원에게 일괄 적용"으로 인식됐으나, 실제 근본 원인은 BE/DB 였다 — `user_preference` 테이블 UNIQUE 키가 `(company_id, pref_key)` 회사 단위였고 모델이 `WHERE company_id = ?` 로만 조회/upsert 해, FE 가 사용자별로 저장 요청을 보내도 DB 가 회사 단위로 같은 행을 덮어써 전사 공유가 됐다. 이번 작업으로 (1) 테마를 권한 개념에서 분리, (2) 최초 진입 시 시스템(OS) 테마를 기본값으로, (3) 사용자별 테마를 DB 에 저장·로드한다.
+
+### 페이즈 결과
+
+- **Phase 1** (`4206831`+`0805531`, refactor): `user_preference` 조회/저장을 회사 단위 → 사용자별 스코프로 전환. `findPreferencesByUser`/`getUserPreferences` 에 `userId` 추가 + `WHERE company_id=? AND user_id=?`, upsert 를 신규 UNIQUE `(company_id, user_id, pref_key)` 기준으로 정리. `getPreferencesController` 가 `req.userId` 전달. 초기 번들 로드 경로 `init.service.ts` 의 누락 호출 `getUserPreferences(companyId)` 도 `(companyId, user.id)` 로 보강(빌드 정합 + 초기 로드 개인별화 필수).
+- **Phase 2** (`a632bc5`, refactor): BE `PERMISSION_KEYS` 에서 테마 권한 키 `app_theme_change` 제거 — 테마는 사용자별 저장이라 권한 불필요. 오너 권한 초기화(`[...PERMISSION_KEYS]`)는 자동으로 해당 키 제외.
+- **Phase 3** (`1233613`, feat): FE 초기 기본 테마 `'light'` → `'system'`(themeStore initialState). seedBundleData 의 서버 테마 시딩을 `setThemeFromServer(serverTheme ?? 'system')` 으로 정리 — 서버 미저장 신규 사용자는 명시적으로 'system' 적용(OS 다크/라이트 즉시 반영).
+- **Phase 4** (`0e107f2`, refactor): FE 전 영역 테마 권한 키 제거 — 앱측(role.types.ts union+array, permissionLabels.ts "기업 테마 설정" 라벨, SystemPermissionTree.tsx BASIC_SETTING_PERMISSIONS) + fs-api 패키지(entities.ts PermissionKey union) 동시 제거로 두 PermissionKey 정의 동기(메모리 `feedback_cross_package_bundle_target`). 카운트 코멘트 10→9.
+
+### DB 변경 (병렬 task-db-structure 트랙)
+
+`user_preference` 테이블 UNIQUE `(company_id, pref_key)` → `(company_id, user_id, pref_key)`, `user_id` NULL → NOT NULL. 머지 순서 **DB → BE** 준수(DB 미적용 시 빈 preference + 구 UNIQUE 덮어쓰기로 전사 깨짐 재현). 적용 후 read-only 검증 완료 — `user_id int NOT NULL`, `UNIQUE KEY uk_user_pref (company_id, user_id, pref_key)`, 기존 theme 행 1건 user_id=37 로 보존, null/0 user_id 0건.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/models/user-preference.model.ts`
+- `src/services/user-preference.service.ts`
+- `src/services/init.service.ts`
+- `src/controllers/user-preference.controller.ts`
+- `src/types/roles.types.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/entities/theme/model/themeStore.ts`
+- `src/app/lib/seedBundleData.ts`
+- `src/shared/types/role.types.ts`
+- `src/features/role/lib/permissionLabels.ts`
+- `src/widgets/settings-dialog/ui/SystemPermissionTree.tsx`
+- `packages/fs-api/src/types/entities.ts`
+
+### 검증 결과
+
+- Lint gate: BE `pnpm lint` exit 0 (Phase 1·2), FE `pnpm typecheck:all && pnpm lint` exit 0 — 0 errors, 19 warnings(기존 baseline) (Phase 3·4).
+- 루트 앱 tsc (`tsc -p tsconfig.app.json`, 메모리 `feedback_data_craft_lint_gate_root_app`): 권한 타입 오류 0건. 워크트리의 `fs_file_attachment`/`*_explorer` "Cannot find module" 8건은 워크트리 미빌드 dist 에 기인(i-dev 메인 트리 baseline 0건 대조 확인) — 본 변경 무관.
+- DB read-only 검증: 위 "DB 변경" 절 참조.
+- advisor 계획·완료 2회 통과(BLOCK 없음). 완료 advisor 가 머지 순서(DB→BE) 게이트 지적 → 준수.
+- 수동 테스트 권장 (마스터): ① 신규 계정 최초 진입 시 system 테마 적용, ② 같은 회사 2명이 서로 다른 테마 설정 시 각자 격리·재로그인 후 복원, ③ 설정 권한 트리에 "기업 테마 설정" 미노출.
+
+### 범위 / 절차 노트
+
+- pre-auth 로그인 화면에서 'dark' 등을 고른 신규 사용자는 로그인 후 서버 미저장이라 'system' 으로 덮어써진다 — 마스터 명령 "최초 system 기본"에 부합하는 의도된 동작.
+- 기존 role 에 부여돼 있던 `app_theme_change` 는 키 제거 후 무시(orphan, 무해). 클린업 DML 은 범위 외.
+- `data-craft-mobile`: 동일 BE 공유로 DB 변경 혜택 자동. 모바일 FE 의 기본값/권한 정리는 본 플랜 범위 외(후속 후보).
+
 ## v001.480.0
 
 > 통합일: 2026-05-27
