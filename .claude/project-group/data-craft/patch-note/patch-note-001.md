@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.495.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #187
+
+### 배경
+
+기존 가이드 기능(물음표 아이콘 + "기능 가이드"/"서비스 문서" 2분할 다이얼로그)은 `fs_data_viewer` 패키지의 데이터 뷰어 헤더 안에만 존재했다. 이를 데이터 뷰어를 포함한 데이터 크래프트 전체의 통합 가이드로 승격하기 위해, 뷰어 헤더의 가이드 버튼을 제거하고 메인 앱 헤더의 알림(Bell) 우측에 단일 가이드 버튼을 신설했다. 큰 내부 구성("기능 가이드" + "서비스 문서" 2분할)은 기존 그대로 유지했다.
+
+### 페이즈 결과
+
+- **Phase 1** (`b15425d`, refactor): `fs_data_viewer` 패키지에서 가이드 다이얼로그·버튼·i18n Provider 를 public API 로 노출(`src/index.ts` 에 `GuideButton`·`GuideDialogShell`·`I18nProvider`·`useI18n` 등 추가)하고, 데이터 뷰어 헤더에서 가이드 버튼·다이얼로그 상태·렌더링(`HeaderActions`/`useHeaderState`/`FsGridHeader`/`HeaderDialogs`)을 전부 제거. `GuideDialogStep` 타입은 곧 제거될 `useHeaderState` 에서 `GuideDialogShell` 의 독립 리터럴 유니온으로 이전. dist 는 gitignored 이므로 비커밋(검증 시 `typecheck:all` turbo `^build` 가 재빌드).
+- **Phase 2** (`74f9379`, feat): 메인 앱 헤더의 `NotificationDropdown` 직후(우측)에 lucide `HelpCircle` 통합 가이드 버튼을 ViewMode·DesignMode 양쪽 툴바에 추가(알림 숨김 시에도 노출). `AppHeader` 에서 패키지 `GuideDialogShell` 을 `I18nProvider` 로 감싸 렌더하고, 앱 i18next 언어 → `FsGridLanguage` 매핑 헬퍼(`mapToFsGridLanguage`, en→en·그 외 ko) 신규 추가. 가이드 다이얼로그 상태는 `useHeaderDialogs` 에 `GuideDialogStep` discriminated union + 6핸들러로 구현.
+
+> advisor 완료 검증: PASS (advisor-fallback 경유 — advisor() 과부하로 3회 재시도 후 fallback).
+
+### 영향 파일
+
+**packages/fs-data-viewer**
+- `src/index.ts`
+- `src/widgets/guide/GuideDialogShell.tsx`
+- `src/widgets/FsGridHeader.tsx`
+- `src/widgets/data-viewer-header/HeaderActions.tsx`
+- `src/widgets/data-viewer-header/HeaderDialogs.tsx`
+- `src/widgets/data-viewer-header/useHeaderState.ts`
+
+**앱 (src/)**
+- `src/widgets/header/ui/AppHeader.tsx`
+- `src/widgets/header/ui/ViewModeToolbar.tsx`
+- `src/widgets/header/ui/DesignModeToolbar.tsx`
+- `src/widgets/header/ui/useHeaderDialogs.ts`
+- `src/shared/i18n/mapToFsGridLanguage.ts` (신규)
+
 ## v001.494.0
 
 > 통합일: 2026-05-27
