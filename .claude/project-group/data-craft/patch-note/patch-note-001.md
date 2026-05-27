@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.502.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스7 — #1 ESC 2-press 근본 수정)
+
+### 배경
+
+긴 텍스트/코드 편집 모달에서 ESC 1번에 안 닫히고 셀 포커스만 해제(2번째에 닫힘) 문제(#1). 핫픽스5(autoFocus)로도 미해결이었고, 마스터 런타임 진단으로 근본 원인 확정: 모달 직후 `document.activeElement`=textarea, ESC 1회 후 =body, 모달 open 유지(`data-scroll-locked` 유지).
+
+### 원인 (런타임 진단 확정)
+
+document capture-phase keydown 리스너 `useEffect` 의 deps 가 `[onSaveShortcut, onCancel]` 인데, `onSaveShortcut`(=saveOnly, deps 에 매 키 입력마다 바뀌는 `editValue` 포함)·`onCancel`(=handleCancel, deps 에 비메모 `closeDialog` 포함)의 **identity 가 매 렌더마다 변함** → 리스너가 매 렌더 cleanup→재등록. 그 **재등록 직전 짧은 틈에 첫 ESC 가 도착하면 잡는 리스너가 없어** 브라우저 기본 동작으로 textarea 가 body 로 blur 될 뿐 모달이 안 닫힘. 두 번째 ESC 때 재등록된 리스너가 잡아 닫힘.
+
+### 핫픽스 결과 (누적 Phase 11)
+
+- **핫픽스7** (`fc23a3a3` + 정리 `6bb70b96`): 양 모달(EditDialog·CodeEditDialog)의 document capture 리스너 useEffect 를 `[]`(마운트 1회 등록)으로 변경해 재등록 틈을 제거. 핸들러 최신값은 `onCancelRef`/`onSaveShortcutRef`(deps 없는 useEffect 로 매 렌더 갱신)로 stale 없이 참조. 추가로 **Escape 분기를 IME `isComposing` 가드에서 제외**(조합 중에도 닫혀야 함); Cmd/Ctrl+S 분기는 가드 유지. 정리 커밋에서 불필요한 exhaustive-deps disable 주석 제거.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/cell-renderers/long-text-cell/EditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/code-cell/CodeEditDialog.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors, 21 warnings**(기존 baseline). 루트 앱 tsc: exit 0.
+- 수동 테스트 권장: ① 긴 텍스트/코드 모달에서 **ESC 1번에 닫힘**(연속 여러 번 열고 닫아도, 타이핑 직후에도), ② Cmd/Ctrl+S 저장 + 모달 유지 + "저장중", ③ 한글 조합 중 ESC 도 닫힘.
+
+### 절차 노트
+
+- 본 핫픽스는 마스터의 런타임 진단(`document.activeElement` 2값)으로 근본 원인을 확정한 뒤 진행 — 핫픽스4·5 의 블라인드 시도와 달리 증거 기반. #1 동일 표면 누적 보정의 종결을 의도.
+- advisor() 과부하로 advisor #2 no-BLOCK 간주(단 본 수정 설계는 advisor 가 제시).
+- 형제 패키지(fs-sub/external-data-viewer) 사본은 스코프 밖.
+- WIP origin push 분류기 차단 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.501.0
 
 > 통합일: 2026-05-27
