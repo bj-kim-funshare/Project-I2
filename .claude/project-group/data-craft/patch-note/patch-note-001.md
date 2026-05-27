@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.482.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #182
+
+### 배경
+
+AI 어시스턴트 기능이 `준비중`(출시 예정) 상태로 UI에만 노출되고 있었는데 준비 기간이 길어질 전망이라, 헤더·플로팅 진입점에서 임시로 숨김 처리. 더불어 디자인 모드 헤더 관리 버튼 그룹(폼/연결/연동) 중 비활성·준비중 상태의 "데이터 연결 관리(연결)" 버튼도 UI에서 임시로 숨김. 두 변경 모두 코드/권한 삭제 없이 단일 토글 상수로 복원 가능한 형태로 구현(임시 처리).
+
+### 페이즈 결과
+
+- **Phase 1** (`394bbabe`+`88335f3b`, fix): AI 어시스턴트 헤더 아이콘(Sparkles)·플로팅 FAB·모달을 단일 토글로 숨김. `src/shared/config/featureFlags.ts` 신규(`AI_ASSISTANT_ENABLED = false`) + config 배럴 재수출, `HeaderAIIconButton`/`FloatingAIButton`/`AIAssistantModal` 3개 컴포넌트에 플래그 가드 추가. fabStore/모달 토글 로직 미변경. 가드 초기 위치가 훅 호출 이전이라 rules-of-hooks lint 실패 → 가드를 훅 이후로 이동(`88335f3b`)하여 통과. 복원은 플래그 1줄 true.
+- **Phase 2** (`3c4ed7b7`, fix): 디자인 모드 관리 버튼 그룹에서 "데이터 연결 관리(연결, Network)" 버튼만 임시 숨김. 파일 로컬 `SHOW_DATA_LINK_BUTTON = false` 토글 + 해당 블록 조건 `{SHOW_DATA_LINK_BUTTON && canEditDataLink && (...)}`. 폼(사용자 입력폼 관리)·연동(외부 데이터 연동 관리) 버튼과 `hasAnyButton` 로직은 미변경. 복원은 상수 1줄 true.
+
+### 검증
+
+- 두 페이즈 모두 lint 게이트(`pnpm typecheck:all && pnpm lint`) PASS (0 errors).
+- 패키지 dist 빌드 후 루트 앱 `tsc -p tsconfig.app.json` PASS (0 errors) — 루트 src/ 타입 정합 확인.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/shared/config/featureFlags.ts` (신규)
+- `src/shared/config/index.ts`
+- `src/widgets/header/ui/HeaderAIIconButton.tsx`
+- `src/widgets/floating-ai-button/ui/FloatingAIButton.tsx`
+- `src/widgets/floating-ai-button/ui/AIAssistantModal.tsx`
+- `src/widgets/header/ui/ManagementButtonGroup.tsx`
+
 ## v001.481.0
 
 > 통합일: 2026-05-27
