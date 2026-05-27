@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.477.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #176
+
+### 배경
+
+언어를 영어로 설정해 사용해도 어느 순간 설정 다이얼로그에는 "English"가 표시되는데 실제 서비스 UI는 한국어로 렌더되는 불일치 버그가 보고됨(스크린샷: 설정=English, 배경 전부 한글).
+
+### 원인
+
+i18n 설정(`src/shared/i18n/i18n.ts`)이 `load: 'languageOnly'` + navigator 감지를 사용. 브라우저가 지역 코드(`ko-KR`/`en-US`)를 반환하면 번역 리소스는 `resolvedLanguage`(base `ko`/`en`)로 정상 해석되지만 `i18n.language` 에는 지역 코드 원본이 남고 `i18nextLng` 로 localStorage 캐시됨. 두 소비처가 `i18n.language` 를 base 코드와 **엄격 비교**해 표시·렌더가 어긋남 — `AppTabContent.tsx` 는 비-`ko` 를 "English"로 표시(사용자가 본 화면), `LanguageSwitcher.tsx` 는 비일치 시 한국어로 fallback(반대 방향 오류). `i18nextLng` 는 storage-reset 대상이 아니라 값이 사라지지 않아 지역 로케일 브라우저에서 처음부터 잠재된 상태였음.
+
+### 페이즈 결과
+
+- **Phase 1 (FE)** `89c01bb`: i18n init 에 `nonExplicitSupportedLngs: true` 추가(지역 코드 → supportedLngs base 매핑). `getCurrentLanguage(): SupportedLanguage` 헬퍼 신규 export — `(i18n.resolvedLanguage ?? i18n.language ?? 'ko').split('-')[0]` 를 `'ko'|'en'` 로 정규화, 미지원 값은 `'ko'` 폴백. `index.ts` 재수출.
+- **Phase 2 (FE)** `ba6079f`: `AppTabContent.tsx` 의 Select `value`·표시 텍스트를 정규화된 `getCurrentLanguage()` 기준으로 교체(엄격 비교 제거). `LanguageSwitcher.tsx` 의 `currentLanguage` 파생·선택 하이라이트를 정규화 코드 기준으로 전환(`en-US` 오표기도 제거). `changeLanguage` 호출은 유지.
+
+### 영향 파일
+
+**data-craft**
+- `src/shared/i18n/i18n.ts`
+- `src/shared/i18n/index.ts`
+- `src/widgets/settings-dialog/ui/AppTabContent.tsx`
+- `src/shared/ui/LanguageSwitcher.tsx`
+
+### 검증 결과
+
+- data-craft lint (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 사전 존재 19 warnings). 루트 앱 `tsc -p tsconfig.app.json --noEmit`: 패키지 dist 빌드 후 exit 0 (Phase 1·2 양쪽).
+- 헬퍼는 `useTranslation()` 구독으로 언어 변경 시 재렌더되어 반응성 유지.
+- 수동 검증 권장: 한국어 로케일 브라우저에서 `i18nextLng` 삭제 후 재로드 → 드롭다운 "한국어" + UI 한글 일치 확인. English 선택 → UI 영어 + 드롭다운 English + `i18nextLng==='en'` + 재로드 유지 확인.
+
+### 알려진 후속 부채 (별도 plan 권장)
+
+- 언어 설정의 **서버 preferences 동기화** 미도입 — 테마(`seedBundleData` 의 `setThemeFromServer`)와 달리 언어는 client localStorage 전용이라 크로스 디바이스 유지 안 됨. 필요 시 별도 plan(FE+BE).
+
 ## v001.476.0
 
 > 통합일: 2026-05-26
