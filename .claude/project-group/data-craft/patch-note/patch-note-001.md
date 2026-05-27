@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.503.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #187 (핫픽스1)
+
+### 배경
+
+v001.495.0 는 가이드 "버튼"만 앱 헤더로 옮겼을 뿐 내용은 뷰어 전속 그대로였다(선택 화면이 "뷰어 가이드/뷰어 문서"로 표기). 마스터 핫픽스 지시: 단순 이전이 아니라 (1) 라벨을 명시 지정대로 `기능 가이드`/`서비스 문서`로 교체, (2) 뷰어 전속 콘텐츠를 데이터 크래프트 전체를 다루는 범용 가이드로 전면 재집필, (3) 방대한 내용을 쉽게 이해하도록 가이드 다이얼로그 UI 전면 개편. 언어는 데이터 크래프트가 지원하는 **ko/en** 만(zh/ja 는 앱에서 ko 로 fallback 하므로 미수정). **콘텐츠 분량은 의도적으로 축소** — 기존은 뷰어 라이브러리 개발자 API·장황한 prose 였고, 신규는 정확성·사용자 관점 우선의 간결한 서술로 재구성(분량 감소 = 콘텐츠 손실이 아니라 리프레이밍).
+
+### 페이즈 결과 (핫픽스1, A–F)
+
+- **A** (`6a3c1ab`): 가이드 라벨 교체 — `뷰어 가이드`→`기능 가이드`, `뷰어 문서`→`서비스 문서`, 선택 화면 설명 데이터 크래프트 톤 (ko/en).
+- **B** (`c032a4f`): 가이드 다이얼로그 UI 개편 — 브레드크럼 헤더, 기능 가이드 사이드바 현재 섹션 강조+단계 수 배지, 서비스 문서 사이드바 카테고리 접이식+항목 수 배지+검색 시 자동 펼침, 다이얼로그 확대(가이드 1040×700·문서 1180×800). useGuideNavigation 계약 보존.
+- **C** (`de55b80`): 기능 가이드 콘텐츠 ko 전면 집필 — 10개 섹션(시작하기·디자인 모드/화면·위젯·뷰 모드·입력폼·데이터 관계·협업/권한/알림·고급·팁·문제 해결), contentLoader ko 배선.
+- **D** (`7ce6d58`): 서비스 문서 콘텐츠 ko 전면 집필 — 13개 카테고리(개요·위젯 레퍼런스·데이터 뷰어·그리드/칸반/간트/캘린더/대시보드·서브 뷰어·폼 레퍼런스·권한/플랜·문제 해결·FAQ), contentLoader ko 배선.
+- **E** (`0ed8137`): 위 ko 정본을 en 으로 전면 동기화(가이드 10 + 문서 13), contentLoader en 배선.
+- **F** (`1910b43`): UI 개편 시 누락된 Radix `DialogTitle` 을 visually-hidden(`sr-only`)으로 복원 — 접근성 회귀 수정.
+
+> advisor 완료 검증: 통과(BLOCK 없음). 사용자 가시 라벨 잔존("뷰어 가이드/문서") 0건, 하드코딩 문자열 0건 확인(전부 i18n 경유).
+
+### 영향 파일
+
+**packages/fs-data-viewer (가이드 UI)**
+- `src/widgets/guide/GuideDialogShell.tsx`, `GuideSelectionContent.tsx`, `GuideViewerContent.tsx`, `DocsViewerContent.tsx`, `components/DocsSidebar.tsx`
+
+**packages/fs-data-viewer (i18n·로더)**
+- `src/shared/config/i18n/translations/ko.ts`, `en.ts`
+- `src/features/guide/lib/contentLoader.ts`
+
+**packages/fs-data-viewer (콘텐츠 ko/en)**
+- `src/shared/config/guide/content/{ko,en}/guide/*.json` (10 섹션 + _meta, 신규 widgets·forms·data-relations·collaboration)
+- `src/shared/config/guide/content/{ko,en}/docs/*.json` (13 카테고리 + _meta, 신규 overview·widgets-ref·forms-ref·permissions)
+
 ## v001.502.0
 
 > 통합일: 2026-05-27
