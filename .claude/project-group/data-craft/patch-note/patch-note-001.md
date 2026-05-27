@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.483.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #183
+
+### 배경
+
+데이터 뷰어 탐색기가 뷰어/서브/외부 3종 위젯으로 분리되어 있어 위젯 설정 드로어에도 3개 항목이 따로 노출됐다. 이를 단일 "데이터 탐색기" 위젯으로 통합하고, 목록 화면 상단 탭(뷰어/서브/외부)으로 소스를 전환하도록 변경. 기존에 저장된 탐색기 위젯 인스턴스는 로드 시점 클라이언트 마이그레이션으로 통합 위젯의 해당 탭으로 열리게 했다. 구현은 **탭 래퍼(경량)** 방식 — 기존 3개 패키지(`fs-data-viewer-explorer`/`fs-sub-data-viewer-explorer`/`fs-external-data-viewer-explorer`)는 내부 구현으로 유지하고 앱 레이어에 단일 위젯을 신설. **FE 전용** — `data-craft-server` 무수정(표준 저장 타입 = 기존 `viewer-explorer`, 서버 인덱스 11 재사용).
+
+### 페이즈 결과
+
+- **Phase 1** (`1a25a21`): 앱 레이어에 신규 `DataExplorerWidget`(`src/widgets/data-explorer-widget/`) 생성. 상단 탭 바(뷰어/서브/외부)는 기존 shadcn `Tabs` 프리미티브 사용, 비활성 탭은 조건부 JSX로 완전 언마운트(불필요 데이터 패치 방지 — `currentView`는 각 패키지 Zustand store 보관이라 위치 보존). `config.properties.initialTab`에서 초기 탭 읽음(미설정 시 `'viewer'`). 탭 라벨은 `src/shared/i18n/locales/{ko,en}.ts`에 `dataExplorer.tabs.*` 키 신규 추가해 i18n 렌더링.
+- **Phase 2** (`313cd3e`): 통합 위젯 표준 저장 타입을 기존 `viewer-explorer`로 확정. `widgetDefaults`에 `initialTab: 'viewer'` 추가, `AddWidgetButton` 드로어에서 탐색기 3항목 → 단일 "데이터 탐색기" 항목, `widgetTypeConfig` picker 그룹 단일화, `WidgetRegistryProvider`에서 `viewer-explorer` → `DataExplorerWidget` 재배선(+ sub/external 키도 `initialTab` 방어값 주입해 재배선, 기존 래퍼/등록 보존).
+- **Phase 3** (`82fd0c4`): `widgetCrudActions.ts` `mapServerWidget()`에 멱등 마이그레이션 `migrateExplorerType()` 추가. 서버 로드 위젯 type이 `sub-viewer-explorer`/`external-viewer-explorer`이면 `viewer-explorer`로 교체 + `properties.initialTab`을 `'sub'`/`'external'`로 주입(기존 initialTab 보존). `effectiveType`으로 기본값·스타일 정규화. 이미 마이그레이션된 인스턴스는 무변경.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `src/widgets/data-explorer-widget/ui/DataExplorer.widget.tsx` (신규)
+- `src/widgets/data-explorer-widget/index.ts` (신규)
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `src/entities/widget/model/widgetDefaults.ts`
+- `src/features/widget-placement/ui/AddWidgetButton.tsx`
+- `src/widgets/property-drawer/ui/widgetTypeConfig.ts`
+- `src/app/providers/WidgetRegistryProvider.tsx`
+- `src/entities/widget/model/widgetCrudActions.ts`
+
+### 검증 결과
+
+- 페이즈별 lint gate: `pnpm typecheck:all` 8/8 (전 페이즈), 루트 앱 `tsc -p tsconfig.app.json` 신규 오류 0(잔존 8건은 본 플랜 미변경 선존 파일), `eslint` 0 errors.
+- 마이그레이션 멱등성: 이미 `viewer-explorer`+initialTab 인스턴스는 통과 무변경.
+
+### 마이그레이션 전략
+
+- 위젯 인스턴스(서버 영속): 신규 서버 인덱스 도입 없이 로드 시점에 old 타입(sub/external)을 표준 `viewer-explorer`+`initialTab`으로 클라이언트 매핑. 새 저장은 항상 `viewer-explorer`. BE 무수정.
+- 환경설정(localStorage 3키): 탭 래퍼가 각 소스 래퍼를 그대로 마운트 → 각 래퍼가 자기 키를 읽으므로 마이그레이션 불필요(소스별 설정 보존).
+- 백워드 호환: 기존 3 래퍼 패키지/레지스트리 등록 유지(삭제 안 함). 완전 제거는 후속 과제.
+
+### 해석 선택 / 후속 결정 후보 (차단 아님)
+
+- **탭 표시 범위**: 현재 탭 바는 활성 래퍼 위에 항상 표시되어 상세 화면에서도 탭이 보임("목록 화면" 느슨한 해석). 엄격 해석("목록 화면에서만 탭, 상세에서 숨김") 원할 시 핫픽스 가능.
+- **속성 에디터**: `WidgetPropertiesEditor`에 `initialTab` 선택 UI 미신설(탭은 런타임 사용자 전환으로 충분). 전용 에디터 신설은 별도 결정.
+
 ## v001.482.0
 
 > 통합일: 2026-05-27
