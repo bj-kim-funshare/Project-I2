@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.499.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스6)
+
+### 배경
+
+마스터 요청: 핫픽스3 에서 도입한 편집 모달의 "저장 없이 닫기" 문구를 다시 "취소"로 복원. (별건으로 #1 "ESC 2번 눌러야 닫힘" 잔존 보고 — 본 핫픽스 미수정, 아래 절차 노트 참조.)
+
+### 핫픽스 결과 (누적 Phase 10)
+
+- **핫픽스6** (`c7f88d16`): 긴 텍스트/코드 편집 모달 하단 보조 버튼 라벨을 `t.common.closeWithoutSave`("저장 없이 닫기") → `t.common.cancel`("취소")로 복원. 단축키 힌트(`codeKeyboardShortcuts`, `cellRenderer.longText.shortcutHint`)의 "ESC: 저장 없이 닫기" → "ESC: 취소"(4 로케일 ko/en/ja/zh). 더 이상 참조되지 않는 `common.closeWithoutSave` 키를 types.ts + 4 로케일에서 제거. ESC 동작 자체(handleCancel = 값 저장 없이 닫기)는 무변경 — 라벨/문구만 복원.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/`:
+- `widgets/cell-renderers/long-text-cell/EditDialog.tsx`, `widgets/cell-renderers/code-cell/CodeEditDialog.tsx`
+- `shared/config/i18n/types.ts`, `shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors**. 루트 앱 tsc: exit 0.
+
+### 절차 노트 — #1(ESC 2-press) 미해결, 블라인드 시도 중단 규칙
+
+- 본 핫픽스는 **라벨 복원만** 수행. 마스터가 함께 보고한 #1("포커싱 때문에 ESC 2번 눌러야 닫힘")은 **미수정**.
+- **#1 은 동일 표면(편집 모달 ESC/포커스)에서 핫픽스4·5 로 2회 블라인드 시도했으나 미해결.** 정적 분석으로 첫-ESC 실패가 재현되지 않으며, 본 세션에는 브라우저 자동화 도구가 없어 런타임 관찰 불가.
+- **하드 룰**: #1 의 다음 시도는 아래 진단 결과를 받은 뒤에만 진행한다. 결과 없이 추가 블라인드 핫픽스 금지.
+  - 진단: 모달을 연 직후 `document.activeElement` 값, ESC 1회 후 `document.activeElement` 값 — 2개.
+  - 첫 값이 textarea 면 → document-capture 리스너가 첫 ESC 를 못 잡는(선점/되돌림) 케이스. 리스너 발화 로깅 필요.
+  - 첫 값이 cell div/body 등이면 → autoFocus 가 무효(포털 textarea + sibling focus race). `autoFocus` attr 대신 다이얼로그 자체 useEffect 에서 `textareaRef.current?.focus()` 명시 호출로 교체.
+- advisor() 과부하로 advisor #2 no-BLOCK 간주. WIP origin push 분류기 차단 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.498.0
 
 > 통합일: 2026-05-27
