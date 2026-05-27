@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.497.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스5 — 핫픽스4 보정의 보정)
+
+### 배경
+
+핫픽스4(v001.494.0) 이후에도 편집 모달 키보드에 잔존 문제 보고:
+1. (긴 텍스트·코드 둘 다) ESC 1번 → 안 닫히고 셀 포커스만 해제, 2번째에 닫힘.
+2. (코드만) Cmd/Ctrl+S 가 textarea 포커스 상태에서만 동작.
+3. (코드만) 셀 포커스 해제 후 ESC 눌러도 모달 안 닫힘.
+
+### 원인 (조사 확정)
+
+`normal-161` 의 **document capture-phase keydown 리스너가 긴 텍스트 `EditDialog.tsx` 에만 적용되고 코드 `CodeEditDialog.tsx` 에는 누락**됨. 코드 모달은 React 버블 onKeyDown 으로만 키를 처리해 포커스가 다이얼로그 안에 있어야 동작 → 코드의 Cmd+S 포커스 의존(#2)·포커스 해제 후 ESC 미작동(#3). 또 양 모달 textarea 오토포커스가 `setTimeout(0)` 이라 유실 시 첫 ESC 가 셀 div native blur 로 소비됨(#1, 셀 포커스 해제하는 JS 핸들러는 없음 — native 동작).
+
+### 핫픽스 결과 (누적 Phase 9)
+
+- **핫픽스5** (`22e9164b`): 코드 `CodeEditDialog.tsx` 에 긴 텍스트 EditDialog 와 **동일한 document capture-phase keydown 리스너** 추가 — ESC→onCancel(닫기), Cmd/Ctrl+S→onSaveShortcut(저장-only), 둘 다 `stopImmediatePropagation`. `CodeEditDialogProps` 에 `onSaveShortcut` 추가, `FsGridCodeCellRenderer` 에서 기존 `saveOnly` 배선. 양 모달(코드·긴 텍스트) textarea 에 `autoFocus` 추가(마운트 포커스 신뢰성 → #1 race 완화).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/widgets/cell-renderers/`:
+- `code-cell/CodeEditDialog.tsx`, `code-cell/types.ts`, `code-cell/FsGridCodeCellRenderer.tsx`
+- `long-text-cell/EditDialog.tsx` (textarea autoFocus)
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors**. 루트 앱 tsc: exit 0.
+- 수동 테스트 권장: ① 코드 모달에서 포커스가 textarea 밖이어도 Cmd/Ctrl+S 저장·ESC 닫힘, ② 긴 텍스트/코드 ESC 1번에 닫힘, ③ Cmd+S → "저장중" + 모달 유지.
+
+### 절차 노트
+
+- **수정 범위 정직 표기**: **#2·#3 은 확정 수정**(코드 모달이 긴 텍스트와 키 처리 패리티 확보, 메커니즘 규명됨). **#1(2-ESC) 은 autoFocus + 코드 패리티로 best-effort 완화**이며, 긴 텍스트는 이미 document 리스너가 있었음에도 첫 ESC 실패가 정적으로 재현 안 돼 #1 의 정확한 런타임 메커니즘은 미확정. **마스터 검증 필수(특히 긴 텍스트 #1).**
+- **권고**: 본 건은 핫픽스3→4→5 로 동일 표면을 거듭 보정(누적 Phase 9). 마스터 검증 후에도 세 증상 중 하나라도 잔존하면, 다음 단계는 **또 다른 블라인드 핫픽스가 아니라 in-app 런타임 디버깅**(마스터 라이브 또는 verify 스킬)으로 진행할 것을 권고.
+- **형제 패키지 미반영**: `fs-sub-data-viewer`·`fs-external-data-viewer` 의 code-cell/long-text-cell 사본은 본 플랜 스코프 밖(메인 앱 = fs-data-viewer). 동일 비대칭 가능성 — 필요 시 별도 plan.
+- advisor #2(핫픽스5) 시점 advisor() 과부하로 no-BLOCK 간주. WIP origin push 분류기 차단으로 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.496.0
 
 > 통합일: 2026-05-27
