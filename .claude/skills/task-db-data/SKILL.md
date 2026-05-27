@@ -81,6 +81,8 @@ Master picked the full-environment scope (2026-05-12) — dev / staging / prod a
 
 7. Advisor returns prose. Dispatcher parses for the **literal token `BLOCK:`** at line start. Presence → halt + Korean report. Absence → proceed.
 
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the capture/forward/rollback SQL file paths as the durable artifact paths; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
+
 ## Phase 3 — WIP commit (no PR — master 2026-05-12 결정)
 
 PR ceremony 폐기 — 데이터 변경 파일은 실행 *후* codification 이라 PR 머지 게이트는 의미 약함. WIP→i-dev 자동 머지 (Phase 5) 로 대체. 모든 audit 컨텍스트는 `plan.md` 에 기록.
