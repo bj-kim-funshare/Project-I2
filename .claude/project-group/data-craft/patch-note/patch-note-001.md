@@ -1,5 +1,53 @@
 # data-craft — Patch Note (001)
 
+## v001.489.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #184
+
+### 배경
+
+데이터 뷰어(fs-data-viewer) 검색 태그가 `"{열명 또는 전체}: {검색명} X"` 형식의 파란 pill 로만 표시되어, 입력 검색어는 항상 "포함" 조건으로만 동작했다. 마스터 요청: (1) 라벨을 `"{열명 또는 전체} 포함: {검색명} X"` 로 명시화, (2) 태그 클릭으로 포함↔제외 전환 — 포함(파랑) 태그 호버 시 빨강 "제외로 변경" 툴팁, 제외(빨강) 태그 호버 시 파랑 "포함으로 변경" 툴팁, 제외 시 해당 검색어를 NOT-contains 조건으로 검색. 확정 스코프 = **FE + BE 완전 구축** (마스터 명시로 Roadmap-1 FE-only lock 본 건 한정 해제) — 데이터 뷰어의 클라이언트 인메모리 필터와 서버 페이징 양 경로에서 제외가 일관 동작.
+
+### 페이즈 결과
+
+- **Phase 1** (`4c9001b` + lint 핫픽스 `2db6569b`, data-craft): `SearchCondition`·`SearchFiltersParam` 에 `isExclude?: boolean` 추가, `FsDataViewerRouter` 에 `handleToggleSearchCondition` 신설 + 서버 파라미터 변환 결속, `FsGridHeaderProps`·`SearchConditionTagsProps` 에 `onToggleSearchCondition` 배선. (로컬 중복 `SearchCondition` 타입 동기화 lint 핫픽스 1회.)
+- **Phase 2** (`45a8bc8d`, data-craft): `Tooltip` 에 `contentClassName` prop 추가. 태그 라벨 `{열} {포함|제외}: {검색명}`, `isExclude` 시 빨강 pill, Tooltip 으로 토글 안내(제외 태그=파랑 "포함으로 변경" / 포함 태그=빨강 "제외로 변경"), pill 클릭=토글, X 버튼은 `stopPropagation` 분리. i18n 4개 로케일(ko/en/ja/zh) + 스키마 타입에 `include`/`exclude`/`toggleToExclude`/`toggleToInclude` 추가.
+- **Phase 3** (`072d73d`, data-craft): 클라이언트 인메모리 필터 `useSearchFilter.matchRowForCondition` 에 `isExclude` 반영(`isExclude ? !matched : matched`), no-data 가드는 부정 제외. AND/OR 결합은 조건 내부 부정으로 무변경.
+- **Phase 4** (`8239d04`, data-craft-server): BE `SearchFiltersParam` 에 `isExclude` 추가. `buildMultiSearchWhereClause`(pivot — grid/grouped/row) 제외 시 단일 열 `NOT LIKE`·전체 열 De Morgan. `buildEavFilterJoins`(EAV — gantt/kanban/aggregation) OR(UNION)·AND(INNER JOIN) 양 경로에 비상관 파생집합 `row_num NOT IN (…)` 제외 분기 — 반환형·호출부 무변경.
+- **Phase 5** (`b2884e5`, data-craft-server): inline 검색 빌더 — `paging.subGrid.ts` 제외 시 `IN`→`NOT IN`, `paging.calendar.ts` searchFilters 블록 재작성(AND=include 통합 INNER JOIN + exclude 건별 INNER JOIN, OR=조건별 row-set UNION). 기존 include 의미 보존, 제외는 Phase 4 와 동일 의미.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/`:
+- `app/FsDataViewerRouter.tsx`
+- `widgets/FsGridHeader.tsx`
+- `widgets/data-viewer-header/headerTypes.ts`
+- `widgets/data-viewer-header/header-search/searchTypes.ts`
+- `widgets/data-viewer-header/header-search/SearchConditionTags.tsx`
+- `widgets/data-viewer-header/header-search/useSearchFilter.ts`
+- `entities/paging.types.ts`
+- `shared/ui/Tooltip/Tooltip.tsx`
+- `shared/config/i18n/types.ts`, `shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`) — `src/`:
+- `types/viewerPaging.types.ts`
+- `models/viewerPaging.whereclause.ts`
+- `models/paging/paging.calendar.ts`, `models/paging/paging.subGrid.ts`
+
+### 검증 결과
+
+- data-craft lint gate (`pnpm typecheck:all && pnpm lint`): 매 FE 페이즈 후 exit 0 (0 errors).
+- data-craft-server lint gate (`pnpm lint`): Phase 4·5 후 exit 0 (0 errors).
+- 수동 테스트 권장: ① 태그 `{열} 포함: {검색명}` 표시 + 호버 빨강 "제외로 변경" → 클릭 시 빨강 "제외" + 제외 결과, ② 빨강 태그 호버 파랑 "포함으로 변경" → 클릭 복귀, ③ 그리드뷰(인메모리)·서버 페이징(grid/grouped/gantt/kanban/calendar/subGrid) 양 경로 제외 일관, ④ 다중 조건 AND/OR + 포함/제외 혼합. 기준 케이스: 행 {A만}{B만}{A·B}, [A포함·B제외] → AND={A만}, OR={A만, A·B}.
+
+### 절차 노트
+
+- advisor #1(계획)·#2(완료) 모두 no-BLOCK.
+- 스코프 확장 2회(Phase 1 `headerTypes.ts`, Phase 2 i18n `types.ts`) — 승인된 의도 내 자명 확장으로 재디스패치. BE EAV 제외는 초기 안티조인(LEFT JOIN+WHERE IS NULL)이 반환형·호출부 확장을 강제하여, 자기완결 파생집합 `NOT IN` 방식으로 전환해 회피.
+- **후속(미실행)**: `paging.calendar.ts` searchFilters 분기는 공유 `buildEavFilterJoins` 와 의미 동일 — 향후 통합 후보(현재는 calendar 기존 구조 보존 위해 inline 유지).
+- WIP origin push 는 분류기 차단으로 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.488.0
 
 > 통합일: 2026-05-27
