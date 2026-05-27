@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.478.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #175
+
+### 배경
+
+데이터 뷰어 / 서브 데이터 뷰어 / 외부 데이터 뷰어 3종과 탐색기가 다크모드에서 색이 거의 대응되지 않던 문제. 라이트 디자인은 그대로 유지하면서 색만 다크모드에 대응하도록 처리.
+
+### 원인
+
+3종 뷰어 `styles.css` 의 `:root`/`.dark` shadcn 토큰 + `@theme inline var()` 는 다크 반응하지만, 실제 컴포넌트 대부분이 하드코딩 중성색 유틸리티(`bg-white`/`bg-gray-*`/`text-gray-*`/`border-gray-*`)·인라인 hex 를 사용해 다크에서 반응하지 않음(뷰어당 1,300여 중성 사이트, 기존 `dark:` 변형 4건뿐). `@theme {}` Material Design hex 토큰은 컴포넌트 사용 0건(死코드). 탐색기 3종은 이미 `.dark` 토큰 체계가 있어 거의 대응되어 있었음.
+
+### 페이즈 결과
+
+- **Phase 1 (feat)** `7bb4d00`: fs-data-viewer `styles.css` 말미에 unlayered `.dark` 오버라이드 레이어 추가 — 24개 중성 유틸 클래스(bg-white·bg-gray-*·text-gray-*·border-gray-*·ring-black)를 기존 `.dark` shadcn 토큰(`var(--card/--muted/--accent/--popover/--background/--foreground/--muted-foreground/--border/--ring)`)으로 일괄 재매핑. 컴포넌트 무수정, 라이트 모드 완전 보존.
+- **Phase 2 (fix)** `c7f2587`: fs-data-viewer dashboard chrome 9개 파일의 `DashboardTokens` 중성 인라인 hex(#ffffff/#f3f4f6/#6b7280)를 `var()` 토큰으로 교체. 로딩 오버레이 `rgba(255,255,255,.7)` → `color-mix(in srgb, var(--card) 70%, transparent)`. Tabs active state `bg-white/text-gray-900` → `bg-card/text-foreground`.
+- **Phase 3 (feat)** `b816a37`: fs-sub-data-viewer `styles.css` 에 Phase 1 동일 오버라이드 레이어 미러(+text-gray-200/300) + ContentArea 플레이스홀더 인라인 hex 토큰화.
+- **Phase 4 (feat)** `e649e9a`: fs-external-data-viewer 오버라이드 레이어 + 테마 설정 오브젝트(`dashboard-tokens.ts`/`uiColors.ts`/`viewColors.ts`)·`styles.css`·ContentArea 의 중성 hex 를 `var()` 토큰화. 시맨틱/데이터색(차트 팔레트·blue/red/amber 상태색·white-on-color) 전량 보존.
+- **Phase 5 (fix)** `7aa3dcb`: 탐색기 3종 검증 — fs-data-viewer-explorer / fs-external-data-viewer-explorer 의 destructive 버튼 `text-white` → `text-destructive-foreground` 토큰화. 사용처 없는 누락 토큰은 dead code 회피로 미추가.
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/styles.css`
+- `packages/fs-data-viewer/src/shared/ui/Tabs/Tabs.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/` (DashboardGrid, FsDashboard, widget-selector/{WidgetPreview,WidgetSelector}, widget-settings/{WidgetSettingsPanel,WidgetSettingsTabs}, widgets/user-insight/{SlotCard,CompareSlotCard})
+- `packages/fs-sub-data-viewer/src/styles.css`
+- `packages/fs-sub-data-viewer/src/shared/ui/dialogs/document-edit/ContentArea.tsx`
+- `packages/fs-external-data-viewer/src/styles.css`
+- `packages/fs-external-data-viewer/src/shared/ui/dialogs/document-edit/ContentArea.tsx`
+- `packages/fs-external-data-viewer/src/shared/config/theme/{dashboard-tokens.ts,componentColors/uiColors.ts,componentColors/viewColors.ts}`
+- `packages/fs-data-viewer-explorer/src/styles.css`
+- `packages/fs-external-data-viewer-explorer/src/styles.css`
+
+### 검증 결과
+
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 전 페이즈 PASS(exit 0, 기존 19 warnings).
+- 패키지 빌드(tsup 3종) + 루트 앱 빌드(`tsc -b && vite build`) 성공 — `color-mix()`·`bg-card` arbitrary state-variant 등 Tailwind v4 CSS 파이프라인 정상 컴파일 확인.
+- advisor 계획·완료 게이트 5관점 PASS(BLOCK 없음).
+
+### 알려진 특성 / 후속 옵션
+
+- **라이트 모드 중성 미세 편차**: 인라인 hex value-swap 방식은 다크 반응을 얻는 대신 shadcn 팔레트에 정확한 등가가 없는 회색을 라이트에서 한 단계 시프트시킴 — `inputColors.border` gray-400→gray-200(가장 눈에 띔), 일부 `gray-50→white` 배경, 달력 weekday/more 텍스트 gray-400→gray-500, SlotCard 보조 텍스트 gray-600→gray-500. 색조·레이아웃·타이포·데이터색은 무변경.
+- **완전 라이트 픽셀 보존 fidelity 핫픽스**: 필요 시 토큰별 전용 CSS 변수(light=원본 hex, dark=조정값)를 `styles.css` 에 정의해 참조하면 라이트를 정확히 보존하면서 다크 반응 유지 가능.
+- 인라인 hex 잔여(차트 위젯/설정 폼 컨트롤 등, 가시 핫스팟 외) 및 `gridBg #fafafa`·gray-600 5건 등 정확 토큰 부재 항목은 미변환 — 후속/핫픽스 후보.
+
 ## v001.477.0
 
 > 통합일: 2026-05-27
