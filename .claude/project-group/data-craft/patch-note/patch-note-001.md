@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.493.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #186
+
+### 배경
+
+데이터 뷰어 신규 열 타입 **"행 연결"**(rowLink) 구성 다이얼로그(`RowLinkConfigDialog`)의 대상 그룹 선택 Step 은 `뷰어 / 서브 / 외부 / 폼` 탭으로 그룹을 고르게 한다. QA 지적: **서브 데이터 그룹 탭**의 각 항목이 서브 그리드명만 보여줘서, 어느 부모 데이터 그룹(뷰어 그룹)에 속한 서브인지 구분이 어렵다. 개선 = 서브 탭 항목에 부모 뷰어 제목을 **주제목**, 서브 그리드 제목을 **부제목**으로 2줄 표기. 다른 탭은 기존 단일 줄 유지. 순수 선택-UI 표시 개선으로 저장 config / 셀 표시값에는 영향 없음.
+
+### 페이즈 결과
+
+- **Phase 1** (`f00cb0e1`): `ConnectionGroupItem` 에 옵셔널 `parentGroupName` 필드 추가. `connectionCallbacks.ts` 서브 그룹 매핑에서 `parentGroupName` 배선(`getSubGridGroupList` 반환 타입이 loose 하여 `SubGridGroupListItem` 캐스트 — 런타임은 server `parent_group_name`→`snakeToCamelDeep` 보존으로 정상). `RowLinkConfigDialog` 리스트 항목을 `parentGroupName` 존재 시 2줄(주=부모 뷰어 제목, 부=작은 muted 서브 그리드명) 레이아웃으로 렌더, 부재 시(뷰어/외부/폼) 기존 단일 줄 유지. 검색 필터를 `groupName` 또는 `parentGroupName` 매칭으로 확장(부모 제목 검색 0건 회귀 방지).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/entities/connection/types.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx`
+- `src/features/viewer/lib/connectionCallbacks.ts`
+
+### 검증 결과
+
+- lint gate `pnpm typecheck:all && pnpm lint` 0 errors (21 pre-existing warnings).
+- `fs-data-viewer` 패키지 dist 재빌드 + 루트 앱 tsc 확인(본 변경 관련 신규 오류 없음).
+- advisor 완료 검증 PASS (advisor-fallback 경유 — advisor() 일시 과부하).
+- 수동 확인 시나리오: dev 재기동 → 행 연결 열 추가 → "서브" 탭 항목이 부모 뷰어 제목(주) + 서브 그리드명(부) 2줄, 뷰어/외부/폼 탭은 단일 줄 유지 확인.
+
+### 알려진 후속 (별도 plan 권장, 차단 아님)
+
+- `getSubGridGroupList()` 반환 타입을 서브 그리드 전용 타입(`parentGroupName` 포함)으로 분리하면 `connectionCallbacks.ts` 의 `as SubGridGroupListItem[]` 캐스트 제거 가능.
+
 ## v001.492.0
 
 > 통합일: 2026-05-27
