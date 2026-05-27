@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.504.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #189
+
+### 배경
+
+데이터 그룹을 가리키는 용어가 레이어마다 제각각이었다 — 한국어 라벨 `메인`/`서브`/`외부`/`폼`, TS 판별자 `groupType:'main'|'sub'|'external'`, widget 값 `'viewer'|'sub-viewer'|'external-viewer'`, `dataType:'single'|'multi'|'form'`. 역사적으로 "뷰어 설정 있으면 뷰어 그룹 / 행 설정만 있으면 서브 그룹 / 없으면 외부 그룹 / 폼 설정 있으면 폼 그룹(외부에 포함)" 으로 파생된 결과다. 이를 **데이터 뷰어 그룹 / 서브 데이터 뷰어 그룹 / 폼 데이터 그룹 / 일반 데이터 그룹** 4-개념 컨벤션으로 전수 통일하고, 폼을 외부에 섞인 상태에서 1급 개념으로 분리 명명했다. 스코프는 마스터 지정 **무중단** — wire 전송값·DB 저장값(widget index, `option_data.groupType` 리터럴)·SQL 리터럴·react-query 캐시 키·API 엔드포인트는 전부 불변, 그 위의 TS 식별자·한국어 UI 라벨·주석만 교체. 따라서 서버/DB 변경이나 데이터 마이그레이션은 없다.
+
+### 페이즈 결과
+
+- **Phase 1** (`e2451940`+`f4cd3dcd`): data-craft `fs-api` 에 4-개념 신규 export 타입 별칭을 구버전과 병존 추가(bridge open) + public entry re-export. typecheck:all 모노레포 원자 검사를 고려해 무중단 경계 유지.
+- **Phase 2** (`283e6213`/`5f1027ef`/`7e9a752d`/`1f4649e1`): data-craft consumer 전체(뷰어 패키지군 + explorer 3종 + relation-builder + 루트 앱)를 신규 별칭으로 이전. 한국어 라벨 4명 통일, `RowLinkConfigDialog` GROUP_TABS 폼 탭을 "폼 데이터 그룹"으로 1급 분리(isForm 로직 불변).
+- **Phase 3** (`74e14e2e`): `fs-api` bridge close — 신규명 canonical 승격, 구 별칭 7종 제거, 잔존 consumer 1건 이전.
+- **Phase 4** (`ea843237`): data-craft-server 내부 식별자·한국어 상수 라벨·주석 통일. wire 문자열·SQL 리터럴·DB index 매핑·callID 패턴·분류 쿼리 동작 전면 불변.
+- **Phase 5** (`38878ce1`+`98f7cc1e`): data-craft-mobile 미러 — `fs-api-mobile` bridge close, `fs-form-builder-mobile` 훅/식별자(`useExternalGroups`→`useGeneralDataGroups` 등)·`ConnectionConfigEditor` 라벨 이전, `fs-data-viewer-mobile`/`fs-shared-mobile` 스윕. web 과 대칭(구명 완전 제거).
+
+### 영향 파일
+
+**data-craft** (i-dev `c6e3bf79`, 70 files)
+- `packages/fs-api/src/types/**`, `packages/fs-api/src/index.ts`
+- `packages/fs-data-viewer/src/**` (`ConnectionSettingsDialog`/`ConnectionConfigDialog`/`RowLinkConfigDialog` 라벨·폼 탭)
+- `packages/fs-sub-data-viewer/src/**`, `packages/fs-external-data-viewer/src/**`
+- `packages/fs-data-viewer-explorer/src/**`, `packages/fs-sub-data-viewer-explorer/src/**`, `packages/fs-external-data-viewer-explorer/src/**`, `packages/fs-relation-builder/src/**`
+- `src/entities/widget/api/**`, `src/features/form-builder/ui/ConnectionConfigEditor.tsx`, `src/features/viewer/lib/connectionCallbacks.ts`, `src/shared/types/form.types.ts`, `src/entities/input-data-group/api/inputDataGroupApi.ts`
+
+**data-craft-server** (i-dev `4cb00ce`, 16 files)
+- `src/types/externalData.types.ts`, `src/types/subGridData.types.ts`
+- `src/models/externalData.model.ts`, `src/models/viewer.model.ts`, `src/models/subGridData.model.ts`, `src/models/inputStore.model.ts`, `src/models/paging/paging.grid.ts`
+- `src/services/externalData.service.ts`, `src/services/subGridData.service.ts`, `src/services/inputStore.service.ts`
+- `src/controllers/externalData.controller.ts`, `src/controllers/subGridData.controller.ts`, `src/controllers/inputStore.controller.ts`
+- `src/routes/externalData.ts`, `src/routes/subGridData.ts`, `src/config/constant.ts`
+
+**data-craft-mobile** (i-dev `101e229`, 14 files)
+- `packages/fs-api-mobile/src/types/**`, `packages/fs-api-mobile/src/index.ts`, `packages/fs-api-mobile/src/api/**`
+- `packages/fs-form-builder-mobile/src/entities/widget/api/**`, `packages/fs-form-builder-mobile/src/entities/widget/index.ts`, `packages/fs-form-builder-mobile/src/form-builder/ui/ConnectionConfigEditor.tsx`
+
+### 비고
+
+- **유지된 wire/DB 불변값**: `groupType:'main'|'sub'|'external'`, `dataType:'single'|'multi'|'form'`, `LayoutWidgetType` 문자열 + DB index(8/9/10), react-query 캐시 키('external-groups'/'sub-grid-groups'), API 엔드포인트 경로. 폼 분류는 기존 `isForm`/`form_list` 신호 그대로.
+- **패키지명 유지**: `fs-external-data-viewer` 등 워크스페이스 패키지 디렉토리/이름은 미변경(import 경로·빌드 설정 흔드는 구조 변경 → 별도 후속 여지).
+- lint 게이트 전 페이즈 PASS (data-craft `typecheck:all && lint`, server `lint`+build, mobile `typecheck`). 루트 앱 tsc 의 TS2307 8건은 미빌드 패키지 dist 선재 오류로 본 변경 무관.
+
 ## v001.503.0
 
 > 통합일: 2026-05-27
