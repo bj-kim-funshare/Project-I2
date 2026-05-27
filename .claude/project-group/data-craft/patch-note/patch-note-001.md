@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.500.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #190
+
+### 배경
+
+마스터 요청: 데이터 탐색기 그룹 삭제 UX 통일 — (1) 모든 탐색기에서 "그리드 삭제" 문구를 "그룹 삭제"로 통일, (2) 삭제 버튼을 빨강 배경 + 흰색 텍스트로 통일(현재 빨강 배경 + 검정 텍스트), (3) 모노레포 전수조사로 사용자 커스텀이 아닌 빨강 버튼이 검정 텍스트를 쓰는 모든 경우를 흰색으로 교정.
+
+검정 텍스트의 실제 원인은 두 가지로 드러남: ① 탐색기 삭제 버튼이 텍스트 색을 CSS 변수(`text-destructive-foreground`)에 의존 → 런타임 cascade/미해결 위험, ② `AlertDialogAction` 삭제 버튼이 텍스트 색 미지정 → 기본 variant 의 `text-primary-foreground`(다크 테마 ≈ 검정) 상속. 처방은 공통적으로 **변수 의존 제거 + 리터럴 `text-white`**.
+
+### 페이즈 결과
+- **Phase 1** (`85861172`): 3개 탐색기 패키지 i18n 의 삭제 확인 다이얼로그 제목·설명을 "그리드 삭제" → "그룹 삭제" 통일 (ko/en/zh/ja 4개 언어). create 등 비삭제 flow 문구는 미변경.
+- **Phase 2** (`45681392`): 3개 탐색기 `styles.css` 의 `.fs-explorer-btn-destructive` 텍스트 색을 `text-destructive-foreground` → 리터럴 `text-white` 전환 (배경·hover 유지).
+- **Phase 3** (`1b4efa2c`): 모노레포 전수조사 1차 — `bg-destructive text-destructive-foreground` 패턴의 시스템 destructive 버튼 5개를 `text-white` 로 통일 (PrintDialog ×3, EventCardHeader, BillingSuccessPage).
+- **Phase 4** (`cc27bf5b`): 전수조사 2차(완료 검증) — `bg-red-*` + 텍스트 미지정으로 `text-primary-foreground`(다크 검정) 상속하던 `AlertDialogAction` 삭제 버튼 3개에 `text-white` 추가 (FormPanelButtonBar, FormListPanel, FormDataList).
+
+### 범위 밖 (의도적 제외)
+사용자 커스텀 버튼 색(`ButtonSettingsDialog` 팔레트), outline/ghost 버튼(투명 배경 + 빨강 텍스트), 배지·토스트·상태 dot·칸반 채움·KPI fill·유저 색 팔레트·연한 배경(`bg-destructive/5`) 에러 텍스트. 대조군(이미 흰색): shadcn `Button` destructive variant, `RoleCard`, `DeleteCardDialog`, `CancelSubscriptionDialog`. 형제 레포(mobile/ai-preview/server)는 감사상 흰색 준수 — 무변경.
+
+### 검증
+- 페이즈별 lint 게이트 통과: `pnpm typecheck:all && pnpm lint` (루트 src/ 변경 페이즈는 패키지 dist 빌드 후 `tsc -p tsconfig.app.json` 추가 — 모두 0 errors).
+- advisor 계획·완료 검증은 advisor() 엔드포인트 throttle 로 **advisor-fallback 경유** 수행. 완료 검증 1차 BLOCK(전수조사 누락 2건) → Phase 4 보강 후 재검증 PASS.
+- 렌더 색은 정적 검증 대상 외(#175) — 마스터 수동 확인 권장: 탐색기 그룹 삭제 다이얼로그 + 폼 삭제 다이얼로그에서 빨강 배경 + 흰색 텍스트 + "그룹 삭제" 문구. (런타임 반영은 해당 패키지 dist 재빌드 후.)
+
+### 영향 파일
+**data-craft (packages)**
+- `packages/fs-data-viewer-explorer/src/lib/i18n.ts`, `.../src/styles.css`
+- `packages/fs-external-data-viewer-explorer/src/lib/i18n.ts`, `.../src/styles.css`
+- `packages/fs-sub-data-viewer-explorer/src/lib/i18n.ts`, `.../src/styles.css`
+- `packages/fs-data-viewer/src/features/print/ui/PrintDialog.tsx`, `.../widgets/calendar/detail-panel/EventCardHeader.tsx`
+- `packages/fs-external-data-viewer/src/features/print/ui/PrintDialog.tsx`
+- `packages/fs-sub-data-viewer/src/features/print/ui/PrintDialog.tsx`
+
+**data-craft (root app)**
+- `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+- `src/features/form-builder/ui/FormPanelButtonBar.tsx`, `.../FormListPanel.tsx`
+- `src/widgets/form-widgets/ui/FormDataList.tsx`
+
 ## v001.499.0
 
 > 통합일: 2026-05-27
