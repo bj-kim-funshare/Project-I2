@@ -1,5 +1,36 @@
 # 아이OS — Patch Note (001)
 
+## v001.106.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #55
+> 대상: 아이OS
+
+### 배경
+
+엔트로픽의 비공식 패치 이후 다중 세션 동시 advisor(opus 4.7) 호출 시 요청이 실패하고 1개만 통과하는 병목 발생. advisor 는 8개 스킬 10개 호출부의 판단 게이트라 병목 시 절차가 정지. 마스터 확인 — advisor() 실패 중에도 서브에이전트 디스패치는 성공(throttle 이 advisor 도구 엔드포인트 한정) → 별도 채널인 동급(opus-4-7) 서브에이전트 fallback 이 실효.
+
+### 페이즈 결과
+
+- **Phase 1 — 프로토콜 + 에이전트 (commit `89637ec`)**: `.claude/md/advisor-fallback-protocol.md` 신설(시스템 실패 정의=catchable error·hang 은 에스컬레이션, per-invocation 재시도 2회·cross-session 카운팅 금지, 디스패치=경로/식별자만 전달, PASS/BLOCK: 토큰 계약 무변경, transparency, fallback-of-fallback halt, --codex 동일 적용). `.claude/agents/advisor-fallback.md` 신설 — read-only, `model: claude-opus-4-7`, `effort: high`(균일 medium 정책의 의도된 예외).
+- **Phase 2 — 8개 스킬 호출부 배선 (commit `d3785d9`, `6d5c07f`)**: advisor 호출 8개 스킬 전체에 프로토콜 참조 배선. **총 10 참조 = 호출부 인벤토리 정확 일치**(PE 2, PE-os 2, group-policy 1, task-db-structure 1, task-db-data 1, new-project-group 1, create-custom-project-skill 1, plan-roadmap 1). 루브릭 중복 인라인 없이 artifact 경로만 call-site별 구체화.
+- **Phase 3 — §4 표 + 계약 (commit `2a7c54b`, `d55b48a`)**: `CLAUDE.md` §4 모델 분할 표 13→14, advisor-fallback 행 추가, effort 산문 "14개 중 13개 medium, advisor-fallback high 예외"로 정합. `completion-reporter-contract.md` 에 `advisor_source` 선택 필드(기본 `"advisor"`) 추가 — 판정 출처 감사, 하위 호환.
+- **보강 (commit `48bbb45`)**: 전방 배선 규칙(프로토콜 §0 Applicability + CLAUDE.md §4 절 — 미래 추가 호출부도 참조 의무, 누락 시 결함) + `advisor_source` emit 결속(프로토콜 §5 가 completion-reporter 페이로드 필드 세팅 의무화).
+
+### 영향 파일
+
+- `.claude/md/advisor-fallback-protocol.md` (신규)
+- `.claude/agents/advisor-fallback.md` (신규)
+- `.claude/skills/{plan-enterprise,plan-enterprise-os,group-policy,task-db-structure,task-db-data,new-project-group,create-custom-project-skill,plan-roadmap}/SKILL.md`
+- `CLAUDE.md`
+- `.claude/md/completion-reporter-contract.md`
+
+### Treadmill Audit
+
+PASS (마스터 명시적 override). 순수 가산형(신규 서브에이전트 1 + 프로토콜 md 1)으로 Q3(폐기 메커니즘 1건)을 자체 충족하지 못하나, 재발성 병목(엔트로픽 잠수함 패치) 해소 근거로 마스터가 plan 시점에 명시적으로 override(이슈 #55 본문 기록). 구현은 override 가 인가한 범위 내 유지 — 신규 훅/상태머신/검증축/cross-session 머신 없음. 전방 배선 규칙은 *재배선 트레드밀*을 사전 차단하는 방향이라 가산이 아니라 기존 메커니즘의 견고화.
+
+후속(watch-item, 비차단): `advisor_source` emit 의무는 프로토콜 §5 에 존재하나 각 스킬의 completion-reporter 디스패치 지점은 미배선 — 런타임 drift 관측 시 다음 이터레이션에서 디스패치 지점 명시 배선.
+
 ## v001.105.0
 
 > 통합일: 2026-05-26
