@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.498.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #191
+
+### 배경
+
+데이터 뷰어 → 그리드 뷰에서 행을 복사한 뒤 "위/아래에 붙여넣기" 하면 서버에는 행이 생성되지만 UI에는 즉시 나타나지 않고 새로고침해야만 보이는 결함 보고.
+
+### 원인 (조사 확정)
+
+`packages/fs-data-viewer/src/features/grid/lib/row-management/rowPasteUtils.ts` 의 `pasteRowAbove` / `pasteRowBelow` 가 서버 행 생성 후 `setViewerModel` 로 로컬 `rowModelList` 만 갱신하고 **`context.notifyRowAdded()` 를 호출하지 않음**. 정상 경로인 형제 파일 `addRowBelow.ts` / `addRowAbove.ts` 는 호출함. 서버 페이징 모드에서는 `notifyRowAdded` 가 rowCache 삽입 + `setRowMapVersion` 증가(=재렌더)를 담당하므로, 미호출 시 새 행이 캐시·버전에 반영되지 않아 새로고침 전까지 UI에 안 나타남.
+
+### 페이즈 결과
+
+- **Phase 1** (`27a12c0`): `pasteRowAbove` / `pasteRowBelow` 에 `addRowBelow.ts` 와 동일 패턴 적용 — postChanges 전 `refIdxInCache` + `insertedRows` 초기화, 신규 행 생성 후 위치 정보 삽입(above: `refIdxInCache`, below: `refIdxInCache + 1`; `ServerPagingRowCache.insertRows` 의 insert-at index 의미와 일치), `setViewerModel`/`onRefresh` 이후·`scrollToRow` 전에 `context.notifyRowAdded(1, insertedRows.length > 0 ? insertedRows : undefined)` 호출. `notifyRowAdded` 미존재 레거시 환경은 기존 경로 그대로 유지(회귀 없음).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/lib/row-management/rowPasteUtils.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors, 21 warnings).
+- 수동 테스트 권장: 그리드 뷰(서버 페이징 모드)에서 행 복사 → 위 붙여넣기 / 아래 붙여넣기 각각 새로고침 없이 즉시 새 행이 올바른 위치에 표시되는지 확인.
+
+### 절차 노트
+
+- **그룹핑 모드는 범위 외**: orchestrator `notifyRowAdded` 는 `notifyRowDeleted`(#169) 와 달리 `groups` state 를 동기화하지 않아, 그룹핑 뷰에서는 본 수정만으로 즉시 반영이 안 될 수 있음. 마스터 명령은 일반 그리드 뷰 붙여넣기 한정이므로 본 플랜 스코프 제외 — 그룹핑 모드에서 동일 증상 확인 시 핫픽스 후보.
+
 ## v001.497.0
 
 > 통합일: 2026-05-27
