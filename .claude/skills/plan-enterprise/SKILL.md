@@ -81,6 +81,7 @@ Main session drafts the plan structure:
 | Command Fulfillment | 본 계획을 끝까지 실행하면 마스터의 명령이 완료되는가? |
 
 Advisor returns prose. Main session parses for the literal token `BLOCK:` at line start (case-sensitive). Block → revise plan or halt for master. No-block → proceed.
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the plan issue `#N` as the durable artifact; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 ## Step 4 — ExitPlanMode
 
@@ -367,6 +368,7 @@ Step 8 onward is identical regardless of whether Step 7 used `phase-executor` or
 | Command Fulfillment | 마스터의 명령이 본 시점에 완료된 것인가, 후속 작업이 필요한가? |
 
 `BLOCK:` token → halt and report to master before patch-note authoring. Master decides whether to revise (Step 7 re-entry) or proceed to commit despite the block.
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the plan issue `#N` as the durable artifact; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 ## Step 9 — WIP B + patch-note authoring
 

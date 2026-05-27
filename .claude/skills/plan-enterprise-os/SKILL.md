@@ -90,6 +90,7 @@ The plan structure is the same as `plan-enterprise` (overall goal, phase breakdo
 | Command Fulfillment | 본 계획을 끝까지 실행하면 마스터의 명령이 완료되는가? |
 
 `BLOCK:` token contract identical to `plan-enterprise`.
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the plan issue `#N` as the durable artifact; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 ### Step 4 — ExitPlanMode
 
@@ -247,6 +248,7 @@ Surface master's reported Codex context and halt. Master options:
 ### Step 8 — Final advisor call #2 (6 perspectives)
 
 Same 6 perspectives as Step 3, applied to the completed work. `BLOCK:` halts patch-note authoring. Step 8 onward is identical regardless of whether Step 7 used `phase-executor` or Codex.
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the plan issue `#N` as the durable artifact; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
 
 ### Step 9 — Patch-note authoring at root `patch-note/`
 

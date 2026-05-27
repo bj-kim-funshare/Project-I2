@@ -144,6 +144,7 @@ Universal required fields: `skill_type`, `block_reason`, `issue_url` (when a han
 | `next_action_guidance` | Templated by moment — `work_complete`/`hotfix_complete`: gate keywords (`플랜 완료` / `핫픽스 <description>` / `중단`). `skill_finalize`: optional confirmation skill prompt when `push_pending: true`, or none. |
 | `post_action_hints[]` | Main-session inference based on what changed: code → `"build_required"` for compiled projects, frontend → `"hard_refresh"` and/or `"dev_server_restart"`, build artifacts → `"cache_clear"`. Pure doc/config changes typically need none. |
 | `advisor_plan_result` / `advisor_complete_result` | The verbatim PASS/BLOCK verdict from the two advisor calls (Step 3 plan + Step 8 completion). Format: `"PASS"` or `"BLOCK: <reason>"`. |
+| `advisor_source` (optional, companion to advisor verdict fields) | Verdict source for auditability: `"advisor"` (default, built-in `advisor()` tool) or `"advisor-fallback"` (stand-in sub-agent per `.claude/md/advisor-fallback-protocol.md`). Omitting this field is valid and implies `"advisor"`. Backward-compatible — existing reports without this field remain valid. |
 | `treadmill_audit_result` (plan-enterprise-os) | One of `"PASS"`, `"NOT APPLICABLE"`, `"FAIL: <reason>"` — derived from the advisor's Treadmill Audit perspective verdict. |
 
 Tier A (multi-phase / hotfix): `plan-enterprise`, `plan-enterprise-os`, `dev-merge`

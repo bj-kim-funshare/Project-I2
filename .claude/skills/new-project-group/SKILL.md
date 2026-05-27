@@ -120,6 +120,8 @@ After all four rounds, before any file write, call `advisor()` once. The call's 
 
 Advisor may flag concerns. If any are blocker-level, halt and report to master before write. Non-blocker concerns are surfaced but proceed.
 
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the collected policy files (`.claude/project-group/<leader>/{dev,deploy,db,group}.md`) and the initial patch-note draft path as the durable artifact paths; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
+
 ## File writes
 
 All writes happen on the WIP branch (see protocol section). Korean content in bodies, English/Latin in YAML keys and closed-choice values.

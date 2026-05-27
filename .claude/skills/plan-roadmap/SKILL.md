@@ -127,6 +127,8 @@ Rubric — 5 perspectives:
 
 `BLOCK:` token contract identical to plan-enterprise / plan-enterprise-os / task-db-*. Advisor must start a line with `BLOCK: <reason>` to halt.
 
+If `advisor()` fails systemically (a catchable tool/API error, after the retry budget), follow `.claude/md/advisor-fallback-protocol.md` to dispatch the read-only `advisor-fallback` sub-agent with this same rubric and the drafted roadmap markdown file path (`.claude/plan-roadmap/<leader>/roadmap.md`) as the durable artifact path; its `PASS` / `BLOCK:` verdict carries identical authority. A normal `BLOCK:` is a valid verdict and never triggers fallback.
+
 ### Step 5 — ExitPlanMode
 
 Present the drafted roadmap content + advisor verdict. `ExitPlanMode` for master approval.
