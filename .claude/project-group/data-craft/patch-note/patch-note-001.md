@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.492.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #183 (핫픽스3)
+
+### 배경
+
+v001.487.0(핫픽스1)에서 폼/일반 탭 분리를 적용했으나, 폼 데이터가 폼 탭과 일반 탭 양쪽에 노출되는 문제가 보고됨. 근본 원인: 분리 필터가 `dataType === 'form'` **단독 신호**만 사용했는데, `dataType`는 일부 FE 경로에서 신뢰할 수 없다(누락/타입 좁아짐). 서버는 폼 그룹 이름에 `[폼] ` 프리픽스를 부여하므로(`externalData.model.ts`의 `CONCAT('[폼] ', form_name)`, 동시에 `form_list.form_id` 존재 시 `dataType='form'`) 이를 **보조 신호로 병행**하는 dual-signal로 교체.
+
+### 페이즈 결과
+
+- **Phase 6 / 핫픽스3** (`65700e2`): `FsExternalDataExplorer`의 분리 필터를 dual-signal로 교체 — `isFormGroup(g) = g.dataType === 'form' || g.groupName.startsWith('[폼] ')`. 폼 탭 = `isFormGroup` true, 일반 탭 = false. 코드베이스 기존 선례(`src/features/viewer/lib/connectionCallbacks.ts`, Enterprise 098 HOTFIX 7+8)와 동일 패턴을 주석과 함께 채택. `dataType`가 드롭된 폼 그룹도 `[폼] ` 프리픽스로 정확히 폼 분류됨.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-external-data-viewer-explorer/src/components/FsExternalDataExplorer.tsx`
+
+### ⚠️ 운영 필수 — 패키지 dist 재빌드
+
+본 변경은 explorer 패키지(dist 소비, gitignored) 소스이므로 확인 시 **`pnpm build:packages` 후 dev 재기동 + 하드 리프레시** 필수. 본 작업에서 마스터 작업 체크아웃(i-dev) dist 재빌드 완료.
+
+### 검증 결과
+
+- `pnpm build:packages` 10/10, 재빌드 dist에 `startsWith('[폼] ')` dual-signal 포함 확인. 루트 앱 `tsc -p tsconfig.app.json` 0 errors, `eslint` 0 errors.
+- advisor 핫픽스 검증 PASS (선례 일치, 제3탭 영향 없음).
+- 수동 확인 시나리오: `pnpm build:packages` → dev 재기동 → 하드 리프레시 → `[폼] ` 로 시작하는 폼 그룹은 **폼 탭에만**, single/multi 그룹은 **일반 탭에만** 표시되는지.
+
+### 알려진 후속 (별도 plan 권장, 차단 아님)
+
+- dual-signal은 증상 해소책이다. `dataType`가 API 응답→`useExternalExplorerApi` 매핑 사이 어디서 드롭되는지 근본 추적은 미완 — 별도 plan으로 분리 권장.
+- `__wdata_*` 위젯 스토리지 그룹은 서버 SQL에서 비노출(NOT REGEXP) 처리되어 FE 목록 미도달 — FE 처리 불필요.
+
 ## v001.491.0
 
 > 통합일: 2026-05-27
