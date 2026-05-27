@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.479.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #179
+
+### 배경
+
+데이터 뷰어(그리드뷰) / 서브 데이터 뷰어에서 "행 아이디"(rowId) 타입 열의 너비가 `defaultWidth: 60px` 로 고정되어, 행 아이디 숫자의 자릿수가 많으면 셀 값이 말줄임표(`4466…`)로 잘리던 문제. 행 아이디 데이터의 자릿수에 맞춰 열 너비가 자동 확장되도록 개선.
+
+### 원인
+
+rowId 열은 `core-types.ts` `defaultWidth: 60` 으로 시딩된 고정 너비를 `customColumnGenerator` 가 그대로 통과시키고, `DataCell` 이 `overflow-hidden` 으로 렌더하여 너비를 초과하는 행 아이디가 CSS 말줄임 처리됨. `customColumns` useMemo 는 컬럼 메타데이터에만 의존(`[columnModelList, mode, factory]`)하여 행 데이터 로드/스크롤 시 재계산되지 않으므로, 자릿수 기반 자동 너비는 generator 내부가 아닌 행 데이터 구독 계산이 필요했음.
+
+### 페이즈 결과
+
+- **Phase 1 (feat)** `bebd38e8`: fs-data-viewer — rowId 값 배열을 canvas `measureText`(14px Pretendard/system-ui, 실제 셀 폰트 일치)로 측정해 최대 픽셀 너비를 산출하는 헬퍼(`rowIdColumnWidth.ts`) 신규. `useTableView`/`useSubGridRendering` 의 `customColumns` 를 base(컬럼 의존) + override(행 데이터·`serverPaging.rowMapVersion` 의존) 이중 구조로 변경해 rowId 열 너비를 계산값으로 치환. 클램프 `min(240, max(computed, 60))`·minWidth 40, only-expand ref 로 스크롤 시 축소 방지. 서버 페이징 로드 행은 렌더 시점 `viewerModel.rowModelList` 동기화로 인메모리·서버 페이징 양 모드 측정 포함. `customColumns` 단일 배열을 헤더·바디·푸터·frozen 레이아웃이 공유하므로 너비 정합 자동 보장.
+- **Phase 2 (feat)** `cdcd079c`: fs-sub-data-viewer — Phase 1 동일 로직 미러링(패키지별 코드 복제 컨벤션). 헬퍼 신규 + `useTableView` override useMemo 추가, `serverPaging.rowMapVersion` 의존 포함, 서버 페이징 행 동기화(L76-79) 확인.
+
+### 영향 파일
+
+**data-craft**
+- `packages/fs-data-viewer/src/widgets/fs_grid_util/rowIdColumnWidth.ts` (신규)
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridRendering.ts`
+- `packages/fs-sub-data-viewer/src/widgets/fs_grid_util/rowIdColumnWidth.ts` (신규)
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+### 검증 결과
+
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 전 페이즈 PASS(exit 0, 기존 20 warnings).
+- advisor 완료 게이트 5관점 — BLOCK 없음. (계획 게이트 advisor #1 은 백엔드 일시 장애(~20분, 7회+ overloaded/rate-limited)로 미수행 — 마스터 ExitPlanMode 승인으로 진행, 완료 게이트가 안전망.)
+
+### 범위 메모
+
+- **외부 데이터 뷰어 제외**: 마스터 명령에 외부 데이터 뷰어가 포함되었으나, `fs-external-data-viewer` 에는 rowId 열 타입 자체가 정의돼 있지 않음(text/number/date/select 4종만, generator rowId 분기 없음) — 해당 열이 존재하지 않아 변경 대상 아님(마스터 확인).
+
 ## v001.478.0
 
 > 통합일: 2026-05-27
