@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.484.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #175 (핫픽스1)
+
+### 배경
+
+v001.478.0(#175) 1차 작업 이후에도 뷰어 3종의 다크모드가 실질적으로 깨져 있다는 마스터 피드백 — 그리드 행이 다크에서 흰 배경 + 어두운 텍스트로 렌더되고, 행 호버 시 텍스트가 안 보임. 그리드/캘린더/간트/칸반/대시보드 전 뷰모드 대응 요구.
+
+### 원인 (1차 작업이 놓친 근본 원인)
+
+1차 작업의 `.dark` 오버라이드 레이어는 Tailwind **유틸리티 클래스**만 잡았으나, 실제 뷰 렌더링 색은 JS 색 토큰 오브젝트를 **인라인 스타일**로 소비한다. 색 흐름: `primitiveColors`(하드코딩 hex) → **`semanticColors`**(중립 별칭 하드코딩, `surface: white`/`onSurface: gray900`) → `componentColors/*` → 인라인 스타일. 클래스 레이어는 인라인을 못 건드려 그리드 배경은 흰색, 텍스트는 `semanticColors.onSurface`(#111827) 고정 → 다크 호버 배경 위 어두운 텍스트 = 안 보임. 추가로 오버라이드 레이어가 `hover:`/`focus:`/`group-hover:` **변형 클래스**(약 240곳)를 누락.
+
+### 핫픽스 결과
+
+- **소스 전환(THE fix)** — 3개 뷰어 `semanticColors.ts`의 중립 표면/텍스트/외곽선 별칭 12개를 CSS `var()` 로 전환(`surface→var(--card)`, `onSurface→var(--foreground)`, `onSurfaceVariant→var(--muted-foreground)`, `outline/outlineVariant→var(--border)` 등). 이 단일 지점이 그리드/캘린더/간트/칸반/대시보드 전 뷰에 다크 반응을 전파.
+- **호버 가독성** — 그리드 행 텍스트 체인(DataRow→DataCell→cell renderer→`textColor = semanticColors.onSurface`)이 `var(--foreground)` 로 해소 → 다크 호버 배경(`bg-muted`) 위 밝은 텍스트로 가시.
+- **변형 클래스 오버라이드** — 3개 뷰어 `styles.css` 오버라이드 레이어에 `hover:bg-*`/`focus:bg-*`/`hover:text-gray-*`/`group-hover:text-gray-*`/`focus:text-gray-*` 규칙(Tailwind v4 `\:` 이스케이프) 추가 → 약 240곳 호버/포커스 상태 다크 대응.
+- **잔여 인라인 색** — `chart-colors.ts`(툴팁/차트 배경 chrome), `ServerPagingOverlay`·로딩 오버레이 3종의 미선언 `--fs-grid-*` 변수, sticky 셀 `#ffffff`, `drawerTokens.surface`, `LoadingStates` 텍스트 폴백 등을 `var()` 토큰으로 전환.
+- **의도적 리터럴 보존** — `FsGridRenderer`의 `isColorSwapped` 대비 텍스트는 `'#ffffff'` 리터럴 유지(유색 셀 배경 위 대비 — 향후 유지보수자가 토큰으로 "고치지" 말 것). `primitiveColors` 원본 팔레트·태그/상태/우선순위/차트 시리즈/간트 바 등 데이터색 전량 보존.
+
+### 영향 파일
+
+**data-craft** (3개 뷰어 공통 패턴)
+- `packages/fs-{data,sub-data,external-data}-viewer/src/shared/config/theme/semanticColors.ts`
+- `packages/fs-{data,sub-data,external-data}-viewer/src/styles.css` (오버라이드 레이어 변형 규칙)
+- `packages/fs-{data,sub-data,external-data}-viewer/src/widgets/fs_grid_renderer/FsGridRenderer.tsx`
+- `packages/fs-{data,sub-data,external-data}-viewer/src/widgets/grid-table/components/ServerPagingOverlay.tsx`, `components/loading/*Overlay.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/lib/chart-colors.ts`, `componentColors/{uiColors,viewColors}.ts`, `dashboard-tokens.ts`, `fs_grid_sub/*`, `shared/config/theme/drawerTokens.ts`
+- `packages/fs-sub-data-viewer/src/{componentColors,dashboard-tokens,fs_grid_sub,drawerTokens}` (동일 패턴)
+- `packages/fs-external-data-viewer/src/app/layout/LoadingStates.tsx`
+
+### 검증 결과
+
+- lint(`pnpm typecheck:all && pnpm lint`) PASS, 패키지(tsup 전체) + 루트 앱(`tsc -b && vite build`) 빌드 PASS — `\:` 이스케이프 변형 선택자·`color-mix()` Tailwind v4 컴파일 정상.
+- 그리드 행 텍스트 색 체인을 소스까지 추적해 다크에서 `var(--foreground)`(밝은) 로 해소됨을 확인. 미선언 `--fs-grid-*` 변수 잔존 0건.
+- advisor 핫픽스 게이트 5관점 PASS(BLOCK 없음).
+- **렌더링 최종 확인은 마스터 측**: 라이트/다크 토글 후 그리드/캘린더/간트/칸반/대시보드, 행 호버 텍스트 가독, 유색 셀 텍스트, 라이트 회귀 여부.
+
+### 미해결 / 열린 결정
+
+- **문서편집 드로어 warm 팔레트**(`drawerTokens.ts` canvas/surfaceAlt/ink/divider — Notion 스타일 따뜻한 크림색): 다크 대응하려면 별도 dark-warm 팔레트 **디자인 결정** 필요. 현재는 다크에서도 warm 크림 유지. → 마스터 결정 대기.
+- 라이트 모드 중립 미세 편차(입력 테두리 gray-400→gray-200 등, v001.478.0에서 이월): 다크 반응을 위한 토큰화의 부수 효과, 색조/레이아웃 무변경.
+- `CalendarBuildingAnimation` 의 장식용 달력-페이지 그래픽 내부 흰 배경(로딩 애니메이션 일러스트, chrome 아님): 의도적 유지.
+
 ## v001.483.0
 
 > 통합일: 2026-05-27
