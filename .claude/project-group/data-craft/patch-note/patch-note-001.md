@@ -1,5 +1,43 @@
 # data-craft — Patch Note (001)
 
+## v001.494.0
+
+> 통합일: 2026-05-27
+> 플랜 이슈: #177 (핫픽스4 — 핫픽스3 보정)
+
+### 배경
+
+핫픽스3(v001.491.0)에서 긴 텍스트/코드 편집 모달의 저장 단축키를 Cmd/Ctrl+S 로 바꾼 뒤 동작이 어긋났다:
+1. Cmd/Ctrl+S 를 눌러도 헤더 "저장중"이 안 뜨고 저장이 안 됨.
+2. Cmd/Ctrl+S 가 모달을 닫음 (저장만 되고 모달은 유지돼야 함).
+3. ESC 가 모달을 닫지 않고 포커스만 해제됨(보고).
+
+### 원인
+
+Cmd/Ctrl+S 가 `handleSave` 를 호출했는데, `handleSave` 는 (a) `oldValue === editValue`(미편집)면 저장 없이 `closeDialog`, (b) 저장 후에도 항상 닫는다. 따라서 미편집 상태로 Cmd+S 시 저장 없이 닫혔다(#1·#2). 셀 데이터 자동저장("저장중" 표시)은 `saveGridModelWithAutoUpdate` 호출에서 점화되는데, early-return 으로 그 호출이 스킵됐다.
+
+### 핫픽스 결과 (누적 Phase 8)
+
+- **핫픽스4** (`e65306f2`): 긴 텍스트/코드 핸들러에 **`saveOnly`** 함수 신설 — editValue 를 셀에 커밋(변경 시 recordHistory)하고 `saveGridModelWithAutoUpdate` 를 **항상 호출**(미편집이어도 명시적 Cmd+S 이므로 "저장중" 점화), **closeDialog/setIsDialogOpen(false) 는 호출하지 않음**. Cmd/Ctrl+S 배선을 `handleSave`(저장+닫기) → `saveOnly`(저장만)로 교체: 긴 텍스트는 키보드 훅 + EditDialog 의 document capture 리스너 + textarea onKeyDown 3경로(신규 `onSaveShortcut` prop), 코드는 키보드 훅. ESC→`handleCancel`(값 저장 없이 닫기) 및 하단 "저장" 버튼→`handleSave`(저장+닫기), 전파 격리(stopPropagation/stopImmediatePropagation) 구조는 무변경 유지.
+- **핫픽스4 lint** (`8a611817`): Cmd+S 가 saveOnly 를 쓰면서 미사용된 키보드 훅의 `handleSave` prop 제거(타입+구조분해+2 렌더러 호출 인자). `handlers.handleSave` 는 다이얼로그 "저장" 버튼 onSave 에 여전히 사용.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/widgets/cell-renderers/`:
+- `long-text-cell/useLongTextCellHandlers.ts`, `useLongTextCellKeyboard.ts`, `EditDialog.tsx`, `FsGridLongTextCellRenderer.tsx`
+- `code-cell/useCodeCellHandlers.ts`, `useCodeCellKeyboard.ts`, `FsGridCodeCellRenderer.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): typecheck exit 0, lint **0 errors** (메인 세션 직접 실행). 루트 앱 tsc: exit 0.
+- 수동 테스트 권장: ① 긴 텍스트/코드 모달에서 Cmd/Ctrl+S → "저장중" 표시 + 모달 **유지**(안 닫힘), ② 편집 후 Cmd+S → 값 저장됨, ③ ESC → 모달 닫힘, ④ 하단 "저장" 버튼 → 저장 후 닫힘.
+
+### 절차 노트
+
+- **#3(ESC 닫힘) 상태**: #1·#2 는 `saveOnly` 분리로 확정 수정. #3 은 현재 코드 경로(ESC→handleCancel→closeDialog, capture 단계 stopImmediatePropagation)가 정적으로는 정상이며, 셀 포커스를 해제하는 경쟁 그리드 레벨 ESC 핸들러도 grep 으로 발견되지 않음. 마스터 검증 후에도 #3 이 재현되면 런타임 전용 이슈로 in-app 디버그 필요.
+- **반복 비용 고지**: 본 건은 핫픽스3 을 보정하는 핫픽스4(누적 Phase 8). 동일 표면(편집 모달 단축키)에 핫픽스5 가 또 필요해지면 자동 반복 대신 마스터가 일시 중단·재설계를 결정하도록 권고.
+- advisor #2(핫픽스4) no-BLOCK. WIP origin push 는 분류기 차단으로 생략, 로컬 i-dev/main 머지로 완료.
+
 ## v001.493.0
 
 > 통합일: 2026-05-27
