@@ -1,5 +1,67 @@
 # data-craft — Patch Note (001)
 
+## v001.518.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #196 (핫픽스2)
+
+### 핫픽스 사유 (마스터 dev 검증에서 결정적 회귀 발견)
+
+```
+[ERROR] VIEWER-R-004 : Unknown column 'pv.텍스트(1)' in 'field list'
+at paging.grid.ts:216 (queryPivotViewPaged)
+GET /api/viewer/data/1341, status=500
+```
+
+컬럼명 `텍스트(1)` (한글 + 괄호 + 숫자) 사용 시 데이터 0건 반환. 회차 1 의 빌더가 **모든** 뷰모드에 영향 — 마스터 수동 시나리오 8 에서 표면화.
+
+### 근본 원인
+
+`src/utils/sqlSanitizer.ts:53` 의 `sanitizeColumnName` 이 `[^a-zA-Z0-9_가-힣]` 외 모든 문자 strip. 빌더 `escapeColumnName` 이 이를 호출하여:
+- 빌더 inner SELECT alias = `` `텍스트1` `` (괄호 strip)
+- 호출자 outer wrapper 의 컬럼 참조 = `` pv.`텍스트(1)` `` (raw column_name + backtick, paging.grid.ts:149 에서 정상 escape)
+- → alias 불일치 → MySQL "Unknown column" 보고 (괄호는 backtick 외부 표시 시 사라짐)
+
+### 핫픽스 (`cab0466`)
+
+`src/utils/pivotBuilder.ts` 의 `escapeColumnName` 에서 `sanitizeColumnName` 호출 제거. backtick wrap + backtick 자체 strip 만 유지:
+```ts
+function escapeColumnName(name: string): string {
+  return '`' + name.replace(/`/g, '') + '`';
+}
+```
+
+### 보안 영향
+
+MySQL backtick 내부는 backtick 문자 외 모든 char 허용 — backtick strip 단독으로 식별자 escape 충분. column_name 은 `data_column` 테이블에서 조회된 값 (사용자가 컬럼 생성 시 입력하나 sp_manage_data_column 의 sanitize 통과). 직접 SQL 주입 경로 아님.
+
+### 영향 파일
+
+data-craft-server:
+- `src/utils/pivotBuilder.ts` (+5 / -8, 1 파일)
+
+### 본 핫픽스로 회복되는 콜사이트
+
+회차 1 의 모든 빌더 호출 경로:
+- viewer.model `queryPivotView` (Phase 2)
+- paging.grid / grouped / row / subGrid (Phase 3)
+- aggregation.engine + service 4 (Phase 4a)
+- service 3 (Phase 4b)
+- externalData.service (Phase 5)
+- getGroupDataAsCellsAuto 후속 경로 (Phase 6b)
+
+### 알려진 잔존 (본 핫픽스 외)
+
+- paging.subGrid.ts:140 `sortColumnName` 의 backtick strip 누락 — pre-existing 결함 (회차 1 이전부터 존재), 별도 핫픽스 또는 후속 plan 권장.
+
+### 합계 변경량
+
+1 파일, +5 / -8 (단일 함수 본문 변경).
+
+### 다음 단계 — 마스터 재검증 필요
+
+본 핫픽스 머지 후 dev 재기동하여 시나리오 8 (대용량 페이징) 재실행 권고. 통과 시 회차 2 진입 가능 (단 회차 2 prep 6단계 절차는 핫픽스1 v001.516.0 그대로 유효).
+
 ## v001.517.0
 
 > 통합일: 2026-05-28
