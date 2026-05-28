@@ -13,7 +13,7 @@ connection_style: DB_* 환경변수
 
 - **환경별 DB 분리** — dev = `data_craft_dev`, prod (`NODE_ENV=production`) = `data_craft_production`. 호스트 / 포트 / 계정 / 비밀번호 등 나머지 접속 정보는 두 환경이 공유하며, **DB명만 환경별로 분기**한다.
 - `.env` 의 `DB_NAME` (dev fallback) / `DB_NAME_PROD` (prod 전용) 페어로 운영 — dev.md §"env 환경별 차등 변수 표준 — BE 페어 패턴" 정합. prod 환경에서 `DB_NAME_PROD` 미설정 시 `DB_NAME_PROD_NOT_CONFIGURED` 식별자로 즉시 throw (사일런트 dev 회귀 차단).
-- 기존 `data_craft_ver_001`, `data_craft_test` 는 **보존 (폐기 아님)** — 참조 / 회복 용도로 남기되 신규 작업에서는 사용하지 않는다.
+- 구버전 DB `data_craft_ver_001` / `data_craft_test` 는 **2026-05-28 폐기 결정** — 신규 운영 DB(`data_craft_dev` / `data_craft_production`)로 완전 이전. `DROP DATABASE` 실행 직후 본 절은 제거 예정. 회복 필요 시 동일 시점 mysqldump 백업(`~/db-backups/2026-05-28/data_craft_test.sql`, `data_craft_ver_001.sql`)에서 복원.
 - 호스트 / 포트 / 계정 / 비밀번호 / 토큰 / API 키 등 시크릿은 각 저장소 `.env` 의 `DB_*`, `JWT_*`, `SMTP_*`, `TOSS_*`, `NTS_*` 변수 참조. env 는 각 저장소에서 git-tracked, **본 I2 정책 파일에는 비적재** (별도 저장소이므로 노출 방지).
 
 ## Migration
