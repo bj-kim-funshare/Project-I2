@@ -1,5 +1,34 @@
 # 아이OS — Patch Note (001)
 
+## v001.107.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #56
+> 대상: 아이OS
+
+### 배경
+
+2026-05-28 10:56 ~ 10:59, data-craft #193 핫픽스3 worktree 가 제거되면서 메인 repo `/Users/starbox/Documents/GitHub/data-craft/node_modules/` 의 직접 의존성 74 개가 일제히 dangling symlink 로 끊김. 마스터의 메인 repo `pnpm dev` 가 ERR_MODULE_NOT_FOUND (concurrently 등) 으로 실패. 근본 원인 = pnpm 이 git worktree 인식 없이 worktree CWD 에서 `pnpm install` / `pnpm dev` 실행 시 메인 `node_modules` 의 심볼릭 링크를 worktree 의 `.pnpm` 스토어로 재지정 → worktree 제거 시 일제히 파손. 매 worktree 제거 사이클마다 재발 가능한 구조적 결함.
+
+### 페이즈 결과
+
+- **Phase 1 — `.claude/md/worktree-lifecycle.md` 보강 (commit `f2b3565`)**: 신규 절 "pnpm 워크스페이스 상호작용 (모든 외부 프로젝트)" 을 Surviving races 와 What does NOT change 사이에 삽입. 5 개 항목 — 원칙 (worktree 내부 pnpm install / pnpm dev / 의존성 건드리는 pnpm script 실행 금지), 허용 (git / 코드 편집 / 정적 검사만, dev 서버는 메인에서만), 위반 후 복구 (메인 cwd 에서 `pnpm install` 1 회), 검출 명령 (BSD `find -type l ! -exec test -e {} \; -print`), 사고 사례 (2026-05-28 data-craft #193 핫픽스3, 74 개 dangling). Failure recovery 말미에 cross-ref 한 줄 추가.
+- **Phase 2 — project-group dev 가이드 + skill 4 건 cross-ref (commit `fbbef81`)**: `new-project-group/SKILL.md` 의 dev.md 형식 절 직후에 "pnpm-workspace leader 의 워크스페이스 운영 원칙" 단락 + `.npmrc` 권장값 분석 (권장 = `node-linker=hoisted` 로 `.pnpm` 가상 스토어 + 심볼릭 링크 구조 자체 폐기, 대안 = 현행 `isolated` + 행동 규약, 비권장 = `hoist-pattern=[]` 부분 차단 / 절대 `store-dir` multi-worktree 충돌) 추가. `group-policy/SKILL.md` 의 dev 영역 가이드에 cross-ref 한 줄. `plan-enterprise/SKILL.md` 와 `plan-enterprise-os/SKILL.md` 의 Step 6 worktree 생성 절차 직후에 각각 한 줄 주의. 외부 project (data-craft 등) 의 실제 `.npmrc` / `dev.md` 는 무수정 — 적용은 후속 `group-policy` 호출.
+
+### 영향 파일
+
+- `.claude/md/worktree-lifecycle.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+
+### Treadmill Audit
+
+PASS. Q1 재발성 (매 worktree 사이클 + 향후 pnpm-workspace leader 추가마다 재발) / Q2 새 엣지 명시 (pnpm-workspace × worktree 상호작용, 검출 명령 / 복구 절차 / 사고 사례 모두 문서화) / Q3 폐기 항목 = `.claude/md/worktree-lifecycle.md` 의 암묵 가정 "git worktree 는 dependency-manager-agnostic 이며 `git worktree remove` 는 자기완결적이다" 를 명시적으로 폐기, 신규 절이 "pnpm 워크스페이스가 활성화된 외부 project 의 경우 worktree remove 는 자기완결적이지 않다" 로 갱신.
+
+본 패치는 새 훅/스크립트/에이전트/검증 축 추가 없이 문서 보강 + cross-ref 만으로 1차 안전망 (운영 원칙 명문화) 과 2차 안전망 (`.npmrc` 권장값 가이드, 후속 group-policy 호출에서 leader 별 적용) 을 제공.
+
 ## v001.106.0
 
 > 통합일: 2026-05-27
