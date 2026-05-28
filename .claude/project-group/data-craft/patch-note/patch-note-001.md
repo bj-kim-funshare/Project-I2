@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.506.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #177 (핫픽스9)
+
+### 배경
+
+긴 텍스트/코드 편집 모달에서 추가 발견된 2건(명백한 버그):
+1. **스크롤 안 됨**: 모달 내부에서 휠 스크롤 불가.
+2. **커서 위치 오류**: 모달 열릴 때 커서가 텍스트 맨 앞에 위치(맨 끝이어야 함).
+
+### 원인
+
+1. `useScrollLock`(모달 열림 시 활성)의 wheel preventDefault 가드가 `[data-scroll-container]` 안의 타깃만 예외 처리하는데, 모달의 `overflow-auto` 스크롤 영역에 그 속성이 없어 모달 내부 휠이 차단됨.
+2. hotfix5 가 textarea 에 추가한 `autoFocus` 가 포커스를 마운트 시점에 잡으며 커서를 0(맨 앞)에 둠. 기존 setTimeout focus 도 커서 위치를 끝으로 설정하지 않았음.
+
+### 핫픽스 결과 (누적 Phase 13)
+
+- **핫픽스9** (`257861cf`): (A) EditDialog·CodeEditDialog 의 `overflow-auto` 래퍼에 `data-scroll-container` 추가 → 모달 내부 휠 스크롤 허용. (B) 두 textarea 의 `autoFocus` 제거 + useLongTextCellEffects·useCodeCellEffects 의 다이얼로그-열림 focus 이펙트를 `focus()` 후 `setSelectionRange(len, len)` 으로 커서를 텍스트 끝에 위치. focus-trap/방향키/keydown 리스너 등은 일절 미변경.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`) — `packages/fs-data-viewer/src/widgets/cell-renderers/`:
+- `long-text-cell/EditDialog.tsx`, `long-text-cell/useLongTextCellEffects.ts`
+- `code-cell/CodeEditDialog.tsx`, `code-cell/useCodeCellEffects.ts`
+
+### 검증 결과
+
+- Lint gate: typecheck exit 0, lint **0 errors, 21 warnings**(baseline). 루트 앱 tsc: exit 0.
+- 수동 테스트: 모달 내부 휠 스크롤 동작 · 모달 열릴 때 커서가 텍스트 끝.
+
+### 미해결 (별도 추적)
+
+- **#1 ESC 2-press** + **방향키가 배경 그리드로 누수**: 모달이 focus 를 trap 하지 않고 그리드 window 키보드(`useClipboardKeyboard`)가 모달 중에도 활성(activeElement 가 input/textarea 일 때만 skip)인 구조 문제로 추정. hotfix7/8(ESC 리스너 register-once + window capture)은 머지됐으나 **HMR 이 마운트된 컴포넌트의 useEffect 변경을 재실행 못 해** 열려있던 모달엔 미적용 가능성 — 검증법: **모달을 닫았다 다시 열어** 새 인스턴스에서 ESC 1-press 동작 확인. 닫고-다시-열어도 잔존하면 focus-trap/그리드-키보드-억제의 구조적 수정 필요(별도 진행).
+- advisor() 과부하 지속 — no-BLOCK 간주. WIP origin push 분류기 차단 생략, 로컬 머지.
+
 ## v001.505.0
 
 > 통합일: 2026-05-28
