@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.527.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #198 핫픽스1
+
+### 페이즈 결과
+
+- **Phase 10 (핫픽스1)** (`3ffcfd31`, data-craft-server): `src/services/columnType/columnTypeCheck.service.ts` 의 3개 조기 return (`column-not-found`, `immediate-no`, `inspector-undefined`) 과 `src/services/externalColumnType/externalColumnTypeCheck.service.ts` 의 4개 조기 return 에 `failureSamples: []` 누락 보강. TypeCheckResult 타입의 필수 필드.
+
+### Root cause
+
+Phase 2 / 8a 의 eslint 게이트는 strict TypeScript 검사를 수행하지 않아 (TS2741 = "missing property in type") 누락을 발견하지 못했고, ts-node 가 dev 서버 기동 시점에 strict 타입 컴파일 단계에서 차단했다. 7개 조기 return 모두에 `failureSamples: []` 를 추가하여 타입 충족 + 컨슈머 (FE 어댑터) 측 분기 안정성 동시 확보.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/services/columnType/columnTypeCheck.service.ts`
+- `src/services/externalColumnType/externalColumnTypeCheck.service.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- Phase 2 / 8a 의 lint 게이트 명세 (`pnpm lint`) 가 strict tsc 를 포함하지 않는 점은 data-craft-server 의 dev 정책 사항. lint gate 에 `tsc --noEmit` 직렬 추가는 별도 group-policy 변경 후속.
+
 ## v001.526.0
 
 > 통합일: 2026-05-28
