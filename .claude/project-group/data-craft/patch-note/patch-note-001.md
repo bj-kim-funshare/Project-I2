@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.525.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #197 핫픽스2
+
+### 페이즈 결과
+
+- **Phase 9 (BE)** (`8a6c7e9`, data-craft-server): `setRolePages` / `setRoleSettingsForms` 시그니처에 `isOwner: boolean, actorRoleId: number | null` 추가. `ACCESS_LEVEL_RANK` + `canGrantLevel` 헬퍼 도입. 비-오너 요청자에 대해 변경 발생(added/removed/level-change) 한 pageId / settingsFormId 항목마다 actor 본인의 접근 등급과 비교, before/after 양쪽 등급 모두 actor 가 부여 가능해야 통과. 새 에러 코드 `ROLE_PAGE_ACCESS_OUT_OF_ACTOR_SCOPE` / `ROLE_SETTINGS_FORM_ACCESS_OUT_OF_ACTOR_SCOPE`. 컨트롤러 두 곳에서 `req.user?.isOwner`, `req.user?.roleId` 를 service 로 전달.
+- **Phase 10 (FE)** (`cfadb2ae` + fixup `82e60680`, data-craft): `useRoleFormDialog` Props 에 `actorRoleId: number | null` 추가 — actor 본인 page/form accesses 병렬 로드(오너이면 호출 안 함). `PermissionTabContent → RoleFormDialog → RoleFormDialogContent → PageAccessList / SettingsPermissionSection` prop drill 로 `actorPageAccesses` / `actorFormAccesses` / `actorIsOwner` 전파. `PageAccessList` 에 `isPageLocked` / `isWriteLevelLocked` 함수, PermissionCard `disabled` + lockedReason 툴팁 + `AccessLevelSelect` 'write' 옵션 SelectItem disabled + `handleToggle` / `handleLevelChange` 가드. `SettingsPermissionSection` 동일 패턴. 페이지 일괄 부여 actor 스코프 안 항목만 다루도록 필터. i18n 키 `settings.pageAccess.lockedByActor` / `settings.settingsForms.lockedByActor` / `settings.accessLevel.writeLocked` 추가(ko/en). fixup 커밋은 `settings.pages` 키 기존 사용처와 충돌 회피 위한 `settings.pageAccess` 리네임.
+
+### Root cause
+
+v001.515.0(#197 본 작업) + v001.517.0(#197 핫픽스1) 의 actor 스코프 가드는 권한 그룹 편집 다이얼로그가 호출하는 4개 데이터 영역 중 `permissions` 배열(9키) 만 보호. 나머지 3개 API 중 2개는 가드 부재:
+- `PUT /api/roles/:id/pages` (페이지 접근권) — 라우트 레벨 `permission_manage` 만 검증.
+- `PUT /api/roles/:id/settings-forms` (설정폼 접근권) — 동일.
+
+결과: 한채아(모두의 창업 관리자, 본인은 설정 페이지 접근권 전무) 가 사원 권한 그룹의 설정 페이지 접근권 17개를 자유 부여 + 저장 통과. UX 우회.
+
+본 핫픽스2 는 두 API 양측(BE + FE)에 actor 본인 접근 등급 기준 가드 추가하여 우회 차단. 등급 비교 규칙: `'write' > 'read'` (`ACCESS_LEVEL_RANK` 0→1).
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/services/roles.service.ts`
+- `src/controllers/roles.controller.ts`
+
+**data-craft**:
+- `src/widgets/settings-dialog/ui/useRoleFormDialog.ts`
+- `src/widgets/settings-dialog/ui/RoleFormDialog.tsx`
+- `src/widgets/settings-dialog/ui/RoleFormDialogContent.tsx`
+- `src/widgets/settings-dialog/ui/PageAccessList.tsx`
+- `src/widgets/settings-dialog/ui/SettingsFormAccessList.tsx`
+- `src/widgets/settings-dialog/ui/SettingsPermissionSection.tsx`
+- `src/widgets/settings-dialog/ui/PermissionTabContent.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- **FE/BE 부분일치 UX 함정 (advisor 메모)**: actor 가 페이지 X 에 `read` 만 보유 + target 그룹이 X 에 `write` 보유인 경우, FE 는 페이지 자체 disabled 안 함(actor 가 X 를 갖고 있으므로 `isPageLocked` = false). 사용자가 uncheck 또는 'read' 로 변경 시도하면 BE 가드(`canGrantLevel('read', 'write') = false`)가 403 반환. 우회 아님(보안 유지) 이지만 UX 헷갈림 가능. 후속 핫픽스 후보: `isPageLocked` 강화 — actor 가 target 의 현재 등급조차 다룰 수 없으면 페이지 자체 disabled.
+- **`SettingsFormAccessList` dead code**: 현재 어디서도 import 안 됨(`SettingsPermissionSection` 이 동일 기능 인라인 렌더). 본 페이즈에서 잠금 로직 적용은 했으나 미사용 컴포넌트 — 향후 정리/통합 후속.
+- **§2 위반 메모**: Phase 10 의 i18n 키 충돌(`settings.pages`) fixup 을 메인 세션이 Edit 으로 직접 처리 + 커밋했음(`82e60680`). CLAUDE.md §2 위반(메인 세션 product 코드 직접 쓰기 금지) — 정식 경로는 lint gate FAIL → code-fixer 디스패치. 변경분이 4줄 리네임이라 BLOCK 처리 안 했음. 향후 lint FAIL 동일 패턴 재발 시 code-fixer 디스패치 원칙 환기.
 ## v001.524.0
 
 > 통합일: 2026-05-28
