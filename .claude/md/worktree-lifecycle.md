@@ -95,12 +95,33 @@ this skill cares about is the one it is about to create or remove for its own WI
   `git -C <wt_path> status` and report; do not force-remove without master confirmation.
 - If the worktree dir was manually deleted but `.git/worktrees/<name>` metadata persists,
   `git worktree prune` cleans it on next entry.
+- worktree 제거 후 메인 repo 에서 ERR_MODULE_NOT_FOUND / dangling symlink 발생 시 "pnpm 워크스페이스 상호작용" 절 참조.
 
 ## Surviving races (acknowledged, not fully mitigated by worktrees)
 
 - **Patch-note version-number race**: two skills concurrently computing `v001.K+1.0` may both
   write the same minor version. Resolved at merge time via §5 step 4 (renumber one side).
 - **Concurrent edits on shared files** (e.g., CLAUDE.md): handled at merge time by §5 step 4.
+
+## pnpm 워크스페이스 상호작용 (모든 외부 프로젝트)
+
+**원칙 (금지)**: pnpm-workspace 가 활성화된 외부 프로젝트 (현재 data-craft 등 모든 `pnpm-workspace.yaml` 보유 leader) 의 worktree 내부에서 `pnpm install` / `pnpm dev` / 기타 의존성을 건드리는 `pnpm <script>` 실행 금지.
+
+이유: pnpm 이 메인 repo `node_modules` 의 최상위 직접 의존성 심볼릭 링크를 worktree 의 `.pnpm` 스토어로 재지정 → worktree 제거 시 메인 repo 가 dangling symlink 상태가 된다.
+
+**허용**: worktree 내부에서는 git 조작 + 코드 편집 + 정적 검사 (lint / typecheck — 메인이 이미 의존성을 깔아둔 상태로 실행) 만. dev 서버는 메인 repo cwd 에서만 띄운다.
+
+**위반 후 복구**: 메인 repo cwd 에서 `pnpm install` 1 회 재실행 → 의존성 재링크.
+
+**검출 명령** (선택 진단, 자동 실행 아님 — macOS BSD `find` 형식):
+
+```bash
+find node_modules -maxdepth 2 -type l ! -exec test -e {} \; -print
+```
+
+출력이 있으면 dangling, 출력 없음 = 정상.
+
+**사고 사례**: 2026-05-28 data-craft #193 핫픽스3 — 74 개 dangling 발생 (worktree 내부에서 `pnpm dev` 실행 → worktree 제거 시 일제히 파손).
 
 ## What does NOT change
 
