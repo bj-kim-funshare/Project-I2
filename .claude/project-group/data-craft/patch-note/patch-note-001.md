@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.523.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #199 (핫픽스2)
+
+### 핫픽스 사유 (마스터 dev 검증)
+
+마스터 보고: "설정한 기본 펼침이 토글 아이콘만 펼쳐져 있고 실제로 그룹은 안 나와 — 두번 더 눌러야 그때부터 나와".
+
+`v001.519.0` Phase 3 가 `useGridGrouping.initializeWithFirstExpanded` 시그니처를 확장해 `defaultExpandedGroupValue` 와 일치하는 그룹을 `collapsedGroups` set 에서 제거(=펼침)하도록 했으나, server-paged grouping (`useServerPagingOrchestrator`) 의 초기 응답은 **첫 그룹의 rows 만** 포함. 다른 그룹의 `rows` 는 빈 배열 상태이며, 사용자가 그룹 헤더를 클릭할 때 `handleToggleGroupWithLoad` 가 `serverPaging.loadGroupRows(...)` 로 lazy-fetch 함. 우리 초기화 로직은 collapsed state 만 갱신하고 lazy-fetch 를 호출하지 않아 펼침 아이콘은 활성이지만 행은 비어 보이는 결함이 발생.
+
+### 근본 원인
+
+`useTableView.ts:628-633` 의 useEffect 는 `initializeWithFirstExpanded(groupKeys, defaultExpandedGroupValue)` 만 호출. server-paged 의 그룹 데이터 lazy-load 트리거가 누락 — `handleToggleGroupWithLoad` (라인 601-622) 가 유일한 fetch 진입점인데 초기화 경로에서는 도달하지 않음.
+
+### 핫픽스 (`efdac7aa`)
+
+`useTableView.ts` 의 초기화 useEffect 에서 `defaultExpandedGroupValue` 가 첫 그룹이 아닌 매칭 그룹이고 그 그룹의 `rows.length === 0` 일 때 `void serverPaging.loadGroupRows(target, 0, 500)` 호출 추가. 첫 그룹은 초기 응답에 포함되어 있으므로 fetch 불필요(가드).
+
+```ts
+const target = viewerModel.defaultExpandedGroupValue;
+groupingHooks.initializeWithFirstExpanded(groupKeys, target);
+if (target && groupKeys.includes(target) && groupKeys[0] !== target) {
+  const group = serverPaging.groups.find((g) => g.groupValue === target);
+  if (group && group.rows.length === 0) {
+    void serverPaging.loadGroupRows(target, 0, 500);
+  }
+}
+```
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+### 비고
+- `initializedRef` 가드는 그대로 유지 — fetch 도 useEffect 의존성 (`serverPaging.groups`) 변경 시에만 재평가되므로 사용자 수동 토글 조작과 race 없음.
+- 페이지 진입 후 `defaultExpandedGroupValue` 를 다른 값으로 변경해도 즉시 반영은 안 되고 다음 페이지 진입 시 적용 (기존 spec).
+- 충돌 해소: 본 hotfix2 패치노트는 원래 v001.521.0 으로 작성됐으나 main 에 #202 / #200 가 동일/상위 버전을 선점하여 v001.523.0 으로 재번호. 양측 항목 모두 보존 (§5 step 4 정책).
+
 ## v001.522.0
 
 > 통합일: 2026-05-28
