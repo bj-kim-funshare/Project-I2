@@ -1,5 +1,62 @@
 # data-craft — Patch Note (001)
 
+## v001.522.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #200
+
+### 페이즈 결과
+
+- **Phase 1** (fix): 권한 관리 영역 — ko.ts·en.ts 양 locale 에 신규 키 21개 추가 (common.saveChanges, settings.addRole/editRole/roleName/roleNamePlaceholder, settings.tabGeneral/tabSettings/tabPages, settings.accessLevel.read/write, settings.permissions.settingsFormAccess/settingsFormAccessNote/settingsFormItemDescription 등). en.ts 의 settings.selectAll/deselectAll 오역('Select All'/'Deselect All')을 권한 토글 시맨틱에 맞는 'Grant All'/'Revoke All' 로 수정 (양 사용처 모두 권한 컨텍스트 검증 후). hard-coded Korean 3건을 t() 전환: RolePermissionTabSidebar(탭 레이블 3개), RoleFormDialogContent(일괄 부여/해제 토글), RolePermissionSearchBar(검색 placeholder). 커밋 `b5a12676` (+72 / -11).
+- **Phase 2** (fix): 인증 화면 — ko.ts·en.ts 양 locale 에 신규 키 64개 추가 (auth.signin.welcomeSubtitle·workspaceTitle, auth.signup.terms.{body,privacyBody,marketingBody} 약관 본문 3종, auth.register.* 서브도메인 등록 전용, auth.resetPassword.subtitle·stepEmail·stepCode·stepPassword·hide/showPassword 등). 컴포넌트 15개에서 hard-coded Korean 42건을 t() 전환 (useTranslation 훅은 모두 early return 이전 선언 — rules-of-hooks 준수). 약관·개인정보처리방침·마케팅 동의 본문은 auth.signup.terms.* 키로 추출 + SignupPage.tsx 상단에 법무 검토 TODO 주석. useSigninErrorHandler.ts 의 planMemberRestricted 누락 키 양 locale 등록. 커밋 `f0021a9a` (+201 / -69).
+- **Phase 3** (fix): settings-dialog 비-권한 탭 — ko.ts·en.ts 양 locale 에 신규 키 71개 추가 (employee 16개, settings 39개, theme 14개 누락 색상 [coral·cherry·lavender·mint·teal·indigo·crimson·sage·bronze·plum·sky·lime·wine·sand], 기타 2개). hard-coded Korean 5건을 t() 전환 — SystemTestSection SSE 상태 3건, DefaultProfileImageSection alt 1건, EditSettingsFormDialog DialogDescription 1건. SeatLimitReachedDialog·EmployeeTabContent·ApprovedUserList 등의 기존 fallback-only t() 호출 키를 양 locale 에 채워 영어 모드 표시 정상화. PageAccessList·RoleCard·SystemPermissionTree·SidebarSection 의 사용 키도 본 페이즈에서 양 locale 등록 (컴포넌트 자체 수정 없이 키 채움만으로 영어 모드 정상화). 커밋 `9f452b3b` (+145 / -5).
+
+### 영향 파일
+
+data-craft:
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `src/widgets/settings-dialog/ui/RoleFormDialog.tsx`
+- `src/widgets/settings-dialog/ui/PermissionTabContent.tsx`
+- `src/widgets/settings-dialog/ui/RolePermissionTabSidebar.tsx`
+- `src/widgets/settings-dialog/ui/RolePermissionSearchBar.tsx`
+- `src/widgets/settings-dialog/ui/RoleFormDialogContent.tsx`
+- `src/widgets/settings-dialog/ui/SettingsPermissionSection.tsx`
+- `src/widgets/settings-dialog/ui/PageAccessCheckboxList.tsx`
+- `src/widgets/settings-dialog/ui/DefaultProfileImageSection.tsx`
+- `src/widgets/settings-dialog/ui/EditSettingsFormDialog.tsx`
+- `src/widgets/settings-dialog/ui/SystemTestSection.tsx`
+- `src/pages/auth/SigninForm.tsx`
+- `src/pages/auth/SigninPage.tsx`
+- `src/pages/auth/SigninErrorModal.tsx`
+- `src/pages/auth/SubdomainLoginForm.tsx`
+- `src/pages/auth/SubdomainLoginPage.tsx`
+- `src/pages/auth/SignupPage.tsx`
+- `src/pages/auth/signup/CompanyInfoSection.tsx`
+- `src/pages/auth/signup/AdminInfoSection.tsx`
+- `src/pages/auth/SubdomainRegisterPage.tsx`
+- `src/pages/auth/subdomain-register/EmailVerificationStep.tsx`
+- `src/pages/auth/subdomain-register/UserInfoStep.tsx`
+- `src/pages/auth/subdomain-register/VerificationCodeInput.tsx`
+- `src/pages/auth/reset-password/ResetPasswordRequestPage.tsx`
+- `src/pages/auth/PendingApprovalPage.tsx`
+- `src/pages/auth/useSigninErrorHandler.ts`
+
+### 검증 결과
+
+- Phase 1/2/3 lint gate 모두 PASS (`pnpm typecheck:all && pnpm lint`, 0 errors, 22 warnings — 베이스라인 동일).
+- advisor #1 (계획 검증) PASS / advisor #2 (완료 검증) PASS.
+- Evidence 사전 검증: (a) selectAll/deselectAll 사용처 2건 모두 권한 토글 컨텍스트 — 시맨틱 일관, regression 없음. (b) Phase 3 process note 4 컴포넌트 잔존 한글은 모두 주석 또는 `t(key, '한글 fallback')` 의 fallback 인자 — 키가 양 locale 등록되어 사용자 노출 없음. (c) Reactivate* 한글 = JSDoc only.
+
+### 잔여 / 후속
+
+- 본 플랜은 1차 (마스터 신고 직접 영역 + settings-dialog). 잔여 영역은 별도 후속 결정 필요:
+  - `src/widgets/` 잔여 (settings-dialog 제외, ~182 .tsx).
+  - `src/features/` 잔여 (role/auth 제외, ~73 .tsx).
+  - `src/pages/` 잔여 (billing-callback, builder, site-creation) + `src/shared/ui/`, `src/app/`.
+  - `packages/fs-*` 7개 — i18n 인프라 자체 부재, 인프라 도입 선결 후 별도 로드맵 권고.
+- 약관·개인정보처리방침·마케팅 동의 영문 본문 = SignupPage.tsx 상단 TODO 주석 부착됨, 운영 배포 전 법무 검토 필요.
+
 ## v001.521.0
 
 > 통합일: 2026-05-28
