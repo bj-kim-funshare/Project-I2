@@ -6,7 +6,7 @@
 
 🟢 /plan-enterprise data-craft : 회차 1 — 뷰 read 시스템 제거 + BE pivotBuilder 전환 + DML 프로시저 부산물 제거 + 핫픽스 2회 (이슈 #196 closed, patch-note v001.514/516/518)
 
-🔴 /task-db-structure data-craft : 회차 2 — 뷰 + view-creator SP + sp_get_relation_columns + relation_view_name 컬럼 일괄 DROP (6+1 단계 강제 순서)
+🟢 /task-db-structure data-craft : 회차 2 — 뷰 + view-creator SP + sp_get_relation_columns + relation_view_name 컬럼 일괄 DROP (6+1 단계 강제 순서) — dev + production 양쪽 7/7 PASS, 머지 02c33e6, group-policy db.md 보강 4b95fbf
 
 🔴 /plan-enterprise data-craft : 회차 3 — 신규 SP 2개 작성 (sp_replace_file_value_data + sp_rename_kanban_column_value) + BE 콜사이트 2건 cutover (storage.model.ts:49 + change.kanbanColumnRename.ts:37)
 
