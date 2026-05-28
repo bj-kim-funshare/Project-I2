@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.508.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #177 (핫픽스10)
+
+### 배경
+
+긴 텍스트/코드 편집 모달이 열린 상태에서 (포커스 해제 후) 방향키를 누르면 **배경 그리드뷰의 셀 포커스가 이동**하는 누수(#1). 마스터 스크린샷 2장으로 확정(모달 textarea 포커스 → ESC 로 blur → 왼쪽 방향키 → 배경 포커스 텍스트제목→ID 이동, 모달은 열린 채).
+
+### 원인 (스크린샷 확정)
+
+그리드의 전역 window keydown 핸들러 `useClipboardKeyboard` 가 **모달/오버레이 열림을 인지하지 못함**. activeElement 가 input/textarea 일 때만 skip 하므로, 모달이 열렸어도 textarea 포커스가 빠진 상태(activeElement=body)면 방향키→`handleMoveToCell`, 복사/삭제 등이 그대로 배경 그리드에 적용됨. 그리드 셀 div 는 모달 중 `tabIndex=-1` 이라 DOM 포커스는 불가하나, 모델 focusedCellKey 가 살아있어 방향키로 이동.
+
+### 핫픽스 결과 (누적 Phase 14)
+
+- **핫픽스10** (`68c09f51`): `useClipboardKeyboard.handleKeyDown` 첫 줄에 오버레이 가드 `if (document.body.dataset.scrollLocked === 'true') return;` 추가. 편집 모달(useScrollLock)이 열리면 body 에 `data-scroll-locked` 가 설정되므로, 모달 열림 중 그리드 전역 키보드(방향키·복사·붙여넣기·삭제·undo/redo)가 전부 비활성화 → 배경 포커스 누수 차단.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/hooks/grid-clipboard/useClipboardKeyboard.ts`
+
+### 검증 결과
+
+- Lint gate: typecheck exit 0, lint **0 errors, 21 warnings**(baseline). 루트 앱 tsc: exit 0.
+- 수동 테스트: 모달 열림 중 방향키를 눌러도 배경 그리드 포커스가 이동하지 않음.
+
+### 미해결 — ESC 2-press
+
+- ESC 첫 입력이 모달을 닫지 않고 textarea 포커스만 해제하는 #1-ESC 는 **여전히 미해결**. 코드상 모달 textarea 를 blur 하는 핸들러가 없고(전 소스 "Escape+blur"/onBlur 0건) close 경로(onCancel→closeDialog)는 ESC#2 에서 정상 동작 → advisor 검증 결론: hotfix7/8(ESC 리스너 register-once + window capture)이 **HMR 로는 마운트된 모달에 재적용 안 됨**(Fast Refresh 는 useEffect 변경 핫스왑 불가). **확정 테스트**: 브라우저 전체 새로고침(Cmd+Shift+R) 후 **새로 연 모달**에서 ESC 1-press 확인. 그래도 잔존 시 focus-trap 구조 수정 진행.
+- advisor() 과부하 지속 — no-BLOCK 간주. WIP origin push 분류기 차단 생략, 로컬 머지.
+
 ## v001.507.0
 
 > 통합일: 2026-05-28
