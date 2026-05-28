@@ -1,5 +1,62 @@
 # data-craft — Patch Note (001)
 
+## v001.526.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #198
+
+### 페이즈 결과
+
+- **Phase 1** (`5fbe0fc9` + hotfix `e76ad971`, data-craft): 40종 컬럼 타입 × 40종 변환 매트릭스 카탈로그 (`packages/fs-data-viewer/src/entities/column-types/conversion-catalog.ts`) — `immediate-no` / `always-ok` / `inspect-required` 3분류. 13종 제외 타입 (log, lastUpdate, formula, simpleFormula, uniqueId, image, file, vote, rating, progress, connection, rowLink, dualWidget) source/target 양축 차단. 시스템 변환 (text→document = `{title:"제목 없음", body:cellValue}` JSON, text→longText, number↔currency↔percent) 명시. 헬퍼 3종 `getConversionRule` / `listTargetTypes(externalMode?)` / `convertCellValue`. hotfix 는 monorepo vitest 인프라 부재로 conversion-catalog.test.ts 임시 제거 (재도입은 후속 이슈).
+- **Phase 2** (`44cbdf26`, data-craft-server): 두 엔드포인트 `POST /api/viewer/:groupId/columns/:columnField/type-check` + `POST /api/viewer/:groupId/columns/:columnField/type-change`. 카탈로그 BE 사본 + `inspectors.ts` (text/longText 출처 10종 파서: number/currency/percent/date/dateTime/time/boolean/email/phone/link). type-change 는 단일 트랜잭션 — type-check 재실행 → `sp_bulk_manage_data_values` 셀 일괄 갱신 → `sp_manage_data_group` column_type + `data_viewer_column_setting.viewer_type` UPDATE. always-ok non-string 결과는 JSON.stringify.
+- **Phase 3** (`b849f6cb`, data-craft): `fs-api` 에 `columnTypeApi.columnTypeCheck` / `columnTypeChange` + 타입 + `API_ENDPOINTS.VIEWER` 신규 두 키.
+- **Phase 4** (`7a760617` + hotfix `572fb33e`, data-craft): 4단계 상태 머신 다이얼로그 (`packages/fs-data-viewer/src/widgets/column-type-change-dialog/`) — select / check / change / done. TypeSelectStep / CheckResultStep / ChangeResultStep + `useColumnTypeChangeDialog` 훅. Spinner + Dialog 패턴. externalMode prop 으로 외부 4종 화이트리스트 지원.
+- **Phase 5** (`8553862a`, data-craft): 그리드 뷰 `createColumnMenuItems` 에 "열 타입 변경" 액션 + `useGridColumnMenu` 내부 `useColumnTypeChangeDialog` 인스턴스 + `ExtendedColumnMenuReturn` 교차 타입 + `FsGridTableView` 호스트. onChanged 시 `invalidateServerCacheRef` 호출.
+- **Phase 6** (`6bf785ab`, data-craft): `createViewColumnMenuItems` + `useViewColumnMenu` 패스스루 + `ViewColumnManagerDialog` 호스트 통합 → 캘린더/칸반/간트 3개 뷰 자동 흡수.
+- **Phase 7** (`604c98d8`, data-craft): 임베드 서브 그리드 (`fs_grid_sub`) — `useSubGridColumnMenu` + `SubGridColumnMenu.tsx` JSX + `FsSubGrid` 호스트.
+- **Phase 7b** (`8eb8963c`, data-craft): 독립 패키지 `fs-sub-data-viewer` — fs-data-viewer/widgets 에 `ColumnTypeChangeDialog` + `useColumnTypeChangeDialog` export 추가 + workspace dep 신설 + menuItems / useGridColumnMenu / FsGridTableView wiring.
+- **Phase 7c** (`8bcdd049`, data-craft): 독립 패키지 `fs-external-data-viewer` — workspace dep + `columnTypeMapping.ts` (1↔number, 2↔text, 3↔dateTime, 4↔boolean) + menuItems 의 viewerType='external' 조기 반환 가드를 조건부 로직으로 교체 + FsGridTableView 호스트 (`externalMode={true}`). onChange 콜백은 8b 까지 stub.
+- **Phase 8a** (`4d35ed29`, data-craft-server): 외부 데이터 채널 endpoint pair `/api/external-data/groups/:groupId/columns/:columnId/{type-check,type-change}`. external 은 `data_viewer_column_setting` 부재 → 소스 타입을 `data_column.column_type` (INT 1-4) 직접 read 후 카탈로그 ID 매핑. conversion-catalog / inspectors 재사용.
+- **Phase 8b** (`89f215b3`, data-craft): `externalDataApi.columnTypeCheck/Change` + `ColumnTypeChangeDialog` 에 optional `onCheck/onChange` props (미제공 시 기본 어댑터 폴백 → 기존 호스트 무영향) + 외부 FsGridTableView 가 mapCatalogToExternal + externalDataApi 호출 콜백으로 stub 교체.
+- **Phase 9** (`8b8410a8`, data-craft): i18n 마이그레이션 — Phase 4~7c 의 `// i18n:` 자리 15곳을 키로 치환. 3개 패키지 × types.ts + 4개 언어 (ko/en/ja/zh) 갱신. 다이얼로그 4개 + 메뉴 진입점 5곳에 `useI18n()` 주입.
+
+### 마스터 명령 요약
+
+뷰어 3종 (fs-data-viewer / fs-sub-data-viewer / fs-external-data-viewer) 디자인 모드에서 4개 뷰모드 (그리드 / 캘린더 / 칸반 / 간트, 대시보드 제외) "열 타입 변경" 옵션 신설. 타입 선택 → "변환 검사" 버튼 (로딩 표시) → 가능 시 "변환하기" 버튼. 외부 뷰어는 4종 (text/number/dateTime/boolean) 으로 제한. 13종 (log/lastUpdate/formula/simpleFormula/uniqueId/image/file/vote/rating/progress/connection/rowLink/dualWidget) 은 변환 목록 자체에서 제외 (source/target 양축). 시스템 변환 규칙 (text→document = 제목 "제목 없음" + 본문 = 셀 텍스트 등) 일부 코드화.
+
+### 영향 파일
+
+**data-craft-server** (BE):
+- `src/controllers/columnType.controller.ts`, `src/controllers/externalColumnType.controller.ts`
+- `src/services/columnType/{conversion-catalog,inspectors,columnTypeCheck.service,columnTypeChange.service}.ts`
+- `src/services/externalColumnType/{externalColumnTypeCheck.service,externalColumnTypeChange.service}.ts`
+- `src/routes/viewer.ts`, `src/routes/externalData.ts`
+- `src/middlewares/permission.middleware.ts`, `src/config/constant.ts`
+- `API/viewer.md`, `API/external-data.md`
+
+**data-craft** (FE 모노레포):
+- `packages/fs-data-viewer/src/entities/column-types/conversion-catalog.ts` + `index.ts`
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/` (ColumnTypeChangeDialog + useColumnTypeChangeDialog + steps × 3 + index)
+- `packages/fs-data-viewer/src/widgets/index.ts` (cross-package export)
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/{menuItems,useGridColumnMenu}.ts`
+- `packages/fs-data-viewer/src/features/column-settings/{createViewColumnMenuItems,useViewColumnMenu}.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/{FsSubGrid.tsx, components/SubGridColumnMenu.tsx, hooks/useSubGridColumnMenu.ts}`
+- `packages/fs-data-viewer/src/shared/config/i18n/{types.ts, translations/{ko,en,ja,zh}.ts}`
+- `packages/fs-sub-data-viewer/package.json` (fs_data_viewer dep) + `features/grid/hooks/column-menu/{menuItems,useGridColumnMenu}.ts` + `widgets/grid-table/FsGridTableView.tsx` + `shared/config/i18n/...`
+- `packages/fs-external-data-viewer/package.json` (fs_data_viewer dep) + `features/grid/hooks/column-menu/{menuItems,useGridColumnMenu}.ts` + `features/grid/lib/columnTypeMapping.ts` + `widgets/grid-table/FsGridTableView.tsx` + `shared/config/i18n/...`
+- `packages/fs-api/src/{api/columnType,api/externalData,types/columnType,types/externalData,constants/endpoints,index}.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- monorepo vitest 인프라 부재 → Phase 1 의 conversion-catalog.test.ts + 계획상 5-way concord 메뉴 회귀 테스트는 후속 이슈로 분리. 기능 자체 동작에 영향 없음.
+- BE 의 conversion-catalog / inspectors 가 FE 사본 → 드리프트 위험. v2 codegen 또는 동기성 lint.
+- type-change 트랜잭션이 `SELECT ... FOR UPDATE` 미적용 — 동시 변환 race 이론상 가능, v2 후보.
+- `inspectors.ts` v1 은 text/longText 출처 10종만 커버 — `multiSelect→singleSelect` 등 추가 inspect-required 쌍은 호출 시 `inspector-undefined` 거부. 후속 확장.
+- RBAC 격상 — 현 권한은 기존 viewer.save 와 동일 (FREE+). 디자인 모드 전용 권한 분리는 후속.
+- Phase 5 의 `groupId=dataViewerField` 가정 — 런타임 검증 후속.
+
 ## v001.525.0
 
 > 통합일: 2026-05-28
