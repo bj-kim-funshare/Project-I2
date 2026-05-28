@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.513.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #195
+
+### 페이즈 결과
+
+- **Phase 1**: 카드 보드 추세선 미리보기 미반영 수정 — `widgetData` plumb-through (`WidgetSettingsModal` → `WidgetSettingsPanel` → `WidgetPreviewPane` → `WidgetRenderer`). 미리보기 CardWidget 이 보드와 동일한 서버 사전 집계 데이터를 사용하도록 한 줄 보강.
+
+### Root cause 요약
+
+마스터 관찰 단서 (모달 열 때 서버 요청 0회 + 보드에는 추세선 이미 렌더) 로 데이터는 메모리에 존재 확정. 보드 `DashboardGrid.tsx:479` 는 `widgetData={widgetDataMap[widget.id]}` 전달로 CardWidget 의 `aggregationData?.sparkline` 서버 fold 경로 사용. 미리보기 `WidgetPreviewPane.tsx` 는 `widgetData` prop 미전달 → `aggregationData=undefined` → client fallback → View/Write 모드 row fetch (`FsDashboard.tsx:592-621` labelColumnIds) 가 sparkline `dateColumnField` 미포함 (서버 batch 가 사전 집계해 raw row 불필요) → cellMap 의 date cell 부재 → 전 row skip → bucketMap empty → null 반환.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/FsDashboard.tsx` (settingColumns 에 card 위젯 존재 시 모든 date/dateTime 컬럼 사전 포함 + `<WidgetSettingsModal widgetData>` 전달)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsModal.tsx` (`widgetData?` prop chain)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSettingsPanel.tsx` (`widgetData?` prop chain)
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetPreviewPane.tsx` (`widgetData?` prop → `<WidgetRenderer widgetData>`)
+
+### 운영 비고
+
+- WIP 브랜치 history 4 commit (race 가설 시도 `76706a5b` → trace 투입 `431fcc99` → trace revert `3f9d2bfe` → 진짜 fix `3fec0406`) 모두 보존 머지. force push 없음.
+- 진단 과정 사이드 이슈: 메인 repo `node_modules` 의 cross-worktree dangling symlink 74개 (`#193 핫픽스3` worktree 제거 후 잔존, 본 #195 와 무관한 오전 다른 세션 부수효과). `CI=true pnpm install` + `pnpm build:packages` 로 복구. 구조적 보완 (`worktree-lifecycle.md` 또는 `.npmrc`) 은 별도 plan-enterprise-os 호출 예정.
+
 ## v001.512.0
 
 > 통합일: 2026-05-28
