@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.520.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #199 (핫픽스1)
+
+### 핫픽스 사유
+
+원 작업(`v001.519.0`) 은 fs-data-viewer 패키지의 viewer-internal 설정 패널(`packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/SettingsPanel.tsx`) 을 대상으로 했으나, 마스터가 의도한 "위젯 설정 드로어" 는 root 앱 (`src/`) 의 **dashboard widget property drawer** (`src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx`) 였음. 해당 파일은 `<Input type="text">` 로 "그룹화 기준 컬럼" 을 노출하고 `onChange('rowGroupingColumnField', value)` 로 위젯 config 에만 저장 — 원 작업 변경은 이 드로어에 반영되지 않아 마스터 "여전히 텍스트필드인데? 기본 값 입력 필드도 없어" 보고로 표면화. 본 핫픽스가 실제 대상을 정정.
+
+### 핫픽스 (`fa9b2a3b`, `cae919d2`)
+
+- `ViewerGridSection.tsx`: "그룹화 기준 컬럼" 텍스트 Input → shadcn `<Select>` 드롭다운 교체. `viewerRef.getViewerModel().columnModelList` 를 effect 폴링(50ms × 60회 재시도)으로 state 에 캐싱하여 `DISABLE_ROW_GROUPING_TYPES` 제외 + `title !== 'ID'` 기준으로 옵션 산출. 뷰어 미준비 시 비활성 placeholder. `onValueChange` 에서 `onChange + viewerRef.setRowGroupingColumnField` 동시 호출로 위젯 store 와 뷰어 모델 양측 즉시 반영.
+- `ViewerGridSection.tsx`: "기본 펼침 행 그룹 값" `<Input>` 신설(`useRowGroup` 활성 시 표시). Enter/onBlur 시 trim 후 `onChange + viewerRef.setDefaultExpandedGroupValue` 호출.
+- `FsDataViewerRef`: `setRowGroupingColumnField(string)` / `setDefaultExpandedGroupValue(string)` 두 imperative 메서드 추가. `useImperativeApi.ts` 에서 `setRowHeight` 패턴 준용으로 구현 (`setViewerModel` + `conditionalSave(createGridSettingChange(...))`).
+- `syncViewerSettings.ts`: `defaultExpandedGroupValue` 양방향 동기화 매핑 추가.
+- `useViewerWidgetProps.ts` + `widget-viewer.types.ts`: `defaultExpandedGroupValue?: string` 위젯 prop 추가/추출.
+- `Viewer.widget.tsx`: `rowGroupingColumnField` / `defaultExpandedGroupValue` props → `viewerRef` 브릿지 useEffect 추가 (kanbanLabelColumn 폴링 패턴 미러: 60×50ms 재시도, idempotent skip).
+- `fs-data-viewer/src/index.ts`: `DISABLE_ROW_GROUPING_TYPES` 공개 surface 추가 (root 앱 import 용).
+- `cae919d2` lint 후속 — 렌더 중 ref 접근(`react-hooks/refs`) 4 errors → `useEffect + 폴링` 패턴으로 이동.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/app/types.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/hooks/useImperativeApi.ts`
+- `packages/fs-data-viewer/src/index.ts`
+- `src/shared/types/widget-viewer.types.ts`
+- `src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx`
+- `src/widgets/viewer-widget/ui/Viewer.widget.tsx`
+- `src/widgets/viewer-widget/ui/syncViewerSettings.ts`
+- `src/widgets/viewer-widget/ui/useViewerWidgetProps.ts`
+
+### 비고
+- `v001.519.0` 의 fs-data-viewer 내부 SettingsPanel 변경은 그대로 둠 — viewer-internal 헤더 설정에서도 동일 기능을 노출하는 결과(이중 노출). 마스터가 정리 필요 판단 시 별도 후속.
+- 드로어 open 시점에 1회 폴링하여 컬럼 목록 캐싱 — 드로어가 열려있는 동안 컬럼 메타가 변경되면 다음 drawer reopen 까지 반영되지 않음(범위 외).
+
 ## v001.519.0
 
 > 통합일: 2026-05-28
