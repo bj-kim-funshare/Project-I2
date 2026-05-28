@@ -1,5 +1,47 @@
 # data-craft — Patch Note (001)
 
+## v001.528.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #203 (Roadmap-5 Step 3)
+
+### 페이즈 결과
+
+- **Phase 1** (`7a5de58`): sp_replace_file_value_data SP 신규 작성 + storage.model.ts:49 cutover. FILE_VIEWER_TYPES=`['file', 'image']` (src/config/constant.ts) hardcode. DEFINER=`funshare`@`%` + sp_error_log INSERT + RESIGNAL 표준 에러 핸들링. storage.model.ts 의 "직접 UPDATE 허용 근거" 주석 + viewerTypePlaceholders 변수 + FILE_VIEWER_TYPES import 제거.
+- **Phase 2** (`a332ff2`): sp_rename_kanban_column_value SP 신규 작성 (Phase 1 SP 직후 append) + change.kanbanColumnRename.ts:37 cutover. p_column_id NULL 가드 + 동일 에러 패턴. bind 순서 `[columnField, oldName, newName]`.
+- **Phase 3 핫픽스 흡수** (`74e5e10`): columnTypeCheck.service.ts 의 3 early-return 에 `failureSamples: []` 필드 추가 (pre-existing TS 오류, parallel session 의 TypeCheckResult interface 변경 부산물). WIP base 가 i-dev 보다 뒤져 columnType 모듈 부재 → i-dev 머지 선행 후 fix.
+
+### Root cause / 목적 요약
+
+Roadmap-5 Step 3 — data 6테이블 (data_group / data_column / data_values / data_group_relation / data_column_relation / data_relation_value) 직접 CUD 위반 단 2건 (storage.model.ts:49 + change.kanbanColumnRename.ts:37) 을 신규 SP 경유로 cutover. Roadmap-5 의 목표 4 (CUD 프로시저 강제) 의 BE 측 정합.
+
+### 영향 파일
+
+data-craft-server:
+- `db.sql/03-procedures.sql` (sp_replace_file_value_data + sp_rename_kanban_column_value 추가)
+- `src/models/storage.model.ts`
+- `src/services/dataViewerChange/change.kanbanColumnRename.ts`
+- `src/services/columnType/columnTypeCheck.service.ts` (Phase 3 핫픽스 흡수)
+
+### 합계 변경량
+
+4 파일, +68 / -26 (Phase 1/2/3 합계; i-dev 머지 흡수는 별도 1487 lines added — columnType 모듈 등).
+
+### 회차 4 (Roadmap-5 Step 4) 진입 prep
+
+본 회차 머지 후 BE 는 2개 신규 SP 를 CALL — 회차 4 (task-db-structure) 가 dev + production 양쪽에 deploy 하기 전까지 다음 BE 호출 시 "sp_xxx does not exist" 발생:
+- `storage.model.ts:replaceFileUri` (file/image URI 일괄 치환 호출자)
+- `change.kanbanColumnRename.ts:kanbanColumnRenameCascade` (kanban 컬럼 이름 변경 호출자)
+
+회차 4 prompt = "신규 SP 2개 (sp_replace_file_value_data + sp_rename_kanban_column_value) DROP IF EXISTS + CREATE × dev + production 순차".
+
+### 운영 비고
+
+- **SP 본문 viewer_type hardcode 동기화 의무** — storage.model.ts 의 `FILE_VIEWER_TYPES` 상수가 향후 변경되면 sp_replace_file_value_data 본문 의 `viewer_type IN ('file', 'image')` 도 동기화 필요. 본 patch-note 에 명시.
+- **Phase 3 의 i-dev 머지 흡수** — WIP A 가 base 후 plan-enterprise #198 의 columnType 모듈 추가로 미보유 상태였음. Phase 3 fix 적용 위해 WIP 에 i-dev 머지. plan-enterprise 표준 흐름 외 변동.
+- **externalColumnType 동일 패턴 4건 미해결** — externalColumnTypeCheck.service.ts:52/59/69/75 에 동일 failureSamples 누락 패턴 잔존. 마스터 명시 명령으로 본 회차 미수정 (별도 핫픽스 권고).
+- **dev=prod 분리 환경 첫 plan-enterprise** — 회차 2 (data-craft-server 02c33e6) 후 첫 코드 회차. 본 회차 BE 변경은 dev + production 양쪽에 동시 영향. 회차 4 도 양쪽 배포 필수.
+
 ## v001.527.0
 
 > 통합일: 2026-05-28
