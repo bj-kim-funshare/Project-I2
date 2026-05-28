@@ -71,7 +71,8 @@ This skill changes real databases. The full pipeline includes paired migration +
    - `routine_mode`: `true` if the request mentions PROCEDURE / FUNCTION / TRIGGER keywords; `false` otherwise. The dispatcher determines this by scanning the request text and any referenced issue body for these keywords before dispatch.
    - `mode`: `"greenfield"` | `"incremental"` — determined by Step 1.5 above.
    - `target_db_name`: confirmed `target_db_name` string (greenfield 모드 시 필수; incremental 시 생략 가능). **plan.md 서술 전용** — agent SQL 본문에 인용 금지임을 agent 가 인지하고 있음.
-   - `admin_connection_env`: `db.md` 의 `admin_connection_env` 필드 값, 또는 sharpening 으로 수집한 값 (greenfield 모드 시 전달; incremental 시 생략).
+
+   > `admin_connection_env` 는 agent 디스패치 payload 에 **포함하지 않는다** — agent SQL 은 default-DB-relative 라 admin 자격증명을 사용하지 않는다. dispatcher 가 Step 1.5 에서 확보한 값을 내부 보관 후 Phase 4 §b 의 admin 접속에서 직접 사용한다.
 
    Per `.claude/md/sub-agent-prompt-budget.md` (recommended 5–15k tokens, hard cap 100k): schema file contents are not inlined — only paths. Db-migration-author reads the schema files itself.
 3. **Receive the agent's JSON summary**. On `error` response → halt with Korean report to master.
