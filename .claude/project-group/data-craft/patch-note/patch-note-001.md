@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.519.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #199
+
+### 페이즈 결과
+- **Phase 1**: `FsDataViewerModel` 에 `defaultExpandedGroupValue?: string` 옵셔널 필드 + `useViewerMetaLoader` 응답 매핑 + i18n 4개 언어(ko/en/ja/zh) `settings.rowGroupingColumn` / `settings.defaultExpandedGroupValue` 라벨 추가. 영속 저장은 기존 `createGridSettingChange` 가 string 값을 이미 수용하므로 helper 무수정 (`9fc80218`).
+- **Phase 2**: 위젯 설정 드로어 `SettingsPanel.tsx` 에 `useRowGrouping === true` 조건부 블록 신설 — eligible 컬럼(`title !== 'ID' && DISABLE_ROW_GROUPING_TYPES 제외`)만 옵션화한 native `<select>` 드롭다운과 `rowHeight` 패턴을 그대로 따른 Enter-커밋 + `CornerDownLeft` 텍스트 필드를 렌더링. 현재 `rowGroupingColumnField` 값이 eligible 셋 밖일 때는 disabled `—` 옵션으로 표시해 자동 mutate 회피. `useSettingsPanelHandlers` 에 `handleRowGroupingColumnChange` (empty / 비eligible / 동일값 가드) 와 `handleDefaultExpandedGroupValueChange` (Enter-only trim) 추가. 기존 `handleRowGroupingToggle` 자동지정 로직 무변경 (`8ba7f109`).
+- **Phase 3**: `useGridGrouping.initializeWithFirstExpanded` 시그니처에 선택적 `defaultExpandedValue?: string` 추가. 비어있지 않고 `groupKeys` 에 포함되면 해당 그룹만 펼치고 나머지는 collapsed set 으로 — 그렇지 않으면 기존 분기(1개 이하 전체 펼침 / 그 외 첫 그룹 펼침) 유지. 단일 호출지 `useTableView.ts:631` 에서 `viewerModel.defaultExpandedGroupValue` 전달. `initializedRef` 가드 보존으로 "페이지 진입 시" 1회만 적용. 서브그리드 (`FsSubGrid.tsx`) 는 의도적으로 무수정 — 마스터 명령 범위 외 (`624cab43`).
+
+### 사용 방법
+1. 그리드 뷰 → 위젯 설정 드로어 → "행 그룹 지정" 토글 ON.
+2. 신규 노출 영역:
+   - **그룹 기준 열** 드롭다운에서 원하는 컬럼 선택 (ID / formula / file 등 그룹화 비대상 타입은 자동 제외).
+   - **기본 펼침 행 그룹 값** 입력란에 페이지 진입 시 자동 펼침할 그룹의 텍스트 값을 입력 후 Enter.
+3. 새로고침/재진입 시 해당 그룹이 펼쳐진 상태로 진입. 일치 그룹이 없거나 값이 비어 있으면 기존대로 가장 위 그룹 펼침.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+- `packages/fs-data-viewer/src/entities/grid/types.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/handlers/settings-handlers.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/useGridGrouping.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/SettingsPanel.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+### 비고
+- `defaultExpandedGroupValue` 는 그룹 기준 열 변경 시 자동 클리어하지 않음 — 새 컬럼에서 값이 매칭되면 그대로 사용, 매칭이 없으면 fallback(첫 그룹 펼침).
+- 서브그리드의 동일 동작 확장은 본 패치 범위 외 (후속 필요 시 별도 플랜).
+
 ## v001.518.0
 
 > 통합일: 2026-05-28
