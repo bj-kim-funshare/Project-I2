@@ -1,5 +1,62 @@
 # data-craft — Patch Note (001)
 
+## v001.516.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #196 (핫픽스1)
+
+### 핫픽스 사유
+
+회차 1 (v001.514.0) 완료 직후 자체 점검에서 발견:
+
+**문제**: Phase 7 의 sp_manage_* 본문은 `relation_view_name` INSERT/UPDATE/NULL set 을 보존 (NOT NULL + UNIQUE 제약 보호 사유). 그러나 회차 2 (task-db-structure) 가 컬럼을 DROP 하면, 수정 없이 재배포된 sp_manage_* 의 다음 INSERT 호출이 "Unknown column" 으로 즉시 실패. 회차 1 → 회차 2 절차 결함.
+
+### 핫픽스 내용
+
+**Phase 8 (`01b9b81`)** — sp_manage_data_group / sp_manage_column_relation / sp_manage_group_relation 본문의 `relation_view_name` 쓰기 / 자동생성 / 임시변수 / dead 커서 / 임시테이블 모두 제거. sp_manage_column_relation + sp_manage_group_relation 시그니처에서 `IN p_relation_view_name VARCHAR(30)` 파라미터 제거. 호출자 `src/models/relation.model.ts` 의 `callSpManageGroupRelation` / `callSpManageColumnRelation` 동반 수정 (CALL 플레이스홀더 7→6 / 6→5, 바인드 배열 정리, TS 파라미터를 `_relationViewName` 으로 변경하여 서비스 호출자 8곳은 무변경).
+
+**Phase 8 보강 (`96434033`)** — sp_get_relation_columns:1013 의 `gr.relation_view_name` SELECT 컬럼 제거 (호출자 0건이지만 회차 2 컬럼 DROP 시 SP 정의 broken 회피).
+
+### 정합성
+
+`grep relation_view_name db.sql/03-procedures.sql` 결과 view-creator 본체 (sp_create_column_pivot_view:907) 1건 잔존 — 의도적 (회차 2 가 본체 DROP). **비-view-creator SP 잔존 0건**.
+
+정적 syntax 검증: DELIMITER 10/10, BEGIN/END 7/7, IF/WHILE/LOOP 모두 균형. lint + tsc 0 errors.
+
+### 영향 파일
+
+data-craft-server:
+- `db.sql/03-procedures.sql`
+- `src/models/relation.model.ts`
+
+### 합계 변경량
+
+2 파일, +45 / -160 (merge stat 기준).
+
+### 회차 2 (task-db-structure) 강제 순서 (확정 — 6단계로 확장)
+
+원 이슈 위험 절 #4 는 4단계로 표기되어 있었으나, 본 핫픽스 자체 점검에서 NOT NULL+UNIQUE 충돌 발견 → 6단계로 확장:
+
+```
+① ALTER TABLE data_group_relation MODIFY relation_view_name varchar(255) NULL
+② ALTER TABLE data_column_relation MODIFY relation_view_name varchar(255) NULL
+   + ALTER TABLE data_column_relation DROP INDEX data_column_relation_unique
+③ sp_manage_data_group / sp_manage_column_relation / sp_manage_group_relation 재배포
+   (db.sql/03-procedures.sql 의 본 핫픽스 기준 본문)
+④ DROP PROCEDURE sp_create_pivot_view / sp_create_column_pivot_view / sp_drop_pivot_view
+⑤ 동적 뷰 일괄 DROP (information_schema.views 에서
+   vw_pivot_group_* / vw_grp_rel_* / vw_col_rel_* / vw_rel_* enumerate)
+⑥ ALTER TABLE data_group_relation DROP COLUMN relation_view_name
+   + ALTER TABLE data_column_relation DROP COLUMN relation_view_name
+```
+
+순서 핵심: ①②가 ③ 보다 먼저 (그렇지 않으면 ③ 재배포된 SP 의 첫 INSERT 가 NOT NULL 실패). ⑥은 ③④⑤ 모두 끝난 뒤.
+
+### 운영 비고
+
+- 본 핫픽스의 sp_manage_* 본문은 **소스 템플릿** — 현재 DB (NOT NULL + UNIQUE 유지) 에 단독 deploy 하면 INSERT 시 "Field doesn't have default value" 로 실패. 회차 2 단계 ①② 후에만 deploy 가능. 마스터 단독 deploy 시도 주의.
+- 패치노트 버전 v001.515.0 은 #197 parallel session 점유로 본 핫픽스는 v001.516.0.
+
 ## v001.515.0
 
 > 통합일: 2026-05-28
