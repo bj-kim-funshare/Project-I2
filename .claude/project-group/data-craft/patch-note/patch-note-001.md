@@ -1,5 +1,55 @@
 # data-craft — Patch Note (001)
 
+## v001.515.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #197
+
+### 페이즈 결과
+
+- **Phase 1** (`0b85adf`, data-craft-server): BE `updateRole` 에 diff(added ∪ removed) 기준 actor 보유 권한 항목 대조 검증 추가. `createRole` 시그니처를 `(companyId, data, isOwner, userPermissions)` 로 확장하여 동일 규칙 적용. `createRoleController` 가 `req.user?.isOwner / permissions` 를 service 로 전달. 새 에러 코드 `PERMISSION_OUT_OF_ACTOR_SCOPE`. 오너 우회 보존. `edit_default_role` 게이팅과 직교. keep-locked(미보유 항목 변경 없는 유지) 통과.
+- **Phase 2** (`7e60e3f`, data-craft): FE `useRoleFormDialog` / `RoleFormDialog` 시그니처에 `actorPermissions: PermissionKey[]` + `actorIsOwner: boolean` 추가. `PermissionTabContent` 가 `useAuthStore.userInfo` 에서 파생하여 전달.
+- **Phase 3** (`2c3e8d1`, data-craft): `SystemPermissionTree` actor 미보유 항목 잠금 — `isLocked(key) = !actorIsOwner && !actorSet.has(key)` 함수로 각 PermissionCard `disabled` 를 기존 부모-자식 조건과 OR 결합. `handleToggle` 시작부에 동일 가드(키보드/programmatic 누수 차단). `PermissionCard` 에 `lockedReason?: string` prop + Shadcn Tooltip 래핑. `RoleFormDialog` / `RoleFormDialogContent` 양쪽에 prop drill. i18n 키 `settings.permissions.lockedByActor` 추가(ko/en).
+- **Phase 4** (`941d0b5`, data-craft): `package.json` `typecheck:all` 스크립트에 `&& tsc -p tsconfig.app.json --noEmit` 영구 합류 — 메모 `feedback_data_craft_lint_gate_root_app` 의 사각지대(turbo typecheck:all 이 루트 앱 src/ 미커버) 봉인.
+- **Phase 5** (`381bc18`, data-craft): `SystemPermissionTree.handleToggle` 해제 분기에서 `removeChildPermissions` 의 cascade 중 actor 미보유 자식은 selectedPermissions 에 보존(BE 평탄 모델 허용 → 부모 OFF + 자식 ON). `RoleFormDialogContent.handleBulkGrant` general 탭 `grantableKeys = actorIsOwner ? PERMISSION_KEYS : PERMISSION_KEYS.filter(...)` 로 범위 제한, `getIsAllSelected` 도 동일 기준.
+- **Phase 6** (`0bc6a30`, data-craft): `handleBulkGrant` settings 탭 분기에 `canGrantSettingsEdit` 조기 반환 가드. `getIsAllSelected` 동일 조건.
+- **Phase 7** (`e30a8a7`, data-craft): `handleSettingsEditToggle` 시작부에 actor 스코프 가드. `SettingsPermissionSection` Props 에 `settingsEditLocked` 추가, `settings_edit` PermissionCard `disabled` / `lockedReason` 연결.
+
+### Root cause / 목적 요약
+
+기존 권한 시스템은 등급(sortOrder) 기반 수정 제한과 권한 키 형식 검증만 수행하고, 편집자(actor) 의 보유 권한 항목과 부여 대상 권한 항목의 항목별 대조 검증을 하지 않았다. 결과적으로 `permission_manage` 만 가진 운영자가 자신보다 낮은 등급의 권한 그룹을 편집할 때 자신이 보유하지 않은 권한 항목(예: `design_mode`, `user_manage`) 까지 우회 부여 가능했다.
+
+본 패치는:
+1. BE(`roles.service.ts` updateRole/createRole) 에 **diff 기준 actor 스코프 검증**을 추가해 우회를 원천 차단.
+2. FE(`SystemPermissionTree` + `RoleFormDialog{,Content}` + `SettingsPermissionSection`) 의 모든 cascade / 일괄 부여 / 단독 토글 경로에 actor 스코프 가드를 동기화하여 UX 일관성 확보 — actor 가 자기 권한 범위 내 정당한 편집은 막지 않고, 미보유 항목 변경 시도만 차단.
+3. 영구 lint 게이트 강화(`typecheck:all` 에 루트 앱 tsc 합류) 로 향후 prop drill 결함 회귀 방지.
+
+오너(`isOwner`) 는 모든 경로에서 우회 보존 — 회귀 없음.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/services/roles.service.ts`
+- `src/controllers/roles.controller.ts`
+- `test/roles/endpoints/update-role-actor-scope.test.ts` (시나리오 명세 — vitest 인프라 부재로 주석 형태)
+
+**data-craft**:
+- `src/widgets/settings-dialog/ui/useRoleFormDialog.ts`
+- `src/widgets/settings-dialog/ui/RoleFormDialog.tsx`
+- `src/widgets/settings-dialog/ui/RoleFormDialogContent.tsx`
+- `src/widgets/settings-dialog/ui/SystemPermissionTree.tsx`
+- `src/widgets/settings-dialog/ui/PermissionCard.tsx`
+- `src/widgets/settings-dialog/ui/SettingsPermissionSection.tsx`
+- `src/widgets/settings-dialog/ui/PermissionTabContent.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `package.json`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- vitest/supertest 런타임 미설치로 `test/roles/endpoints/update-role-actor-scope.test.ts` 는 시나리오 명세 형태로 보존. 인프라 구축 시 활성화 권장.
+- `user_manage` 권한으로 사용자에게 권한 그룹을 "할당" 하는 경로(등급 비교만)는 본 패치 범위 밖 — 권한 그룹 자체에 actor 미보유 항목이 들어갈 수 없게 봉쇄됨으로써 우회 효과는 차단.
+
 ## v001.514.0
 
 > 통합일: 2026-05-28
