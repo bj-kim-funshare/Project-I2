@@ -1,5 +1,58 @@
 # data-craft — Patch Note (001)
 
+## v001.514.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #196
+
+### 페이즈 결과
+
+- **Phase 1** (`a603987`): pivot SQL builder 유틸 도입 (`src/utils/pivotBuilder.ts` 신규 212라인). `sp_create_pivot_view` / `sp_create_column_pivot_view` 본체 SQL 생성 로직을 TypeScript 빌더로 포팅. 단일 그룹 + 다중 그룹 JOIN 패턴 모두 구현, `sanitizeColumnName` + backtick escape + PreparedStatement 바인딩으로 SQL 주입 방어.
+- **Phase 2** (`18c8ab2`): `viewer.model.ts` `queryPivotView` 빌더 컷오버. outer wrapper `SELECT * FROM (pivotSql) AS pv WHERE pv.is_deleted = 0 ORDER BY pv.row_num` 로 기존 의미(모든 셀 alive 인 row 만) 보존.
+- **Phase 3** (`58386c9`): paging 4 모델 (`grid` / `grouped` / `row` / `subGrid`) 전체 컷오버. `findPivotViewName` + `validateViewName` 호출 전면 제거.
+- **Phase 4a** (`8e71082`): aggregation 엔진 + 단순 service (gantt/calendar/viewer.paging) + 4 helper (aggregation.simple / paging.gantt / paging.calendar / paging.row) 동반 시그니처 변경 (`viewName: string` → `PivotColumn[]/groupId`). 8 파일 cutover, `getPagedGridData` EAV 분기 단순화.
+- **Phase 4b** (`9c246a1`): 복합 service (grouped / kanban / subGrid) + `paging.kanban` 모델 cutover. 다중 그룹 JOIN 검증 결과 실 콜패턴 사용 0건, 빌더 `buildMultiGroupSelect` 미래 사용 목적 보존.
+- **Phase 5** (`2d691b1`): `relation.model` / `externalData.model` 의 `relation_view_name` SELECT 제거 + `externalData.service` 의 `getMultiGroupData` / `getMultiGroupDetail` VIEW 의존 cutover (INFORMATION_SCHEMA → `findColumnNameToIdMap`, VIEW SELECT → `getGroupDataAsCellsAuto(preferView=false)`).
+- **Phase 6** (`f091470`): viewer.model dead export 3건 (`findPivotViewNamePool` / `findRelationIdByGroupId` / `callSpCreatePivotView`) + `paging.row` EAV 폴백 dead code 49라인 + `_viewName` 파라미터 12지점 일괄 제거. `pnpm tsc --noEmit` 0 errors 달성.
+- **Phase 6b** (`a1594c3`): `getGroupDataAsCellsAuto` VIEW 체인 완전 제거 — `findPivotViewName` / `queryPivotView` / `hasPivotView` / `getGroupDataAsCellsFromView` 4함수 삭제 + 단순 래퍼화 + `viewer.cache.ts` dead 필드 정리. **VIEW 의존 grep 0건 달성**.
+- **Phase 7** (`3e3555e`): DML 프로시저 (`sp_manage_data_group` / `sp_manage_column_relation` / `sp_manage_group_relation`) 에서 view-creator/dropper CALL 모두 제거. `relation_view_name` INSERT/UPDATE/NULL set 전원 보존 (NOT NULL + UNIQUE 제약 + 회차 2 컬럼 DROP 시 동시 소멸).
+
+### Root cause / 목적 요약
+
+PostgreSQL 마이그레이션 평가서가 "동적 뷰 생성기"를 구조적 절벽으로 명시 (`.claude/project-group/data-craft/postgresql-migration-assessment-20260528.md:128`). 회차 1 = BE + 프로시저 부산물 제거, 회차 2 (task-db-structure) = 뷰 + view-creator 프로시저 + `relation_view_name` 컬럼 일괄 DROP. 다운타임 허용 전제.
+
+### 영향 파일
+
+data-craft-server:
+- 신규: `src/utils/pivotBuilder.ts`
+- viewer/relation/externalData 모델: `src/models/viewer.model.ts`, `src/models/relation.model.ts`, `src/models/externalData.model.ts`
+- paging 모델: `src/models/paging/{paging.grid,paging.grouped,paging.row,paging.subGrid,paging.gantt,paging.calendar,paging.kanban}.ts`
+- aggregation: `src/models/aggregation/{aggregation.engine,aggregation.simple}.ts`
+- service: `src/services/externalData.service.ts`, `src/services/viewer/{viewer.paging,viewer.paging.gantt,viewer.paging.calendar,viewer.paging.grouped,viewer.paging.kanban,viewer.paging.subGrid,viewer.cache}.ts`
+- SQL 프로시저: `db.sql/03-procedures.sql`
+
+### 합계 변경량
+
+22 파일 변경, +605 / -909 라인 (merge stat 기준).
+
+### 회차 2 (task-db-structure) 진입 prep
+
+이슈 위험 절 #4 — 회차 2 강제 순서:
+1. `sp_manage_data_group` / `sp_manage_column_relation` / `sp_manage_group_relation` **재배포** (본 회차 Phase 7 본문 기준)
+2. view-creator 프로시저 (`sp_create_pivot_view` / `sp_create_column_pivot_view` / `sp_drop_pivot_view`) DROP
+3. 모든 동적 뷰 (`vw_pivot_group_*` / `vw_grp_rel_*` / `vw_col_rel_*` / `vw_rel_*`) DROP — `information_schema.views` enumerate 후 일괄
+4. `data_group_relation.relation_view_name` / `data_column_relation.relation_view_name` 컬럼 DROP (UNIQUE KEY `data_column_relation_unique` 동반 정리)
+
+머지 직전 dev DB 에 `source 03-procedures.sql` dry-run 권고 (DELIMITER 블록 syntax 검증).
+
+### 운영 비고
+
+- 다운타임 허용 전제로 공존 플래그 / 뷰모드별 순차 컷오버 생략 — BE 빌더 일괄 치환 + 머지 후 회차 2 진입.
+- Phase 6 에서 계획 누락 발견 (`getGroupDataAsCellsAuto` VIEW 체인 4 콜사이트 잔존) → 마스터 승인하 Phase 6b 추가로 완전 해결.
+- Phase 7 의 스펙 외 추가 라인 제거 (`sp_manage_data_group:1514`, `sp_manage_group_relation:2147/2156`) 는 phase-executor 의 일관성 판단 — INSERT/메인 플로우의 view-creation CALL 만 남으면 비일관 변환 발생.
+- relation.model 의 `callSpManageGroupRelation` / `callSpManageColumnRelation` 시그니처 `relationViewName` 파라미터 잔존 — SP 자체가 `relation_view_name` 컬럼 쓰기 수행 (NOT NULL 제약), 회차 2 컬럼 DROP 시 동시 소멸.
+- FE relationViewName 소비처 0건 확인 (data-craft / data-craft-mobile / data-craft-ai-preview 모두 grep empty) — Phase 5 안전.
+
 ## v001.513.0
 
 > 통합일: 2026-05-28
