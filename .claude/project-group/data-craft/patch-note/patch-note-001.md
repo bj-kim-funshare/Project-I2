@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.512.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #193 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 5 (핫픽스3, fix)**: **핫픽스2의 회귀 수정** — 서브그리드 토글 시 화면 전체가 스켈레톤으로 깜빡이던(새로고침처럼 보이던) 문제 해소. 핫픽스2가 create-on-open 직후 호출한 `reloadMeta()`(=`loadMeta`)가 `setIsMetaLoading(true)` 를 토글 → `FsDataViewer` 의 `if(isMetaLoading)` 전체 스켈레톤 반환이 원인이었다. `useViewerMetaLoader.loadMeta` 에 `opts?:{silent?:boolean}` 추가해 `silent` 일 때 `setIsMetaLoading` 토글을 스킵(메타 fetch·setViewerModel·subGrids 반영은 동일)하고, `FsDataViewer` 는 하위로 내려가는 reloadMeta 를 `reloadMetaSilent = ()=>reloadMeta({silent:true})` 래퍼로 교체. 에러 재시도(`onRetry`)는 비-silent 유지(스켈레톤 정상). prop 체인 타입 변경 없음. lint(`typecheck:all && lint`) exit 0.
+
+### 영향 파일
+- data-craft (fs-data-viewer 패키지, 2파일):
+  - `src/app/hooks/useViewerMetaLoader.ts`
+  - `src/app/FsDataViewer.tsx`
+
+### 비고
+- 핫픽스2(v001.510.0)의 `reloadMeta` 스켈레톤 깜빡임 회귀를 바로잡는 후속. create-on-open 직후 서브그리드 패널이 깜빡임 없이 즉시 열림.
+- dev 반영: `fs_data_viewer` 는 src alias(빌드 불요), `fs_data_viewer_explorer` 는 dist alias → main repo 에서 explorer dist 재빌드 완료. (`fs_data_viewer` 패키지 빌드는 기존 tsup DTS 단계 `fs_api` 타입 미해결로 dist 산출 후 exit 1 — 본 변경 무관, 별도 정리 후보.)
+- prod 복구는 data-craft 배포 필요. origin push 미수행.
+
 ## v001.511.0
 
 > 통합일: 2026-05-28
