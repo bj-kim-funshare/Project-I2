@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.530.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #204 (권한 그룹 편집 모달 — 시안 C 디자인 전면 적용)
+
+### 페이즈 결과
+
+마스터 명령: "데이터 크래프트→설정→권한 관리→권한 관리 그룹 편집 모달의 디자인을 디자인 팀에서 보내줬어, 기능은 100% 그대로 유지하고 디자인팀 시간에 따라서 디자인만 전부 갈아엎어". 디자인 시안 HTML 의 3가지 시안 중 마스터 선택 = 시안 C ("범위, 주의, 할당된 사용자가 모두 있는 시안"). 단일 work_repo = data-craft, 5개 페이즈 순차 + lint hotfix 1회 + ESLint warning 핀픽스 1회.
+
+- **Phase 1** (`a17a9106`): 시안 C 의 색/간격 토큰 + 공용 atomic 컴포넌트 5종 (CountChip / SectionHeader / ScrollspySidebar skeleton / SummaryAside skeleton / role-form-tokens) 을 `src/widgets/settings-dialog/ui/role-form-dialog/` 하위에 신규 작성. 색 토큰은 기존 `--auth-*` CSS 변수 (tokens.css) 로 매핑. +539 / -0.
+- **Phase 2** (`32b4c48c`): RoleFormDialog 외곽을 시안 C 1180×780 3컬럼 grid (212/1fr/280) 로 재구성. gradient lock 헤더 + 그룹명 인라인 + 푸터 좌측 "선택된 권한 N개". 좌측 ScrollspySidebar / 우측 SummaryAside 끼움 (skeleton). isSystem 경로는 기존 단독 표시 유지. +178 / -69.
+- **Phase 3** (`a875d7c6`): activeTab 분기 → 통합 스크롤 + scrollspy + sticky 검색바. RoleFormDialogContent 가 3섹션 (일반/설정/페이지) 을 한 컬럼에 위→아래 렌더. jumpRequest 패턴 (counter) 으로 동일 섹션 재클릭 처리. RolePermissionSearchBar 디자인 교체. RoleFormDialog 에서 useSettingsForms 리프트해 granted/total 실 카운트 sidebar/aside 양쪽 연결. RolePermissionTabSidebar.tsx 파일 삭제 (Phase 2 이연분 흡수), RoleFormSectionId 타입 신규 (`role-form-types.ts`). +276 / -171.
+- **Phase 4** (`295abeb0`): 3섹션 본체 시안 C 적용. PermissionCard 를 PermissionRow 스타일로 교체 (props 시그니처 보존 → 3섹션 공용 재사용). SystemPermissionTree 에 ParentRow + 트리 라인. SettingsPermissionSection 에 SettingsAccessTriToggle 신규 (없음/읽기/쓰기). PageAccessList 에 그룹 카드 + 2-col grid + 전체선택/해제 (AccessLevelSelect trailing 보존 → read/write 기능 유지). 부모 단독 토글 보존 검증 완료 (라인 157/161). +529 / -332.
+- **Phase 5** (`7683fb34`): RoleFormSummaryAside 본체 — 영향 범위 (총 부여 + 섹션별 progress) / 주의 사항 (user_manage + permission_manage 동시 + write ≥3 위험 신호) / 할당된 사용자 (useApprovedUsers client-side filter, +N 오버플로우 아바타). 신규 API 호출 없음. AccessLevelSelect 는 PageAccessList 내부 지역 함수로 존재 → 삭제 불필요. +64 / -5.
+- **Lint hotfix** (`f502b017`): RoleFormSummaryAside `import type` (TS1484) + RoleFormDialogContent `RefObject<HTMLElement | null>` (TS2322 React 19) 정합. +2 / -2.
+- **ESLint warning fix** (`d28626ae`): RoleFormDialog 의 `allUsers` 를 useMemo 콜백 내부로 흡수 (react-hooks/exhaustive-deps). +4 / -5.
+
+### 영향 파일
+
+data-craft:
+- 신규: `src/widgets/settings-dialog/ui/role-form-dialog/role-form-tokens.ts` · `RoleFormCountChip.tsx` · `RoleFormSectionHeader.tsx` · `RoleFormScrollspySidebar.tsx` · `RoleFormSummaryAside.tsx` · `SettingsAccessTriToggle.tsx` · `role-form-types.ts`
+- 수정: `src/widgets/settings-dialog/ui/RoleFormDialog.tsx` · `RoleFormDialogContent.tsx` · `RolePermissionSearchBar.tsx` · `SystemPermissionTree.tsx` · `PermissionCard.tsx` · `SettingsPermissionSection.tsx` · `PageAccessList.tsx`
+- 삭제: `src/widgets/settings-dialog/ui/RolePermissionTabSidebar.tsx`
+
+### 검증
+
+- `pnpm typecheck:all`: 본 작업 산출물 에러 0건 확인. 잔존 에러 (fs_file_attachment / fs_*_explorer 모듈 누락, en/ko.ts 중복 키) 는 모두 pre-existing — 본 플랜 도입 아님.
+- `pnpm exec eslint src/widgets/settings-dialog/ui/`: 0 error 0 warning.
+- 기능 회귀 점검: 부모 페이지 단독 토글 (PageAccessList), scope guard (actorPermissions/Pages/FormAccesses 전파), requires 표시, locked-page 처리, 저장 흐름 (useRoleFormDialog 미수정) 모두 보존.
+
 ## v001.529.0
 
 > 통합일: 2026-05-28
