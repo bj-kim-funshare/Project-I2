@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.521.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #202
+
+### 페이즈 결과
+
+- **Phase 1** (feat): `data-craft-server/src/config/constant.ts` 의 `DB.NAME` 해소 한 줄을 `resolveDbName()` 헬퍼 호출로 교체. 헬퍼는 `src/services/email.service.ts:6-16` `getFrontendUrl()` 패턴 1:1 복제 — `NODE_ENV === 'production'` 분기 + 미설정 시 `InternalServerError('DB_NAME_PROD_NOT_CONFIGURED')` / `InternalServerError('DB_NAME_NOT_CONFIGURED')` throw. 폴백 문자열 `'data_craft'` 제거 (사일런트 회귀 차단). `InternalServerError` import 는 기존 `TOKEN_EXPIRES_ACCESS_PROD` 가드에서 이미 적재됨. 커밋 `13b9dc0` (+12 / -1).
+- **Phase 2** (chore): `data-craft-server/.env` 의 `DB_NAME=data_craft_test` → `data_craft_dev` 교체 + `DB_NAME_PROD=data_craft_production` 라인 추가 (DB_NAME 직후). `.env.example` 도 동일 페어 형태로 갱신. 커밋 `15b24ed` (+4 / -2). dev/prod 분리 후 EC2 측 .env 동기 + pm2 restart 는 본 패치 외부.
+
+### 영향 파일
+
+data-craft-server:
+- `src/config/constant.ts`
+- `.env`
+- `.env.example`
+
+### 검증 결과
+
+- Phase 1, Phase 2 모두 `pnpm lint` (data-craft-server) exit 0
+- advisor #1 (계획 시점) PASS — 5관점 모두 통과
+- advisor #2 (완료 시점) PASS — BLOCK 토큰 부재
+- `InternalServerError` import 실측 확인 (constant.ts:3) — 기존 페어 가드(TOKEN_EXPIRES_ACCESS_PROD) 가 사용 중이라 재활용
+
+### 절차 노트
+
+본 패치는 4-스킬 체인(group-policy → task-db-structure → task-db-data → plan-enterprise)의 4/4 단계로, 직전 3 단계에서 db.md `분리` 전환 + `data_craft_dev`/`data_craft_production` DB 신규 생성 + `data_craft_test` 구조·데이터 복제가 완료된 상태를 전제로 한다. BE 서버가 NODE_ENV 에 따라 두 DB 를 자동 분기 접속하도록 페어 패턴(dev.md §"BE 페어 패턴" 표준)을 1:1 복제 적용.
+
+### 후속 작업 (별도)
+
+- EC2 prod 인스턴스: `git pull` 후 `.env` 의 `DB_NAME_PROD` 라인 존재 검증 + `pm2 restart` (NODE_ENV=production 유지)
+- 정적 토큰 매칭 e2e 테스트 — 본 그룹은 현재 테스트 러너 미구성(`package.json` 의 `test` 스크립트 부재) 으로 본 패치에서 제외. 마스터 결정 시 별도 plan 으로 테스트 인프라 도입
+
 ## v001.520.0
 
 > 통합일: 2026-05-28
