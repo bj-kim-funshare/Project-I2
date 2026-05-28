@@ -201,6 +201,8 @@ git -C "${wt_a_x}" push -u origin "${wip_a_x}"
 
 **Codex 변형 + N>1**: v1 미지원 (실패 정책 참조).
 
+> 외부 pnpm-workspace project 의 worktree 내부에서 pnpm 명령 실행 시 메인 repo `node_modules` 손상 가능 — `.claude/md/worktree-lifecycle.md` 의 'pnpm 워크스페이스 상호작용' 절 참조.
+
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ## Step 7 — Phase execution loop
