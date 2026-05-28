@@ -1,5 +1,31 @@
 # 아이OS — Patch Note (001)
 
+## v001.109.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #58
+> 대상: 아이OS
+
+### 배경
+
+`task-db-structure` v2 는 **기존 데이터베이스** 의 점진적 DDL 변경 (incremental) 만 다뤘다. db-migration-author 가 schema 파일 baseline 을 읽어 ALTER 위주로 출력 — schema 파일 부재 시 `schema_files_missing` 에러로 halt; Pre-cond #3 가 "DB 코드가 들어있는 target repo 식별 가능" 을 요구하여 이미 schema 가 존재한다는 전제; `db.md` 에 `CREATE DATABASE` 권한 admin 자격증명 필드 없음; destructive 분류와 auto-rollback 정책에 `DROP DATABASE` 항목 없음. 마스터 요청: "DB 생성, 설계, 신규 구축" 시나리오까지 다루도록 v3 승격.
+
+### 페이즈 결과
+
+- **Phase 1 — `db-migration-author` agent 의 greenfield 모드 확장 (commit `73892267`)**: Input 에 `mode: "greenfield" | "incremental"` (default incremental) + `target_db_name` (plan.md 서술 전용, SQL 본문 인용 금지) 추가. Scope 의 In 에 "greenfield multi-table 설계 + 프레임워크 baseline scaffolding" 항목 추가 — `CREATE DATABASE` / `DROP DATABASE` 자체는 dispatcher 책임이며 agent SQL 본문에는 포함되지 않음을 명문화. Process 에 greenfield 분기 (schema 파일 부재 허용, default-DB-relative 코멘트 emit, raw-sql/prisma/knex/sequelize baseline scaffolding, rollback 은 테이블 DROP 만). JSON 응답 schema 에 `mode`, `database_created` 필드 추가. `schema_files_missing` failure mode 에 "mode == greenfield 시 비활성" 조건 추가. Discipline 에 target_db_name SQL-body prohibition 명문화. plan.md 템플릿 헤더에 mode / target_db_name 메타 행 추가. +37/-4.
+- **Phase 2 — `task-db-structure` SKILL.md 의 모드 디스패치/Phase 갱신 (commit `8640aca8` + 보강 `5238764`)**: frontmatter description 에 v3 greenfield 한 문장 추가. Pre-cond #2 에 optional `admin_connection_env` 필드 설명 (incremental 무시; greenfield 부재 시 sharpening 1회), #3 에 greenfield 시 schema 파일 부재 허용 단서. Phase 1 Step 1.5 신설 — 키워드 매트릭스 표 (강한/약한/없음 × schema 존재/부재 → 자동확정 또는 sharpening) + target_db_name 우선순위 3 단계 (request → db.md URL/`${ENV_UPPER}_DB_NAME` → sharpening) + admin_connection_env sharpening. Step 2 dispatcher payload 에 mode / target_db_name 추가 (admin_connection_env 는 dispatcher 내부 보관 — agent payload 비포함, 보강 commit 으로 정리). Step 4 plan 카드에 "모드" / "신규 DB" 라인. Phase 2 advisor 체크 (c) destructive 분류에 dispatcher-emitted `DROP DATABASE` 를 최상위 항목으로 추가, (f) 신규 (f1 agent SQL CREATE DATABASE 미포함 invariant, f2 plan.md 페어링, f3 이름 충돌 권고). Phase 4 entry greenfield AskUserQuestion 카드 (모든 env / 일부 env / 공유 / 중단). §b greenfield 분기 (env 별 target_db_name 확정 → admin 자격증명 접속 → `CREATE DATABASE IF NOT EXISTS <env_db_name>` 실행 → 일반 자격증명 재접속). §b2 greenfield skip 명시. §d greenfield 모드 auto-rollback 미수행 + master 결정 카드 (`DROP DATABASE` 자동 호출 금지). §e greenfield 시 DB 존재 확인 (`SHOW DATABASES LIKE` / `\l`). Failure policy 3 행 신설. Scope v2 → v3 승격 (In 3 항목 + Out CREATE USER/GRANT + engine-level admin DEFER). +112/-11 (보강 +2/-1 합산).
+- **Phase 3 — README.md 인벤토리 한 줄 갱신 (commit `ac8e683b`)**: L38 task-db-structure 행을 "DDL 변경 + greenfield 구축 (CREATE DATABASE / 다중 테이블 설계 / dev→staging→prod 자동 + 롤백)" 로 확장. L191 인보케이션 예시 주석 `# DDL` → `# DDL / greenfield`. CLAUDE.md L73·L120 의 task-db-structure 매칭은 본 변경과 무관 (전자 i-dev 운용, 후자 mysql/psql 허가 prose) — 손대지 않음. +2/-2.
+
+### 영향 파일
+
+- `.claude/agents/db-migration-author.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+- `README.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 본 변경은 기존 스킬 1개 + 기존 sub-agent 1개의 v2 → v3 **기능 확장**. 새 규칙/훅/agent/스킬/검증축/페르소나 **추가 없음**. `feedback_no_prevention_treadmill.md` 의 대상이 아님. v3 의 Out 항목 (CREATE USER / GRANT, engine-level admin ops) 을 명시적 DEFER 로 박아두어 향후 트레드밀 유혹을 사전 차단.
+
 ## v001.108.0
 
 > 통합일: 2026-05-28
