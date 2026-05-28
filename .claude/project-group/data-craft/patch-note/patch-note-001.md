@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.505.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #177 (핫픽스8 — ESC 2-press 잔존 대응)
+
+### 배경
+
+긴 텍스트/코드 편집 모달에서 포커스(파란 테두리) 상태의 첫 ESC 가 모달을 닫지 않고 포커스만 해제하고, 두 번째 ESC 에 닫히는 문제(#1)가 핫픽스7 이후에도 잔존(마스터 하드 리프레시 후 재확인).
+
+### 근거 / 원인 가설
+
+마스터 증상 설명상 **ESC#2 가 닫는다 = close 경로(onCancel→closeDialog)는 정상이며, 단지 ESC#1 이 그 경로에 도달하기 전에 포커스-의존 핸들러에 선점**됨. 정적 분석으로는 textarea 를 blur 하는 ESC 핸들러를 특정하지 못함(앱 코드 내 "Escape+blur" 동시 핸들러 0건, document-capture keydown 리스너도 plain 모달엔 선점자 없음). 따라서 선점자를 코드에서 찾는 대신 **모달 close 리스너를 capture 단계 최상단(window)으로 올려 ESC#1 이 무엇보다 먼저 close 를 호출**하도록 함.
+
+### 핫픽스 결과 (누적 Phase 12)
+
+- **핫픽스8** (`539e64c8`): EditDialog/CodeEditDialog 의 hotfix7 register-once keydown capture 리스너 등록 대상을 `document` → `window` 로 승격(addEventListener/removeEventListener 4곳). window capture 는 모든 document-capture/element 핸들러보다 먼저 실행되며, 앱 내 window-capture ESC 핸들러는 존재하지 않으므로 ESC#1 이 가장 먼저 close 에 도달. 핸들러 본문/`[]`/ref 구조는 hotfix7 그대로.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/cell-renderers/long-text-cell/EditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/code-cell/CodeEditDialog.tsx`
+
+### 검증 결과
+
+- Lint gate: typecheck exit 0, lint **0 errors, 21 warnings**(baseline). 루트 앱 tsc: exit 0.
+- 수동 테스트: 긴 텍스트/코드 모달 ESC **1번**에 닫힘.
+
+### 절차 노트 — 중요: dev 서버 재시작 필요 가능성
+
+- 핫픽스4·5·7 이 동일 증상으로 연속 무효했던 점은, 마스터의 **Vite dev 서버가 변경된 모듈을 stale 하게 서빙**(브라우저 하드 리프레시로는 dev 서버 프로세스 모듈 그래프가 갱신 안 됨)했을 가능성을 시사. 검증 시 **dev 서버 완전 재시작**(프로세스 kill + `pnpm dev`, 또는 `/dev-start data-craft`) 후 확인 권장. fs_data_viewer 는 optimizeDeps 미포함(src alias) 이라 빌드는 불필요하나, 서버 인메모리 transform stale 가능성은 재시작으로만 해소.
+- #1 의 정확한 선점 핸들러는 정적으로 미특정 — window-capture 승격은 증상(ESC#2 는 닫힘)에 근거한 구조적 대응. 재시작 후에도 잔존 시 임시 in-code 계측(console.trace) 디버그 빌드 필요.
+- advisor() 과부하 지속 — no-BLOCK 간주. WIP origin push 분류기 차단 생략, 로컬 i-dev/main 머지.
+
 ## v001.504.0
 
 > 통합일: 2026-05-28
