@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.507.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #193
+
+### 페이즈 결과
+- **Phase 1 (fix)**: 서브그리드가 한 번도 생성되지 않은 그리드(예: group 1674)에서 행 서브그리드 열기 시 404(SUBGRID_NOT_FOUND)나던 문제를 create-on-open 으로 해소. `getSubGridPagedData` 캐시 미스 경로에서 마스터 서브그리드가 없으면(권한/그룹 검증 통과 후) 트랜잭션 안에서 `findMasterSubGrid` 재확인 → 없을 때만 `autoCreateMasterSubGrid`(export 전환) 호출 → commit + 메타캐시 무효화 후 기존 흐름으로 빈 결과 반환. 동시성: UNIQUE(`data_group_unique`) 충돌 시 재조회로 기존 사용, deadlock 시 `MAX_RETRY_COUNT`/`RETRY_DELAY_MS` 백오프(`createGroup` 패턴). `executeSubGridQuery` 에 `rowIdColumnId===null && !viewName → {rows:[],totalRows:0}` 명시 가드 추가.
+- **Phase 2 (refactor)**: `viewer.group.ts` `createGroup` 의 그룹 생성 시 서브그리드 자동생성 블록(`if(firstRowId>0)`) 제거 — 미사용 `updateSubGridRowDataList` import·`firstRowId` 선언 동반 정리. 서브그리드 생성을 create-on-open 단일 경로로 통일.
+
+### 영향 파일
+- data-craft-server:
+  - `src/services/viewer/viewer.paging.subGrid.ts`
+  - `src/services/dataViewerPost.service.ts`
+  - `src/services/viewer/viewer.group.ts`
+
+### 비고
+- create-on-open 은 열기 토글이 행 위에 있어 클릭 순간 parentRowField 행이 존재한다는 점을 이용(스키마 변경 없음). 일반 행 삭제는 soft 라 기존 서브그리드 보존됨.
+- **prod 반영은 본 수정 배포 필요** (plan-enterprise 는 i-dev 머지까지). origin push 미수행.
+- 후속 후보: 서브그리드 grouped/aggregation 조회 변형(`getSubGridGroupedData`/`getSubGridGroupRows`/`getSubGridAggregation`)은 아직 null 시 404 throw — 정상 흐름에선 평면 열기가 선행해 생성되므로 미발생이나, grouped-first 진입 엣지까지 자가복구하려면 동일 create-on-open 확장 필요.
+
 ## v001.506.0
 
 > 통합일: 2026-05-28
