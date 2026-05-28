@@ -1,5 +1,92 @@
 # data-craft — Patch Note (001)
 
+## v001.529.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #181 (i18n 하드코딩 전면 개선)
+
+### 페이즈 결과
+
+> 감사(`.claude/project-group/data-craft/audit/i18n-hardcoding-audit-2026-05-27.md`)는 ~660 인스턴스 추정이었으나, 실제 뷰어 3종 잔존이 ~10배(약 800+)로 드러나 마스터 결정 후 단일 플랜 내에서 확장 수행 (Phase 23~43).
+
+**서버 (data-craft-server)** — Phase 1 + 7번째 누출 후속
+
+- **Phase 1**(`f1d5fbd`): 응답 영문 누출 6건 한국어화 — error.middleware('내부 서버 오류'), auth.controller(활성/비활성·토글 실패), file.ts(삭제 성공 2건), user.service(비밀번호 변경), webhook.controller(ack 2건). i18n 배선 없이 직접 치환 (Korean-only 설계 정합).
+- **7번째 누출 후속**(`37e1e92`): webhook.controller.ts:123 catch 블록 'Internal Server Error' → '내부 서버 오류'.
+
+**메인 앱 FE (data-craft 루트 `src/`)** — Phase 2~19 (react-i18next + 중앙 로케일 `src/shared/i18n/locales/{en,ko}.ts`)
+
+- **Phase 2~3**: form-builder UI 15개 파일, formBuilder.* 78 신규 키.
+- **Phase 4~5**: property-drawer base + style-editors 10개, propertyDrawer.* 60 신규.
+- **Phase 6~9**: property-editors 28개 파일 + viewer-editor/CreateDataDialog, propertyDrawer.* 152 신규(옵션 배열·모듈 상수 컴포넌트 내부 이동 처리).
+- **Phase 10~14**: subscription 22개 파일 — 다수가 t() 완비였으나 키 누락으로 EN 폴백되던 **"t() 있으나 키 부재" 결함 클래스** 다수 보강. paymentPassword 섹션 신규.
+- **Phase 15~16**: file/logo/attachment 7개 + misc 4개. fileUpload 신규 섹션.
+- **Phase 17~19**: toast/error 잔여 — auth/settings-dialog/header/input-store/global. 훅 vs 비-React 패턴 적용(registerErrorHandlers/GlobalErrorFallback = 전역 `i18n.t()`, 나머지 useTranslation). DesignSidebarDndArea 누락 toast 보강(`d0963fc`).
+
+**뷰어 3종 FE (data-craft `packages/fs-*-data-viewer`)** — Phase 20~43 (자체 useI18n + en/ko/zh/ja 4개 로케일, **zh/ja 기계번역 + `// TODO: translation review` 마커**)
+
+- **fs-data-viewer** Phase 20~33 (~150 파일):
+  - Phase 20~21 cell-renderers + data-viewer-header + grid-table (35 컴포넌트).
+  - Phase 22~23: 패키지 i18n types.ts 분리 인지 후 본격 확장; Phase 23 app/core(useSaveErrorManagement·useViewerMetaLoader provider 외부 → static `translations[DEFAULT_LANGUAGE]` 패턴 채택).
+  - Phase 24~25 dashboard 위젯/렌더러(13) + widget-settings(11). user-insight/renderers는 순수 함수라 SlotRendererInput에 t: TranslationKeys 추가.
+  - Phase 26 gantt(11) + calendar(7).
+  - Phase 27 kanban-board(7) — EmptyCellComponents 33종 빈셀 placeholder를 cellRenderer.empty.* 키로 일괄 전환(makeTextEmpty가 t.cellRenderer.empty[key] 해소). FsKanbanCard/Board 누락분 보강.
+  - Phase 28 cell-renderers row-link 3개 파일(76건).
+  - Phase 29 cell-renderers dates/multi/progress 16개 파일.
+  - Phase 30 batch-input-dialog + fs_grid_sub 14개.
+  - Phase 31~33 features/print + features/grid + 크로스파일 t-스레딩(printHtmlBuilder, 5개 print 훅, cellSaveFunctions, rowFiltering/Grouping 등).
+- **fs-sub-data-viewer** Phase 22 + 34~38a (~80 파일):
+  - Phase 22 cell-renderers + data-viewer-header.
+  - Phase 34 grid-table(9), Phase 35 cell-style-dialog/dialogs/date-range-badge, Phase 36 FsGridHeader + 캘린더 오버레이 잔여 + SingleSelect/SimpleFormula.
+  - Phase 37 column-generator(tags.ts 34 검색태그를 getColumnTags(t) 함수화) + batch/app/hooks.
+  - Phase 38 entities/grid/integrity 일부 + components/loading + ColumnGenerator 에러.
+  - Phase 38a integrity 잔여(formula/domain/entity/referential/dual-widget-sub/cell-value-number/select/datetime) + StyleSettingWidget·DualWidgetConfigDialog 소비처 + helpers.ts(getColumnTypeName/getCellThemeTypeName/getCategoryName) 도입.
+- **fs-external-data-viewer** Phase 39~42 (~84 파일):
+  - Phase 39 cell-renderers + data-viewer-header **41개 컴포넌트** 일괄(고유 cell-renderer 4종 Document/File/Image/MultiSelect 포함).
+  - Phase 40 grid-table + cell-style-dialog + dialogs + date-range-badge + FsGridHeader.
+  - Phase 41 column-generator(tags.ts) + batch + app/hooks(provider 외부 static 패턴).
+  - Phase 42 integrity 13개 + helpers.ts + 3 consumers(StyleSettingWidget/DualWidgetConfigDialog/HeaderSettings) + voteUtils.
+- **Phase 43 cleanup**(`e5b6939`): 뷰어 3종 locale-aware 헬퍼 — counterSuffix(item/time/vote/monthDay) + formatYearMonthDay/formatCount, gantt/calendar/Deadline/Timeline/DateTime/HolidayDatePicker 년월일 포맷 + dashboard 건/회 + kanban 월일 + voteUtils 표 — 모두 t-스레딩.
+
+**merge 후속** (i-dev 머지 충돌 해소)
+
+- 16 UU 충돌 해소(`2aa6f25d`): 로케일 5종은 양측 키 보존, 컴포넌트는 의도 분석 후 WIP 우선/기존 우선 선택.
+- 누락 import/const 복구(`7a634538` < `db229c7c`): ExtViewerExpl/SubViewerExpl 두 파일의 Select* import + LANGUAGE_OPTIONS const + language 변수 복구.
+- 로케일 중복 키 제거(`9e3093eb` < `3e5d8407`): planMemberRestricted·accessLevel TS1117 해소.
+- `any` 캐스트 typed intersection 전환(`61cb7ae4`): `(props as Props & { language?: string })`.
+
+### advisor #2 5관점 검증 결과
+- Intent: PASS
+- Logic: PASS (caveat — Phase 42 integrityMessages.invalidWidgetColumnRef 키가 fs-external에만 추가, fs-sub 미보강 — 각 패키지 TranslationKeys 자체 정합)
+- Group Policy: PASS
+- Evidence: PASS (per-phase 잔존 grep + 4-locale tsc 정합 게이트 + 다수 within-scope 보강)
+- Command Fulfillment: PASS with documented limitations (아래 §"문서화된 한계" 참조)
+
+### 문서화된 한계 (후속 결정/리팩토링 필요)
+1. **Provider-boundary statics (C)**: fs-*-data-viewer `useSaveErrorManagement`/`useViewerMetaLoader`/`DELETED_GROUP_MESSAGE` 소비처들이 I18nProvider 외부 렌더 → `translations[DEFAULT_LANGUAGE]`(ko) 정적 패턴. 키는 i18n 시스템에 있으나 런타임 EN 전환 미반영. 해소엔 t-prop 데이터플로 리팩토링 필요(마스터 결정 사안).
+2. **영속 로그 포맷 문자열**: 3 패키지의 `computeAutoFillChanges.ts`, fs-data-viewer `resetRowAction.ts` 등 — 변경 이력/감사 로그를 셀 데이터에 영구 저장. 쓰기 시점 언어로 저장 vs 키+렌더시 번역 전략 결정 필요.
+3. **레거시 상수**: fs-sub/fs-external `FsGridProgressCellRenderer/constants.ts` IMPORTANCE_LABELS — 번역키 버전 별도 존재, 레거시 호환 fallback 보존.
+4. **개발자 가드 메시지**: data-craft `useFormWidgetIndividual.ts:56` enterprise-401 F4 가드 — 기술 식별자 포함, §4 제외 유지.
+5. **다단계 t-스레딩 잔여**: rowAdd*FilterAnalyzer(blockedReason 3+ 단계), BrowserPrintEngine.execute() 인터페이스 t 주입, useGridPrint.ts buildAggregationSummaryPage 호출 — 모두 바운디드 후속.
+6. **크로스패키지 키 분기**: integrityMessages.invalidWidgetColumnRef 키가 fs-external에만 추가, fs-sub 미보강. 각 패키지 자체 정합은 유지(타입 오류 없음). 향후 fs-sub 동기화 권장.
+
+### 영향 파일
+
+**data-craft-server** (5):
+- src/middlewares/error.middleware.ts, src/controllers/{auth,webhook}.controller.ts, src/routes/file.ts, src/services/user.service.ts
+
+**data-craft 메인 앱** (~88):
+- src/shared/i18n/locales/{en,ko}.ts (중앙 로케일 — 거의 모든 메인앱 페이즈에서 누적 편집)
+- src/features/form-builder/ui/ (15), src/widgets/property-drawer/ui/ (28+), src/features/subscription/ui/ (22)
+- src/features/logo-upload/, src/widgets/file-uploader-widget/, src/widgets/file-attachment/, src/features/period-selector/, src/shared/ui/ColorPalette·number-input-with-return, src/features/mode-switching/
+- src/pages/auth/, src/pages/billing-callback/, src/widgets/settings-dialog/, src/widgets/header/, src/features/input-store/hooks/, src/app/GlobalErrorFallback, src/widgets/page-navigation/
+
+**data-craft `packages/fs-data-viewer`** (~150): cell-renderers/**, data-viewer-header/**, grid-table/**, dashboard/**, gantt-chart/**, calendar/**, kanban-board/**, batch-input-dialog/**, fs_grid_sub/**, features/print/**, features/grid/**, app/hooks/**, shared/config/i18n/{types,helpers,translations/en|ko|zh|ja}.ts
+
+**data-craft `packages/fs-sub-data-viewer`** (~80): 동일 구조 + entities/grid/integrity/**, entities/column-types/, components/loading/, shared/config/i18n/{types,helpers(new),translations/...}.ts
+
+**data-craft `packages/fs-external-data-viewer`** (~84): 동일 구조 + 고유 cell-renderer 4종 + entities/grid/integrity/**, shared/config/i18n/{types,helpers(new),translations/...}.ts
+
 ## v001.528.0
 
 > 통합일: 2026-05-28
