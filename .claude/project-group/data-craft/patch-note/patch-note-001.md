@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.517.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #197 핫픽스1
+
+### 페이즈 결과
+
+- **핫픽스1** (`1ecbadc`, data-craft-server): `updateRole` 의 actor 스코프 diff 가드에서 `findPermissionsByRoleId` 결과를 PERMISSION_KEYS(9키) 화이트리스트로 필터한 뒤 existing 으로 사용. legacy 키(`app_theme_change`, `design_section_edit` 등)는 actor 스코프 검사 대상 밖이 되어 false 403 PERMISSION_OUT_OF_ACTOR_SCOPE 차단.
+
+### Root cause
+
+v001.515.0(#197 본 작업)으로 BE actor 스코프 가드를 도입한 직후 라이브에서 다음 시나리오로 잘못된 403 발생:
+
+- 주임 권한(권한 항목: 9 표준키 + legacy `app_theme_change`) 사용자가 "모두의 창업 관리자" 권한 그룹(권한 항목: `app_theme_change` ✱ / `design_mode` / `design_page_edit` / `design_section_edit` ✱ / `permission_manage` / `settings_edit` / `user_manage`)을 편집하여 `edit_default_role` 활성화 후 저장.
+- ✱ = 현재 PERMISSION_KEYS(9키 체계 개편으로 제거됨) 에 없는 legacy 키 — DB 잔존.
+- FE 폼이 `editRole.permissions.filter(p => PERMISSION_KEYS.includes(p))` 로 legacy 키를 자동 드롭 → submitted 에서 누락 → BE diff 가 `removed = [app_theme_change, design_section_edit]` 로 인식 → 주임 actorSet 에 `design_section_edit` 미보유 → throw.
+
+### 처리 방향
+
+legacy 키 = 9키 체계 개편 시 deprecated. FE 가 안 보이는 키 = actor 가 의도적으로 변경할 수 없는 키. BE 가드는 actor 스코프 안에 들어오는 키(=PERMISSION_KEYS) 만 검사하는 것이 의미적으로 올바름. 다음 권한 그룹 저장 시 `replacePermissions` 가 submitted(9키만) 로 덮어쓰므로 legacy 키는 자연 정리됨 — 마스터 명시 승인.
+
+### 영향 파일
+
+- `data-craft-server/src/services/roles.service.ts`
+
+### 알려진 후속
+
+- `createRole` 은 existing = ∅ 이므로 본 결함 무관, 비대칭은 의도(advisor 확인).
+- legacy 키가 권한 그룹에 잔존하는 상태에서, 그 그룹을 한 번이라도 저장하면 자연 청소됨. 일부러 보존이 필요하다면 별도 결정(현재 정책: 자연 삭제 허용).
+
 ## v001.516.0
 
 > 통합일: 2026-05-28
