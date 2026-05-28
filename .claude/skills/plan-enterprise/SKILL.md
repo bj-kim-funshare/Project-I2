@@ -201,8 +201,6 @@ git -C "${wt_a_x}" push -u origin "${wip_a_x}"
 
 **Codex 변형 + N>1**: v1 미지원 (실패 정책 참조).
 
-> 외부 pnpm-workspace project 의 worktree 내부에서 pnpm 명령 실행 시 메인 repo `node_modules` 손상 가능 — `.claude/md/worktree-lifecycle.md` 의 'pnpm 워크스페이스 상호작용' 절 참조.
-
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
 ## Step 7 — Phase execution loop
@@ -390,6 +388,8 @@ git worktree remove "${wt_a_x}"
 git branch -d "${wip_a_x}"
 ```
 
+> 워크트리 제거 직후 work repo cwd 에서 dangling symlink 자가 검출 — `.claude/md/worktree-lifecycle.md` 의 Remove 절차 참조.
+
 (A merges first — phase commits land on i-dev before the patch-note entry references them.) 머지 충돌은 §5 step 4 (양측 보존; 상호 배타일 때만 마스터 보고).
 
 단일-repo 케이스 (N=1) 는 위 절차가 1회 반복으로 기존 동작과 동치:
@@ -400,6 +400,8 @@ git merge --no-ff plan-enterprise-<N>-<slug>-작업
 git worktree remove "${wt_a}"
 git branch -d "${wip_a}"
 ```
+
+> 워크트리 제거 직후 work repo cwd 에서 dangling symlink 자가 검출 — `.claude/md/worktree-lifecycle.md` 의 Remove 절차 참조.
 
 ### 9.2 — leader repo 에서 WIP B (-문서) 생성 + patch-note 작성
 
@@ -434,6 +436,8 @@ git branch -d "${wip_a}"
 ### 9.3 — leader repo i-dev 로 WIP B 머지
 
 In main working tree: `git checkout i-dev && git merge --no-ff plan-enterprise-<N>-<slug>-문서`. After merge: `git worktree remove "${wt_b}"` and `git branch -d "${wip_b}"`.
+
+> 워크트리 제거 직후 work repo cwd 에서 dangling symlink 자가 검출 — `.claude/md/worktree-lifecycle.md` 의 Remove 절차 참조.
 
 ## Step 10 — Merge
 
@@ -502,6 +506,7 @@ When master types `핫픽스 <description>`:
    - **Step 8 advisor #2** re-runs on the hotfix commits only.
    - **Step 9 patch-note** authors a NEW entry `v<NNN>.<K+2>.0` (next minor) **on the same hotfix WIP** (not on the original `-문서`). Previous entries are not modified. The new entry summarizes only the hotfix phase.
    - **Step 10 merge** the hotfix WIP into `i-dev` — single merge commit per hotfix. After merge: `git worktree remove "${wt_h}"` and `git branch -d "${wip_h}"`.
+   > 워크트리 제거 직후 work repo cwd 에서 dangling symlink 자가 검출 — `.claude/md/worktree-lifecycle.md` 의 Remove 절차 참조.
 6. Return to **Step 11 PENDING**. Master may issue more `핫픽스` (next gets a new WIP, `M+1`) or finalize.
 
 Hotfix iterations do not have their own internal cap — master controls the loop via the PENDING gate.

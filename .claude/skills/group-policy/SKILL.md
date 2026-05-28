@@ -74,8 +74,6 @@ Resolution:
 
 Same rule for deploy/db/group. The free-text addition slot in each area follows additive semantics — new free-text appends to existing free-text (unless master explicitly writes "자유 입력 슬롯 전체 교체: ..." to replace). The skill flags ambiguous responses (e.g., field name not matching any current key, project name not matching any existing member) and asks master once to clarify.
 
-- pnpm-workspace leader 의 dev 정책 갱신 시: 워크스페이스 운영 원칙 + `.npmrc` 권장값 분석은 `.claude/skills/new-project-group/SKILL.md` 의 "pnpm-workspace leader 의 워크스페이스 운영 원칙" 절을 참조. `.claude/md/worktree-lifecycle.md` 의 'pnpm 워크스페이스 상호작용' 절도 함께 cross-ref 유지.
-
 ## DB area — standard value recognition
 
 The `db` area has two fields with known standard values that drive downstream skill behavior. When master's modification response targets these fields, apply the following rules (partial-update principle — "change only what is mentioned" — still holds; no other db fields are touched):

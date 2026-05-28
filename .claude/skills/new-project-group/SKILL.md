@@ -182,15 +182,6 @@ targets:
 (자유 입력 슬롯 내용을 여기에 보존)
 ```
 
-**pnpm-workspace leader 의 워크스페이스 운영 원칙**: leader 의 어느 멤버 repo 라도 `pnpm-workspace.yaml` 을 보유하면, 해당 leader 의 `dev.md` 에 "워크스페이스 운영 원칙" 절을 두어 — worktree 내부에서 `pnpm install` / `pnpm dev` 실행 금지 원칙을 명시하고 `.claude/md/worktree-lifecycle.md` 의 'pnpm 워크스페이스 상호작용' 절을 cross-ref 한다.
-
-**`.npmrc` 권장 설정 (구조적 차단 옵션 — 후속 `group-policy` 호출로 적용 결정)**:
-- **권장 (구조적 차단)**: `node-linker=hoisted` — pnpm 의 `.pnpm` 가상 스토어 + 심볼릭 링크 구조를 폐기하고 npm-style flat `node_modules` 사용. cross-worktree 심볼릭 링크 클래스 자체 소멸. trade-off: 디스크 사용량 증가 (중복 복사), peer-dep isolation 약화, 일부 모노리포에서 phantom-dep 노출 가능. 워크스페이스 패키지 수가 적은 leader 에서 trade-off 작음.
-- **대안 (행동 규약 강화)**: 현행 `node-linker=isolated` (pnpm 기본값) 유지 + 운영 원칙만 강제. 디스크 / 격리는 보존, 구조적 차단은 없음 (운영 룰 준수 전제).
-- **비권장**: `hoist-pattern=[]` 만으로는 cross-worktree 링킹 차단 불완전 (`.pnpm` 스토어 자체는 그대로). `store-dir` / `virtual-store-dir` 절대경로 고정은 multi-worktree 충돌 위험.
-
-본 가이드는 권장값 명명까지. 실제 `.npmrc` 수정은 별도 `group-policy` 호출에서 leader 별 trade-off 평가 후 결정.
-
 ### `deploy.md`, `db.md`, `group.md`
 
 Each file: short YAML frontmatter with the closed-choice answers, then Korean body for free-text additions.
