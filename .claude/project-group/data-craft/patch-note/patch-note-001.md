@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.524.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #201
+
+### 변경 사유
+
+권한 그룹 수정 UI 의 두 권한 키 — `permission_manage` (전체 권한 관리) 와 `edit_default_role` (기본 권한 그룹 편집) — 의 분리 운영 효용이 실데이터로 입증되지 않음. dev / prod / test DB 전수 조회에서 `edit_default_role` 단독 발급 0건, 코드 계층상 이미 `permission_manage` 부모-자식 강제 + 라벨 description 에 "권한 관리가 있어야 부여 가능" 명시. 사실상 한 권한처럼 운영 중이었음. UX 단순화 + 계층 관리 코드 한 분기 제거를 위해 단일 키로 통합.
+
+### 핵심 동작 변경
+
+- BE `roles.service.ts updateRole`: `role.isDefault && !isOwner` 분기의 `edit_default_role` 추가 잠금 블록 제거. 기본 권한 그룹 수정은 라우트 미들웨어의 `permissionCheckMiddleware('permission_manage')` 단일 경로로만 통과 (Owner 는 우회 유지).
+- FE: `permission_manage` 권한자가 자동으로 기본 권한 그룹의 [수정] 버튼 노출. 권한 트리에서 `permission_manage` 가 독립 권한 (자식 없음) 으로 표시.
+- 권한 키 정의 총 수: 9개 → 8개.
+
+### 페이즈 결과
+
+- **Phase 1 (data-craft, FE — 정의 + UI 병합)** — `ade71557`. 원 플랜은 Phase 1 (정의/라벨/계층/가이드) 과 Phase 2 (UI 분기) 로 분리했으나, Phase 1 의 타입 유니온 제거가 Phase 2 의 `PermissionTabContent.tsx:48 usePermission('edit_default_role')` 호출에 cascading TS2345 를 유발해 페이즈 경계에서 컴파일 불가능. lint 게이트가 결함을 포착해 reset 후 단일 페이즈로 병합 재실행. lint exit 0.
+- **Phase 2 (data-craft-server, BE — 키 + 이중 검증 제거)** — `24866715`. `PERMISSION_KEYS` 에서 `'edit_default_role'` 제거 + `roles.service.ts:160-165` 의 `DEFAULT_ROLE_EDIT_DENIED` throw 블록 (주석 포함 6줄) 통째 제거. lint exit 0.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-api/src/types/entities.ts`
+- `src/shared/types/role.types.ts`
+- `src/features/role/lib/permissionLabels.ts`
+- `src/features/role/lib/permissionHierarchy.ts`
+- `packages/fs-data-viewer/src/shared/config/guide/content/ko/docs/permissions.json`
+- `packages/fs-data-viewer/src/shared/config/guide/content/en/docs/permissions.json`
+- `src/widgets/settings-dialog/ui/PermissionTabContent.tsx`
+- `src/widgets/settings-dialog/ui/SystemPermissionTree.tsx`
+
+data-craft-server:
+- `src/types/roles.types.ts`
+- `src/services/roles.service.ts`
+
+### 검증
+
+- **DB 발급 분포 (read-only SELECT)**: `data_craft_dev` / `data_craft_production` 두 권한 모두 0건, `data_craft_test` `edit_default_role` 단독 발급 0건 (both 2 role, permission_manage 단독 1 role).
+- **Route middleware 강제 확인**: `data-craft-server/src/routes/roles.ts` 의 `PUT /:roleId` 라우트가 `permissionCheckMiddleware('permission_manage')` 강제. service 레이어 추가 잠금 제거 안전 (privilege escalation 없음).
+- **Cross-repo 잔존 검색 (GitHub code search)**: data-craft-mobile / data-craft-ai-preview / data-craft-server (db.sql, test) / data-craft (test) 5건 total_count=0.
+- **Lint 게이트**: data-craft `pnpm typecheck:all && pnpm lint` exit 0, data-craft-server `pnpm lint` exit 0.
+- **advisor 5관점**: 계획 검증 + 완료 검증 모두 5/5 PASS.
+
+### 배포 순서 제약 (load-bearing)
+
+BE 먼저 배포 → FE 나중 배포 필수.
+- BE 먼저: BE 검증 미수행 + FE 가 여전히 버튼 숨김 → 점진적 무해.
+- FE 먼저: FE 가 [수정] 버튼 노출 → BE 가 여전히 `edit_default_role` 검증 → 403.
+
+### 비고
+
+- DB DML 정리는 본 플랜 범위 외 (마스터 결정). test DB `role_permission` 의 잔존 `edit_default_role` row 2건은 코드가 키를 인식하지 않으므로 동작 무영향. 필요 시 별도 `/task-db-data` 호출.
+- `entities.ts` 의 changelog 주석 `enterprise-191: 9개 → 11개 키 체계로 개편` 은 stale (현재 8개) — 역사 기록이라 의도적으로 유지. 본 패치노트에서 "권한 키 9개 → 8개" 명시함으로써 추적.
+
 ## v001.523.0
 
 > 통합일: 2026-05-28
