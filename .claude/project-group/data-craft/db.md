@@ -22,6 +22,20 @@ connection_style: DB_* 환경변수
 - DML 변경은 `task-db-data` 스킬 사용.
 - `dev_prod_separation: 분리` 설정에 따라 `task-db-structure` / `task-db-data` 는 **dev → prod 순차 실행 + 환경별 master 승인 게이트 + 실패 시 자동 롤백** 모드로 동작.
 
+## 백업 / Rollback capture 표준 (Roadmap-5 Step 2 검증 — 2026-05-28)
+
+본 그룹 DB 는 일부 테이블 (`data_viewer_setting` 등) 에 큰 JSON BLOB 컬럼이 있어 **전체 mysqldump 가 timeout / Lost connection 발생**. 대안 패턴:
+
+- **사전 백업 표준** (task-db-structure Phase 4 실행 전):
+  - `mysqldump --routines --triggers --events --no-data --no-create-info --skip-add-drop-table --skip-comments --no-tablespaces` — 정의 (routines / triggers / events) 만 dump. 데이터 0건이라 timeout 없음.
+  - 영향 받는 컬럼의 데이터는 `mysql -BNe "SELECT ... FROM ..."` 으로 TSV 별도 백업.
+  - 전체 데이터 dump 가 필요하면 `--single-transaction --quick --max-allowed-packet=1G --net-buffer-length=1M` 옵션 조합 (그래도 보장 안 됨, 분할 권고).
+- **Capture rollback 한계** (`task-db-structure` Phase 4 §b2 의 `SHOW CREATE PROCEDURE` 출력):
+  - `mysql -BNe` 의 출력은 줄바꿈을 literal `\n` escape 으로 변환 → 직접 `source` 시 syntax 깨짐.
+  - **대안**: 위 routines mysqldump 산출물을 직접 capture rollback 으로 사용 (정확한 DELIMITER 보존).
+  - skill spec 의 `rollback.<env_or_label>.sql` 명세는 본 그룹에서는 routines mysqldump 로 대체.
+- **MySQL DDL = implicit commit** 이라 dry-run `BEGIN/ROLLBACK` 무효 — task-db-structure Phase 4 §c dry-run 단계는 본 그룹에서는 best-effort 도 의미 적어 master 게이트가 critical (혹은 master 결정으로 skip).
+
 ## Connection
 
 - `data-craft-server` 가 `mysql2` 패키지로 직접 연결. 풀 설정 / 트랜잭션 패턴은 server 코드 참조.
