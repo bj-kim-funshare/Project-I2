@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.510.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #193 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2, fix)**: create-on-open 으로 막 생성된 서브그리드가 **페이지 새로고침 전엔 안 열리던** FE 결함 해소. FE 의 `subGridModel`(`.subGridField`)은 viewer meta 로드(`useViewerMetaLoader → meta.subGrids[0]`)에서만 채워지는데, meta 가 서브그리드 생성 이전에 로드돼 undefined → open 응답엔 subGridField 없음 → 패널 미표시였다. `reloadMeta` 콜백을 `FsDataViewer → FsDataViewerRouter → GridViewPage → FsGridTableView → useTableViewInit → useSubGrid` 로 선택적 prop 체이닝하고, `useSubGrid.handleToggleSubGrid` 첫 열기 후 `subGridModel===undefined` 이면 `metaReloadInFlightRef` 가드로 중복 방지하며 `reloadMeta()` 재조회 → `onRefresh()`. 이후 `subGridField` 가 채워져 패널 즉시 열림(캐시된 행 표시), 새로고침 불필요. lint(`typecheck:all && lint`) exit 0.
+
+### 영향 파일
+- data-craft (fs-data-viewer 패키지, 7파일):
+  - `src/app/FsDataViewer.tsx`, `src/app/FsDataViewerRouter.tsx`, `src/app/types.ts`
+  - `src/pages/GridViewPage.tsx`, `src/features/grid/lib/gridViewTypes.ts`
+  - `src/widgets/grid-table/hooks/useTableViewInit.ts`, `src/features/grid/hooks/useSubGrid.ts`
+
+### 비고
+- BE create-on-open(Phase 1·핫픽스1)과 짝을 이루는 FE 반영. 코드는 data-craft i-dev, 패치노트는 I2 main 분리 머지(외부 리더 레이아웃 제약).
+- dev 반영: `fs_data_viewer` 는 src alias 이나 `fs_data_viewer_explorer` 는 dist alias → main repo 에서 두 패키지 dist 재빌드 완료. prod 는 배포 빌드 시 재생성.
+- tsup DTS 단계의 기존 `fs_api` 타입 declaration 미해결 경고는 본 핫픽스 무관(typecheck:all 통과·main dist 빌드 정상) — 별도 정리 후보.
+- origin push 미수행.
+
 ## v001.509.0
 
 > 통합일: 2026-05-28
