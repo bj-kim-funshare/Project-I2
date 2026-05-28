@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.511.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #194
+
+### 페이즈 결과
+- **Phase 1 (fix)**: 설정 → 앱 설정에서 언어를 영어로 바꿔도 뷰어가 한글로만 나오던 버그 수정. 뷰어 계열 위젯 6종(메인 Viewer + ViewerExplorer + SubViewerExplorer + ExternalViewerExplorer + SubViewer + ExternalViewer)이 위젯별 정적 `language` 속성(또는 prop 미전달 → 패키지 기본 한글) 대신 앱 전역 i18n(`useTranslation` + `mapToFsGridLanguage(i18n.language)`)에서 언어를 실시간 파생하도록 통일. 정적 의존 제거로 미사용이 된 `useViewerWidgetProps`/탐색기 위젯의 `language` 구조분해도 함께 제거. 커밋 `0e0ae63`.
+- **Phase 2 (refactor)**: 무력화된 위젯별 언어 선택기 UI(속성 패널 ViewerWriteModeSection + 탐색기 3종 에디터의 언어 Select)와 `LANGUAGE_OPTIONS` 상수/재수출, `widgetDefaults` 4개 케이스의 `language: 'ko'`, `widget-viewer.types.ts` 의 `language?` 필드 4곳 제거. 데이터 모델·UI 일관 정리(+5/-166). 커밋 `5d0c270`.
+
+### 영향 파일
+- data-craft (루트 앱, 15파일):
+  - 렌더 사이트 6종: `src/widgets/viewer-widget/ui/Viewer.widget.tsx`, `src/widgets/viewer-explorer-widget/ui/ViewerExplorer.widget.tsx`, `src/widgets/sub-viewer-explorer-widget/ui/SubViewerExplorer.widget.tsx`, `src/widgets/external-viewer-explorer-widget/ui/ExternalViewerExplorer.widget.tsx`, `src/widgets/sub-viewer-widget/ui/SubViewer.widget.tsx`, `src/widgets/external-viewer-widget/ui/ExternalViewer.widget.tsx`
+  - props/타입: `src/widgets/viewer-widget/ui/useViewerWidgetProps.ts`, `src/shared/types/widget-viewer.types.ts`
+  - 속성 에디터: `src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerWriteModeSection.tsx`, `.../viewer-editor/constants.ts`, `.../viewer-editor/index.ts`, `.../SubViewerExplorerPropertiesEditor.tsx`, `.../ExternalViewerExplorerPropertiesEditor.tsx`, `.../ViewerExplorerPropertiesEditor.tsx`
+  - 기본값: `src/entities/widget/model/widgetDefaults.ts`
+
+### 비고
+- 검증: eslint exit 0(기존 21 warnings 비차단), 워크트리 패키지 빌드 후 루트 앱 `tsc -p tsconfig.app.json --noEmit` exit 0(lint 게이트가 루트 src 타입체크를 안 하는 사각 보강).
+- 코드는 data-craft i-dev, 패치노트는 I2 main 분리 머지(외부 리더 레이아웃 제약). origin push 미수행.
+- **후속 권장(robustness)**: `mapToFsGridLanguage` 는 `lang === 'en'` 엄격 비교 → 첫 방문 시 region 코드(`en-US`)가 정규화 안 된 채 들어오면 `ko` 폴백 가능. 앱 설정 토글 경로(정확히 `'en'`/`'ko'` 저장)는 정상이나, 자동 감지 엣지 케이스 대비 매퍼를 `startsWith`/`split('-')` 관용 처리하는 1줄 핫픽스 권장.
+
 ## v001.510.0
 
 > 통합일: 2026-05-28
