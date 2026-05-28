@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.509.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #193 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1, fix)**: 서브그리드 grouped/aggregation 조회 변형(`getSubGridGroupedData`/`getSubGridGroupRows`/`getSubGridAggregation`)도 create-on-open 적용. Phase 1 의 인라인 create-on-miss 루프를 공유 헬퍼 `resolveOrCreateMasterSubGrid` 로 추출해 `getSubGridPagedData` 리팩터(동작 동일) + 세 변형의 `!masterGroupId → 404 throw` 를 동일 헬퍼 호출로 대체. 세 변형 모두 params 에 parentRowField 보유(앵커). `validateGroupAccess` 권한 검증은 생성 이전 유지. 빈 서브그리드 다운스트림(EAV/pivot/aggregation 경로) 크래시 없음 확인. lint exit 0.
+
+### 영향 파일
+- data-craft-server:`src/services/viewer/viewer.paging.subGrid.ts`
+
+### 비고
+- 이로써 서브그리드 4개 조회 진입점(평면/grouped/groupRows/aggregation) 전부 없으면 자가 생성 → grouped-first 진입 엣지에서도 404 미발생.
+- 핫픽스지만 patch-note 는 I2 main 으로 분리 — 외부 리더 레이아웃 제약(코드는 data-craft-server i-dev, 패치노트 파일은 I2 거주). 코드 핫픽스 WIP 는 data-craft-server i-dev 로 머지됨.
+- prod 반영은 배포 필요. origin push 미수행.
+
 ## v001.508.0
 
 > 통합일: 2026-05-28
