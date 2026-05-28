@@ -1,5 +1,38 @@
 # 아이OS — Patch Note (001)
 
+## v001.108.0
+
+> 통합일: 2026-05-28
+> 플랜 이슈: #57
+> 대상: 아이OS
+
+### 배경
+
+직전 v001.107.0 (이슈 #56) 은 pnpm × worktree dangling symlink 사고 대응을 **외부 project 정책 분산** 으로 풀었다 — 각 pnpm-workspace leader 의 `dev.md` 에 "워크스페이스 운영 원칙" 절을 두고, `.npmrc` 권장값 (`node-linker=hoisted` 등) 을 `new-project-group/SKILL.md` 에 가이드. 마스터 지적: 정책 분산은 (a) 새 pnpm-workspace leader 추가마다 룰 재설치 필요, (b) 운영자 룰 준수에 의존, (c) `feedback_no_prevention_treadmill.md` 의 변종 — 다른 leader 에서 같은 사고 재발. 근본 해결은 **plan-enterprise / plan-enterprise-os 스킬 자체가 worktree 제거 후 자가 검출** 하는 것.
+
+### 페이즈 결과
+
+- **Phase 1 — `worktree-lifecycle.md` Remove 절차에 자가 검출 단계 추가 + 기존 절 축소 (commit `250c0c3`)**: Remove (after successful merge) 절차에 dangling 검출 bash 블록 (`if [ -d node_modules ]` 가드 → `find -maxdepth 2 -type l ! -exec test -e {} \; -print` → 발견 시 `WARNING: N dangling symlinks ... run 'pnpm install'` 출력) 을 박았다. 자동 install 은 하지 않음 — `.claude/settings.json` 의 `autoMode.allow` 에 `pnpm install` 권한 없고 메모리 `feedback_no_unrequested_dev_servers.md` 와 동족이라 master-in-loop 유지. v001.107.0 의 "pnpm 워크스페이스 상호작용" 절은 5 항목 → 3 항목 (비권장 / 허용 / 사고 사례) 으로 축소, Failure recovery cross-ref 한 줄 폐기.
+- **Phase 2 — SKILL.md 4 건에 자가 검출 참조 라인 + v001.107.0 외부 정책 분산 가이드 폐기 (commit `9c54469`)**: `plan-enterprise/SKILL.md` 와 `plan-enterprise-os/SKILL.md` 의 `git worktree remove` 호출부 (Step 9 WIP A / Step 9 WIP B / Step 11 HOTFIX — 총 7 곳) 에 worktree-lifecycle.md Remove 절차 참조 라인 일관 삽입. `new-project-group/SKILL.md` 의 "pnpm-workspace leader 의 워크스페이스 운영 원칙" 단락 + `.npmrc` 권장값 단락 전체 폐기 (9 줄), `group-policy/SKILL.md` 의 dev cross-ref 한 줄 폐기, `plan-enterprise` / `plan-enterprise-os` Step 6 인근 v001.107.0 사전 경고 한 줄 폐기. net +13/-15 = 축소 방향, Q3 trade-out 명백히 실현. Sentinel grep 3 종 모두 빈 출력 확인.
+
+### 영향 파일
+
+- `.claude/md/worktree-lifecycle.md`
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+- `.claude/skills/new-project-group/SKILL.md`
+- `.claude/skills/group-policy/SKILL.md`
+
+### 검증 dogfood
+
+본 패치의 Phase 1 절차가 v001.108.0 자체의 WIP A 머지 직후 실전 적용 — Project-I2 (I-OS harness, node_modules 부재) 에서 첫 가드 false → no-op 동작 확인.
+
+### Treadmill Audit
+
+PASS. Q1 재발성 (매 worktree 사이클 + 향후 pnpm-workspace leader 추가마다 재발) / Q2 새 엣지 명시 (자가 검출 명령, 발견 시 master 안내 메시지, halt 하지 않음, no-op 동작) / Q3 폐기 = **v001.107.0 의 외부 정책 분산 가이드 전체 폐기** — `new-project-group` 의 운영 원칙 + `.npmrc` 권장값 가이드 / `group-policy` cross-ref / `plan-enterprise` 및 `plan-enterprise-os` Step 6 사전 경고 cross-ref / `worktree-lifecycle.md` "pnpm 워크스페이스 상호작용" 절 축소. 정책 분산 → 스킬 내 단일 위치 모델로 전환.
+
+본 패치는 v001.107.0 의 가산 가이드를 폐기하면서 그 자리를 자가 검출 단일 절차로 대체하므로 순 가산이 아닌 **재정의/축소** 형태.
+
 ## v001.107.0
 
 > 통합일: 2026-05-28
