@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.558.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스6)
+> Work repo: data-craft-mobile (merge 42838d8)
+
+### 핫픽스 결과 (6건 묶음)
+
+- **핫픽스6 — ME 정보 재구성 + 회색gap/편집버튼/소개/통계 제거 + 로그아웃 설정 이전 + 네비 높이** (`73ca4c3`, +92/-169 across 5 files):
+  - (1) 프로필 편집 버튼 제거 — 헤더 톱니 아이콘과 중복, `_ProfileEditButton` 클래스/Positioned 블록 삭제.
+  - (2) 헤더-본문 사이 회색 gap 제거 — `Scaffold.backgroundColor: Colors.white` + Stack 안 `Positioned(top: 130+topPadding, bottom:0, child: Container(color: white))` 로 흰색 통일. 메뉴 사이 SizedBox(8) 회색 분리 제거.
+  - (3) 로그아웃 → 설정 이전 — `me_screen` 의 하단 로그아웃 TextButton + LogoutConfirmDialog import 제거, `account_settings_screen.dart` Section 6 (회원탈퇴 위) 에 로그아웃 버튼 추가.
+  - (4) 이름 아래 정보 재구성 — `me_profile_card.dart` 의 subtitle/bio 폐기 → 오너 태그 (`user.isOwner` 조건부, `Icons.verified` + "오너", 좌측) + 기업명/이메일/전화번호 아이콘 Row 4종, 없는 정보는 `isNotEmpty` 가드로 미표시.
+  - (5) 소개(bio) + 통계 row 삭제 — bio placeholder 제거, `me_stats_row.dart` 파일 삭제, MeStatsRow 호출 정리 (잔존 0건 grep 확인).
+  - (6) 바텀 네비 높이 — `bottom_nav_bar.dart` padding top 10 / bottom 10 으로 증가.
+
+  advisor #2 PASS (advisor-fallback 경유). 핫픽스5 advisory (회색 gap) 직접 해소. 5번 핫픽스 누적 후 이번 핫픽스로 ME 화면 시안 정렬 최종 단계.
+
 ## v001.557.0
 
 > 통합일: 2026-05-29
