@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.539.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #208 핫픽스2
+
+### 페이즈 결과
+
+- **Phase 11 (핫픽스2)** (`49fd4ab5`, data-craft-mobile): Phase 1 (v001.535.0 의 부트스트랩 커밋 `fdde1aa0`) 가 pnpm/Vite 스캐폴드 일괄 제거 시 `DataCraft/` (디자인 팀 시안 프레임·핸드오프·mid-fi JSX) + `prototype/` (스크린 목업) 도 함께 삭제하여 Phase 4~8 의 5화면이 Material 3 디폴트 (deepPurple) 로 작성된 결함을 수정. Part A: `git checkout fdde1aa0^ -- DataCraft prototype` 으로 96 시안 파일 복원 (HTML 스펙·의사결정 문서·`midfi-part1~5.jsx`·`midfi-screens.jsx`·`handoff/CLAUDE.md`·`DarkMode.html` 등). Part B: 신규 `lib/theme/app_theme.dart` (DC_TOKENS 기반 ThemeData — brand `#2563eb`, soft `#F8FAFC` fill, 10px round, 1.5px brand focus border, 타이포그래피), `main.dart` 에 wire. 3 위젯 + 5 화면 restyle (28px 수평 패딩, brand 그라디언트 로고, theme 기반 컬러/타이포 일관 적용). 인증 로직 (signin/signup/requestVerificationCode/verifyEmail/confirmPasswordReset/AuthController/redirect) 바이트 단위 보존. advisor-fallback 경유 advisor #2 PASS.
+
+### Root cause
+
+v001.535.0 의 Phase 1 부트스트랩 단계에서 "기존 산출물 일괄 제거" 의 affected_files 글롭이 디자인 시안 디렉토리도 포함시킨 채 실행. 본 플랜 본문에는 "디자인 시안은 시각만 참고" 라고 적혀 있었으나 정작 참고 자료 자체를 제거한 채 후속 phase 가 작업한 모순. 마스터의 실행 단계 UX 검증에서 노출 — 코드 레벨 lint/build/widget test 로는 디자인 일치도 결함 감지 불가 (실 시나리오 렌더링 시각 검증 필요).
+
+### 영향 파일
+
+#### data-craft-mobile
+- (복원, 96 파일) `DataCraft/**` (HTML 스펙·핸드오프·mid-fi JSX·frames/scraps/uploads/lib), `prototype/**` (README·index·screens/)
+- (신규) `lib/theme/app_theme.dart` — DC_TOKENS 기반 ThemeData
+- (수정) `lib/main.dart` — `buildAppTheme()` wire
+- (restyle) `lib/screens/auth/widgets/auth_text_field.dart`, `step_indicator.dart`, `tenant_header.dart`
+- (restyle) `lib/screens/auth/common_signin_screen.dart`, `common_signup_screen.dart`, `forgot_password_screen.dart`, `company_signin_screen.dart`, `company_signup_screen.dart`
+
+### 비차단 후속
+
+- `DataCraft/handoff/CLAUDE.md` 가 PWA/React 시절 작성 — Flutter 전용 핸드오프 문서 별도 작성 권장.
+- `AuthTextField labelTrailing` 슬롯이 단일 사용 — 일관 적용 여부 마스터 판단.
+- `WidgetStateProperty` 사용 시 info-level deprecation 가능성 — 기능 영향 없음.
+
 ## v001.538.0
 
 > 통합일: 2026-05-29
