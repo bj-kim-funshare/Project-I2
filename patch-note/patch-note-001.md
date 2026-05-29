@@ -1,5 +1,31 @@
 # 아이OS — Patch Note (001)
 
+## v001.110.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #59
+> 대상: 아이OS
+
+### 배경
+
+`task-db-structure` v3 는 스케줄 잡 (MySQL EVENT) 을 범위 밖으로 두었다 — `SKILL.md` Scope 에 "EVENT (MySQL) — v4 candidate, DEFER", `db-migration-author.md` 에 `event_unsupported` 에러 경로. 이 결손이 남으면 Roadmap-6 (data-craft MySQL→PostgreSQL/TimescaleDB 마이그레이션) 의 DEV-1 에서 MySQL EVENT 를 옮기지 못해 "기존 이벤트·트리거·프로시저를 하나도 빠짐없이 이전" 요구가 깨진다. 마스터 설계의도 — "데이터를 제외한 모든 DB 관련 작업 = task-db-structure 단일 스킬" — 을 완결하기 위해 스케줄 잡을 routine 과 나란한 1급 객체 클래스로 정식 편입 (v3 → v4). 본 플랜은 Roadmap-6 선행 #1.
+
+### 페이즈 결과
+
+- **Phase 1 — `db-migration-author` 스케줄 잡 저작 범위 추가 (commit `15652b9`)**: frontmatter description 에서 EVENT out-of-scope 제거. §Input 에 `scheduler_backend` (`pg_cron` | `timescaledb_job`, PG 한정) 추가, `routine_mode` 키워드 스캔에 스케줄 잡 키워드 포함. §Scope 에 스케줄 잡 클래스 신설 (MySQL `CREATE/ALTER/DROP EVENT`; PG pg_cron `cron.schedule`/`cron.unschedule`; TimescaleDB `add_job`/`alter_job`/`delete_job` + `add/remove_retention_policy`·`add/remove_compression_policy`) — routine 핸들링의 확장으로 명시 + cross-engine 매핑 노트. forward (MySQL EVENT non-transactional / PG 함수호출 트랜잭션), rollback (`DROP EVENT` / `cron.unschedule` / `delete_job` / `remove_*_policy`, capture 우선), DESTRUCTIVE 태깅 추가. `event_unsupported` failure mode → PG backend 모호 시 `needs_clarification` 로 교체. +56/-9.
+- **Phase 2 — `task-db-structure` SKILL.md 스케줄 잡 오케스트레이션 (commit `98cf7b6`)**: Scope `(v3)` → `(v4)`, In-scope 에 스케줄 잡 3종 + cross-engine 매핑 추가, EVENT DEFER 줄 제거 (CREATE USER/GRANT deferral 은 보존). Pre-conditions 에 optional db.md `scheduler_backend` 필드 (PG 한정, 부재 시 sharpening fallback, timescaledb 단독 시 자동 추론 가능). Phase 1 dispatch 에 `scheduler_backend` 전달 (agent Input 파라미터명 정합). Phase 4 §b2 capture (`SHOW CREATE EVENT` / `cron.job` / `timescaledb_information.jobs`), §c dry-run EVENT implicit-commit 주석, §e post-verify 존재 확인, Failure policy 에 PG scheduler_backend 모호 행 신설. +33/-17.
+
+### 영향 파일
+
+- `.claude/agents/db-migration-author.md`
+- `.claude/skills/task-db-structure/SKILL.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 기존 스킬 1개 + 기존 sub-agent 1개의 v3 → v4 **기능 확장**. 새 규칙/훅/agent/스킬/검증축 **추가 없음**. 오히려 deferred 범위 (EVENT "v4 candidate, DEFER") 와 `event_unsupported` 에러 경로를 **폐기 (retire)** — Q3 (폐기될 기존 1건) 실현. 신규 `scheduler_backend` 는 optional 이며 PG backend 모호 시에만 사용 + 부재 시 기존 sharpening fallback 재사용 → 상시 인지 부담 미발생.
+
+> follow-up: `completion-reporter-contract.md` 의 `task-db-structure` 스키마 `affected_tables[]` 는 테이블 전용 — 스케줄 잡 객체명은 현재 `destructive_ops_count` + 내러티브로 수용. 향후 `affected_objects[]` 일반화 검토 (블로커 아님).
+
 ## v001.109.0
 
 > 통합일: 2026-05-28
