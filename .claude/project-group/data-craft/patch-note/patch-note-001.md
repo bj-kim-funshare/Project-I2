@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.556.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스5)
+> Work repo: data-craft-mobile (merge 0d3fcd9)
+
+### 핫픽스 결과
+
+- **핫픽스5 — me_screen Stack overflow z-order 버그 수정** (`ceff367`): 핫픽스4 까지 본문 콘텐츠(이름·부제·bio·통계·프로필 편집)가 코드상 들어가 있었으나 마스터 화면에서 렌더 안 됨. 메인 세션 코드 read 진단 = Stack 안에서 `MeHeader` 만 unpositioned child 였고 흰 body Column 이 `Positioned(top:0)` 로 배치되어 **Stack layout-height 계산에서 제외**됨 (Stack 은 unpositioned child 만 기준으로 사이즈 결정). 결과: 부모 Column 이 Stack 의 130+topPadding 만 차지로 알고 다음 형제 `MeMenuList` 가 overflow 한 흰 Container 콘텐츠 위에 paint 되어 **본문이 가려짐**.
+
+  처치 (`me_screen.dart` 1파일, +43/-62):
+  - Stack 을 `SizedBox(height: 130+topPadding+40)` 로 감싸 명시적 영역 확보 (헤더 + 아바타 절반 튀어나옴 40px 포함).
+  - 흰 body `Container` (MeProfileCard + MeStatsRow) 를 Stack 밖 outer Column 의 일반 sibling 으로 분리 — 실제 layout height 확보.
+  - `_HeaderSpacer` 위젯 삭제 (불필요).
+  - 결과: `MeMenuList` 는 흰 body 아래에 정상 배치되어 본문 콘텐츠 가시화.
+
+  advisor #2 PASS (advisor-fallback 경유) + advisory 1건: 아바타 하반부가 Scaffold 회색 배경(#F5F6F8) 40px gap 위에 위치 (시안의 "흰 본문 위에 절반 걸침" 과 미세 시각 차분). 후속 회귀 시 white Container 시작점을 SizedBox 안쪽으로 끌어올리거나 Transform 으로 조정 가능.
+
 ## v001.555.0
 
 > 통합일: 2026-05-29
