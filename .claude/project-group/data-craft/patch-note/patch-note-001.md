@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.562.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스9)
+> Work repo: data-craft-mobile (merge 521bed8)
+
+### 핫픽스 결과
+
+- **핫픽스9 — 바텀 네비 배지 디자인 재구성** (`2b201b9`, +3/-2 across 1 file): 마스터 확대 확인 결과 배지 자체 디자인이 시안과 다름 (큰 빨간 원, 흰 테두리 없음). 핫픽스8 의 ClipRect 침범은 해소되었으나 디자인 자체 시안 미흡. 시안 (`midfi-screens.jsx` L122-130) 정합:
+  - 흰 테두리 width 1.5→2 (가시성 강화).
+  - `Positioned(top: 0)` → `Positioned(top: -3)` 시안 원본 좌표 복귀. 핫픽스8 의 `Padding(top: 4)` 가 effective offset 보전 → ClipRect top 기준 +11px 양수 유지.
+  - `BoxConstraints maxHeight: 16` 추가 → 배지 16x16 컴팩트 사이즈 고정.
+  - borderRadius 8, padding horizontal 4, color #DC2626, Text 10/700/white 유지.
+
+  advisor #2 PASS (advisor-fallback) + advisory 1건: 시안 border 1.5px vs 핫픽스 2px 0.5px 차분 (가시성 보강 방향).
+
 ## v001.561.0
 
 > 통합일: 2026-05-29
