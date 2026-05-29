@@ -1,5 +1,57 @@
 # data-craft — Patch Note (001)
 
+## v001.543.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스8
+
+### 페이즈 결과
+
+- **Phase 18 (핫픽스8)** (`dc1e30ec`, data-craft): 변환 성공 시 **기존 열 변경 패턴** (직접 mutation + onRefresh) 적용 + 핫픽스2 의 `reloadMeta`, 핫픽스7 의 `location.reload` 잔재 일소.
+  
+  5개 호스트 (메인 그리드 FsGridTableView, 비그리드 ViewColumnManagerDialog, 임베드 서브 FsSubGrid, 독립 서브 FsGridTableView, 외부 FsGridTableView) 의 `onChanged(newTypeId)` 콜백을 통일된 패턴으로 교체:
+  ```ts
+  const col = model?.columnModelList.find(c => c.columnField === columnField);
+  if (col) {
+    col.type = getColumnTypeById(newTypeId) ?? col.type;
+    onRefresh?.();  // 또는 bumpColumnsVersion / forceUpdate (호스트별 리렌더 채널)
+  }
+  invalidateServerCacheRef.current?.();  // 행 캐시 (시스템 변환 셀 rewrite 케이스)
+  ```
+  
+  `saveChange` 호출 안 함 — BE 영속화는 이미 `columnTypeApi.columnTypeChange` 별도 채널 완료. ColumnTypeChangeDialog 의 `handleDoneClose` 에서 핫픽스7 의 `shouldReload + setTimeout(window.location.reload)` 분기 완전 제거.
+
+### Root cause + 마스터 지적
+
+마스터: "새로고침 없이 즉시 반영되어야 정상. 기존 열 추가/삭제/제목 변경은 잘 됨."
+
+분석: `useColumnHandlers.ts` 의 columnTitle / columnWidth / columnUnit / columnDefaultValue 핸들러는 모두 **직접 mutation + onRefresh + saveChange** 3단계 패턴 사용 — local model 을 즉시 mutate 하므로 BE 응답 무관하게 다음 렌더에 반영. 
+
+본 컬럼 타입 변경 기능 (Phase 4 다이얼로그) 은 BE 영속화 채널이 별도 (columnTypeApi) 라 saveChange 는 건너뛰어야 하나, mutation + onRefresh 단계는 동일하게 적용해야 했음. 핫픽스2/6/7 의 `reloadMeta` / `location.reload` 우회는 잘못된 접근 — 7사이클 헛수정 사례. advisor 검증 후 표준 패턴 채택.
+
+### advisor 검증 (논리적 해결)
+
+advisor 가 짚은 3가지:
+1. `saveChange` 호출 금지 — 같은 변경을 두 채널로 보내면 conflict.
+2. `reloadMeta` (핫픽스2) + `location.reload` (핫픽스7) 동시 제거 — 죽은 코드.
+3. `invalidateServerCacheRef.current?.()` 는 유지 — 시스템 변환 (text→document 등) 시 행 캐시 무효화 필요.
+
+본 핫픽스 모두 반영.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/ColumnTypeChangeDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/FsSubGrid.tsx`
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-external-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- Phase 16 의 BE 진단 응답 (`viewerTypeUpdated`, `actualType`) + ChangeResultStep 진단 메시지는 유지 — mutation 패턴 위에서도 BE persistance 가시화에 가치.
+
 ## v001.542.0
 
 > 통합일: 2026-05-29
