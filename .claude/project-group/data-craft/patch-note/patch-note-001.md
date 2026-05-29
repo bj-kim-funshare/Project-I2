@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.540.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스6
+
+### 페이즈 결과
+
+- **Phase 15 (핫픽스6 BE)** (`2bb9e67f`, data-craft-server): `columnTypeChange.service.ts` 의 `UPDATE data_viewer_column_setting` 후 (a) ResultSetHeader `affectedRows` 캡처 → 0 이면 롤백 + `viewer-type-update-no-affected-rows` 반환, (b) 동일 트랜잭션 내 SELECT 재확인 후 `actualType !== targetType` 이면 롤백 + `viewer-type-update-not-persisted` + `actualType` 반환. 성공 시 `viewerTypeUpdated: number` 응답 추가. 진단 console.log (NODE_ENV !== 'production' 가드). `externalColumnTypeChange.service.ts` 동일 패턴 (data_column.column_type 기준) — `column-type-update-not-persisted` reason 추가.
+- **Phase 16 (핫픽스6 FE)** (`197e64ba`, data-craft): `fs-api columnType.ts` 타입 갱신 (`viewerTypeUpdated?`, `actualType?`). `ChangeResultStep` 분기 보강 — (a) `ok:true && viewerTypeUpdated === 0` → 노란 경고 메시지 "BE 가 vcs UPDATE 0건 반환", (b) `ok:false && reason === 'viewer-type-update-not-persisted'` → 진단 + actualType 표시, (c) `ok:false && reason === 'viewer-type-update-no-affected-rows'` → "컬럼 메타 UPDATE 매칭 0건" 진단. 4언어 i18n 키 3개 추가.
+
+### Root cause
+
+text→longText 같은 always-ok + pass-through 시스템 변환 케이스에서 `updates=[]` 라 셀 데이터 변경은 없고, `column_type` 도 2→2 무변화. 유일한 실제 DB 변경은 `vcs.viewer_type` UPDATE — 그러나 핫픽스6 이전엔 `affectedRows` 검증 안 함 → SP 부작용 / 트리거 / column_id 매칭 실패 등 silent 실패 시 사용자 인지 불가. 본 핫픽스는 (1) UPDATE 결과 강제 검증 (2) post-SELECT 로 실제 persisted 값 재확인 (3) FE 가 진단 메시지로 root cause 카테고리 표시. 마스터가 다음 시도에서 정확한 실패 원인 확인 가능.
+
+### 영향 파일
+
+**data-craft-server**:
+- `src/services/columnType/columnTypeChange.service.ts`
+- `src/services/externalColumnType/externalColumnTypeChange.service.ts`
+
+**data-craft**:
+- `packages/fs-api/src/types/columnType.ts`
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/ChangeResultStep.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts` + `translations/{ko,en,ja,zh}.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- 마스터가 hotfix6 적용 후 재시도 시 진단 메시지가 표시되면 그 reason 기반으로 정확한 root cause (SP 부작용 / 트리거 / column_id 매칭) 후속 핫픽스 가능.
+- `data_viewer_column_setting` UPDATE 가 `viewer_setting_id` 필터 없이 column_id 단독 매칭 — 같은 column_id 가 여러 viewer_setting 에 걸친 경우 모두 갱신됨. 의도는 column-level 메타라 정합하나, 정밀화는 v2 후보.
+
 ## v001.539.0
 
 > 통합일: 2026-05-29
