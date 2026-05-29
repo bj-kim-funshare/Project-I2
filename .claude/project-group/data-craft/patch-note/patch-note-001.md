@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.559.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스7)
+> Work repo: data-craft-mobile (merge cb9a50a)
+
+### 핫픽스 결과
+
+- **핫픽스7 — 바텀 네비 배지 + 오너 태그 inline + 정보 가로 배치** (`3b1ae7b`, +71/-67 across 2 files):
+  - (1) 바텀 네비 배지 잘림 — `bottom_nav_bar.dart` padding top 10→14, bottom 10→12. Stack `clipBehavior: Clip.none` 기존 확인.
+  - (2) 오너 태그 → 이름 우측 — `me_profile_card.dart` 이름 Text + 오너 태그를 단일 `Row(crossAxisAlignment.center)` + SizedBox(width:8) separator 로 합쳐 같은 줄 표시.
+  - (3) 기업명/이메일/전화번호 가로 배치 — 세로 나열 → `Wrap(spacing:8, runSpacing:4)` 각 항목 `Row(mainAxisSize.min, [Icon, Text])` `isNotEmpty` 가드 유지.
+
+  advisor #2 PASS (advisor-fallback 경유) + advisory 3건 (이름 overflow Flexible 권고 / Wrap semantics / 배지 fix 는 mitigation 성격).
+
 ## v001.558.0
 
 > 통합일: 2026-05-29
