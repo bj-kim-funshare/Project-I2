@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.541.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스7
+
+### 페이즈 결과
+
+- **Phase 17 (핫픽스7)** (`233af2fb`, data-craft): 변환 성공 (`ok:true && viewerTypeUpdated > 0`) 시 ColumnTypeChangeDialog 의 `handleDoneClose` 가 `onClose()` 후 800ms `setTimeout` 으로 `window.location.reload()` 실행 — 새 메타 강제 적용. `resetState()` 가 changeResult 를 비우기 전에 shouldReload 조건을 캡처. ChangeResultStep 에 `viewerTypeUpdated > 0` 조건부 "잠시 후 페이지가 새로고침됩니다" 안내 추가 (4언어 i18n 키 `columnTypeChange.changeStep.willReload`). `viewerTypeUpdated === 0` 케이스는 기존 경고만 표시, reload 미실행.
+
+### Root cause + 마스터 결정적 관찰
+
+마스터 보고: "변환 후 새로고침해도 절대 안변했는데, 너가 작업하고 나니 내가 안건드렸는데 변환된 타입으로 나오더라고, 다시 내가 변환하면 또 그대로 나오고."
+
+해석:
+- BE 는 정상 작동 (Phase 16 진단 응답 가능). viewer_type='longText' DB persisted.
+- 마스터 새로고침 (in-app refresh 또는 Cmd+R) 으로는 FE state 가 새 메타 갱신 안 됨.
+- 마스터 무동작 사이에 **Vite HMR (Fast Refresh)** 발생 → FsDataViewer / useViewerMetaLoader 재마운트 → 신규 메타 fetch → 새 타입 표시. = HMR 이 우리가 못 한 일을 함.
+- 핫픽스2 의 `props.reloadMeta?.()` 호출이 호스트 경로 어딘가에서 단절 (props undefined, stale closure, 또는 silent 갱신이 column-header state 미갱신).
+
+핫픽스2/6 의 `reloadMeta` 우회 시도 + Phase 16 진단 가시화 위에, **결정적이고 단순한 해법**으로 `window.location.reload()` 채택. 호스트별 wiring 변경 없이 모든 surface (메인 그리드, 캘린더/칸반/간트, 임베드 서브, 독립 서브, 외부) 에 균일 적용.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/ColumnTypeChangeDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/ChangeResultStep.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts` + `translations/{ko,en,ja,zh}.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- `window.location.reload()` 는 UX 가 다소 거친 brute force — v2 에서 viewer-level `key` bump 또는 reloadMeta wiring 결함 root cause 추적 후 deep fix 검토.
+- `viewerTypeUpdated === 0` 케이스 (vcs UPDATE 미반영) 는 reload 안 함 — 의도된 변경 없음으로 판단. Phase 16 진단 메시지가 표시되므로 마스터가 root cause 확인 가능.
+
 ## v001.540.0
 
 > 통합일: 2026-05-29
