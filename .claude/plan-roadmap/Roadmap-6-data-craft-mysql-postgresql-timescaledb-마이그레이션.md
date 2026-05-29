@@ -4,13 +4,13 @@
 
 ## 프롬프트
 
-1️⃣ 🔴 /plan-enterprise-os — task-db-structure 범위에 스케줄 잡(MySQL EVENT ↔ PostgreSQL pg_cron / TimescaleDB background job) 포함 확장. 현 EVENT v3-후보 제외 해소 → "데이터 제외 전 DB 작업 = task-db-structure 단일 스킬" 원칙 완결. (I-OS, main)
+1️⃣ 🟢 /plan-enterprise-os — task-db-structure 범위에 스케줄 잡(MySQL EVENT ↔ PostgreSQL pg_cron / TimescaleDB background job) 포함 확장. 현 EVENT v3-후보 제외 해소 → "데이터 제외 전 DB 작업 = task-db-structure 단일 스킬" 원칙 완결. (I-OS, main)
 
-1️⃣ 🔴 /group-policy data-craft — [정책 수정] db.md engine mysql→postgresql + psql dev/prod 연결·DB명 확정. 소스 MySQL 좌표는 별도 보존. 이 시점부터 prod DB 작업 동결.
+1️⃣ 🟢 /group-policy data-craft — [정책 수정] db.md engine mysql→postgresql + psql dev/prod 연결·DB명 확정. 소스 MySQL 좌표는 별도 보존. 이 시점부터 prod DB 작업 동결.
 
-🔴 (master ad-hoc) [선행 완료 게이트] task-db-structure spec 에 EVENT/스케줄잡 scope 명시 확인 + db.md engine=postgresql 확정 확인. 둘 충족 시 DEV-1 착수. (DEV-1 의 task-db-structure 는 #1 머지에 종속)
+🟢 (master ad-hoc) [선행 완료 게이트] task-db-structure spec 에 EVENT/스케줄잡 scope 명시 확인 + db.md engine=postgresql 확정 확인. 둘 충족 시 DEV-1 착수. (DEV-1 의 task-db-structure 는 #1 머지에 종속)
 
-🔴 /plan-enterprise data-craft — [DEV-1 인벤토리] 소스 MySQL 전 객체(테이블·컬럼·인덱스·제약·프로시저·함수·트리거·이벤트) 완전 열거(mysqldump --routines --triggers --events, out-of-band) + psql 매핑 issue. 누락 0 = information_schema 카운트 ↔ 인벤토리 자동 대조(기계 검증); advisor 는 매핑 품질.
+🟢 /plan-enterprise data-craft — [DEV-1 인벤토리] 소스 MySQL 전 객체(테이블·컬럼·인덱스·제약·프로시저·함수·트리거·이벤트) 완전 열거(mysqldump --routines --triggers --events, out-of-band) + psql 매핑 issue. 누락 0 = information_schema 카운트 ↔ 인벤토리 자동 대조(기계 검증); advisor 는 매핑 품질.
 
 🔴 /task-db-structure data-craft — [DEV-1 dev] psql dev DB 생성 + CREATE EXTENSION timescaledb + 스키마·인덱스·제약·프로시저·함수·트리거·스케줄잡(EVENT 대체) 구축(PSM→PL/pgSQL). prod 게이트 보류.
 
