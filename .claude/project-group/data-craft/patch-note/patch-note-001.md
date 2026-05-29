@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.552.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스2)
+> Work repo: data-craft-mobile (merge 03b2a4c)
+
+### 핫픽스 결과 (4건 묶음)
+
+- **핫픽스2 — ME 시안 재반영 + 알림 진단 + 네비 라벨 + 로그인 기본값** (`1bbb0bd`):
+  - (1) ME 화면 시안 재구성 — 헤더 그라디언트 200px 확대 + 우측 톱니 + 아바타 배치 (`me_header.dart`), 프로필 카드 (이름·역할·회사·핸들·bio placeholder) (`me_profile_card.dart`), MeStatsRow 신규 (담당KR/완료율/팔로워/팔로잉, BE 미정의 → `—` placeholder, fake 정적값 금지 원칙 유지) (`me_stats_row.dart`), 메뉴 5개 카드 패턴 + 권한 게이트 메뉴 동일 디자인 통일 + 로그아웃 빨강 텍스트 하단 분리 (`me_menu_list.dart`). 활동 탭바 + 활동 피드는 BE 미정의로 미렌더 유지.
+  - (2) 알림 fetch 진단 — `notification_api.dart` 의 `response.data['data']` unwrap 은 Phase 2 (`9419c75`) 시점부터 이미 적용 상태 확인. DTO shape (`isRead int` / `items` / `unreadCount`) BE 컨트롤러 응답과 일치. 추가 수정 없음. 실 에러 원인은 런타임 네트워크/BE 접근 문제로 추정 — 마스터 재현 환경 (실 디바이스 로그 / 401·500 응답 / 콘솔 스택) 입력 후 후속 진단 사이클 필요.
+  - (3) 바텀 네비 라벨 한글 일관화 — `bottom_nav_bar.dart` Inbox → 알림, DM → 채팅. 라우트 경로 (`/inbox`, `/dm`) 미변경 (회귀 회피).
+  - (4) 로그인 화면 dev 기본값 — `common_signin_screen.dart` 이메일 `admin@funshare.co.kr` / 비밀번호 `Test1234!@` TextEditingController 초기값 주입. `kDebugMode` 가드 없음 — 출시 빌드 분기는 후속.
+
+### advisor / 후속
+
+- advisor #2 PASS (advisor-fallback 경유) + advisory 3건:
+  - (1) 시안 vs 핫픽스 차분: 시안 원본 헤더 130px / 톱니 32px / 활동탭+피드 / 단순 메뉴 리스트(아이콘 없음) 와 핫픽스의 확대 헤더 200px + 컬러 아이콘 메뉴 카드 결정 사이 분기. MeStatsRow placeholder 만 시안 구조 정밀 재현. 마스터 추가 지시 시 재회귀 가능.
+  - (2) 알림 fetch 다음 사이클 = 마스터 재현 환경 의존.
+  - (4) `kDebugMode` 가드 후속 권고.
+
 ## v001.551.0
 
 > 통합일: 2026-05-29
