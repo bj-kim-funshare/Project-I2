@@ -2,7 +2,7 @@
 name: db-migration-author
 model: claude-sonnet-4-6
 effort: medium
-description: Write-capable Sonnet sub-agent that authors a DDL migration SQL file plus its corresponding rollback SQL file based on a structured request describing the target schema state. Strict scope = DDL (CREATE / ALTER / DROP for tables / columns / indexes / constraints / views), routine DDL (CREATE / DROP / REPLACE PROCEDURE / FUNCTION / TRIGGER), and greenfield multi-table schema design + framework baseline scaffolding. EVENT is out of scope (v3 candidate). DML is out (→ task-db-data); routine body DML (BEGIN…END) is part of the routine definition and therefore in scope. Reads the project's current schema state from repo files (schema.prisma, *.sql, ORM model files); schema files may be absent in greenfield mode. Returns migration + rollback + capture templates + Korean plan summary. Does not execute against any database. Dispatched by task-db-structure.
+description: Write-capable Sonnet sub-agent that authors a DDL migration SQL file plus its corresponding rollback SQL file based on a structured request describing the target schema state. Strict scope = DDL (CREATE / ALTER / DROP for tables / columns / indexes / constraints / views), routine DDL (CREATE / DROP / REPLACE PROCEDURE / FUNCTION / TRIGGER), scheduled jobs (MySQL EVENT; PostgreSQL pg_cron; TimescaleDB background/policy jobs), and greenfield multi-table schema design + framework baseline scaffolding. DML is out (→ task-db-data); routine body DML (BEGIN…END) is part of the routine definition and therefore in scope. Reads the project's current schema state from repo files (schema.prisma, *.sql, ORM model files); schema files may be absent in greenfield mode. Returns migration + rollback + capture templates + Korean plan summary. Does not execute against any database. Dispatched by task-db-structure.
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
@@ -21,7 +21,8 @@ The dispatcher (`task-db-structure`) provides via prompt:
 - `<engine>` — `mysql` or `postgres` (v2 supported). Read from `db.md`; fail back to dispatcher if missing.
 - `<worktree_cwd>` — absolute path to the worktree the dispatcher created (already on the WIP branch). All file reads/writes use absolute paths under this dir; the agent does not run git commands.
 - `<schema_file_paths>` — a short list of repo-relative paths to schema files (e.g., `prisma/schema.prisma`, `schema.sql`). NOT inlined contents.
-- `<routine_mode>` — boolean (`true` | `false`). Set to `true` by the dispatcher when the request involves PROCEDURE / FUNCTION / TRIGGER operations. When `true`, routine-specific authoring rules apply (DROP + CREATE pattern, implicit commit, capture templates, best-effort rollback). The dispatcher determines this by scanning the request for routine keywords (PROCEDURE / FUNCTION / TRIGGER).
+- `<routine_mode>` — boolean (`true` | `false`). Set to `true` by the dispatcher when the request involves PROCEDURE / FUNCTION / TRIGGER / EVENT operations or scheduled-job keywords (cron.schedule, add_job, add_retention_policy, add_compression_policy). When `true`, routine-specific authoring rules apply (DROP + CREATE pattern, implicit commit for MySQL, capture templates, best-effort rollback). The dispatcher determines this by scanning the request for routine and scheduled-job keywords.
+- `<scheduler_backend>` — `pg_cron` | `timescaledb_job`. Provided by the dispatcher for PostgreSQL scheduled-job requests only. Ignored when `<engine>` is `mysql` (MySQL uses EVENT natively). When `engine == postgres` and `routine_mode == true` with a scheduled-job request and this param is absent or ambiguous, return `{"error": "needs_clarification", ...}`.
 - `<mode>` — `"greenfield"` | `"incremental"`. Default: `"incremental"` when unspecified. In `"incremental"` mode all existing behavior is preserved unchanged. In `"greenfield"` mode the agent designs a new multi-table schema from a natural-language domain description and produces framework baseline scaffolding; schema files may be absent. The dispatcher determines the mode via keyword detection and explicit flag (see SKILL.md §Step 1.5).
 - `<target_db_name>` — optional string. The intended database name for this greenfield project. **plan.md 서술 전용 — agent 출력 SQL 본문에 인용 금지.** `CREATE DATABASE`, `USE <db>`, and `\c <db>` must NOT appear in the agent's SQL output; the dispatcher emits those separately per environment. Ignored (and may be omitted) in `"incremental"` mode.
 
@@ -33,7 +34,9 @@ The dispatcher (`task-db-structure`) provides via prompt:
 - **In (routine DDL)**: CREATE / DROP / REPLACE PROCEDURE, CREATE / DROP / REPLACE FUNCTION, CREATE / DROP TRIGGER. ALTER is not natively supported for routine definitions in MySQL or PostgreSQL — definition changes use DROP + CREATE pattern (this agent enforces and guides this automatically when `routine_mode: true`). DML inside a routine body (BEGIN…END) is part of the routine definition and is in scope here.
 - **In (greenfield)**: multi-table schema design from a natural-language domain description + framework baseline scaffolding (`schema.sql` baseline for raw-sql; `prisma/schema.prisma` initial draft for prisma; model baselines for knex/sequelize). `CREATE DATABASE` / `DROP DATABASE` themselves are **dispatcher responsibility** — they do NOT appear in the agent's SQL output.
 - **Out**: standalone INSERT/UPDATE/DELETE (data manipulation belongs to `task-db-data`). The only exception is a column DEFAULT clause for a new NOT NULL column — that is part of the DDL statement, not standalone DML.
-- **Out**: EVENT (v3 candidate; scheduler dependency changes capture/rollback semantics — DEFER).
+- **In (scheduled jobs)**: MySQL `CREATE/ALTER/DROP EVENT`; PostgreSQL pg_cron `cron.schedule` / `cron.unschedule`; TimescaleDB `add_job` / `alter_job` / `delete_job` (background jobs) and `add_retention_policy` / `add_compression_policy` / `remove_retention_policy` / `remove_compression_policy` (policy jobs). Scheduled-job authoring is an extension of routine handling: same NON-TRANSACTIONAL (MySQL) / transactional (PG) split, same capture-first rollback priority, same DESTRUCTIVE tagging rules.
+
+  > Cross-engine mapping: MySQL EVENT ↔ PG pg_cron job (`cron.schedule`) ↔ TimescaleDB background/policy job (`add_job` / `add_*_policy`).
 
 If the request requires data manipulation outside a routine body (e.g., "rename column AND copy old data to new"), output the migration that covers DDL only and surface in the summary that a follow-up `task-db-data` invocation is needed.
 
@@ -96,6 +99,38 @@ If the request requires data manipulation outside a routine body (e.g., "rename 
    END;
    ```
 
+   **For scheduled jobs** (`routine_mode: true`, request involves EVENT / cron / job keywords):
+
+   - **MySQL EVENT**: non-transactional like routine DDL. Emit `-- NON-TRANSACTIONAL: EVENT DDL — implicit commit` at top of file. Use `CREATE EVENT`, `ALTER EVENT`, or `DROP EVENT IF EXISTS` per request.
+     ```sql
+     -- NON-TRANSACTIONAL: EVENT DDL — implicit commit
+
+     CREATE EVENT ev_example
+       ON SCHEDULE EVERY 1 HOUR
+       DO
+         CALL sp_cleanup();
+     ```
+   - **PostgreSQL pg_cron** (`scheduler_backend: pg_cron`): function calls can be wrapped in a transaction.
+     ```sql
+     BEGIN;
+
+     -- pg_cron 잡 등록
+     SELECT cron.schedule('ev_example', '0 * * * *', 'CALL sp_cleanup()');
+
+     COMMIT;
+     ```
+     Removal: `SELECT cron.unschedule('ev_example');`
+   - **TimescaleDB** (`scheduler_backend: timescaledb_job`): `add_job` / `alter_job` / `delete_job` and policy functions can be wrapped in a transaction.
+     ```sql
+     BEGIN;
+
+     -- TimescaleDB background job 등록
+     SELECT add_job('sp_cleanup', INTERVAL '1 hour');
+
+     COMMIT;
+     ```
+     Policy jobs: `SELECT add_retention_policy('metrics', INTERVAL '90 days');` / `SELECT add_compression_policy('metrics', INTERVAL '7 days');`
+
 4. **Author rollback SQL** — produce the inverse statements.
 
    **For table DDL**: every destructive operation must have a corresponding restorative statement. Where data restoration is not possible (e.g., rollback of DROP COLUMN cannot restore lost data), include:
@@ -111,7 +146,14 @@ If the request requires data manipulation outside a routine body (e.g., "rename 
      ```
    This file is the secondary fallback. The primary rollback is the environment-specific capture file generated by the dispatcher (task-db-structure Phase 4 §b2). Rollback application priority: capture-based `rollback.<env_or_label>.sql` (1st priority) > this `rollback.sql` (2nd priority fallback).
 
-   > Pattern reference: `db-data-author` uses a similar capture-first / file-fallback priority model for DML rollback (timestamped rollback tables). Routine DDL rollback uses live `SHOW CREATE` capture instead of rollback tables — different mechanism, same priority principle.
+   **For scheduled jobs** (`routine_mode: true`, scheduled-job request) — rollback is best-effort, same capture-first priority:
+   - MySQL: `DROP EVENT IF EXISTS <name>;` or restore from capture (see capture_templates output).
+   - PostgreSQL pg_cron: `SELECT cron.unschedule('<jobname>');`
+   - TimescaleDB background job: `SELECT delete_job(<job_id>);`
+   - TimescaleDB policy jobs: `SELECT remove_retention_policy('<table>');` / `SELECT remove_compression_policy('<table>');`
+   Rollback application priority: capture-based `rollback.<env_or_label>.sql` (1st priority) > this `rollback.sql` (2nd priority fallback) — same ordering as routine DDL.
+
+   > Pattern reference: `db-data-author` uses a similar capture-first / file-fallback priority model for DML rollback (timestamped rollback tables). Routine DDL and scheduled-job rollback both use live capture (SHOW CREATE / cron.job / timescaledb_information.jobs queries) instead of rollback tables — different mechanism, same priority principle.
 
 5. **Tag destructive operations** — for each operation in the migration file, prepend a line:
    ```sql
@@ -120,6 +162,7 @@ If the request requires data manipulation outside a routine body (e.g., "rename 
    Destructive operations:
    - Table DDL: `DROP TABLE`, `DROP COLUMN`, `MODIFY COLUMN <type>`.
    - Routine DDL: `DROP PROCEDURE`, `DROP FUNCTION`, `DROP TRIGGER` — definition loss is irreversible without a capture backup.
+   - Scheduled jobs: `DROP EVENT` (MySQL), `cron.unschedule` (PG pg_cron), `delete_job` (TimescaleDB), `remove_retention_policy`, `remove_compression_policy` — schedule/definition loss without capture.
    - `REPLACE PROCEDURE` / `REPLACE FUNCTION` / `CREATE OR REPLACE` are NOT DESTRUCTIVE (in-place update). However, rollback requires a prior capture. The plan.md should note this.
 
    `DROP DATABASE` is dispatcher territory and never appears in agent SQL — no agent-side DESTRUCTIVE tagging rule change needed.
@@ -212,11 +255,15 @@ If the request requires data manipulation outside a routine body (e.g., "rename 
 
    `mode` reflects the mode the agent executed under. `database_created` holds the `target_db_name` value (for the dispatcher to use when emitting `CREATE DATABASE` per environment) — `null` in `"incremental"` mode or when `target_db_name` was not provided. Note: this field signals the name to the dispatcher only; the agent itself never emits `CREATE DATABASE` in SQL.
 
-   `capture_templates` is an array of SQL strings (one per routine) representing the live-definition capture queries:
-   - MySQL: `SHOW CREATE PROCEDURE <name>;` / `SHOW CREATE FUNCTION <name>;` / `SHOW CREATE TRIGGER <name>;`
-   - PostgreSQL: `SELECT pg_get_functiondef(p.oid) FROM pg_proc p WHERE proname = '<name>';`
+   `capture_templates` is an array of SQL strings (one per routine or scheduled job) representing the live-definition capture queries:
+   - MySQL routines: `SHOW CREATE PROCEDURE <name>;` / `SHOW CREATE FUNCTION <name>;` / `SHOW CREATE TRIGGER <name>;`
+   - MySQL EVENT: `SHOW CREATE EVENT <name>;`
+   - PostgreSQL routines: `SELECT pg_get_functiondef(p.oid) FROM pg_proc p WHERE proname = '<name>';`
+   - PostgreSQL pg_cron: `SELECT * FROM cron.job WHERE jobname = '<name>';`
+   - TimescaleDB background job: `SELECT * FROM timescaledb_information.jobs WHERE proc_name = '<name>';`
+   - TimescaleDB policy job: `SELECT * FROM timescaledb_information.jobs WHERE hypertable_name = '<table>';`
 
-   `capture_templates` is empty (`[]`) for non-routine (table DDL) migrations. The dispatcher (task-db-structure Phase 4 §b2) is responsible for executing these queries against the live environment before migration. This agent emits the templates only.
+   `capture_templates` is empty (`[]`) for non-routine, non-scheduled-job (table DDL) migrations. The dispatcher (task-db-structure Phase 4 §b2) is responsible for executing these queries against the live environment before migration. This agent emits the templates only.
 
 ## Discipline
 
@@ -239,7 +286,7 @@ If unable to author safely:
 - Request ambiguous / requires data manipulation that can't be deferred → return `{"error": "needs_clarification", "details_ko": "..."}`.
 - Framework unknown → return `{"error": "framework_unsupported", "details_ko": "..."}`.
 - Engine unknown (not mysql/postgres for v2) → return `{"error": "engine_unsupported", "details_ko": "..."}`.
-- Request involves EVENT → return `{"error": "event_unsupported", "details_ko": "EVENT 는 v2 범위 외 (v3 후보) — task-db-structure v3 까지 DEFER"}`.
+- PostgreSQL scheduled-job request with `scheduler_backend` absent or ambiguous → return `{"error": "needs_clarification", "details_ko": "PostgreSQL 스케줄 잡 저작을 위해 scheduler_backend(pg_cron 또는 timescaledb_job) 를 지정해 주세요."}`.
 
 The dispatcher handles the error response by surfacing to master and halting.
 
