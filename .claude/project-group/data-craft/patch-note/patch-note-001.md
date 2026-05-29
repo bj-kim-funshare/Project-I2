@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.564.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스11)
+> Work repo: data-craft-mobile (merge 4d4229e)
+
+### 핫픽스 결과
+
+- **핫픽스11 — BackdropFilter blur 누출 회귀 처치** (`ec9a795`, +37/-36 across 1 file): 핫픽스10 의 외부 `ClipRect` 제거가 BackdropFilter 의 blur 를 전체 화면으로 누출시킴 (advisor advisory 예측 회귀). 처치:
+  - ClipRect 복귀 (BackdropFilter 최상위 부모) — blur 영역 nav 한정.
+  - 배지 Positioned `top: -3` → `top: 0` 음수좌표 제거 + Stack `clipBehavior: Clip.none` 제거.
+  - 외부 padding top 10→14, Stack 내 `Padding(top)` 4→8 — 배지 양수좌표에서 가시 영역 안착 (effective +22px nav 내).
+  - 핫픽스10 의 Center / maxHeight 없음 / border 1.5 디자인 유지.
+
+  advisor #2 PASS (advisor-fallback). blur 누출 + 배지 가시화 양립 달성.
+
 ## v001.563.0
 
 > 통합일: 2026-05-29
