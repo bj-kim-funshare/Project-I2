@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.561.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스8)
+> Work repo: data-craft-mobile (merge 818156b)
+
+### 핫픽스 결과
+
+- **핫픽스8 — 바텀 배지 양수좌표 + 아바타 NetworkImage 에러 fallback** (`1294a95`, +23/-8 across 2 files):
+  - (1) 바텀 네비 배지 잘림 진짜 처치 — 핫픽스7 padding 증가만으로 미해결. 원인 = Badge `Positioned(top: -3)` 음수 좌표가 외부 `ClipRect` (BackdropFilter 부모) 의 경계 위로 침범. 처치: `Positioned(top: 0)` 양수 변환 + 아이콘 Stack 을 `Padding(top: 4)` 로 감싸 자연스러운 공간 확보. Container padding top 14→10 으로 총 시각 높이 유지.
+  - (2) 아바타 NetworkImage 에러 fallback — `_AvatarWidget` StatelessWidget → StatefulWidget 전환, `_imageError` state + `onBackgroundImageError` 콜백. 로드 실패 시 setState 로 initial 텍스트 fallback 표시 (웹 동일 패턴).
+
+  advisor #2 PASS (advisor-fallback 경유).
+
 ## v001.560.0
 
 > 통합일: 2026-05-29
