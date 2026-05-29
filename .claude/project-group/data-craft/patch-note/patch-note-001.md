@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.542.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #208 핫픽스3
+
+### 페이즈 결과
+
+- **Phase 12 (핫픽스3)** (`45bf8295`, data-craft-mobile): hotfix2 후 마스터 실행 테스트에서 발견된 3개 결함 일괄 수정 — (1) 5화면 의미 매핑 오류 (common/company signup 의미 swap), (2) 공용 로그인의 "기업 계정으로 로그인" 링크가 웹에 없음에도 노출, (3) 기업 로그인의 companyId 입력 Step A 가 웹의 SubdomainGuard 패턴과 불일치. 추가로 DEBUG 배너 제거 및 "잊으셨나요?" 가 필드 라벨 위(잘못된 위치) → 자동 로그인 row 의 우측(웹 SigninForm.tsx 117~129 동등)으로 재배치. 파일명 보존 + 클래스 내용 swap 전략으로 라우트는 그대로 유지. `auth_controller` 메서드 rename (`companySignup → signup`, `commonSignup → subdomainRegister`) + 호출처 일괄 갱신. `company_signin` 은 Step A 제거하고 `addPostFrameCallback` 으로 `?tenant=` query param 읽어 `getTenantInfo + getCompanyLogo` 호출, tenant 부재 시 `/auth/signin` 리다이렉트. `MaterialApp.router(debugShowCheckedModeBanner: false)`. advisor-fallback 경유 advisor #2 PASS.
+
+### Root cause
+
+v001.535.0 의 Phase 5/8 구현 시 메인 세션이 모바일 인증 화면 5종의 의미 매핑을 잘못 수행: REGISTER_USER 가 companyId required 라는 사실에 끌려 "공용 회원가입" 으로 분류했으나 실제 웹에서는 `/register` SubdomainRegisterPage (기업 회원가입 = 기존 회사 사용자 추가). 반대로 VALIDATE_BUSINESS_NUMBER + SIGNUP 은 "기업 회원가입" 으로 분류했으나 실제로는 `/signup` SignupPage (공용 회원가입 = 신규 회사 + admin 생성). 추가로 웹의 SubdomainGuard 가 host 에서 tenant 결정한다는 점을 모바일에 매핑하면서 companyId 직접 입력 UI 로 잘못 구현 — 마스터의 "회사 아이디 로그인 없음" 명시와 어긋남. UX/시안 검증 단계에서 마스터가 직접 확인.
+
+### 영향 파일
+
+#### data-craft-mobile
+- `lib/main.dart` — `debugShowCheckedModeBanner: false`
+- `lib/state/auth_controller.dart` — 메서드 rename (`companySignup → signup`, `commonSignup → subdomainRegister`)
+- `lib/screens/auth/common_signin_screen.dart` — "기업 계정으로 로그인" 링크 제거, "잊으셨나요?" 자동 로그인 row 우측 재배치
+- `lib/screens/auth/common_signup_screen.dart` — SIGNUP + VALIDATE_BUSINESS_NUMBER 흐름 (신규 회사 + admin)
+- `lib/screens/auth/company_signin_screen.dart` — Step A (companyId 입력) 제거, `?tenant=` query 기반
+- `lib/screens/auth/company_signup_screen.dart` — REGISTER_USER 흐름 (기존 회사 사용자 추가)
+- `lib/screens/auth/widgets/auth_text_field.dart` — `labelTrailing` 슬롯 정리
+
+### 비차단 후속
+
+- `/auth/company/signin`·`/auth/company/signup` 라우트 UI 링크 없음 — deep-link 진입 시 정상 동작. 유지/제거는 디자인 결정.
+- `company_signup` AppBar 제목 "기업 회원가입" — 의미상 "사용자 등록" 등 라벨 폴리시 후속 가능.
+
 ## v001.541.0
 
 > 통합일: 2026-05-29
