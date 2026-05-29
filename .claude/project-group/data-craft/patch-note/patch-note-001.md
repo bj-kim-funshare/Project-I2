@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.545.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #212
+
+Roadmap-6(MySQL→PostgreSQL/TimescaleDB 마이그레이션) DEV-1 첫 단계 — 소스 MySQL(`data_craft_dev`) 전 객체 완전 인벤토리 + PostgreSQL 매핑 문서 확정. 이후 DEV-1 구축·ETL·검증의 source of truth + 대조 체크리스트.
+
+### 페이즈 결과
+
+- **Phase 1 (인벤토리 + 기계 검증, `2669428`)**: `mysqldump --routines --triggers --events --no-data`(TLS 검증만 생략, read-only)로 스키마 스냅샷을 `docs/migration/_source/data_craft_dev-schema-2026-05-29.sql`(2677줄)에 동결. `docs/migration/mysql-inventory.md`(907줄)에 8종 객체 전수 열거 후 `information_schema` 카운트와 8종 대 8종 대조 — **누락 0 검증 통과**. 카운트: 테이블 37·컬럼 370·인덱스 106·제약 89(PK 37/UNIQUE 10/FK 36/CHECK 6)·프로시저 8·함수 0·트리거 10·이벤트 1.
+- **Phase 2 (PostgreSQL 매핑, `a2911fe`)**: `docs/migration/mysql-to-pg-mapping.md`(362줄) — 타입(tinyint(1)→boolean, datetime→timestamptz, binary(16) UUID→uuid, unsigned/enum/json/zero-date), 식별자·방언(AUTO_INCREMENT→IDENTITY, LAST_INSERT_ID→RETURNING, GET_LOCK→pg_advisory_xact_lock 등), 제약·인덱스, 루틴 PSM→PL/pgSQL(프로시저 8·트리거 10), **EVENT→스케줄 잡(pg_cron / TimescaleDB add_job 후보)**, cross-engine ETL 위험. 인벤토리 8종 전부 커버. 실 컬럼/FK/트리거명 인용(추측 아님).
+
+### DEV-1 진입 전 확정 필요 (다음 단계 task-db-structure 호출 전)
+
+- **TZ**: 덤프 헤더는 `SET TIME_ZONE='+00:00'`(UTC)이나, 앱이 실제 어떤 TZ로 `CURRENT_TIMESTAMP`/`datetime`을 저장 중인지(서버 TZ 의존) 확정 필요. UTC 확정 시 기존 데이터 변환 불요.
+- **`tinyint` 비-(0/1) 컬럼**: boolean vs smallint 판정은 컬럼별 의미 확인 후 결정(매핑 문서에 컬럼 목록 명시).
+- **EVENT backend**: pg_cron vs TimescaleDB background job 최종 선택은 DEV-2(Timescale 전략)에서 확정. `data_values` 시계열 파티션은 TimescaleDB 하이퍼테이블 유력.
+
+### 영향 파일
+
+- data-craft-server: `docs/migration/_source/data_craft_dev-schema-2026-05-29.sql`, `docs/migration/mysql-inventory.md`, `docs/migration/mysql-to-pg-mapping.md`
+
+### 비고
+
+- 본 작업은 인벤토리+매핑 확정까지(비범위: psql 스키마 구축=task-db-structure, ETL=plan-enterprise/pgloader, 앱 mysql2→pg 전환). prod DB는 동결(dev 한정 read-only 접근).
+- mysql 접근은 ExitPlanMode 승인 한정 인가(read-only 2작업), TLS는 자체 서명 인증서 대응으로 `--ssl-verify-server-cert=false`(암호화 유지) 마스터 인가 — 본 작업 한정.
+- 절차 노트: docs-only 페이즈라 lint 게이트 스킵(소스 무변경 + worktree node_modules 부재). skill spec에 docs-only carve-out 미명문 — 향후 plan-enterprise-os 후속에서 명문화 검토 가능(블로커 아님).
+
 ## v001.544.0
 
 > 통합일: 2026-05-29
