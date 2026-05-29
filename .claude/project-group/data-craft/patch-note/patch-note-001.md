@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.538.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스5
+
+### 페이즈 결과
+
+- **Phase 14 (핫픽스5)** (`b65ec07d`, data-craft): TypeSelectStep 드롭다운 **근본 재설계** — `createPortal` 마운트 완전 폐기, 옵션 패널을 `position:relative` 트리거 컨테이너 내부 `position:absolute` 인라인 자식으로 전환. triggerRef/dropdownStyle/getBoundingClientRect 계산 + onPointerDown stopPropagation hack 모두 제거, 단일 `containerRef` 기반 mousedown 외부 클릭 감지로 단순화. ColumnTypeChangeDialog 의 핫픽스4 `onPointerDownOutside` 가드 (data-column-type-dropdown 식별자) 도 함께 제거. portal 없으면 Radix DismissableLayer 가 옵션 클릭을 dialog 자식으로 정상 인식 → dismiss 문제 근본 해소.
+
+### Root cause + 4사이클 회고
+
+- 핫픽스2: native `<select>` → 커스텀 드롭다운 도입, portal + body 마운트 + 하드코딩 zIndex 9999.
+- 핫픽스3: 드롭다운이 다이얼로그 백드롭 (zIndex≈12000) 뒤에 깔림 → zIndex 12100 으로 격상.
+- 핫픽스4: 드롭다운은 위에 떴지만 옵션 클릭 시 DismissableLayer 가 portal 클릭을 외부로 판정 → 모달 닫힘. Radix 캡처 페이즈 리스너 vs React 버블 페이즈 stopPropagation 격차 → `onPointerDownOutside` data-attr 가드로 보강 시도.
+- 핫픽스4 결과 (마스터 보고): 옵션 선택 안됨 + 드롭다운 닫힘 + 모달까지 닫힘 = 완전 사용 불가.
+
+**근본 원인**: portal 마운트 자체가 문제의 진원. dialog 자식이 아닌 body 자식으로 분리되는 순간 모든 outside-click 가드가 hack 영역에 진입. 4사이클의 누적 패치가 hack 위에 hack 을 쌓는 구조 → 결국 모든 상호작용 봉쇄.
+
+**해법**: portal 폐기 → inline 자식 렌더. Radix Dialog 의 자식이면 자동으로 dismiss 면제. 모든 z-index/stopPropagation/data-attr hack 일소.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/TypeSelectStep.tsx` (-93/+32 — 대규모 축소)
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/ColumnTypeChangeDialog.tsx` (-5 — 핫픽스4 잔재 제거)
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- 옵션 패널이 dialog content 영역 밖으로 잘리는 케이스 (옵션 리스트 길이 + dialog 작은 viewport) 가 발견되면 dialog content 의 overflow: visible 또는 옵션 패널 max-h 조정 후속.
+- 4사이클 hack 누적 회고는 portal+modal+커스텀드롭다운 안티패턴 케이스 노트로 별도 메모리화 검토.
+
 ## v001.537.0
 
 > 통합일: 2026-05-29
