@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.533.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스2
+
+### 페이즈 결과
+
+- **Phase 11 (핫픽스2)** (`522022a2`, data-craft): 
+  - **변환 타입 드롭다운 커스텀화**: `TypeSelectStep` 의 native `<select>` 를 `COLUMN_ICONS` + `t.columnTypes.*` 이름이 포함된 커스텀 드롭다운으로 교체. 다른 UI 와 동일 룩.
+  - **메타 재로드 격상**: 메인 그리드 `FsGridTableView` 의 `onChanged` 가 `invalidateServerCacheRef.current?.()` 외에 `props.reloadMeta?.()` 도 호출 — 변환 후 컬럼 타입 메타 (vcs.viewer_type, 헤더 아이콘 포함) 가 BE 에서 즉시 재로드되도록 격상. `fs-sub-data-viewer FsGridTableView` 에 `tv.onRefresh()` 추가로 re-render 트리거.
+  - **zero-change UX 메시지**: `ChangeResultStep` 에 `updatedCells === 0 && ok === true` 케이스 (always-ok 동일값 변환, 예: longText→text) 를 별도 `doneTypeOnly` 메시지 ("변환 완료 — 셀 값은 그대로, 컬럼 타입만 변경됨") 로 분리. 4언어 (ko/en/ja/zh) i18n 키 추가.
+
+### Root cause
+
+- **드롭다운**: Phase 4 다이얼로그 작성 시 native `<select>` 사용 — 다른 데이터-크래프트 UI 의 커스텀 드롭다운 컨벤션 미반영.
+- **변환 미반영 (시각적)**: longText→text 는 카탈로그상 `always-ok` 이고 system transform 이 cellValue 그대로 통과 → BE updates 배열 비어 있어 `updatedCells: 0` 반환. 그러나 `data_viewer_column_setting.viewer_type` 은 실제 UPDATE 됨. FE 측 Phase 5 onChanged 가 `invalidateServerCacheRef` (행 데이터 캐시) 만 무효화하고 컬럼 메타 (useViewerMetaLoader) 는 재로드하지 않아 헤더 아이콘이 longText 그대로 표시 → 사용자가 "변환 안됨" 으로 인지. "변환된 행 0개" 메시지 자체도 always-ok 동일값 케이스에서 변환 실패로 오인.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/TypeSelectStep.tsx`
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/ChangeResultStep.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-sub-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/types.ts` + `translations/{ko,en,ja,zh}.ts`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- `FsSubGrid` (임베드 서브 그리드), `ViewColumnManagerDialog` (캘린더/칸반/간트), `fs-external-data-viewer FsGridTableView` 세 호스트는 `reloadMeta` 채널 부재로 변환 후 컬럼 헤더 아이콘이 하드 리프레시 전까지 갱신되지 않음. 메인 그리드 외 surface 전체 적용은 별도 phase 후속.
+- 카탈로그 always-ok 시스템 변환에서 `updatedCells: 0` 이 정상인 케이스 — BE 응답에 `columnTypeMetadataUpdated: boolean` 명시 신호 추가는 v2 보강 후보.
+
 ## v001.532.0
 
 > 통합일: 2026-05-29
