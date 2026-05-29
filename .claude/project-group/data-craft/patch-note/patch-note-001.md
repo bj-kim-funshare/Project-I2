@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.536.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스4
+
+### 페이즈 결과
+
+- **Phase 13 (핫픽스4)** (`51316289`, data-craft): TypeSelectStep portal 옵션 패널 클릭 시 다이얼로그 자체가 dismiss 되어 옵션 선택 불가하던 결함 보강. Radix DismissableLayer 는 document 캡처 페이즈 리스너 → React 버블 페이즈 stopPropagation 만으로는 차단 불가. Radix 공식 API `onPointerDownOutside` 로 전환: TypeSelectStep portal 컨테이너에 `data-column-type-dropdown` 식별자 추가 + ColumnTypeChangeDialog 의 DialogContent 에 `onPointerDownOutside` 핸들러 추가 → 해당 식별자 영역 클릭 시 `event.preventDefault()` 로 dismiss 차단.
+
+### Root cause
+
+핫픽스2/3 에서 portal + 옵션 버튼 `onPointerDown stopPropagation` 으로 outside-click 차단을 시도했으나, Radix DismissableLayer 가 `document` 의 **캡처 페이즈** 에 리스너를 등록하므로 React 합성 이벤트의 **버블 페이즈** stopPropagation 은 도달 시점이 늦어 무력. portal 마운트 위치가 dialog DOM 외부 (body 직속) → DismissableLayer 가 클릭 좌표를 외부로 판정 → dismiss.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/TypeSelectStep.tsx`
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/ColumnTypeChangeDialog.tsx`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- 동일 portal-드롭다운 패턴이 다른 다이얼로그 (예: column-settings-dialog/) 에서 발견 시 동일 `data-*` 식별자 + onPointerDownOutside 가드 표준 적용 후속.
+
 ## v001.535.0
 
 > 통합일: 2026-05-29
