@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.555.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스4)
+> Work repo: data-craft-mobile (merge 3455b95)
+
+### 핫픽스 결과
+
+- **핫픽스4 — ME 본문 콘텐츠 + 프로필 편집 + 메뉴 아이콘박스+부제 시안 정밀 정합** (`b0720fd`): 핫픽스3 시안 비교 시 본문의 이름/부제/bio/통계 4종/프로필 편집 버튼/메뉴 아이콘박스+부제 6건 누락 — 마스터 강한 피드백 대응. 처치:
+  - `me_header.dart`: 140 → 130px (시안 정합).
+  - `me_screen.dart`: Stack 안 `MeProfileCard(user, account)` + `MeStatsRow` + `_ProfileEditButton` (Positioned, 아바타 우측 회색 둥근 직사각형) + `MeMenuList(user, account)` 모두 호출. 로그아웃은 메뉴 분리 후 하단 빨강 TextButton 으로 별도 배치.
+  - `me_stats_row.dart`: Expanded 균등분포 → `Row(mainAxisAlignment.start) + SizedBox(width:20)` 좌정렬 gap. `—` placeholder 유지.
+  - `me_menu_list.dart`: 44x44 회색 원형 아이콘박스 + outlined 아이콘 (notifications/person/lock/auto_awesome/flag) + 제목/부제 column + chevron 풀세트. 부제는 `푸시 · 이메일 · 통합` / `user.email` 동적 / 없음 / 현재 ThemeMode / 없음. 권한 게이트 메뉴(권한 관리·사용자 관리)도 동일 패턴, 아이콘 `shield_outlined` / `group_outlined`.
+
+  advisor #2 PASS (advisor-fallback 경유) + advisory 4건: 프로필 편집 버튼 픽셀 정밀도 / 메뉴 아이콘박스+부제는 시안 jsx 에는 없으나 마스터 지시 채택 / 로그아웃 분리 텍스트 vs 시안 메뉴 마지막 빨강 row / bio placeholder 색 tone 차분.
+
 ## v001.554.0
 
 > 통합일: 2026-05-29
