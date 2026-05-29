@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.554.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#210
+> Work repo: data-craft (merge dd3911a1 작업 + 핫픽스 merge)
+
+### 개요
+
+영어 모드에서 한국어가 노출되던 i18n 누락을 data-craft 웹 모노레포 메인앱 전역에서 제거. 마스터 보고 증상(디자인 모드 → 화면 편집 모달 한국어 노출) + 2차 보고(위젯 설정 드로어 옵션 한국어) 모두 해소. **뷰어 패키지 3종(4언어)은 별도 후속 플랜으로 이관**(아래 잔여 참조).
+
+### 누락 메커니즘 (조사 확정)
+
+i18next `fallbackLng: 'ko'`. 두 클래스:
+- **Class A** — 컴포넌트가 `t('key','한국어 기본값')` 호출하나 키가 en.ts에 부재 → 한국어 기본값이 영어 모드에 렌더.
+- **Class B** — 한국어가 애초에 `t()` 미연결(raw 하드코딩).
+
+### 결과
+
+- **감사 인프라 영구화** (`7932f29`→`79a1769`): `scripts/i18n-audit/`에 Node 런타임 flattener 기반 감사 스크립트 2종 커밋(`i18n_audit_mono.py` = Class A, `i18n_categorize.py` = Class B). 완료 게이트 = Class A 0.
+  - **감사 파서 버그 정정**: 초기 정규식 파서가 `{{interpolation}}`·멀티라인 값에서 중괄호 오카운트 → 키 누락 과대보고(209건). Node `--experimental-strip-types`로 .ts locale을 실제 평가하는 방식으로 교체. **실제 Class A = 75건**(초기 209의 ~131이 파서 오탐).
+- **Class A 전건 해소(0)** (`0c0d4bc`,`6c997559`): 메인앱 누락 키 67건을 en/ko 추가 — editPageDialog/builder/boundary/layout/header/form/settings/billing 등. (디자인 모드 화면편집 모달 = editPageDialog 등 → 보고 증상 직접 해소.)
+- **Class B 메인앱 전 영역** (`729a5d98`…`2b1a3368`): raw 하드코딩 ~280건을 `t()` 편입 + en/ko 키 추가.
+  - **property-drawer 전체**(button-editor/viewer-editor/컴포넌트/위젯타입 상수) — **위젯 설정 드로어 옵션 한국어 폴백 11곳 제거(`0e9a3aad`)로 2차 보고 반영**: 모든 드롭다운 옵션(view-type/date-range/button-action/widget-type)이 `t()` 경유, `?? koreanLabel` 폴백 제거.
+  - form-builder/widget-placement/WidgetTypeSelector, shared/ui·lib, subscription, settings-dialog, tabs-widget, 전 메인앱 위젯.
+  - 비훅 컨텍스트(SseProvider useEffect 토스트)는 i18n 인스턴스 직접 임포트로 처리.
+- **react-compiler 핫픽스** (`b3de7c1`): i18n 편입 과정에서 발생한 "memoization could not be preserved" 5건 수정 — useMemo/useCallback deps에 `t` 추가(RoleFormDialog·Input.widget), 정적 키맵 모듈 스코프 호이스트(WidgetTypeSelector).
+
+### 검증
+
+merged i-dev: `tsc -p tsconfig.app.json` 0 errors · `pnpm lint` 0 errors(경고 35, 기존) · `i18n_audit_mono.py` Class A **0** · `pnpm build:packages` 정상.
+
+### 잔여 (후속 plan-enterprise 핸드오프)
+
+- **뷰어 패키지 3종** — `fs-data-viewer`/`fs-external-data-viewer`/`fs-sub-data-viewer`: .tsx ~89 + .ts display ~250, **ko/en/ja/zh 4언어** locale. 별도 워크스페이스 + 자체 i18n. (선행 감사 #180이 "영역별 별도 enterprise" 권고한 단위.) **ja/zh 정책 확정**: 신규 키는 ko 원본 + en 번역 추가, ja/zh = ko 값 복제(무회귀, 실번역은 추가 후속).
+- **메인앱 .ts long-tail** — entities(page/role/form/widget/layout) 권한 라벨·설명 등 display .ts(~150), `columnTypeUtils.ts` COLUMN_TYPE_INFO_MAP·`planUtils.ts`/`file-attachment-ui.ts` 순수함수 반환값(호출자 t() 주입 리팩터 필요), `billingErrorMessages.ts` 에러맵.
+- **disabled 기능** — `AIAssistantModal`(AI 비서, `AI_ASSISTANT_ENABLED=false` → null 반환, 미노출), `call-external-api`(disabled, DUMMY_APIS·getApiNameById 한국어) — 기능 활성화 전 i18n 필요.
+- **아키텍처 후속** — `formatDateKorean`(`${y}년 ${m}월`) 날짜 포맷은 i18n 시간대 아키텍처 도입 시 처리(파일 자체 주석 명시).
+- 예외(번역 대상 아님, 의도적): 언어 선택기 네이티브명('한국어'/'日本語'), `page-icons/iconKeywords.ts` 한글 검색 키워드 데이터.
+
+### 영향 파일 (요약)
+
+data-craft: `scripts/i18n-audit/*`(신규 3), `src/shared/i18n/locales/{en,ko}.ts`, `src/widgets/property-drawer/**`, `src/features/{form-builder,subscription,widget-placement}/**`, `src/widgets/{settings-dialog,tabs-widget,input-widget,file-uploader-widget,file-attachment,form-widgets,empty-data-widget,layout-canvas,floating-ai-button,button-widget,sub-viewer-widget,external-viewer-widget,viewer-widget}/**`, `src/shared/ui/**`, `src/app/providers/SseProvider.tsx` 등 ~110파일.
+
 ## v001.553.0
 
 > 통합일: 2026-05-29
