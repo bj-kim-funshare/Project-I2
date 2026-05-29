@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.566.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스12)
+> Work repo: data-craft-mobile (merge 1d85b4e)
+
+### 핫픽스 결과 (advisor 사전 계획 검증 옵션 D 채택)
+
+마스터 명시: "어드바이저 검증 받아서 제대로 좀 고쳐" — 12번째 회귀 사이클 (핫픽스7-11 의 padding/좌표 회피 mitigation 누적) 끊기. advisor-fallback 사전 계획 검증 → 옵션 D (최소 변경 root-cause) 채택. 5건:
+
+- **핫픽스12 — 기업명 오너태그 우측 + 바텀 네비 root-cause** (commits `d382f30` + `bf94cb0`):
+  - (1) `me_profile_card.dart` 기업명을 오너 태그 우측 Row 로 이동 (d382f30). 이름 단독 줄 → 오너태그+기업명 Row → 정보 Wrap(이메일/전화).
+  - (2) `bottom_nav_bar.dart` Stack `clipBehavior: Clip.none` 추가 (bf94cb0). 배지 우측 잘림의 진짜 root-cause = Stack default `Clip.hardEdge` → `Clip.none` 한 줄로 해소. 핫픽스8-11 의 양수 좌표/padding 회피 mitigation 패턴 종료.
+  - (3) `bottom_nav_bar.dart` padding 시안 정합 — `EdgeInsets.only(top: 14, bottom: 12)` → `top: 8`, Stack 내부 `Padding(top:8)` 제거, `SafeArea(bottom: true)` 로 iOS safe area 흡수.
+  - (4) `bottom_nav_bar.dart` 배지 `Positioned(top: -3, right: -7)` 시안 원본 좌표 복귀, Container `maxHeight: 16` 추가 시안 fixed height 정합.
+  - (5) `main_shell.dart` Scaffold `extendBody: true` 추가. 회색 배경 진짜 root-cause = nav 가 Scaffold 회색 영역 위에 떠 BackdropFilter blur 가 회색을 가져온 것 → extendBody true 로 body 가 nav 아래까지 확장 → blur 대상이 본문 콘텐츠.
+
+  Container alpha 0.88, BackdropFilter blur sigma 20 시안값 유지 (advisor 합의 비대상).
+
+  **blocker (분리 후속)**: `saturate(180%)` 시안 미구현 — Flutter `ImageFilter.compose` 로 가능하나 본 핫픽스 범위 외. 별도 후속 이슈 권장.
+
+  advisor 사전 PASS (옵션 D 권고) + 사후 PASS + advisory 1건 (extendBody 부수효과 = 자식 라우트 스크롤 끝 콘텐츠가 반투명 nav 뒤 가려질 수 있음, 시각 QA 권장).
+
 ## v001.565.0
 
 > 통합일: 2026-05-29
