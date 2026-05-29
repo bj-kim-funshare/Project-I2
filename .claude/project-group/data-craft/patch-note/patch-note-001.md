@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.557.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #217 (funshare-inc/data-craft)
+
+Roadmap-6 DEV-1 데이터 ETL — 소스 MySQL `data_craft_dev`(원격)의 전 37테이블 데이터를 로컬 PostgreSQL `data_craft_dev`로 충실 복사. timescale 없이 그대로. dev 단일·prod 동결. **실제 개발 서버(원격 MySQL·앱·서비스) 무영향** — 소스 read-only + 로컬 psql 적재만, .env·앱 코드 무변경.
+
+### 페이즈 결과
+- **Phase 1 (`e7863d2`)**: 소형 36테이블(data_values 제외) 적재. `session_replication_role=replica`(트리거+FK 비활성 → updated_at/감사값 MySQL 원값 보존), UUID 5컬럼 `BIN_TO_UUID`, json→jsonb, datetime→timestamp 값 그대로, IDENTITY 시퀀스 26개 재설정. 36테이블 행 수 전수 패리티 MATCH.
+- **Phase 2 (`5a8639c` 스크립트 + 메인 세션 적재)**: `data_values` 3,216,955행 스트리밍 적재(`mysql -q | psql \copy`, ~34초). MySQL COUNT(*) == psql 3,216,955 정확 일치. 파티션 분포 2026_01~05(default 유입 0).
+- **Phase 3 (`faf1ece`)**: 전수 검증 — 37/37 패리티 MATCH, 36 FK 실데이터 고아 검출(ETL 유발 위반 0), default 파티션 0, 집계 스팟체크 일치, 시퀀스 OK. advisor PASS.
+
+### 영향 파일
+- data-craft-server: `docs/migration/etl/{lib.sh, dump-small.sh, load-small.sh, load-data-values.sh, verify-parity.sh, verify.sh, verify-result.md}`
+
+### 인지된 deviation / 결정 대기 (ETL 오류 아님)
+- **json→jsonb 정규화**: `value_data` 등 SUM(LENGTH) MySQL 64.5M vs psql 53.3M — jsonb 표준형(공백/키정렬) 정규화로 **byte-length만 차이, 의미 동일**.
+- **DB-state 결함 surface (해소 미수행)**: `client.active_promotion_id=15` 행이 `fk_client_active_promotion`(convalidated=true) 위반. **MySQL 소스에도 동일 고아 존재**(MySQL은 본 FK 실효 enforce 안 함) — 본 ETL은 충실 복사로 행 유지(plan 비범위라 사전 수정 안 함). 권장 해소 = **(b) `UPDATE client SET active_promotion_id=NULL WHERE active_promotion_id=15`**(1행 멱등 → validated FK 정합 회복 + dev 데이터 형태 보존). 해소는 task-db-data 또는 app-transition 단계에서 마스터 인가.
+
+### 비범위
+앱 mysql2→pg 전환(다음 DEV-1 단계), Timescale(DEV-2), prod.
+
 ## v001.556.0
 
 > 통합일: 2026-05-29
