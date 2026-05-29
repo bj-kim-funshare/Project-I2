@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.535.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #208
+
+### 페이즈 결과
+
+- **Phase 1** (`fdde1aa0`, data-craft-mobile): 기존 Vite/React 19 PWA 스캐폴드 (apps/, packages/, package.json, pnpm-lock.yaml, pnpm-workspace.yaml, tsconfig*, vite.config.*, prototype/, DataCraft/, src/ 등) 일괄 삭제. `.git/` 과 루트 `README.md` 만 보존. `flutter create --org kr.co.funshare.datacraft --project-name data_craft_mobile .` 로 Flutter 3.35.6 스캐폴드 재초기화 (android/ios/macos/windows/linux/web 자동 생성).
+- **Phase 2** (`94a0b4d1`, data-craft-mobile): `pubspec.yaml` 에 `go_router`, `dio`, `flutter_secure_storage`, `flutter_riverpod` 추가. `lib/router/app_router.dart` 에 5개 인증 라우트 + `/` home placeholder 등록. `lib/api/dio_client.dart` 에 `--dart-define API_BASE_URL` 기반 base URL (기본 `http://localhost:8000`), `Authorization: Bearer` 인터셉터, 401 refresh 회전 골격 (1회 재시도, `_retried` 플래그). `lib/storage/token_storage.dart` 싱글턴 (refresh = secure_storage, access = 인메모리). `lib/main.dart` 를 `ProviderScope + MaterialApp.router` 로 교체. pubspec.lock + ios/macos/linux/windows 의 generated_plugin_registrant·Podfile·xcconfig 는 `flutter pub get` 자동 sync.
+- **Phase 3** (`4e5cd4d5`, data-craft-mobile): `lib/api/auth_api.dart` (225줄) — 12 엔드포인트 메서드 (`signin`, `autoSignin`, `signup`, `registerUser`, `sendVerificationCode`, `verifyEmail`, `confirmPasswordReset`, `checkCompanyId`, `validateBusinessNumber`, `tenantInfo`, `companyLogo`; refresh 는 dio interceptor 처리). `lib/api/dto/auth.dart` (251줄) — 요청/응답 DTO + fromJson/toJson. `lib/state/auth_controller.dart` (173줄) — Riverpod `AsyncNotifier<AuthState>` (user/account/companyId/isAuthenticated), signin/signup/logout 트랜잭션 + 토큰 영속.
+- **Phase 4** (`e8b9b81f`, data-craft-mobile): `lib/screens/auth/common_signin_screen.dart` — ConsumerStatefulWidget Material 3, 이메일/비밀번호 + 자동 로그인 토글, `authControllerProvider.signin` 호출, 성공 시 `context.go('/')`, 에러 시 SnackBar. 재사용 위젯 `auth_text_field.dart` (Phase 5~8 공용). 라우터 `/auth/signin` 스텁 교체.
+- **Phase 5** (`f08ebf1`, data-craft-mobile): `lib/screens/auth/common_signup_screen.dart` — 3-step 위저드 (이메일·기업 ID → `sendVerificationCode` → 6자리 코드 → `verifyEmail` → 이름·전화·비밀번호 → `commonSignup`). `commonSignup` API 가 companyId/phone required 라 폼 필드 확장 (계획 본문 대비 사실 매핑). `step_indicator.dart` (Phase 6·8 재사용) 함께 생성. 라우터 `/auth/signup` 스텁 교체.
+- **Phase 6** (`45440145`, data-craft-mobile): `lib/screens/auth/forgot_password_screen.dart` — 2-step (이메일 → `sendVerificationCode('reset')` → 코드·새 비밀번호·확인 → `confirmPasswordReset`). 성공 시 SnackBar 후 `/auth/signin` 이동. `AuthTextField` + `StepIndicator` 재사용. 라우터 `/auth/forgot-password` 스텁 교체.
+- **Phase 7** (`3bf92b81`, data-craft-mobile): `lib/screens/auth/company_signin_screen.dart` — 2-step (기업 ID → `checkCompanyId` → `getTenantInfo` + `getCompanyLogo` → 이메일·비밀번호 → `signin`). `tenant_header.dart` 위젯 (회사명+로고 표시) 함께 생성. 라우터 `/auth/company/signin` 스텁 교체.
+- **Phase 8** (`8210b63e`, data-craft-mobile): `lib/screens/auth/company_signup_screen.dart` — 3-step (사업자번호 `validateBusinessNumber` → 기업 정보 + `checkCompanyId` → 관리자 계정 → `companySignup` → 자동 로그인). 부속 정리: `auth_api.dart::signin` 에 `companyId` optional 추가 (Phase 7 blocker 임시 해결, Phase 9 에서 회수), `auth_controller.dart` pass-through, `test/widget_test.dart` 삭제 (Phase 1 autogen MyApp 참조가 Phase 2 main.dart 교체로 stale).
+- **Phase 9 (보정)** (`1129f1ef`, data-craft-mobile): advisor #2 (advisor-fallback 경유) BLOCK 해소 — 마스터 결정 "웹과 동일한 방식". `auth_api.dart::signin` 의 `companyId` optional 파라미터 + body 삽입 제거, `auth_controller.dart::signin` 시그니처에서 companyId 제거, `company_signin_screen.dart::Step B` 호출 인자 제거. 결과: signin payload 가 웹 `SigninRequest({email, password, rememberMe?})` 와 정확 일치. Step A 의 `checkCompanyId`/`getTenantInfo`/`getCompanyLogo` 는 UX (회사 표시) 용으로 유지.
+
+### 결과 요약
+
+`data-craft-mobile` 저장소를 Flutter 3.35.6 앱으로 재초기화하고 5개 인증 화면 (공용 로그인 / 공용 회원가입 3-step / 비밀번호 찾기 2-step / 기업 로그인 2-step / 기업 회원가입 3-step) 을 웹과 동일한 BE 인증 엔드포인트 직호출 방식으로 구현. 웹 fs_api 모노레포 전략은 모바일에서 미채택 — 모든 인증 API 코드는 모바일 메인 src(`lib/`) 에 직접 작성, BE/DB 무수정. advisor #2 verdict = PASS (advisor-fallback 경유).
+
+### 후속 (별도 처리)
+
+- `/group-policy data-craft` 호출로 `dev.md` `data-craft-mobile` target 의 `dev_command` (`pnpm dev` → `flutter run`), `lint_command` (`pnpm typecheck` → `flutter analyze`), `type` (`monorepo` → `project`), `port` 재정의 필요. 본 플랜 전체 phase 의 lint 게이트는 툴체인 전환 사유로 일괄 스킵 — 위 정책 갱신 후 다음 plan 부터 자동 게이트 복귀.
+- `deploy.md` 모바일 배포 채널 (TestFlight / 내부 테스트 트랙) 정의 — 마켓 등록 단계 진입 전 추가.
+- WebView 통합 / 설정 / 사이드바 / 드로어 / 마켓 등록 → 별도 plan-enterprise.
+
+### 영향 파일
+
+#### data-craft-mobile
+- `pubspec.yaml`, `pubspec.lock`, `lib/main.dart`
+- `lib/router/app_router.dart`
+- `lib/api/dio_client.dart`, `lib/api/auth_api.dart`, `lib/api/dto/auth.dart`
+- `lib/storage/token_storage.dart`
+- `lib/state/auth_controller.dart`
+- `lib/screens/auth/common_signin_screen.dart`, `common_signup_screen.dart`, `forgot_password_screen.dart`, `company_signin_screen.dart`, `company_signup_screen.dart`
+- `lib/screens/auth/widgets/auth_text_field.dart`, `step_indicator.dart`, `tenant_header.dart`
+- (삭제) `apps/`, `packages/`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig*.json`, `vite.config.ts`, `prototype/`, `DataCraft/`, `src/`, `scripts/`, `i-work-station/`, `.env.example`, `.github/`, `test/widget_test.dart`
+- (autogen) `ios/Flutter/`, `ios/Podfile`, `macos/Flutter/`, `macos/Podfile`, `linux/flutter/`, `windows/flutter/` 등 `flutter create` + `flutter pub get` 자동 산출물
+
 ## v001.534.0
 
 > 통합일: 2026-05-29
