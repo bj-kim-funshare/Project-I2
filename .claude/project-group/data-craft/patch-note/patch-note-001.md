@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.565.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#218
+> Work repo: data-craft (merge 8b2ae94)
+
+### 개요
+
+#210 이 메인앱 `.tsx` 한국어 표시 문자열을 i18next 로 편입한 데 이어, **메인앱 `.ts` 파일의 잔여 렌더 한국어**를 `t()` 로 편입. 비훅 순수함수는 마스터 지시대로 호출자에서 `t` 주입(컨버터 체인이 전부 비-React 인 columnTypeUtils 만 모듈레벨 `i18n.t` 채택 — 플랜 승인 deviation). 데이터/검색키워드/비교값/식별자(컬럼 `id`·`NUM_TO_ID`·`categoryName`, 권한 key, 에러코드, cycleKey ASCII, 연산자 심볼)는 전량 보존. i18n-audit 스크립트가 `.tsx` 만 스캔하므로 `.ts` 는 전수 수동 sweep.
+
+### 페이즈 결과
+
+- **Phase 1** (`66e5e13`): `features/role/lib/permissionLabels.ts` 의 `PERMISSION_LABELS` 16개 label/description → `settings.permissions.items.*` i18n 키. 소비자 5개(RoleCard·PermissionCheckboxList·SettingsPermissionSection·SystemPermissionTree·useRolePermissionSearch) `t()` 해석.
+- **Phase 2** (`7845ba4`): subscription 에러/토스트/만료 fallback i18n — `billingErrorMessages.resolveBillingError` 시그니처 `(msg)→(msg, t)` (소비자 6개 동반), `usePlanLimitToast`·`usePlanExpiryNotification`(`{{days}}` 보간) hook `t()` 화. 한국어 fallback 맵 제거.
+- **Phase 3 + 보강** (`e2179ef`, `3c58e86`): 순수 포맷터 호출자 `t` 주입 — `formatLimit`/`formatPlanLimit`('커스텀'), `formatFileSize`/`formatFileSizeGB`('무제한'), `formatBreadcrumb`. 동일파일 잔여 보강: `PLAN_LABEL_KO`→`settings.planNames.*`, `planDisplayLabel` 프로모션 suffix, `formatStorageSize`, 파일초과 토스트 2건.
+- **Phase 4** (`62656c5`): `columnTypeUtils.ts` `COLUMN_TYPE_INFO` 27개 `name`→`nameKey`(`columnType.*`), `getColumnTypeFromId` 에서 `i18n.t`. `i18n.on('languageChanged') → typeCache.clear()` 캐시 무효화. (이미 렌더된 fs_data_viewer 모델은 다음 데이터 로드 시 갱신 — 뷰어 취약성으로 강제 리빌드 미시도.)
+- **Phase 5a** (`85ca44e`): entities — `widgetDefaults` placeholder 5, `cycleKeyUtils` 표시 포맷터 4(`cycleLabel.*`, 키 생성/파싱 보존), `formStateActions` '(복사본)', `formApiSaveForm` '새 폼'. (UI 미노출 에러/console 메시지는 보존.)
+- **Phase 5b** (`afe291c`): shared/소비자 — `visibility-utils` 연산자 라벨 7(`visibilityOperator.*`), `validateGroupName` 2(`validation.*`, `{{max}}`), `useEmailVerificationFlow` 2, `useSessionExpiredNotice` 인라인 폴백 제거, `useAdjustResources` '[설정]'·'개', `PlanFeatureList` `formatStorageSize` t 주입.
+
+### 검증
+
+- 페이즈별 lint gate(`pnpm typecheck:all && pnpm lint`) 전건 PASS (0 errors).
+- ko↔en 키 구조 패리티 2051==2051, 차집합 공집합(양방향). 변경 코드의 i18n 키 참조 185건 전수 키셋 해석 확인(오타/누락 0). i18n Class A audit = 0.
+- 패키지 복제본 `packages/fs-file-attachment` formatBreadcrumb(별도 typed-i18n)·메인앱 외 영역은 범위 밖(후속).
+
+### 영향 파일
+
+data-craft (39 files, +457/-213):
+- `src/features/role/lib/permissionLabels.ts`, `src/widgets/settings-dialog/ui/{RoleCard,PermissionCheckboxList,SettingsPermissionSection,SystemPermissionTree,useRolePermissionSearch}.tsx|ts`
+- `src/features/subscription/lib/{billingErrorMessages,planUtils,useAdjustResources}.ts`, `src/features/subscription/ui/{usePlanLimitToast,ExceededItemList,PlanComparisonCard,ResourceAdjustSection,PlanLimitExceededDialog,PromotionPurchaseDialog,SeatManageDialog,UpgradeDialog,UpgradeStepPayment}.tsx|ts`
+- `src/features/notification/api/usePlanExpiryNotification.ts`
+- `src/shared/lib/{columnTypeUtils,planUtils,file-attachment-ui,visibility-utils,validateGroupName}.ts`, `src/shared/hooks/{useEmailVerificationFlow,useSessionExpiredNotice}.ts`
+- `src/widgets/file-uploader-widget/ui/useFileUploaderHandlers.ts`, `src/widgets/file-attachment/ui/PlanQuotaBar.tsx`, `src/widgets/settings-dialog/ui/plan/{PlanCard,PlanFeatureRow,PlanFeatureList,CurrentPlanBadge,SubscriptionActionSection}.tsx`
+- `src/entities/widget/model/widgetDefaults.ts`, `src/entities/period/model/cycleKeyUtils.ts`, `src/entities/form/model/formStateActions.ts`, `src/entities/form/api/formApiSaveForm.ts`
+- `src/shared/i18n/locales/{ko,en}.ts` (신규 키 76)
+
 ## v001.564.0
 
 > 통합일: 2026-05-29
