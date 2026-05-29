@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.537.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #208 핫픽스1
+
+### 페이즈 결과
+
+- **Phase 10 (핫픽스1)** (`253a4420`, data-craft-mobile): 라우터에 인증 가드 부재로 미인증 사용자가 `/` 진입 시 HomePlaceholder 가 그대로 노출되어 로그인 화면 도달 불가하던 결함 수정. `appRouter` 전역 const → `routerProvider` (Riverpod `Provider<GoRouter>`) 전환, `_RouterNotifier(ChangeNotifier)` 가 `authControllerProvider` 를 listen 하여 `refreshListenable` 로 라우터 재평가. redirect 3분기: AsyncLoading 시 null / 미인증 + 비인증경로 → `/auth/signin` / 인증 + 인증경로 → `/`. `main.dart` 의 `DataCraftApp` 를 ConsumerWidget 으로 전환하고 `ref.watch(routerProvider)` 로 라우터 소비. advisor-fallback 경유 advisor #2 PASS.
+
+### Root cause
+
+v001.535.0 의 Phase 2 라우팅 인프라가 초기 부트스트랩 단계에서 인증 가드 추가를 미포함. `appRouter` 가 단순 const `GoRouter` 였고 `/` 가 HomePlaceholder 로 직접 매핑되어 미인증 상태에서도 home 진입. UX 검증 단계에서 마스터가 직접 확인 — `flutter analyze` 와 widget 단위 테스트로는 라우팅 흐름 결함이 노출되지 않는 클래스 (실 시나리오 실행 필요).
+
+### 영향 파일
+
+#### data-craft-mobile
+- `lib/router/app_router.dart` — `appRouter` const → `routerProvider` Provider<GoRouter>, `_RouterNotifier` + `refreshListenable` + 3분기 redirect
+- `lib/main.dart` — `DataCraftApp` StatelessWidget → ConsumerWidget, `ref.watch(routerProvider)` 소비
+
 ## v001.536.0
 
 > 통합일: 2026-05-29
