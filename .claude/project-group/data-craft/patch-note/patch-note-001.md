@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.532.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #206
+
+### 페이즈 결과
+
+- **Phase 1** (`8df4331`): data-craft 프로덕션 빌드(`pnpm build` = `tsc -b && vite build`)를 막던 cross-package export gap 해소. `listTargetTypes` 를 fs-data-viewer 공개 `entities` 엔트리의 `E` 네임스페이스 최상위(기존 `getColumnTypeById`/`getColumnTypesByCategory` 인접)에 멤버로 추가하고, 형제 뷰어 2곳(fs-sub-data-viewer / fs-external-data-viewer)의 `column-menu/menuItems.ts` 에서 bare named import `{ listTargetTypes } from 'fs_data_viewer/entities'` 를 `{ E as DataViewerEntities }` 별칭 import 로 교체해 `DataViewerEntities.listTargetTypes(...)` 로 호출(로컬 `E` 타입 용도 무변경, 외부 뷰어 2번째 인수 `true` 보존). "E 네임스페이스만 export" 컨벤션 준수.
+
+### 검증
+
+- 근본 원인: `listTargetTypes` 가 fs-data-viewer `conversion-catalog.ts` 에만 존재하고 공개 `./entities` 엔트리(dist/entities.js)에 미노출 → 형제 패키지 dist 가 미노출 심볼을 import → rollup "not exported" 번들 에러. 루트 앱은 src alias 로 소비해 dev/typecheck 가 결함 미노출, 프로덕션 vite 빌드만 노출.
+- 프로덕션 번들 게이트(이 클래스의 유일 게이트): `pnpm build:packages` → `pnpm build` **exit 0** (`✓ built in 17.10s`). 기존 실패 해소 확인.
+- lint 게이트 `pnpm typecheck:all && pnpm lint`: 둘 다 exit 0 (0 error). 기능 회귀 없음(열 컨텍스트 메뉴 "변경 타입" 게이팅 보존).
+
+### 영향 파일
+
+data-craft:
+- 수정: `packages/fs-data-viewer/src/entities/index.ts` · `packages/fs-sub-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts` · `packages/fs-external-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+
 ## v001.531.0
 
 > 통합일: 2026-05-29
