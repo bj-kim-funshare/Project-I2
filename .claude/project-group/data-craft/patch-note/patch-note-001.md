@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.553.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스3)
+> Work repo: data-craft-mobile (merge 08fd9d3)
+
+### 핫픽스 결과
+
+- **핫픽스3 — ME 화면 시안 구조 정합 재구성** (`ffa9187`): 마스터 강한 피드백 "시안에서는 배경과 본문이 나눠져 있고 그 사이에 프로필 사진 원형만 걸쳐져 있는 형태인데 핫픽스2 는 카드를 냅다 위에 올림" 대응. 핫픽스2 의 떠 있는 카드 컨테이너 (radius/shadow) + 확대 헤더 200px + 컬러 아이콘 메뉴 카드 + 분리 로그아웃 텍스트 결정을 모두 시안 (`midfi-part5.jsx` L714-866) 원본 패턴으로 회귀:
+  - `me_screen.dart`: Stack 기반 헤더(그라디언트 140px) + 흰 본문 + Positioned 아바타 절반 걸침 구조. 카드 컨테이너 완전 제거, 흰 본문 영역 안에 flat 콘텐츠 배치.
+  - `me_profile_card.dart`: radius/shadow 제거, 이름 + 부제 + bio placeholder 텍스트만 본문 안 flat 배치 (아바타 코드는 me_screen 의 Stack 으로 이동).
+  - `me_menu_list.dart`: 컬러 원형 아이콘 카드 → 시안 단순 ListTile (텍스트 + chevron) 회귀. 로그아웃을 분리 텍스트 버튼 → 마지막 빨강 메뉴 항목으로 복귀.
+  - `me_header.dart`: 200px → 140px.
+  - `me_stats_row.dart`: 카드 없이 본문 안 flat 배치, `—` placeholder 유지.
+
+  핫픽스2 advisory 1 (시안 vs 핫픽스 차분) 의 직접 해소. advisor #2 PASS (advisor-fallback 경유) + advisory 5건 (헤더 140 vs 시안 130 / 로그아웃 row chevron 누락 / "프로필 편집" 버튼 미구현 / Stats row Expanded vs spec gap:20 / 활동 탭+피드 BE 미정의로 미렌더).
+
 ## v001.552.0
 
 > 통합일: 2026-05-29
