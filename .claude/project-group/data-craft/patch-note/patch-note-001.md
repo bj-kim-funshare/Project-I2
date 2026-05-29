@@ -1,5 +1,45 @@
 # data-craft — Patch Note (001)
 
+## v001.544.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #209
+
+### 페이즈 결과
+
+설정 → 권한 관리 → **권한 그룹 수정** 모달의 다크모드 깨짐을 정리했다. 디자인 시안의 3-컬럼 레이아웃(시안 C)은 이미 구현되어 있어, 본 플랜은 토큰을 우회한 하드코딩 라이트 색을 모두 테마 토큰으로 전환하는 "다크모드 정합"에 집중했다(레이아웃/데이터/API 무변경).
+
+- **Phase 1** (`2c9f801`, data-craft): 모달 다크모드 토큰 보강 — `tokens.css` `:root`/`.dark` 에 모달 전용 플립 변수 5종(`--auth-head-tile-from`/`-to`, `--auth-on-head-tile`, `--auth-sticky-veil`, `--auth-input-bg`) 추가(기존 `--auth-*` 값 불변, auth 화면 공유 회귀 0). `role-form-tokens.ts` `roleFormColors` 에 신규 참조 6종 노출. 다크 값은 디자인팀 시안 그대로, 라이트 값은 현 외관 보존.
+- **Phase 2** (`bca6c67`, data-craft): 모달 셸 색 교체 — 헤더 bg(`#fff`→card), Lock 아이콘 타일 그래디언트(`ink`→`headTileFrom/To`, 다크에서 near-white 반전 버그 제거)·아이콘 색(`#fff`→`onHeadTile`), AVATAR 팔레트 다크 분기(`getResolvedTheme`), 검색바 sticky 베일·입력 bg, 섹션헤더 아이콘 색.
+- **Phase 3** (`51b7228`, data-craft): 요약 패널·사이드바·섹션헤더 — aside 카드/아바타 테두리(`#fff`→card), scrollspy 선택칩(`#fff`→card), 섹션 아이콘 타일 bg(`ink`→`headTileFrom`, 다크 near-white 제거).
+- **Phase 4** (`f9ad0aa`, data-craft): 설정 권한 트라이토글(없음/읽기/쓰기) 다크 — 활성 텍스트(`text-white`→`cta-ink`, 다크 near-white 배경 위 가독 확보), 비활성 bg(`bg-white`→`input-bg`).
+- **Phase 5** (`740c0de`, data-craft): 잔여 다크 breakage 정리 — `onAccent`(`--auth-cta-ink`) 토큰 추가, 일괄부여 버튼 텍스트(`#fff`→onAccent), PageAccessList 그룹카드·전체선택 버튼·SettingsPermissionSection 카드 `bg-white`→`bg-[var(--auth-card)]`.
+
+### 영향 파일
+
+data-craft:
+- `src/app/styles/tokens.css`
+- `src/widgets/settings-dialog/ui/RoleFormDialog.tsx`
+- `src/widgets/settings-dialog/ui/RolePermissionSearchBar.tsx`
+- `src/widgets/settings-dialog/ui/PageAccessList.tsx`
+- `src/widgets/settings-dialog/ui/SettingsPermissionSection.tsx`
+- `src/widgets/settings-dialog/ui/role-form-dialog/role-form-tokens.ts`
+- `src/widgets/settings-dialog/ui/role-form-dialog/RoleFormSectionHeader.tsx`
+- `src/widgets/settings-dialog/ui/role-form-dialog/RoleFormSummaryAside.tsx`
+- `src/widgets/settings-dialog/ui/role-form-dialog/RoleFormScrollspySidebar.tsx`
+- `src/widgets/settings-dialog/ui/role-form-dialog/SettingsAccessTriToggle.tsx`
+
+### 검증 결과
+
+- 페이즈 스코프 lint: 루트앱 `tsc -p tsconfig.app.json --noEmit` exit 0, 변경 파일 eslint exit 0 (전 페이즈).
+- 모달 전체 종합 스윕: 의도적 AVATAR 팔레트(라이트/다크 배열)·theme-safe 반투명 red 외 하드코딩 라이트 색 **0건**.
+- 라이트모드 외관 픽셀 동일 — 모든 신규 토큰의 라이트 값 = 기존 하드코딩 값.
+
+### 절차 노트 / 후속
+
+- 전체 lint 게이트(`pnpm typecheck:all`)는 본 플랜과 무관한 `fs_data_viewer/column-type-change-dialog` 사전결함(`viewerTypeUpdated`/`actualType` TS2339, 6건)으로 차단된다 — i-dev 베이스에 본 커밋 없이도 동일 재현되는 기존 결함이며 본 다크모드 커밋의 회귀가 아니다. 별도 이슈 **#211** 로 보고함(별도 plan 권장).
+- Phase 4·5 는 종합 재스윕에서 발견된 추가 다크 breakage(트라이토글 white-on-white, 잔여 `bg-white`/`#fff`)를 정리한 orchestrator 승인 확장 페이즈. 마스터 사전 승인("이슈 허가, 절차대로 진행해") 범위 내 모달 다크 정합 의도에 직결.
+
 ## v001.543.0
 
 > 통합일: 2026-05-29
