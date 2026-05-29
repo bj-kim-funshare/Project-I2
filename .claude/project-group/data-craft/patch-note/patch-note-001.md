@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.563.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스10)
+> Work repo: data-craft-mobile (merge 3ec926d)
+
+### 핫픽스 결과
+
+- **핫픽스10 — 바텀 배지 잘림 3중 처치** (`c9f199d`, +13/-15 across 1 file): 핫픽스7/8/9 모두 미해결 4번째 시도. 두 갈래 원인 추정 + 3중 처치:
+  - 외부 `ClipRect` (BackdropFilter 부모) 제거 → 배지가 nav 영역 위로 자유 overflow. `BackdropFilter` 만 최상위.
+  - 배지 Container `BoxConstraints maxHeight: 16` 제거 → padding + border + text 자연 sizing.
+  - Text 를 `Center` 위젯으로 감싸 baseline 정렬 보장 (vertical-center).
+  - border width 2→1.5 시안 정합 복귀.
+
+  advisor #2 PASS (advisor-fallback) + advisory: BackdropFilter blur 가 외부 ClipRect 없이 nav 위 영역으로 누출 가능 (시각 QA 권장). 누출 발견 시 ClipRect 복귀 + Container padding-top 증가로 배지 영역을 nav 안에 안착시키는 대안 처치.
+
 ## v001.562.0
 
 > 통합일: 2026-05-29
