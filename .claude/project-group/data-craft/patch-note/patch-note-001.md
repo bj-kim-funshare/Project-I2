@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.547.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #214 (핫픽스1)
+
+간트뷰에서 오늘 날짜(기준선) 열만 다른 일자보다 배경이 밝게 강조되던 것을 제거. 기준선 마커(파란 삼각형 + 세로선)는 유지하고 배경색만 다른 일자와 동일하게 맞춤.
+
+### 페이즈 결과
+
+- **Phase 2 / 핫픽스1 (간트뷰 오늘 열 배경 하이라이트 제거, `8aac36f`)**: `TimelineHeader.tsx` 의 오늘 열 `bg-primary/10` 배경 분기를 제거하여 오늘 열이 평일(`bg-background`)·일요일(`bg-red-500/10`)·토요일(`bg-blue-500/10`) 기본 배경으로 폴백하도록 수정. `FsGanttTimeline.tsx` 의 본문 '오늘 날짜 하이라이트'(`bg-blue-50/50` absolute div) 블록 삭제. `TodayLine.tsx`(기준선 삼각형 + 세로선)는 미변경. 스코프는 배경색 한정(글자색 강조·기준선 유지). lint gate(typecheck:all && lint) PASS.
+
+### 영향 파일
+
+data-craft (i-dev):
+- `packages/fs-data-viewer/src/widgets/gantt-chart/timeline/TimelineHeader.tsx`
+- `packages/fs-data-viewer/src/widgets/gantt-chart/timeline/FsGanttTimeline.tsx`
+
+### 알려진 후속 (비차단)
+
+- `useDateRange.ts` 의 `todayColumnLeft` 가 본 변경 후 fs-data-viewer 타임라인에서 미참조 가능성 — lint 무오류(반환 객체 속성), 정리는 후속 리팩토링 대상.
+
 ## v001.546.0
 
 > 통합일: 2026-05-29
