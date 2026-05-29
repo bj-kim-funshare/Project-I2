@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.550.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216
+> Work repo: data-craft-mobile (merge 4da369a)
+
+### 페이즈 결과
+
+- **Phase 1 — 바텀 네비 셸 + 3 placeholder** (`c376b47`): `StatefulShellRoute.indexedStack` 5-브랜치 셸 (Home/Page/Inbox/DM/ME) + 시안 BottomTabs 위젯(blur, DC_TOKENS 색/배지). `'/'` → '/home' 라우트 교체, 인증 가드 redirect 갱신. Home/Page/DM placeholder + Inbox/ME stub.
+- **Phase 2 — API 클라이언트 + DTO** (`9419c75`): 웹 `fs-api` 의 notification / user / account / profile + AUTH.WITHDRAW 메서드를 Dart 미러. `auth_api.dart` 에 withdraw 추가, `dto/auth.dart` UserInfoDto 의 permissions/roleId/roleName + AccountInfoDto.planType 활용 (Phase 7/8 게이트 의존). `isRead 0|1` 컨벤션 유지 + bool 헬퍼.
+- **Phase 3 — Inbox 화면** (`e9dc948`): 시안 midfi-screens.jsx L141-281 이식. dual rule 해석 = 디자인 시안 + 기능 웹 type 6종. 칩 = 전체/구독/승인/데이터 (웹 NOTIFICATION type 6종 매핑). pull-to-refresh, 그룹화(오늘/이전), 모두 읽음 + 읽음 삭제, type 별 라우팅. 미래상태 SNS 칩(@멘션/배정 등)은 후속.
+- **Phase 4 — ME 메인 화면** (`591113a`): 시안 midfi-part5.jsx L714-866 이식. 그라디언트 헤더 + 프로필 카드 (UserInfoDto.profileImage / roleName → companyName → email fallback) + 메뉴 5개. 통계 4종 + 활동 피드는 BE 미정의 → 섹션 전체 생략 (fake 값 금지 준수). `signout()` → `logout()` 리네임 + try/catch 토큰 클리어 보장. /me/settings/{account,app} stub 라우트 등록.
+- **Phase 5 — ME 계정 정보** (`bc0090d`): 6섹션 (프로필 이미지 image_picker+image_cropper → profileApi, 이름/연락처 인라인, 이메일 3단계 다이얼로그, 비밀번호 다이얼로그, 회원탈퇴 다이얼로그). pubspec 의존성 `image_picker` + `image_cropper` 추가, iOS Info.plist 사진/카메라 동의 + Android Manifest CAMERA 권한 + UCropActivity 등록.
+- **Phase 6 — ME 앱 설정** (`72d9132`): 테마(Light/Dark/System 라디오 + `theme_controller` + SharedPreferences) + 언어(라디오 + i18n 준비 중 안내) + 알림 환경설정(인앱/푸시 토글). `buildDarkTheme()` 추가 (brand 유지 + surface/ink 반전). `main.dart` themeMode watch. pubspec `shared_preferences` 추가.
+- **Phase 7 — ME 권한 관리** (`60bf1ec`): PERMISSION CRUD (LIST/CREATE/UPDATE_NAME/UPDATE/DELETE/BULK_UPDATE) + `PermissionController(AsyncNotifier)` + ReorderableListView. `PermissionTreeEditor` = `kPermissionKeys` 8종 Switch 토글. 게이트 = `permission_manage + planType != 'free'` — 미충족 시 메뉴 미노출. 디자인팀 시안 미존재 → DC_TOKENS 일관 자체 구성 (마스터 옵션 A).
+- **Phase 8 — ME 사용자 관리** (`e8a8b16`): EmployeeApi 7 endpoint (AUTH pending/approved/rejected/approve/reject/toggleUserActive + ROLE.updateUserRole) + 역할 목록 통합. `EmployeeController` 4 요청 Future.wait 병렬, 낙관적 UI 업데이트. `InviteLinkCard` Clipboard 복사. 세그먼트 3종 + 사용자 카드 + 액션 (승인/거부/역할/활성). 게이트 = `user_manage OR isOwner + planType != 'free'`. 자체 DC_TOKENS 구성.
+
+### 작업 형식
+
+이슈 호스트 = `funshare-inc/data-craft#216` · Work repo = `data-craft-mobile` (i-dev merge 4da369a, +6062/-19 across 61 files). lint 게이트 본 플랜 전 페이즈 운영상 스킵 (dev.md `data-craft-mobile.lint_command` 가 구 pnpm 기준, 후속 `/group-policy data-craft` 갱신 예정). advisor #1 PASS / advisor #2 PASS (advisor-fallback 경유 — built-in advisor() 시스템 실패 후).
+
+### 후속 작업 / 핫픽스 후보
+
+- ME 헤더 인라인 편집 후 즉시 갱신 미동작 (Phase 5 blocker) — `authController.updateUserField` 로컬 패치 또는 별도 `userInfoProvider` 도입.
+- image_cropper Android AppCompat 의존성 확인 (`compileSdkVersion ≥ 34` + AppCompat) — `build.gradle` 점검.
+- WithdrawDialog isOwner 분기 멤버수 동적 표시 (현재 카피 분기만).
+- RejectedUserList 재승인 버튼 — 웹과 동작 차이, 마스터 확인 후 정렬.
+- Phase 7 권한 트리 ROLE 기반 페이지/폼 단위 access 토글 (현재 PermissionKey 8종만).
+- 초대 URL `WEB_BASE_URL` dart-define 주입, share_plus 공유 버튼.
+- 다크 테마 인증 화면 시각 회귀 수동 QA.
+- 후속 플랜: SSE/FCM 푸시, ME `plan`(빌링) + `form:{id}`(builder) 탭, 활동 피드/통계 BE 명세, Home/Page/DM 실 화면, i18n 인프라.
+- 후속 `/group-policy data-craft`: dev.md `data-craft-mobile` target 갱신 (`dev_command: flutter run`, `lint_command: flutter analyze`, `type: project`, 포트 재정의).
+
 ## v001.549.0
 
 > 통합일: 2026-05-29
