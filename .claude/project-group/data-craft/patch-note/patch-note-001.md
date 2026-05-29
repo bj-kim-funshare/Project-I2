@@ -1,5 +1,15 @@
 # data-craft — Patch Note (001)
 
+## v001.551.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: funshare-inc/data-craft#216 (핫픽스1)
+> Work repo: data-craft-mobile (merge 2c5c3ca)
+
+### 핫픽스 결과
+
+- **핫픽스1 — 인증 후 `/` 라우트 404 수정** (`19f3969`): 로그인 성공 후 `GoException: no routes for location: /` 발생 + 바텀 네비 미노출 증상. 원인 = Phase 1 이 셸 라우트를 `/` → `/home` 으로 옮겼으나 4개 인증 화면이 `context.go('/')` 잔존 호출. 4파일 (common_signin, common_signup, company_signin, company_signup) 의 호출을 `/home` 으로 교체. `lib/` 전체 `context.go('/')` 잔존 0건 grep 확인. router redirect 로직은 Phase 1 시점에 이미 올바르게 작성되어 있어 수정 불필요. advisor #2 PASS (advisor-fallback 경유).
+
 ## v001.550.0
 
 > 통합일: 2026-05-29
