@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.549.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #213
+
+데이터 뷰어 4종(그리드·칸반·캘린더·간트) 다크모드 색 보정 — **색-only**. 디자인팀 시안을 참고해, 4뷰가 직접 소비하던 하드코딩 **라이트-전용 데이터/상태/틴트 색**(선택 하이라이트·캘린더 오늘·요일 색·유색 카테고리 틴트·우선순위/상태 배지·다이얼로그 그라디언트·인라인 폴백 등)을 다크-aware 토큰으로 전환. 구조·기능·UI·레이아웃·마크업·로직 무변경. 뉴트럴 표면은 #175 의 `semanticColors→var()` chokepoint 로 이미 다크 전환돼 있어, 본 플랜은 그 위에 데이터/상태 색 레이어만 보강. 전역 뉴트럴 `.dark` 팔레트(`--card`/`--foreground`/`--border` 등)는 의도적 유지(대시보드/크롬 영향 회피). 3개 뷰어 패키지(fs-data-viewer 4뷰 / fs-sub-data-viewer·fs-external-data-viewer 그리드) 동기 적용. #175 비교검사 결과 토큰 네임 충돌 0, 메커니즘 일관 확인. `isColorSwapped` 대비 텍스트(`#ffffff`)는 의도적 보존.
+
+### 페이즈 결과
+
+- **Phase 1 (fs-data-viewer 토큰 레이어, `5493972`)**: `styles.css` `:root`(기존 라이트값 보존)+`.dark`(시안 다크값)에 34개 `--fs-*` 데이터/상태 토큰 추가(선택=`#1B2A45`·오늘=`#3A2A14`·일/토요일·priority·state·selection). `viewColors.ts`/`uiColors.ts` 의 하드코딩 리터럴을 `var(--fs-*)` 로 교체. `semanticColors.ts` 는 이미 var() → 무변경.
+- **Phase 2 (그리드 렌더러 잔여, `49b8fee`+`b963fc9`)**: column-group-dialog·서브그리드 래퍼·푸터의 blue/green/red 틴트 잔여를 토큰으로 교체, DialogHeader 라이트 그라디언트에 다크 대응. 핵심 셀 레이어는 이미 var() 기반이라 무변경. 기존 `.dark` 오버라이드 커버 클래스는 보존.
+- **Phase 3 (칸반 렌더러 잔여, `b0da533`)**: KanbanDrawerHeader 인라인 `rgba(40,30,20,0.04)`→`var(--muted)`, CompactComponents/ColumnHeader/FsKanbanColumn 의 ring·드래그/드롭 파란 틴트·삭제 hover 에 `dark:` 변형 추가. 칸반 컬럼 카테고리 hue 보존.
+- **Phase 4 (캘린더 렌더러 잔여, `6897527`)**: WeekdayHeader 요일 색을 `--fs-sunday/saturday-text` 토큰 경로로 통일, MonthPickerOverlay·MiniCalendar 오늘 표시에 `dark:` 변형 추가. DateCell/EventChip 등은 Phase 1 토큰으로 이미 커버.
+- **Phase 5 (간트 렌더러 잔여, `2416fbe`+`f418718`)**: TimelineHeader 요일·주말 컬럼·FsGanttTimeline 미분류 배지에 `dark:` 변형, TodayLine 고정 `#3b82f6`→`var(--primary)`. `bg-black/20` 진행률 오버레이 등 의도적 명암 리터럴 보존. TimelineHeader 는 구조 변경 없이 순수 `dark:` 클래스 방식으로 보정.
+- **Phase 6 (fs-sub-data-viewer 동기, `55ad81a`)**: Phase 1+2 를 사본에 미러. 이 패키지는 `@custom-variant dark` 부재 + dist 빌드라 `dark:` 변형 대신 `var()` 토큰 + 기존 `.dark` 오버라이드만 사용(그라디언트는 `--fs-dialog-grad-*` 토큰).
+- **Phase 7 (fs-external-data-viewer 동기, `1e32438`)**: Phase 6 과 동일 패턴을 external 사본에 미러(+143/-69 동일).
+- **폴백 폴리시 (`229899a`)**: ColorPickerCompact 빈 색 폴백 `#e5e7eb`→`var(--muted)`, parseSelectOption 미매칭 폴백 `#9ca3af`→`var(--muted-foreground)`(인라인 backgroundColor 전용 소비 확인 후 안전 교체).
+
+### 영향 파일
+
+data-craft (i-dev):
+- **fs-data-viewer**: `src/styles.css`, `src/shared/config/theme/componentColors/{viewColors,uiColors}.ts`, `src/widgets/grid-table/components/{column-group-dialog/*,grid-body/*,grid-footer/FooterButtons}.tsx`, `src/widgets/kanban-board/{KanbanDrawerHeader,kanban-column/{ColumnHeader,FsKanbanColumn},kanban-card/cell-renderers/{compact/CompactComponents,lib/parseCellValue}}.tsx`, `src/widgets/calendar/calendar/{WeekdayHeader,MonthPickerOverlay}.tsx`, `src/widgets/calendar/detail-panel/MiniCalendar.tsx`, `src/widgets/gantt-chart/timeline/{FsGanttTimeline,TimelineHeader,TodayLine}.tsx`
+- **fs-sub-data-viewer**: `src/styles.css`, `src/shared/config/theme/componentColors/{viewColors,uiColors}.ts`, `src/widgets/grid-table/components/{column-group-dialog/*,grid-body/RowMenuColumn,grid-footer/FooterButtons}.tsx`
+- **fs-external-data-viewer**: `src/styles.css`, `src/shared/config/theme/componentColors/{viewColors,uiColors}.ts`, `src/widgets/grid-table/components/{column-group-dialog/*,grid-body/RowMenuColumn,grid-footer/FooterButtons}.tsx`
+
+### 검증 / 알려진 후속 (비차단)
+
+- **렌더 육안 확인 필수**: lint(`pnpm typecheck:all && pnpm lint`)/build 는 컴파일만 보증, 다크 렌더는 못 본다. 마스터 다크모드 토글 → 4뷰 + sub/external 그리드 육안 확인 필요.
+- **라이트 톤 미세 drift 2건(토큰 통일 부수효과)**: `settingsButtonText` gray-600→muted-foreground(gray-500), `listColors.card.selectedBorder` blue-300→blue-200. 시각 차이 미미, 인지 시 핫픽스 1줄.
+- **`drawerTokens.ts` warm(Notion 크림) 드로어 팔레트 = 범위 밖 미해결**: 간트·칸반 상세 드로어가 라이트 cream 유지. 다크-warm 별도 디자인 결정 미결(메모리 명시) — 마스터 결정 시 핫픽스.
+- **유색 데이터 fill hue 보존**: 간트 바·캘린더 이벤트 칩·칸반 카테고리 vivid 색은 정체성 유지. 시안 미감과 차이 시 마스터 판단으로 핫픽스.
+
 ## v001.548.0
 
 > 통합일: 2026-05-29
