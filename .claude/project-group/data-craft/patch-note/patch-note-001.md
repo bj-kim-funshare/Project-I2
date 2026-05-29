@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.546.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #214
+
+목록-우선 사용자 입력 폼이 설정→사용자 설정에서는 다크모드에 정상 대응하나 페이지 폼 위젯으로 쓰면 헤더만 어둡고 본문은 흰 배경+검은 글자로 깨지던 문제 수정. 근본 원인은 `DEFAULT_WIDGET_STYLE` 의 하드코딩 라이트 색상(`#ffffff`/`#000000`/`#e0e0e0`)이 `getWidgetInlineStyles`/`getAreaDesignStyles` 를 통해 **인라인 style** 로 적용되어 Tailwind `bg-background` 클래스를 이기던 것. 렌더 시점에 레거시 기본 색상을 테마 CSS 변수로 해석하도록 보강.
+
+### 페이즈 결과
+
+- **Phase 1 (위젯 레거시 기본 색상 → 테마 CSS 변수 해석, `14bf546`)**: 신규 `src/shared/lib/color-tokens.ts` 에 white(`isWhiteBackground` — 기존 `areaStyles.ts` 로직 이전)·black(`isDefaultBlackText`)·기본 테두리(`isDefaultAreaBorder`) 판별 + `resolveSurfaceColor`/`resolveTextColor`/`resolveBorderColor` 해석 헬퍼 추가. `widget-styles.ts` 의 `getWidgetInlineStyles`(textColor·backgroundColor)·`getAreaDesignStyles`(areaBackgroundColor·areaBorderColor) 4개 지점이 레거시 기본 sentinel 일치 시 `var(--background)`/`var(--foreground)`/`var(--border)` 로 치환(명시적 커스텀 색은 리터럴 유지). `areaStyles.ts` 의 `isWhiteBackground` 는 color-tokens 재수출로 전환해 `Section`/`Area` 소비처 무변경. `Section.tsx`/`Area.tsx` 의 `bg-white dark:bg-background` 기존 규약을 위젯 인라인 색상 파이프라인에 확장. 공유 헬퍼이므로 동일 기본 색상을 쓰는 모든 위젯이 함께 테마 정합 — lint gate(typecheck:all && lint) PASS.
+
+### 영향 파일
+
+data-craft (i-dev):
+- `src/shared/lib/color-tokens.ts` (신규)
+- `src/shared/lib/widget-styles.ts`
+- `src/widgets/layout-canvas/ui/areaStyles.ts`
+
 ## v001.545.0
 
 > 통합일: 2026-05-29
