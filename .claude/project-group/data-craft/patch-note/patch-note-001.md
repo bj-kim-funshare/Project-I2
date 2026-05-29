@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.548.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #215
+
+데이터 뷰어 그리드뷰의 내장 서브그리드(행 토글로 펼치는 임베드, `packages/fs-data-viewer`) 상태/순서 결함 수정. 셀 입력값이 접기/펼치기 후에도 보존되고(버그1) 즉시 반영되며, 추가 행이 새로고침/접기-펼치기 후에도 최상단에 유지되도록(버그3) 듀얼 캐시(`serverSubGridCacheRef`/`baseSubGridCacheRef`) write-through 와 seq 정렬 hydration 을 정합화.
+
+⚠️ **버그2 자동 생성 열 새로고침-후 소실은 본 플랜에서 미해결** — 진단 결과 FE 무결함, data-craft-server 후속 필요(아래 후속 항목 참조).
+
+### 페이즈 결과
+
+- **Phase 1 (셀 편집 캐시 write-through, `317f0962`+`494916c1`)**: 서브그리드 셀 편집 시 `updateCellInSubGridCache` 로 `serverSubGridCacheRef`/`baseSubGridCacheRef` 양쪽 캐시 셀 값을 in-place write-through(메인 그리드 `updateCellInLoadedRow` 패턴 차용, 서버 재요청 없음). `updateCellLocally`(단일 셀 편집 + 클립보드 붙여넣기 공통 경로)에서 호출하고 콜백 체인을 `useSubGrid → tv.subGridHooks → subGridProps(FsGridTableView) → BodyRowList → SubGridRow → FsSubGrid → useSubGridModel` 전 구간 배선. → 버그1(접기-펼치기 후 입력값 소실) 해결 + 버그2 즉시 미반영(자동/수동 열 공통) 해결. lint gate PASS.
+- **Phase 2 (행 추가 최상단 정합 + seq 정렬, `66703ae`)**: `addRowToCache` 가 캐시에 하단 append 하던 것을 최상단 prepend 로 전환하고, hydration 초크포인트 `syncRowsToSubGridModel` 에 기존 헬퍼 `sortRowsBySeq` 적용. 추가 행(`seq=minSeq-1`, 서버 영속)이 접기-펼치기·새로고침 모든 경로에서 최상단 유지. → 버그3 해결. lint gate PASS.
+- **Phase 3 (자동 생성 열 셀 영속 진단, 코드 변경 없음)**: 진단-우선 페이즈. 자동 생성 열과 사용자 추가 열의 FE `columnField` 적재 경로(`viewer.service.ts:138` → `buildSubGridModel.ts:42` → `useViewerMetaLoader.ts:299`)와 셀 저장 payload(`createSubGridCellChange`)가 완전히 동일함을 코드 경로로 확정. **FE 무결함** → 근본 원인은 data-craft-server 의 `subGridCell` 변경 처리 단계. no-thrash 정책에 따라 FE 코드 변경 없이 진단 증거를 이슈 #215 코멘트로 기록.
+
+### 영향 파일
+
+data-craft (i-dev):
+- `packages/fs-data-viewer/src/features/grid/hooks/useSubGrid.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/FsSubGrid.tsx`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridModel.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_sub/types.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/SubGridRow.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/types.ts`
+
+### 알려진 후속 (비차단 / 마스터 결정 필요)
+
+- **버그2 자동 생성 열 새로고침-후 소실 = 미해결 (BE 후속 필수)**: 최초 그룹 생성 시 자동 생성된 열의 셀 값이 새로고침 후 소실됨(사용자 추가 열은 영속). Phase 3 진단 결과 FE 는 자동/수동 열 모두 유효 서버 `columnField` 로 동일 payload 를 emit 함이 확정되어, 근본 원인은 data-craft-server 의 `subGridCell` 변경 저장 로직(자동 생성 열 식별/매핑 차이 추정). data-craft-server 후속 플랜 또는 핫픽스 필요. 증거 체인: 이슈 #215 Phase 3 진단 코멘트.
+
 ## v001.547.0
 
 > 통합일: 2026-05-29
