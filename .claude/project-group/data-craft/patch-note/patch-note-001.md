@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.560.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #215 (핫픽스1)
+
+내장 서브그리드 자동 생성 텍스트 열("항목")에 입력한 값이 브라우저 새로고침 후 사라지던 데이터 손실 결함의 **근본 수정**(BE). 근본 원인: 컬럼 생성 시 `data_column.column_type` 이 `viewer_type` 의 정규 매핑(`VIEWER_TYPE_TO_COLUMN_TYPE`)과 불일치(text 인데 1=숫자) → `data_values` BEFORE INSERT/UPDATE 트리거가 비숫자 입력을 `'Type error: value must be a number'` 로 거부 → `sp_bulk_manage_data_values` 전체 롤백 → 셀 값 미저장(POST 는 200 반환). DB(`sp_error_log` + 트리거 정의 + 실측)로 확정.
+
+### 코드 수정 (data-craft-server, i-dev `4d0dd4d`)
+- `src/services/dataViewerPost.service.ts` `autoCreateMasterSubGrid`:
+  - 기본 '항목' 열 `column_type: 1` → `VIEWER_TYPE_TO_COLUMN_TYPE['text']`(=2) — **핵심 수정**.
+  - 기본 'ID' 열 `column_type: 1` → `VIEWER_TYPE_TO_COLUMN_TYPE['rowId']`(=1, 동작 동일·매직넘버 제거).
+  - sharedConfig 경로 폴백 `?? 1` → `?? 2`(미지 viewer_type 을 안전한 텍스트로 기본화).
+- `src/services/viewer/viewer.subGrid.ts` `postSubGridViewer`: 클라이언트 제공 `col.columnType` 대신 `VIEWER_TYPE_TO_COLUMN_TYPE[col.viewerType]` 로 BE 권위화(동일 결함 잠재 경로 차단). lint PASS(0 errors).
+
+### 기존 데이터 복구 (별도 task-db-data 실행, i-dev `29d3bbe` `exec=dml-20260529162841-047efc`)
+- 마스터 실행. `data_column.column_type` 불일치 SAFE(→text) 6행 복구: 항목 ×3(8595/8598/8604), 수식/함수/타이머 ×3(4288/4289/4291) = 1→2. 복구 후 SAFE 불일치 0 확인.
+
+### 전수조사 결과 (마스터 지시)
+data-craft-server 의 모든 컬럼 생성 경로(메인 그리드 / 서브그리드 / 외부 뷰어 / 데이터 그룹·폼 생성 / 임포트) 점검:
+- 데이터 손실 유발(엄격 타입 오설정) 코드 결함은 `autoCreateMasterSubGrid` 1건 + 잠재 `postSubGridViewer` 1건 = **본 핫픽스로 모두 해소**.
+- 그 외 생성 경로는 `VIEWER_TYPE_TO_COLUMN_TYPE` 사용 또는 시스템 컬럼 고정 text(2)로 정상.
+
+### 알려진 후속 (비차단)
+- **외부 데이터 `addExternalColumn`(externalData.service.ts)**: 사용자 제공 `columnType` 을 직접 사용(viewer_type 페어 없는 별도 4-타입 도메인, `isValidExternalColumnType` 검증 통과). 현재 손실 사례 없음 — 미변경, 후속 정책 판단 대상.
+- **DB 잔존 lenient 불일치 4행**(rowId ×3 `6277/6340/6403`, date `8284` = `column_type:2`): text(2)는 모든 값 허용이라 **손실 없음**(버그의 무해한 역방향). narrowing(2→1/3) 은 기존 값 검증 위험으로 의도적 미적용 — 별도 판단 시에만.
+
 ## v001.559.0
 
 > 통합일: 2026-05-29
