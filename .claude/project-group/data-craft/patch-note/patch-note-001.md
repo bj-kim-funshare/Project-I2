@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.534.0
+
+> 통합일: 2026-05-29
+> 플랜 이슈: #198 핫픽스3
+
+### 페이즈 결과
+
+- **Phase 12 (핫픽스3)** (`2bdc0aaa`, data-craft): TypeSelectStep 드롭다운 옵션 패널이 다이얼로그 백드롭 뒤에 렌더되어 클릭 불가하던 결함 보강. 옵션 패널 zIndex 를 하드코딩 `9999` → `Z_INDEX.NESTED_MODAL_DROPDOWN` (12100) 으로 교체 (다이얼로그 본체 `NESTED_MODAL_CONTENT=12000` 위로 끌어올림). 옵션 버튼에 `onPointerDown stopPropagation` 추가하여 portal 외부 클릭으로 Radix DismissableLayer 가 다이얼로그를 닫는 현상 차단.
+
+### Root cause
+
+핫픽스2 에서 커스텀 드롭다운 도입 시 옵션 패널의 z-index 를 하드코딩 `9999` 로 설정. data-craft 다이얼로그 stacking 컨벤션의 `Z_INDEX.NESTED_MODAL_CONTENT` 는 12000 → 옵션 패널이 다이얼로그 백드롭 (= 백드롭 자체가 12000 부근) 보다 아래에 깔림. 결과: 옵션은 시각적으로 보이지만 백드롭이 클릭을 가로채 선택 불가.
+
+### 영향 파일
+
+**data-craft**:
+- `packages/fs-data-viewer/src/widgets/column-type-change-dialog/steps/TypeSelectStep.tsx`
+
+### 알려진 후속 (본 패치 범위 밖)
+
+- z-index 컨벤션 상수 (`Z_INDEX.NESTED_MODAL_DROPDOWN`) 가 다른 다이얼로그 내부 드롭다운 패턴에도 표준 적용되어 있는지 (드롭다운 stacking 일관성) 별도 점검 후속.
+
 ## v001.533.0
 
 > 통합일: 2026-05-29
