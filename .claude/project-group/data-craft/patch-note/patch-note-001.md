@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.569.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#222 (핫픽스1)
+> Work repo: data-craft-mobile (merge ab78868)
+
+### 핫픽스 결과
+
+마스터가 실제 data-craft 로고 PNG 제공 — 웹 `src/assets/auth-wordmark-mark.png` 와 byte-identical (14100 bytes, 1024×1024, alpha 채널 검정 다이어그램 로고). #222 Phase 2 가 lucide grid 아이콘으로 임시 처리했던 로고를 실제 브랜드 로고로 교체.
+
+- **핫픽스1 — 로그인 로고 실제 이미지 교체** (commit `e377c20`):
+  - `assets/images/auth-wordmark-mark.png` 신규 (웹과 동일 바이너리).
+  - `pubspec.yaml` flutter.assets 섹션 등록.
+  - `lib/screens/auth/widgets/auth_wordmark.dart`: `Icon(LucideIcons.grid)` → `Image.asset('assets/images/auth-wordmark-mark.png', width: size, height: size, color: authInk1, colorBlendMode: BlendMode.srcIn)`. 웹 Wordmark.tsx 의 CSS mask + `--auth-ink-1` 색칠을 Flutter `BlendMode.srcIn` 으로 동치 재현 (PNG alpha 채널 검정 → authInk1 색 입힘, 다이어그램 모양 유지). lucide import 제거.
+  - `flutter pub get` 결과 새 의존성 없어 pubspec.lock 무변경.
+
+### 검증 절차
+
+- **flutter run 재기동 권장** — asset 추가는 hot-reload 미반영 가능. ⌘R 만으로 부족 시 재기동.
+- 로그인 화면 로고 자리에 검정 다이어그램 마크 + "DataCraft" 텍스트 표시 확인 (검정 사각형 아님 — alpha 채널 확인됨).
+- 웹 :5173 wordmark 와 동일 형태 비교.
+
+### blocker / 후속 (advisor #2 advisory)
+
+- **AuthWordmark dark 분기 부재**: 현재 `authInk1` (light=#111113) const 고정 참조, Theme.brightness 분기 없음. dark 모드 진입 시 검정 배경 + 검정 로고 invisible 가능. dark 진입 UI 가 ME 앱설정에만 있어 즉시 회귀는 안 나나, dark 인증 화면 정합은 후속 (`feedback_data_craft_darkmode_color_architecture.md` 소스 var() 전환 패턴 참조).
+
+advisor 사후 PASS (advisory 1건 — dark 분기 후속, PNG alpha 채널 확인으로 srcIn 색칠 우려 해소됨).
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `assets/images/auth-wordmark-mark.png` (신규)
+  - `pubspec.yaml`
+  - `lib/screens/auth/widgets/auth_wordmark.dart`
+
 ## v001.568.0
 
 > 통합일: 2026-06-01
