@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.605.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스6)
+
+사용자 설정의 레코드 신규/편집 폼을 모달 대신 전체 화면으로 전환(마스터 요청). **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[FE] 사용자 설정 레코드 편집 전체 화면 전환** (`user_settings_screen.dart`): 레코드 신규/편집 폼을 `AlertDialog`(showDialog 모달)에서 `Navigator.push`(MaterialPageRoute) 전체 화면으로 전환. `_RecordDialog`→`_RecordScreen` 으로 변경, build 가 Scaffold(AppBar 타이틀=새 기록/기록 편집, 백 화살표=취소) 반환. 저장 버튼은 AppBar 액션 + 하단 전체폭 버튼 두 곳(저장 중 스피너). 저장 성공 시 `Navigator.pop(true)` 만 하고 성공 SnackBar 는 부모에서 1회 표시(팝된 컨텍스트 발화 방지), 목록 갱신은 `onSaved` 로 1회. 삭제 확인 다이얼로그는 의도대로 모달 유지. DynamicFormRenderer/검증/저장 로직 보존.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/me/settings/user_settings_screen.dart`
+
 ## v001.604.0
 
 > 통합일: 2026-06-01
