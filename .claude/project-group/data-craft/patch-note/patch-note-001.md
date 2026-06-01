@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.596.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스1)
+
+#230 모바일 영문 지원 플랜의 런타임 회귀 1건 + 마스터 추가 요청 1건. **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[버그] 하단 네비게이션 lucide lazy-link StackOverflow 수정** (`bottom_nav_bar.dart`): Phase 5 가 탭 라벨 다국어화를 위해 top-level `const _tabs` 를 런타임 함수 `_buildTabs(l10n)` 로 바꾼 결과, 거대한 `lucide_icons_flutter` 라이브러리의 첫 접근이 lazy 가 되어 Flutter web DDC(dev 컴파일러)가 빌드 도중 `initializeAndLinkLibrary` 스택 오버플로를 일으킴(하단 탭 영역 크래시). 아이콘·라우트·뱃지를 다시 eager `const _tabDefs` 구조로 복원(lucide 가 모듈 로드 시점 링크 — 원래 동작)하고 라벨만 build 시점 `_labelFor(l10n, route)` switch 로 해석(기존 nav* 키 재사용). **dev 서버 재기동 런타임 검증으로 예외 0건 확인** — `flutter analyze`/typecheck 로는 안 잡히는 DDC 런타임 전용 결함.
+- **[FE] 계정 정보 프로필 이미지 폴백** (`profile_image_section.dart`): 프로필 이미지가 없거나 네트워크 로드에 실패할 때 한 글자 이니셜(사용자명 첫 글자, 없으면 '?')로 폴백. 기존엔 URL 이 있으나 로드 실패 시 빈 원이 표시됐음. `_imageLoadFailed`+`_lastUrl` 상태 + `onBackgroundImageError` 추가(me_screen `_AvatarWidget` 패턴과 동일), URL 변경 시 폴백 플래그 리셋.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/main_shell/widgets/bottom_nav_bar.dart`
+- `lib/screens/me/settings/widgets/profile_image_section.dart`
+
 ## v001.595.0
 
 > 통합일: 2026-06-01
