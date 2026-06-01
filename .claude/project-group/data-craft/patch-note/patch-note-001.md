@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.575.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#227
+
+데이터 뷰어 5개 뷰(그리드·캘린더·칸반·간트·대시보드)의 사용자 관련 기능에서 선택 후보 목록에 탈퇴·추방·거부·미승인 사용자가 함께 노출되던 버그를 수정. 5개 뷰는 모두 `UserContext` 의 단일 `userList`(FE `useUserList()` → GET `/api/user`)를 공유하며, 그 출처인 BE 쿼리 `findUsersByCompanyId` 가 `company_id` 만으로 조회해 비활성 사용자까지 반환한 것이 근본 원인. BE 쿼리에 활성·승인 필터를 추가해 단일 출처에서 5개 뷰·3개 뷰어 패키지를 일괄 해결. (마스터 선택: BE 근원 수정 — 이미 탈퇴/추방자에게 배정돼 있던 과거 셀은 이름이 빈칸으로 표시되는 트레이드오프 승인.)
+
+### 페이즈 결과
+
+- **Phase 1** (`9222eea`, fix): `data-craft-server/src/models/user.model.ts` `findUsersByCompanyId` 쿼리의 WHERE 절을 `WHERE company_id = ?` → `WHERE company_id = ? AND is_approved = 1 AND is_active = 1 AND is_deleted = 0` 로 수정. 탈퇴/거부(`is_deleted=1`)·추방(`is_active=0`)·미승인(`is_approved=0`) 사용자를 제외. `is_owner` 필터는 추가하지 않아 회사 오너는 후보로 유지(employee-management 용 `findApprovedUsersByCompanyId` 와의 의도된 차이). SELECT 컬럼·파라미터·반환 매핑·`ORDER BY` 무변경, +1/-1 단일 파일. lint 게이트(`pnpm lint`) PASS.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/models/user.model.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm lint`): exit 0 (0 errors, 1 warning — pre-existing 무관).
+- advisor 계획 검증(#1)·완료 검증(#2): 5-perspective 전 항목 PASS (Evidence: 모든 단계 실제 코드 근거; Command Fulfillment: 쿼리 변경 완료, 행동 확인은 PENDING 게이트 수동 검증 인계).
+- 호출 체인 단일성 검증: `findUsersByCompanyId` → 유일 호출자 `getUsersByCompanyId`(`user.service.ts`) → 유일 호출자 GET `/api/user` 컨트롤러. model 레이어 필터가 다른 기능에 영향 없음(grep 확인). FE 소비자도 `useUserList()` 단일 — main/sub/external 3개 뷰어 위젯뿐(grep 확인).
+- 비차단 발견: `user.is_active` 컬럼이 추적 스키마(`db.sql/`)에 부재(schema-drift) — 컬럼은 라이브에 존재(#148 토글 기능 가동 중). 기록만; 별도 `task-db-structure` 로 스키마 정합은 마스터 재량.
+- 미수행(PENDING 게이트 인계): 마스터 수동 검증 — ① dev `/api/user` 응답에 비활성/탈퇴/거부 사용자 제외 확인, ② 5개 뷰 배정 피커/셀에서 비활성 미노출·오너/정상 사용자 정상 노출, ③ `is_active` 백필 전제(기존 승인자/오너가 `is_active=1`) 확인 — 아닐 시 정상 사용자 후보 누락 회귀 가능.
+
 ## v001.574.0
 
 > 통합일: 2026-06-01
