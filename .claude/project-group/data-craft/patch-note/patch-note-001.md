@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.575.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #228
+
+데이터 뷰어 → **행 연결 타입 셀** → 디자인 모드 → **행 연결 그룹 편집 모달**(`RowLinkGroupManageDialog`)에서 행 연결 기능의 **열 제목**을 변경 후 저장하면 "허용되지 않은 컬럼 속성: title" 저장오류가 뜨고 제목이 저장되지 않던 버그를 수정(QA 보고, 100% 재현 확인). 원인은 이 모달의 열제목 `onCommit` 핸들러가 잘못된 변경 헬퍼 `createColumnPropertyChange(columnField, 'title', v)` 를 사용한 것 — 이 헬퍼는 `{ field:'columnProperty', property:'title', value }` 페이로드를 만들고, 서버 `processColumnPut` 은 `title` 을 컬럼 속성 SQL-인젝션 화이트리스트(`COLUMN_SETTING_ALLOWED_FIELDS`)와 대조하는데 `title` 이 화이트리스트에 없어 throw → 트랜잭션 롤백 → 저장 실패로 이어졌다. 열제목은 별도 전용 헬퍼 `createColumnTitleChange` 가 `{ field:'columnTitle', title }` 형식으로 보내 서버의 `updateColumnNameViaSP`(SP `sp_manage_data_group`, `column_type` 보존) 경로로 처리되어야 정상이며, 일반 열 메뉴는 이미 올바른 헬퍼를 쓰고 있었다 — 본 모달만의 회귀. 같은 모달의 단위·너비·정렬·고정 필드는 동일 generic 헬퍼를 쓰지만 snake_case 변환 결과가 모두 화이트리스트에 있어 정상 동작했고, 오직 열제목만 깨져 있어 QA 증상과 정확히 일치했다.
+
+### 페이즈 결과
+
+- **Phase 1** (`b34d8329`, fix): `RowLinkGroupManageDialog.tsx` import 블록에 `createColumnTitleChange` 추가 + 열제목 `onCommit` 의 `createColumnPropertyChange(col.columnField, 'title', v)` → `createColumnTitleChange(col.columnField, v)` 교체. 서버/DB 무변경, FE 단일 파일 +2/-1. unit·width·enableSorting·frozen 핸들러는 미수정. lint 게이트(`pnpm typecheck:all && pnpm lint`) PASS(오류 0, 워크트리 패키지 dist 빌드 선행).
+
+### 영향 파일
+
+- `data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+
 ## v001.574.0
 
 > 통합일: 2026-06-01
