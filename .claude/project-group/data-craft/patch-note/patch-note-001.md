@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.585.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#227
+
+[#227 핫픽스1] v001.576.0(Phase 1)의 `/api/user` 활성·승인 필터가 **회사 오너(is_owner)** 를 후보 목록에서 탈락시키던 회귀를 수정(마스터 보고: "왜 오너는 안 나와?"). 근본 원인은 오너의 `is_active` 컬럼이 어느 코드 경로에서도 설정되지 않는다는 구조 — 사용자 INSERT 가 `is_active` 를 넣지 않고(컬럼 기본값에 의존), 활성/비활성 토글 UI 는 오너를 `is_owner = 0` 으로 제외하므로 오너의 `is_active` 는 영구히 기본값에 고정된다. 따라서 Phase 1 의 `is_active = 1` 게이트에서 오너가 탈락했다. 오너는 회사 루트 계정으로 탈퇴·추방·거부 대상이 될 수 없으므로 후보에 무조건 포함되어야 한다.
+
+### 페이즈 결과
+
+- **Phase 2 (핫픽스1)** (`120e260`, fix): `data-craft-server/src/models/user.model.ts` `findUsersByCompanyId` 의 WHERE 절을 `WHERE company_id = ? AND is_approved = 1 AND is_active = 1 AND is_deleted = 0` → `WHERE company_id = ? AND is_deleted = 0 AND (is_owner = 1 OR (is_approved = 1 AND is_active = 1))` 로 변경. 오너는 `is_deleted = 0` 만 만족하면 포함(탈퇴 시 제외), 일반 사용자는 기존 활성·승인 게이트 유지. `is_owner = 1` 분기가 문제의 `is_active` 컬럼을 우회하므로 오너의 실제 `is_active` 값과 무관하게 항상 노출(우회가 아닌 정합 해결). SELECT·파라미터·`ORDER BY` 무변경, +1/-1 단일 파일. lint 게이트(`pnpm lint`) PASS(오류 0; fresh 워크트리라 `pnpm install` 선행).
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/models/user.model.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm lint`): exit 0 (0 errors).
+- advisor 완료 검증(#2, 핫픽스): 5-perspective 전 항목 PASS (Evidence: 오너 생성 코드 `isApproved: true` 확인 + `is_active` 미설정 구조 분석 근거; Command Fulfillment: 쿼리 수정 완료, 오너 노출 행동 확인은 PENDING 게이트 수동 검증 인계).
+- 진단 근거: 오너는 `createUser`(auth.service.ts:235-236)에서 `isOwner: true, isApproved: true` 로 생성 → `is_approved` 는 culprit 아님. INSERT(user.model.ts:85)가 `is_active` 미포함 → 컬럼 기본값 고정이 원인.
+- 미수행(PENDING 게이트 인계): dev 환경에서 데이터 뷰어 후보 목록에 **오너가 정상 노출** 되고, 탈퇴·추방·거부·미승인 사용자는 여전히 제외되는지 마스터 수동 검증.
+
 ## v001.584.0
 
 > 통합일: 2026-06-01
