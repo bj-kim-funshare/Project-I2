@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.591.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스4)
+
+v001.590.0(핫픽스3) 후속 마스터 시각 핫픽스 2건. 기능 무변경.
+
+### 변경 내용
+
+- **속성 카드 열 단위 ↔ 기본 값 순서 교체** (`cb6c8e90`): `groupItems` 의 `PROPERTY_ORDER` 에서 unit/defaultValue 순위를 교환(defaultValue 1, unit 2). 최종 속성 순서: 너비 → 기본 값 → 단위 → 단위 위치. 그리드 팝오버 + 캘린더·칸반·간트 패널 공통 반영(둘 다 `groupItems.properties` 경유).
+- **키보드 리턴 아이콘 연한 회색** (`b6b2fc48`): 텍스트 필드(`BareInputB`) 우측 `CornerDownLeft` 리턴 아이콘 색을 `text-primary`(파랑) → `text-muted-foreground/60`(연한 회색, CSS 변수 기반 다크모드 안전)으로 변경(활성/비활성 동일). 로딩 스피너(`Loader2`) 색은 무변경.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/groupItems.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/BareInputB.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+
 ## v001.590.0
 
 > 통합일: 2026-06-01
