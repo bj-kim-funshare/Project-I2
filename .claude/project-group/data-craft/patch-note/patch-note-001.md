@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.571.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220
+> Work repo: data-craft-server (merge abfc060)
+
+### 개요 — DEV-1 앱 계층 MySQL2 → PostgreSQL(pg) 전면 전환
+
+Roadmap-6 DEV-1. data-craft-server 데이터접근계층을 `mysql2` → `pg`(node-postgres)로 전면 전환하고 로컬 PostgreSQL `data_craft_dev`(이미 구조+데이터 적재 완료) 대상 dev 검증. **timescale 없이 plain psql 동작 완성**이 목표. 라이브 개발 서비스(원격 MySQL)·실서비스는 무영향 — pg는 `DB_ENGINE` 토글로 additive 도입(기본값 `mysql`이라 미플립 배포는 구조 무변화), 실 `.env` 미수정. 라이브 컷오버·psql 배포위치·Timescale(DEV-2)·prod는 비범위(후속).
+
+### 페이즈 결과
+
+- **Phase 1 — pg 드라이버 + 엔진 토글 facade + 어댑터**: `pg`/`@types/pg` 추가(mysql2 보존), `DB_ENGINE`+`PG_*` 설정, `pgAdapter.ts`(`?`→`$n` 상태머신 번역 + `PgConnectionAdapter`로 `[rows,fields]`·트랜잭션 API 미러), `database.ts` 엔진 분기 + pg 타입파서. 이로써 ~500 placeholder·~125 destructuring 사이트 호출형태 무변경.
+- **Phase 2 — INSERT → RETURNING**: mysql2 `insertId` 소비 21사이트를 `RETURNING <pk>`로 전환(비표준 PK 정확 지정). `affectedRows`는 어댑터가 pg `rowCount`로 중앙 부착.
+- **Phase 3 — upsert → ON CONFLICT**: `ON DUPLICATE KEY UPDATE`+`VALUES()`→`ON CONFLICT DO UPDATE`+`EXCLUDED`, `INSERT IGNORE`→`ON CONFLICT DO NOTHING`. 부분 유니크 술어 반영.
+- **Phase 4 — 토큰 방언 스윕**: 백틱→큰따옴표, `REGEXP`→`~*`, `JSON_EXTRACT`→`->>`, 날짜함수(`make_interval`/`EXTRACT`/`to_char`), `IN (?)`→`= ANY(?)`, jsonb 자동파싱 가드.
+- **Phase 5~8 — EAV 구조 방언**: `value_data`가 text임을 실측 확인 후 `CAST(.. AS CHAR)` 제거(pg CHAR=char(1) 절단)·숫자비교 정규식 가드·`CAST(.. AS UNSIGNED)`→`::bigint`·multi-table `DELETE`→pg 단일/`USING`·`CREATE TEMP TABLE`·pivotBuilder 식별자 큰따옴표. whereclause/aggregation/paging/stragglers 전수.
+- **Phase 9 — 저장 프로시저 8종**: psql `RETURNS jsonb` FUNCTION으로 이전됨 → `CALL sp_x(?)`→`SELECT sp_x(?::jsonb) AS result` 단일 jsonb 파싱. EAV 래퍼(viewer/externalData)·relation 래퍼(+매퍼 pg 반환 정합, NOT_FOUND 멱등 처리)·fire-forget·직접 bulk 8사이트.
+- **Phase 10 — promotion 감사 컨텍스트 레일**: `setPromotionAuditContext`(SET LOCAL app.current_admin_id) + 제약 문서화. 앱은 promotion 카탈로그 DML 0건이라 런타임 무변화(향후 admin CRUD용).
+- **Phase 11 — 검증 + 런타임 결함 3건 수정**: 빌드/타입체크/lint 0 + 로컬 psql 실동작 검증. **tsc/lint가 못 잡은 드라이버-계약 런타임 결함 3건 포착·수정**:
+  - **11a** pg 예약어 `user` 비인용(→`CURRENT_USER`로 오해석) 38건 `"user"` 처리.
+  - **11b** timestamp(1114) 파서 raw 문자열→Date 복원(mysql2 `+09:00` 계약, `.toISOString()` 26곳 크래시 방지).
+  - **11c** `LIKE ESCAPE '\\'`(2자, pg invalid escape string)→`'\'`(1자) 32건 — 모든 검색/필터 크래시 방지.
+- **검증 결과**: 정적 게이트 build/lint/tsc 0. 로컬 psql 런타임 5/5 PASS(실 whereclause 빌더→피벗·sp_bulk 성공+타입검증·timestamp Date 계약) + relation 프로시저 remap 4/4 PASS(`relationId` number·NOT_FOUND→SUCCESS). 리포트: `docs/migration/app-transition-verify.md`.
+
+### 영향 파일
+
+data-craft-server: 63 파일(+1063/-558). 핵심:
+- `src/config/`: `database.ts`(엔진 facade+타입파서), `pgAdapter.ts`(신규), `constant.ts`, `envValidator.ts`
+- `src/models/`: viewer/builder/user/roles/promotion/relation/storage/file/notification/paymentHistory/dataLink/refreshToken/webhook/user-preference/email-verification + paging/* + aggregation/* + viewerPaging.whereclause + utils/pivotBuilder
+- `src/services/`: relation/promotion/auth/user/resetPassword/billing*/integrityCheck/dataViewer*/viewer/* + builder/*
+- `src/middlewares/`: auth.middleware
+- `src/routes/`: file.ts, files.ts
+- `package.json`(pg 의존성), `.env.example`(DB_ENGINE/PG_* additive)
+- `docs/migration/`: mysql-to-pg-mapping.md(§9 promotion 감사), app-transition-verify.md(신규)
+
 ## v001.570.0
 
 > 통합일: 2026-06-01
