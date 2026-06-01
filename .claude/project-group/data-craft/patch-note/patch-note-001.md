@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.595.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스6)
+
+마스터 버그 핫픽스: 열 이동(재정렬) 저장 실패(PostgreSQL 타입 오류). **BE 전용(data-craft-server).** 핫픽스5(boolean→smallint)와 동일 MySQL→pg 엄격성 결함 클래스.
+
+### 변경 내용
+
+- **[BE 버그] seq 재정렬 CASE THEN ::int 캐스트** (`bafc63a`): 열 이동 시 `UPDATE ... SET seq = CASE column_id WHEN ? THEN ? END` 배치에서 `column "seq" is of type integer but expression is of type text` 런타임 오류. pg 는 CASE THEN 파라미터 타입을 문맥 없이 `text` 로 추론 → integer `seq` 대입 실패(MySQL 은 묵시 변환으로 통과). THEN 플레이스홀더를 `WHEN ? THEN ?::int` 로 캐스트하여 CASE 결과를 integer 로 고정. placeholder 변환기가 `?::int` → `$n::int` 로 보존함을 시뮬레이션 확인.
+- **동일 패턴 일괄 수정**: 동일한 `seq = CASE … WHEN ? THEN ?` 결함이 3개 재정렬 핸들러에 존재 — 열 이동(`change.columnSettings.ts`, 보고된 건) + 행 이동(`change.rowSettings.ts`) + 서브그리드 행 이동(`change.subGridRow.ts`). 동일 결함 클래스로 3곳 모두 `::int` 캐스트 적용. `services/` 전체 grep 결과 동일 패턴 추가 발견 없음(이 3곳이 전부) — 결함 클래스 완전 봉쇄.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/services/dataViewerChange/change.columnSettings.ts`
+- `src/services/dataViewerChange/change.rowSettings.ts`
+- `src/services/dataViewerChange/change.subGridRow.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm lint`): exit 0 (0 errors).
+- placeholder 변환 시뮬레이션: `WHEN ? THEN ?::int` → `WHEN $1 THEN $2::int` (유효 pg).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+- 미수행(마스터 수동 검증): pg 에서 ① 열 드래그 이동 + 맨앞/맨뒤 이동 저장 → seq 오류 없이 영속, ② 행 이동·서브그리드 행 이동도 동일 확인. (lint/빌드 검증 불가한 DB 계약 런타임 픽스)
+
 ## v001.594.0
 
 > 통합일: 2026-06-01
