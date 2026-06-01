@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.572.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223
+
+데이터 뷰어 **열 메뉴(column menu)** 를 디자인팀 시안 **B안(인스펙터/밀집형)** 으로 시각 재디자인. 기능·조건부 로직 100% 보존, 디자인만 교체. 대상: 그리드뷰 디자인 모드 열 헤더 팝오버 + 캘린더·칸반·간트 디자인 모드 "열 정보 편집" 상세 패널. (대시보드는 열 메뉴 부재로 제외 — 마스터 확정.)
+
+### 페이즈 결과
+
+- **Phase 1** (`254cb398`): 열 메뉴 아이템 타입에 `ColumnMenuRole` 유니온(23 role) + 옵셔널 필드(`role`/`columnId`/`typeName`/`typeId`) 추가. 두 팩토리(`menuItems.ts`·`createViewColumnMenuItems.ts`)의 모든 push 항목에 semantic role 태깅(unfreeze 는 frozen 방향 동적 결정). 기존 렌더러는 새 필드 무시 → 런타임 동작 byte-identical.
+- **Phase 2** (`0ce93f60` + 핫픽스 `7b6620ab`): B안 프레젠테이션 atom 11개를 신규 `column-menu-b/` 폴더에 추가(CardB·Caps·InlineFieldB·BareInputB·SegB·SwitchChipB·IconBtnB·NavRowB·TypeBadgeB·iconMap·index). 전부 Tailwind 시맨틱 토큰(다크모드 안전), 아이콘 lucide 매핑. 핫픽스: React Compiler "cannot create components during render" 규칙 대응 — 아이콘을 `MENU_ICON_MAP[key]` 값 참조로 전환.
+- **Phase 3** (`713621aa`): B안 그룹핑 레이아웃 `ColumnMenuVariantB` + 순수 헬퍼 `groupItems`(9 버킷, `never` exhaustive guard) + 입력 포팅 래퍼(`BInputField`·`BNumberField`·`BStepperField`). `BInputField` 는 기존 `InputItem` 의 이중 모드(패널=로컬+`onCommit`, 드롭다운=controlled+`onChange`+Enter 디스패치)를 정확히 포팅. 위치·정렬은 freeze/move role 을 4 셀로 해석(빈 버킷 숨김).
+- **Phase 4** (`11720de9`): 그리드 팝오버 `ColumnMenuDropdown` 을 B안 shell(w-392/rounded-2xl/flex-col)+`ColumnMenuVariantB` 로 배선, `onClose` → `setColumnMenuOpen(null)`. portal/positioning 무변경.
+- **Phase 5** (`41636327`): 캘린더·칸반·간트 `ColumnDetailPanel` 을 `<ColumnMenuVariantB isInPanel/>` 로 교체(자체 회색 헤더 + per-item 루프 -44줄 제거). 다이얼로그 외곽 셸·뷰 팩토리 무변경.
+- **Phase 6** (`3accc10f`): 미사용 `getMenuIcon` 제거(-5줄) + 다크모드 토큰 감사(raw hex/폰트 하드코드 0 확인).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/lib/gridMenuTypes.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-data-viewer/src/features/column-settings/createViewColumnMenuItems.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/ColumnMenuDropdown.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx`
+- `packages/fs-data-viewer/src/widgets/view-column-manager/ColumnDetailPanel.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/` (신규 16파일: CardB, Caps, InlineFieldB, BareInputB, SegB, SwitchChipB, IconBtnB, NavRowB, TypeBadgeB, iconMap, index, groupItems, ColumnMenuVariantB, BInputField, BNumberField, BStepperField)
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): 6 페이즈 전부 exit 0 (0 errors; 35 warnings 는 무관 파일 pre-existing).
+- advisor 계획 검증(#1)·완료 검증(#2): 5-perspective 전 항목 PASS.
+- Surface B 실제 렌더(의도): 열 제목 → 속성(단위/단위 위치/기본값/진행도 단계) → 표시·동작(고유값만 허용) → nav(열 설정 편집/열 타입 변경) → 삭제. width·sort·rowGroup·kanban·freeze·move 는 뷰 팩토리 미방출(빈 그룹 숨김).
+- 미수행(PENDING 게이트 인계): 브라우저 런타임 시각 스모크 — 그리드 팝오버/패널 클릭스루 + 다크모드 토글 육안 확인은 마스터 수동 검증 권장(`fs_data_viewer` 는 src alias → 빌드 불필요, 하드 리프레시).
+
 ## v001.571.0
 
 > 통합일: 2026-06-01
