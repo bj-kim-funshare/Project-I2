@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.593.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230
+
+data-craft-mobile(Flutter) 영문 지원 전면 구현 — 앱 전체를 한국어/영어 양국어로 국제화하고 앱 설정 언어 토글이 실제 동작하도록 배선. 기존 "i18n 준비 중" placeholder 제거. **모바일 단독 저장소(data-craft-mobile), BE/DB 무수정.**
+
+### 페이즈 결과
+
+- **Phase 1** (`582c593`): Flutter 공식 i18n 인프라 구축(`flutter_localizations`+`intl`+gen-l10n). `l10n.yaml`(synthetic-package: false, output-dir `lib/l10n/gen` gitignore), `app_ko.arb`(template)/`app_en.arb` 생성. `main()` async 전환 → 저장 로케일 로드 후 `Intl.defaultLocale` 초기화, MaterialApp 에 localizationsDelegates/supportedLocales/locale(themeControllerProvider watch) 연결. `setLocale()` 에서 `Intl.defaultLocale` 동시 갱신. 앱 설정 화면 "준비 중" 게이트(subtitle+SnackBar) 제거 → English 정상 전환, 화면 전체 국제화.
+- **Phase 2** (`0af3fdc`): 인증 화면군(signin/signup common·company, forgot_password) + auth 위젯 국제화. `auth*` 키, 동적 보간 2건 ARB placeholder 처리. 웹 `auth.*` 영문 카피 재사용.
+- **Phase 3** (`0950830`): ME 화면 클러스터 1(프로필 카드·메뉴·로그아웃·계정 정보·권한 관리·사용자 관리 + 위젯 13종) 국제화. 한글 127건 치환, me*/account*/permission*/employee* 등 126키.
+- **Phase 4** (`2b7cdb6`): ME 클러스터 2(플랜 관리·사용자 설정·동적 폼) 국제화 54키. 통화 placeholder(`{amount}원`/`₩{amount}`). 권한 라벨 `kPermissionKeyLabels` const 맵 → AppLocalizations 스위치 헬퍼 전환(영문 모드 권한 라벨 영문화).
+- **Phase 5** (`bdf97f0`): 인박스·셸/내비·플레이스홀더 국제화 31키. 상대시간을 `lib/util/relative_time.dart` 헬퍼 + ARB ICU 복수형(en "{count} minutes ago"/ko "{count}분 전")으로 전환. notification_type_meta 라벨·bottom_nav 탭 const→l10n. 부수 버그 수정: inbox 타이틀 하드코딩 'Inbox' → 한글 모드 '알림' 정상.
+- **Phase 6** (`bd9863d`): 마지막 잔존 한글 제거(완결성). `auth_api.dart` 의 throw 한글 메시지를 typed `MissingAuthDataException` + l10n 헬퍼로 전환, signin 화면 2종 적용. **앱 전역 user-facing 한글 string literal 0건 달성**(한글-only·영문-only 양방향 검증 완료).
+
+### 검증
+- 메인 세션 독립 검증: `flutter analyze` 0 에러/0 경고(잔존 9건은 사전 info-level deprecation), 앱 전역 한글 string literal 0건, 하드코딩 영문 Text() 리터럴 0건, ko/en ARB 키 parity 280/280.
+- advisor 계획/완료 PASS.
+
+### 후속 (서버 출처 — BE/DB 무수정 경계)
+- 알림 본문·사용자 작성 동적 폼 라벨/옵션·플랜명·결제 주문명 등 API 출처 텍스트는 원어 유지. 완전 양국어화는 BE i18n 후속 플랜 필요.
+- 플랜 관리 절대 날짜 포맷(yyyy.MM.dd) intl locale-aware 전환은 미적용(상대시간만 전환).
+- dev.md mobile `lint_command`(pnpm typecheck)는 Flutter 부적합 → `flutter analyze` 전환을 `/group-policy` 후속 권장.
+
+### 영향 파일
+data-craft-mobile:
+- 신규: `l10n.yaml`, `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb`, `lib/util/relative_time.dart`
+- 수정: `pubspec.yaml`, `lib/main.dart`, `lib/state/theme_controller.dart`, `lib/api/auth_api.dart`, `lib/api/dto/permission.dart`, `lib/screens/auth/*`(5 화면 + 위젯), `lib/screens/me/*`(me_screen + 위젯 + settings 화면 6종 + settings/widgets 다수), `lib/screens/inbox/*`, `lib/screens/main_shell*`, `lib/screens/{home,dm,page}/*_placeholder.dart`
+
 ## v001.592.0
 
 > 통합일: 2026-06-01
