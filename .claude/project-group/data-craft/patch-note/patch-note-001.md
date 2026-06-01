@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.600.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #234
+
+데이터 뷰어 → 대시보드 뷰 → 사용자 보드 위젯에서, 위젯 영역이 작아 페이지네이션 화살표가 나타날 때 디자인(설정) 모드의 좌측 상단 드래그 핸들이 가려져 위젯 위치 이동이 막히던 버그 수정. **data-craft 단독(FE 패키지 fs-data-viewer), BE/DB 무수정.**
+
+### 페이즈 결과
+
+- **Phase 1** (fix): 페이지네이션 `ArrowButton`(`PaginatedUserGrid.tsx`) 의 `inlineStyle` 맵을 기존 우상단 클리어런스 패턴과 대칭으로 보강. 위(↑) 화살표에 `left: 40` 추가(상단 바를 좌우 40px 안쪽으로 들여 좌측 드래그 핸들 + 우측 설정 아이콘 모두 회피), 좌(◀) 화살표에 `top: 40` 추가(우▶ 화살표와 대칭, 좌측 상단 핸들 회피). 화살표와 드래그 핸들이 공간적으로 분리되어 동일 `z-10` 에서도 `onMouseDown` 가로채기가 해소됨. `HOTFIX-003 (#234)` 주석 문서화. `git show 83ddf61e` diff 직접 검증 — 아래(↓)/우(▶) 화살표·`pos` 맵·JSX 구조 무변경 확인. 워크트리 fresh 상태로 sibling 패키지 dist 부재 → `pnpm build:packages`(10/10 성공) 선행 후 lint gate `pnpm typecheck:all && pnpm lint` exit 0 (0 errors).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/user-insight/PaginatedUserGrid.tsx`
+
 ## v001.599.0
 
 > 통합일: 2026-06-01
