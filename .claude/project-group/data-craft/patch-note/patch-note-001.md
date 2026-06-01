@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.601.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #231
+
+#220(본작업+핫픽스6건)으로 mysql2→pg 앱 전환의 9종 런타임 결함을 잡았으나 전부 "엔드포인트를 써봐야 터지는" 반응형 발견이었다. 본 작업은 dev psql(`DB_ENGINE=postgres`, `127.0.0.1:5432 data_craft_dev`) 잔여 결함을 **정적 전수 + 전 엔드포인트 동적 실행**으로 선제 색출·해결. 결과: **pg/SQL 드라이버 크래시 잔여 0건 입증** + **Cat13 silent-wrong(숫자 컬럼 사전순 정렬) 15사이트 numeric 정렬 복원**. **data-craft-server 단독, 라이브 dev(원격 MySQL)·실서비스 무영향(디스포저블 클론 DB 검증), 실 `.env` 무수정.**
+
+### 페이즈 결과
+
+- **Phase 1** (docs): `docs/migration/psql-audit.md` audit 문서 골격 + 정적 전수 결과 확정. 크래시급 11카테고리(예약어 비인용/camelCase 별칭 정의·참조/MySQL전용함수/CAST AS CHAR/미가드 SUM·AVG(text)/LIKE ESCAPE 2자/ON DUPLICATE·CALL·백틱/문자열 비교) **전부 0건** — #220 9종 결함 클래스 소진 확인. silent-wrong 후보 14건(text value_data/pivot `ORDER BY` 사전순) 표 기록.
+- **Phase 2** (test): `test/psql-audit/` 동적 검증 하네스 구축 — env 프리앰블(import 전 주입) + 클론 DB 부트스트랩(활성커넥션 사전점검 → `CREATE DATABASE data_craft_psql_audit TEMPLATE data_craft_dev`) + 포트 18000 앱 기동 + owner/일반 토큰(`createAccessToken`) + fixture 디스커버리 + 라우트 워커(Express stack) + crash 분류기(HTTP 5xx **또는** 응답바디 pg 에러토큰 — HTTP200 `{error}` 포함) + teardown DROP. 스모크 PASS. lint 1사이클(require→await import).
+- **Phase 3** (test): 전 엔드포인트 동적 실행 — 210 라우트 × 2 사용자(owner 6/regular 37) = 420 레코드, 클론 대상(enterprise plan elevation 으로 plan-gated 커버). **독립 grep 으로 pg 에러토큰 0 매칭 — SQL 크래시 0건 확인**. crash 3건은 전부 비-SQL(TOSS 웹훅 시크릿 미설정 ×2, SSE long-poll 타임아웃). audit 문서 §4 기입.
+- **Phase 4** (fix): Cat13 14사이트를 **column_type=1(숫자) 한정** numeric `ORDER BY` 로 복원. 신규 헬퍼 2종(`queryColumnTypes`, `buildNumericAwareOrderExpr` — `(CASE WHEN expr ~ '^-?[0-9]+(\.[0-9]+)?$' THEN expr::numeric END) dir NULLS LAST, expr dir`). 텍스트(2)·날짜(3, YYYY-MM-DD 사전순=연대순)·불리언(4) 무변경. 원시 SQL 증명: OLD `10,100,2,9`(버그) → NEW `2,9,10,100`(수치순). tsc/lint/build 0.
+- **Phase 5** (test): 전 엔드포인트 동적 회귀 재실행(420 레코드) — pg 크래시 0 재확인(독립 grep), 신규 회귀 0. 정적 재스캔으로 헬퍼 15사이트 검증 중 model-스코프 누락분 1건 발견(다음 페이즈).
+- **Phase 6** (fix): Phase 5 재확인이 드러낸 **15번째 Cat13 사이트** — `src/services/viewer/viewer.connection.ts:52`(입력 폼 연결 타입 드롭다운 후보 정렬). `SELECT DISTINCT` 서브쿼리 래핑으로 pg DISTINCT+ORDER BY 제약 해소 후 헬퍼 적용. 클론 런타임 실측 수치순 확인. silent-wrong 잔여 **0건(15/15)**.
+- **Phase 7** (test): 증거 강화 — Cat13 fix 의 **실 HTTP 엔드포인트 증명**(`GET /api/viewer/data/:groupId/column/:columnId/values`, 구별 데이터 `2,9,10,100` 클론 삽입 후 호출 → 응답 수치순). OID 1700 numeric→string parity 실증(`decimalNumbers`/`supportBigNumbers` 미설정 → mysql2 기본 string 반환과 동일, benign 확정).
+
+### 잔여(수용·범위 밖)
+- 비-SQL crash 3건(TOSS 웹훅 시크릿 미설정 — 인프라 config / SSE 타임아웃 — 정상 long-poll): pg 무관.
+- benign latent: OID 1700 numeric→string(mysql2 동일 parity), `??` passthrough(현재 미사용), `storage.model.ts:42` `sp_replace_file_value_data` `AS result` 부재(호출부 반환값 미참조 — 무해).
+- 범위 밖: `GET /api/roles` 403(forceIncludeAuth 미들웨어 순서 — pg 무관 설계 이슈, 마스터 인지). sub-grid 8 라우트 동적 미실행(parentRowField fixture 미수집 — 단 subGrid.ts Cat13 6사이트는 grid 와 정적 동형 수정 + 원시 SQL 증명으로 커버).
+
+### 최종 결론
+dev psql 전 데이터 접근이 **(a) 크래시 0** + **(b) 숫자 컬럼 numeric 정렬 복원으로 MySQL 동등성/값정확성 확보**. audit 문서 `docs/migration/psql-audit.md` 에 전 발견·수정·잔여 기록.
+
+### 영향 파일
+
+data-craft-server:
+- `src/models/aggregation/aggregation.helpers.ts` (신규 헬퍼 `queryColumnTypes`·`buildNumericAwareOrderExpr`)
+- `src/models/aggregation/aggregation.simple.ts`, `src/models/paging/paging.grid.ts`, `src/models/paging/paging.grouped.ts`, `src/models/paging/paging.subGrid.ts`, `src/services/viewer/viewer.connection.ts` (Cat13 15사이트 numeric ORDER BY)
+- `docs/migration/psql-audit.md` (신규 — 전수조사 audit 문서)
+- `test/psql-audit/*` (신규 — 동적 검증 하네스 + Cat13 증명 스크립트)
+
 ## v001.600.0
 
 > 통합일: 2026-06-01
