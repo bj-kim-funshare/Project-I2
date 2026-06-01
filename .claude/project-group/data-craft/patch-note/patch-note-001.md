@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.590.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스3)
+
+v001.589.0(핫픽스2) 후속 마스터 시각 핫픽스. 기능 무변경, 속성 카드 행 순서만 조정.
+
+### 변경 내용
+
+- **속성 카드 단위 위치 행 재배치** (`cfee225b`): 속성 카드의 행 순서를 너비 → 단위 → **단위 위치** → 기본 값 에서 너비 → 단위 → 기본 값 → **단위 위치** 로 변경(단위 위치를 기본 값 아래로). `groupItems` 의 `result.properties` 에 `PROPERTY_ORDER`(width 0·unit 1·defaultValue 2·unitPosition 3·progressImportance 4) 기반 안정 정렬을 `return` 직전 1회 적용. 팩토리·핸들러·다른 버킷 무변경, 그리드 팝오버 + 캘린더·칸반·간트 패널 공통 반영.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/groupItems.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+
 ## v001.589.0
 
 > 통합일: 2026-06-01
