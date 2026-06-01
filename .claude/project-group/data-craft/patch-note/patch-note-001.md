@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.573.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#224
+
+데이터 뷰어 → 대시보드 뷰 → **게이지 위젯**에서 **선형(linear)·반원(semicircle)** 형태를 쓸 때 사용자가 지정한 **단위(unit)** 가 보드·미리보기 어디에도 표시되지 않던 버그를 수정. 원형(circle) 게이지는 이미 단위를 정상 표시하고 있었으나 나머지 두 변형의 렌더 코드에 단위 출력이 누락돼 있었음. 보드와 미리보기가 동일 `GaugeWidget` 컴포넌트를 공유하므로 단일 수정으로 양쪽 동시 해결.
+
+### 페이즈 결과
+
+- **Phase 1** (`2cd508a`, fix): `GaugeWidget.tsx` 의 반원 중앙 값 span 과 선형 가운데 값 span 에, 원형 변형이 쓰는 `config.unitPosition`/`config.unit` 조건부 단위 렌더링을 이식. 단위는 각 변형의 **기존 값 span 안쪽 inline 자식**으로 삽입(별도 sibling 미사용)해 반원의 `-translate-x-1/2` 중앙 정렬과 선형의 `justify-between` min/max 레이아웃을 보존. 반원 13px·선형 11px 의 보조 텍스트(`colors.textSecondary`)로 값보다 작게 배치, `config.unit` 미입력 시 미표시하는 기존 동작 유지, 원형 변형 무변경.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/dashboard/widgets/GaugeWidget.tsx`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors; 35 warnings 는 무관 파일 pre-existing). 신선 워크트리라 `pnpm install` + `pnpm build:packages`(dist .d.ts 생성) 선행 후 통과 — 첫 실행의 cross-package 모듈 미해결은 패키지 미빌드 환경 artifact 였고 코드 결함 아님.
+- advisor 계획 검증(#1)·완료 검증(#2): 5-perspective 전 항목 PASS.
+- 실제 커밋 diff: `GaugeWidget.tsx` 단일 파일 +22/-1, affected_files 범위 내. 병렬 #223 머지(열 메뉴)와 파일 비중첩 → i-dev 머지 무충돌.
+- 미수행(PENDING 게이트 인계): 브라우저 런타임 시각 스모크 — 선형·반원 게이지 + 단위 입력 시 보드·미리보기 양쪽 표시, 원형 회귀 없음, 단위 미입력 시 미표시는 마스터 수동 검증 권장(`fs_data_viewer` 는 src alias → 빌드 불필요, 하드 리프레시).
+
 ## v001.572.0
 
 > 통합일: 2026-06-01
