@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.573.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #225
+
+디자인 모드 좌측 사이드바에서 페이지 항목 사이를 마우스로 **빠르게 왕복 호버**할 때, 액션 버튼 툴팁이 순간적으로 화면 **좌상단(0,0)** 에 번쩍였다가 제 위치로 튀던 버그를 제거. 원인은 Radix 툴팁의 instant-open(skip-delay) 경로 — `skipDelayDuration`(기본 300ms) 윈도우 내 재호버 시 지연 없이 즉시 오픈되어 floating-ui 위치 측정 전 1프레임이 미측정 위치(좌상단)에 그려졌다. 전역 `TooltipProvider` 에 `skipDelayDuration={0}` 을 추가해 instant-open 경로 자체를 제거, 모든 툴팁이 항상 `delayDuration`(300ms) 대기 후 위치 측정이 끝난 뒤 렌더되도록 했다. 앱 전역 단일 공유 컴포넌트 수정이라 사이드바 외 모든 툴팁에 동일 적용. 트레이드오프(빠른 스윕 시 즉시표시 상실, 매번 300ms 대기)는 마스터 수용.
+
+### 페이즈 결과
+
+- **Phase 1** (`647a484`): `src/app/providers/index.tsx` 의 `<TooltipProvider delayDuration={300}>` → `<TooltipProvider delayDuration={300} skipDelayDuration={0}>`. shadcn `TooltipProvider` 가 props 를 Radix `Provider` 로 forward 하므로 import/타입 변경 불필요. +1/-1, 단일 파일. lint 게이트(`pnpm typecheck:all && pnpm lint`) PASS(오류 0).
+
+### 영향 파일
+
+- `data-craft:src/app/providers/index.tsx`
+
 ## v001.572.0
 
 > 통합일: 2026-06-01
