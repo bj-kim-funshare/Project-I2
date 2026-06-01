@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.584.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스5)
+> Work repo: data-craft-server (merge i-dev)
+
+### 핫픽스5 — SUBSTRING_INDEX → pg split_part (간트/캘린더 타임라인)
+
+**결함 클래스: MySQL 전용 문자열 함수.** `SUBSTRING_INDEX(str, delim, count)`가 pg에 없음(`function substring_index(text, unknown, integer) does not exist`) → 간트 차트 `GET /api/viewer/data/:id/gantt` 500(캘린더 타임라인 경로 동일).
+
+### 진단·수정
+타임라인 컬럼은 `"시작일~종료일"`(예: `2026-04-22~2026-07-11`) 저장. 시작·종료 추출을 pg 등가식으로:
+- `SUBSTRING_INDEX(col,'~',1)`(첫 세그먼트=시작) → **`split_part(col,'~',1)`**.
+- `SUBSTRING_INDEX(col,'~',-1)`(마지막 세그먼트=종료, 음수 카운트) → **`reverse(split_part(reverse(col),'~',1))`** — 다중 `~`에도 정확(MySQL 음수 카운트 의미 동일). `split_part(col,'~',2)` 안 씀(다중 `~`에서 깨짐).
+- gantt 8 + calendar 4 = 12건. 2파일. tsc/lint/build 0, 잔여 SUBSTRING_INDEX 0.
+
+### 검증 (런타임)
+- 크래시 함수 `queryGanttFromPivot`를 마스터 실패 그룹 1628(타임라인 컬럼 8131 '기간')에 직접 실행 → `substring_index` 없이 `minStart=2026-01-01, maxEnd=2026-06-13` 반환. 구 표현식은 동일 환경서 에러 재현(대조).
+
+### ✅ 함수-레벨 MySQL-ism 스캔 완료
+본 핫픽스 후 **MySQL 전용 문자열/날짜/수학 함수 전수 재스캔 0건**(DATE_FORMAT/STR_TO_DATE/FIELD/FIND_IN_SET/TIMESTAMPDIFF/GROUP_CONCAT/LPAD/PERIOD_DIFF 등 — PERIOD_는 JS 식별자 오탐). 함수 호환성 결함 클래스는 소진. 잔여 위험은 함수 외(타입/연산자/세션 동작)에 한정될 가능성.
+
+### 진행 — #220 누적 런타임 결함 8종
+로그인→사용자→레이아웃→집계→간트. 모두 정적 게이트 통과 상태에서 실 사용으로만 노출.
+
 ## v001.583.0
 
 > 통합일: 2026-06-01
