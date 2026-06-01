@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.604.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스5)
+
+#230 권한/사용자 관리의 `/api/roles` 403 PERMISSION_DENIED 근본 원인 해소 — 권한 보유 계정도 막히던 진짜 원인. **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[버그] `/api/roles` 호출에 `includeAuth=true` 추가** (`permission_api.dart`·`employee_api.dart`): BE 는 `app.use('/api', authMiddleware, ...)` 로 글로벌 authMiddleware 를 먼저 태우는데, 이 미들웨어는 `?includeAuth=true`(또는 route-level forceIncludeAuth 선행) 일 때만 full mode 로 돌아 `req.user.permissions` 를 채운다. permission-gated 라우트 `GET /api/roles`(guard `permissionCheckMiddleware('permission_manage')`)는 글로벌 mount 아래라 route-level `forceIncludeAuth` 가 글로벌 authMiddleware 뒤에 실행 → light mode 로 돌아 `req.user` 미생성 → **permission_manage 보유자·오너 포함 모든 호출자에게 403**. 웹 fs-api 는 이 계약을 알고 `?includeAuth=true` 를 자동 첨부(interceptor)하지만 모바일 Dio 는 누락했었음. 권한 관리(`permission_api.list`)·사용자 관리 역할(`employee_api.roles`)의 `/api/roles` GET 양쪽에 `queryParameters: {'includeAuth': 'true'}` 추가. 이제 권한 관리 메뉴가 보이는 계정(=permission_manage 보유/오너)에서 역할·권한 조회가 정상 200. 사용자 관리의 역할명도 정상 해석.
+- 전수 audit: 다른 permission-gated 모바일 GET 잔존 위험 없음 확인(`/api/auth/*`·`/api/subscription` 별도 mount, `/api/builder/*`·`/api/input-store/*` 는 경험상 200).
+
+### 핫픽스 경위 (#230 권한/사용자 관리)
+핫픽스3 = "조회 전용"을 웹 안내로 오판(증상 처리) → 핫픽스4 = 모바일이 존재하지 않는 `/api/permission` 호출하던 것을 웹과 동일한 `/api/roles` 로 정정(엔드포인트) → 핫픽스5 = `includeAuth=true` 누락이라는 실제 근본 원인 해소.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/api/permission_api.dart`
+- `lib/api/employee_api.dart`
+
 ## v001.603.0
 
 > 통합일: 2026-06-01
