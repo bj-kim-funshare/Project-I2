@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.586.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스1)
+
+v001.572.0 의 데이터 뷰어 열 메뉴 B안 디자인에 대한 마스터 시각 핫픽스 2건(텍스트 필드 + 위치·정렬 아이콘). 기능 무변경, 시각만 조정. 그리드 팝오버 + 캘린더·칸반·간트 패널 양 표면 공통 atom(`column-menu-b/`) 수정으로 일괄 반영.
+
+### 변경 내용
+
+- **텍스트 필드 하단 테두리 + 키보드 리턴 아이콘 통일** (`3e7df1a1`): 열 제목·너비·단위·기본값 등 모든 텍스트 입력(`BareInputB`)의 전체 테두리(rounded card + ring)를 하단 밑줄(`border-b`)만으로 변경, 우측 끝에 키보드 리턴 아이콘(`CornerDownLeft`, 로딩 시 스피너) 상시 표시, `px` 등 단위 suffix 제거(리턴 아이콘으로 통일). `BInputField` 절대위치 로딩 오버레이 제거 → `BareInputB` loading prop 위임, `BNumberField` px suffix 전달 제거.
+- **위치·정렬 아이콘 B안 커스텀 SVG 교체** (`bffa2429`): 왼쪽/오른쪽 고정·맨 앞으로/맨 뒤로 4개 아이콘을 lucide 근사치(ArrowLeftToLine/ArrowRightToLine/ChevronFirst/ChevronLast)에서 디자인팀 B안 시안의 정확한 커스텀 SVG(채워진 사이드바 핀 + 기준선 화살표)로 교체. 신규 `positionIcons.tsx`(`currentColor` 기반, 다크모드 안전), `iconMap` 타입을 `MenuIcon`(lucide+커스텀 수용)으로 확장, `IconBtnB` 반경 `rounded-[10px]` 로 B안 일치.
+- lint: 미사용 `LucideIcon` import 제거 (`4235e77f`).
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/BareInputB.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/BInputField.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/BNumberField.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/IconBtnB.tsx`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/iconMap.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/positionIcons.tsx` (신규)
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors; 35 warnings 무관 파일 pre-existing).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+- 미수행(마스터 육안 검증 권장): 그리드/패널 텍스트 필드가 밑줄+우측 리턴 아이콘으로 보이는지, 위치·정렬 4 셀 아이콘이 디자인팀 시안과 동일한지 클릭스루 확인(`fs_data_viewer` src alias → 하드 리프레시).
+
 ## v001.585.0
 
 > 통합일: 2026-06-01
