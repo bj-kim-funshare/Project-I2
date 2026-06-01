@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.581.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#226 (핫픽스1)
+> Work repo: data-craft-mobile (merge 2ad69ff)
+
+### 핫픽스1 — 권한/사용자 관리 메뉴 plan-free 게이트 제거
+
+#226 본 플랜 후 마스터가 오너로 접속했는데 ME 탭에 권한 관리가 보이지 않는다고 제보. 진단: 메뉴 게이트가 `(permission_manage || isOwner) && account.planType != 'free'` 였는데, 오너 계정이 free 플랜이면 `&& planType != 'free'` 절 때문에 권한 관리·사용자 관리가 모두 숨겨짐(해당 `&& planType != 'free'` 절은 본 플랜이 도입한 게 아니라 기존 모바일 코드를 Phase 5가 계승한 것).
+
+웹은 권한자(오너 포함)에게 plan 종류와 무관하게 권한 관리·사용자 관리 탭을 노출하고, 콘텐츠만 PlanGate(standard+)로 막는다. 마스터 명령의 "접근 가능한 유저만" 기준에서도 오너는 항상 접근 가능 → 메뉴 노출 게이트는 권한 전용이어야 함.
+
+### 수정
+- `me_menu_list.dart`: `canManagePermission`·`canManageUsers` 두 게이트에서 `&& account.planType != 'free'` 제거 → 권한 전용(`permission_manage || isOwner`, `user_manage || isOwner`). 오너/권한자는 plan 무관 메뉴 노출. flutter analyze 이슈 0.
+
+### 후속(비차단)
+- 콘텐츠 레벨 PlanGate(free 플랜에서 업그레이드 안내) 미도입 — 웹 정합 후속. 현재는 권한자면 plan 무관 화면 진입.
+
+### 영향 파일
+data-craft-mobile:
+- (수정) `lib/screens/me/widgets/me_menu_list.dart`
+
 ## v001.580.0
 
 > 통합일: 2026-06-01
