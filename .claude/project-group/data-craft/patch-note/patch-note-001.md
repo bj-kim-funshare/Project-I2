@@ -1,5 +1,40 @@
 # data-craft — Patch Note (001)
 
+## v001.579.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#226
+> Work repo: data-craft-mobile (merge 223ee84)
+
+### 모바일 내 정보(ME) 탭 전면 재구성 — 웹 설정 구조 미러
+
+모바일 ME 탭 메뉴를 웹 data-craft `settings-dialog` 구조와 동일하게 재구성. 기존 5항목(알림 설정·계정·개인정보 및 보안·테마·도움말 및 피드백)을 제거하고, 웹과 동일한 5항목(플랜 관리·계정 정보·권한 관리·사용자 관리·사용자 설정)으로 역할 게이트와 함께 교체. 우상단 설정 버튼은 웹 앱 설정과 동일한 기능(앱 설정 화면)으로 재배선. 프로필 카드·헤더 그라디언트 등 나머지 디자인은 무손상 유지.
+
+### 페이즈 결과
+- **Phase 1** (`c461894`): 플랜 관리 화면(읽기 전용) — `subscription_api`(GET `/api/subscription/status`·`/plans`·`/billing/history`) + DTO(num.toInt() 안전 캐스트) + `subscription_controller`(AsyncNotifier) + `PlanManagementScreen`(현재 플랜·만료일·사용량 2×2·기능 목록·카드 정보·결제 내역). Toss 결제 인터랙션은 웹 전용 SDK 의존이라 명시적 후속.
+- **Phase 2** (`053e23f`): 사용자 설정 데이터 계층 — `form_builder_api`(settings/forms·forms/{id}·input-store save/history/delete) + `form_schema` DTO(12종 widgetType·VisibilityCondition) + `settings_form_controller`. 웹 소스 확인으로 설정 폼 저장은 정적(`managementCycle='none'`, `dataMode='individual'`, `widgetType='user-form'`, `widgetId='settings-form:{id}'`)임을 검증.
+- **Phase 3** (`9815627`): 동적 폼 렌더러 — `DynamicFormField`(9종 위젯) + `DynamicFormRenderer`(order 정렬, visibility 평가기 — operator >·>=·==·<·<=·!=·includes + AND/OR, required 검증, 숨김 필드 제외). 값 키 = field.id(웹 `convertHistoryToFormRecords` 확인). connection·image·file 3종은 placeholder(후속).
+- **Phase 4** (`295ee39`): 사용자 설정 화면 — `UserSettingsScreen`(폼 목록 → 레코드 목록 → 새 기록/수정/삭제 CRUD). 렌더러 GlobalKey validate()→collectValues()→saveRecord 흐름, 삭제 groupId는 history 응답에서 소싱, 저장/삭제 실패는 SnackBar로 BE 에러 노출.
+- **Phase 5** (`cd0c967`): ME 메뉴 재구성 + 설정 버튼 재배선 + 라우트 통합 — `me_menu_list` 5항목 교체+게이트(플랜 관리=isOwner, 계정 정보=전체, 권한 관리=permission_manage||isOwner+!free, 사용자 관리=user_manage||isOwner+!free, 사용자 설정=settings_edit||isOwner), `me_header` 설정 버튼 `/me/settings/account`→`/me/settings/app`, `app_router` `/me/settings/plan`·`/me/settings/user-forms` 라우트 추가.
+
+### 검증
+- `flutter analyze`(신규 10파일 + ME 트리 + router) — **에러 0, 본 플랜 도입 신규 경고 0**. 신규 info 2건(plan_management_screen surfaceVariant deprecation·문자열 보간 중괄호)만 본 플랜 기인. API 경로·폼 타입·cycle 페이로드·fieldName=field.id 모두 웹 소스 grep 으로 사전 검증.
+
+### 후속 / 경계 (사일런트 컷 아님)
+- **플랜 관리 결제 인터랙션**: Toss Payments SDK 웹 JS 전용 → 모바일 결제(카드 등록·업/다운그레이드·좌석 변경)는 백엔드 결제 프록시/모바일 PG 선행 별도 플랜.
+- **사용자 설정 connection·image·file 필드**: 1차 placeholder, 후속.
+- **앱 설정 오너 기본 프로필/시스템 테스트 섹션**: 후속(기존 테마·언어·알림 화면 재사용).
+- **`settings_edit` 권한 서버 전달 여부**: 런타임 QA 시 `UserInfoDto.permissions` 실측 필요(현 모바일 코드엔 permission_manage·user_manage 만 사용).
+- **plan_management_screen info 2건**·**RadioListTile/withOpacity deprecation**: 기존 코드 상태 정합, 별도 정리 후속.
+- **lint 게이트**: dev.md mobile `lint_command: pnpm typecheck` 는 Flutter repo 부적합 → 본 플랜은 `flutter analyze` 로 실검증. `/group-policy data-craft` 로 `flutter analyze` 전환 후속.
+
+### 영향 파일
+data-craft-mobile:
+- (신규) `lib/api/subscription_api.dart`, `lib/api/dto/subscription.dart`, `lib/state/subscription_controller.dart`, `lib/screens/me/settings/plan_management_screen.dart`
+- (신규) `lib/api/form_builder_api.dart`, `lib/api/dto/form_schema.dart`, `lib/state/settings_form_controller.dart`
+- (신규) `lib/screens/me/settings/widgets/dynamic_form_field.dart`, `lib/screens/me/settings/widgets/dynamic_form_renderer.dart`, `lib/screens/me/settings/user_settings_screen.dart`
+- (수정) `lib/screens/me/widgets/me_menu_list.dart`, `lib/screens/me/widgets/me_header.dart`, `lib/router/app_router.dart`
+
 ## v001.578.0
 
 > 통합일: 2026-06-01
