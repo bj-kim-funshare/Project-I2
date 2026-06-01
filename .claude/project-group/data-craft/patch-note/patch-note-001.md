@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.603.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #234 (핫픽스1)
+
+#234 의 후속 — 대시보드 보드 위젯 상세 설정 "크기" 탭의 가로/세로 입력을 비울 수 없던 것을, 비울 수 있게 하고 Enter/저장 시점 커밋 + 자동 조정으로 개선. **data-craft 단독(FE 패키지 fs-data-viewer), BE/DB 무수정.**
+
+### 페이즈 결과
+
+- **Phase 2** (fix): 공용 `NumberStepper` 에 opt-in 프롭 `commitOnEnter`(기본 false=기존 즉시 커밋 동작 보존) 추가. true 일 때 로컬 draft 문자열로 편집 중 빈 값 허용, 입력 중에는 커밋하지 않고 **Enter 키 또는 blur(=저장 및 적용 버튼 클릭) 시점에 커밋**. 커밋 시 빈 값/비숫자 → 그 칸의 **현재 값으로 자동 복원**(비울 때 되돌아오던 값 그대로), 범위 밖 → **min/max 가까운 값으로 자동 조정(clamp)**. ± 스텝퍼는 기존대로 즉시 동작. `WidgetSizeInput` 의 가로·세로 두 `NumberStepper` 에만 `commitOnEnter` 전달 → `CardSettings`(최근 N개월) 등 다른 사용처는 무영향. lint gate(build:packages 선행 후 `pnpm typecheck:all && pnpm lint`) exit 0.
+  - 알려진 비차단 동작: blur 커밋이라 Tab/취소/탭 전환 등 입력 이탈에도 draft 가 커밋됨(숫자 입력 표준 관용, 기존 라이브 커밋도 취소 불가였음). 타이핑 후 Enter 없이 ± 버튼을 바로 누르면 직전 타이핑 값이 무시될 수 있음(특정 조작 순서 한정, 크래시 아님).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/NumberStepper.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/WidgetSizeInput.tsx`
+
 ## v001.602.0
 
 > 통합일: 2026-06-01
