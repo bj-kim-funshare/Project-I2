@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.582.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스4)
+> Work repo: data-craft-server (merge fe8efb2)
+
+### 핫픽스4 — 피벗 집계 SUM/AVG(text) 결함 (function sum(text) does not exist)
+
+**결함 클래스: text 컬럼에 숫자 집계.** 피벗 컬럼 `pv."col"`은 `value_data`(text)에서 나오는 텍스트인데, 집계 쿼리가 `SUM(pv."col")`/`AVG(pv."col")`를 캐스트 없이 적용. pg엔 `sum(text)`/`avg(text)`가 없어 크래시(MySQL은 text→숫자 암묵 변환). 대시보드/집계 위젯 전부 500(`/api/viewer/data/:id/aggregation`·`/dashboard-aggregation`).
+
+### 진단·수정
+- `aggregation.simple.ts` **2지점**(단순 집계·서브그리드 집계의 `pv."col"` 경로)에 숫자 정규식 가드 적용: `SUM(CASE WHEN pv."col" ~ '^-?[0-9]+(\.[0-9]+)?$' THEN pv."col"::numeric END)`. 비숫자 행→NULL→집계 무시(MySQL 암묵 변환과 동일).
+- 동일 파일의 `value_data` 직접 경로 2지점(184·449)은 Phase 6에서 이미 동일 가드 적용됨 — 무변경. `MIN/MAX/COUNT(text)`는 pg에서 유효(크래시 없음)이라 비범위. `getAggregationFunction` 헬퍼는 호출자 없는 dead code.
+- 1파일 2건. tsc/lint/build 0, 잔여 bare `SUM/AVG(pv.")` 0.
+
+### 검증 (런타임)
+- 크래시 함수 `queryAggregationFromPivot` + engine 경로를 마스터 실패 그룹(1653/1655/1675)에 직접 실행 → `function sum(text)` 없이 숫자 sum/avg 반환(예: group 1675 sum=2233505). 가드 SUM 실측 확인.
+
+### 회고
+Phase 6 aggregation 스윕이 `value_data` 직접 경로 가드는 했으나 **피벗 경유 `pv."col"` 집계 경로**는 누락 — 같은 결함의 두 경로 중 하나만 커버됐던 케이스. #220 누적 런타임 결함 7종째(로그인→사용자→레이아웃→집계 순 엔드포인트별 노출). 정적 게이트 불검출 클래스 지속.
+
 ## v001.581.0
 
 > 통합일: 2026-06-01
