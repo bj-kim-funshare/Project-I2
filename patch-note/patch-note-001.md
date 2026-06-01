@@ -1,5 +1,27 @@
 # 아이OS — Patch Note (001)
 
+## v001.111.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #60
+> 대상: 아이OS
+
+### 배경
+
+모니터링 대시보드(`monitoring/`)의 기간 필터가 "스킬 호출별 토큰" 2개 패널에 잘못 적용되고 있었다. "스킬 호출별 토큰 소모(Top 30)" 차트와 "스킬 호출별 토큰 사용량(호출~종료 누적)" 표/모달은 `index.html` 힌트("헤더의 기간/비교 토글 영향 없음")대로 기간-무관(전체) 이어야 하나, `applyWeekSelection`이 전역 호출 데이터를 선택 주차의 날짜로 필터링해 sparse한 현재 주에서는 데이터가 사라져 보였다. (카테고리 B — 전체 메시지/토큰·모델 분포·스킬 점유·캐시 비중·효율·추정 비용·서브에이전트 — 는 이미 `leftData` 주간 스코프로 정상 렌더됨이 코드·실데이터·런타임으로 확인되어 무수정.)
+
+### 페이즈 결과
+
+- **Phase 1 — 카테고리 A 전역화 (commit `df564c9`)**: `monitoring/script.js`의 `applyWeekSelection`에서 주간 필터링 블록(`weekDays`/`weekInvocations`)을 제거하고 `aggregateData.by_skill_invocation` 전체를 `loadSkillInvocations`·`renderChartPromptBar`에 그대로 전달. 두 패널이 선택 주차와 무관하게 전체 호출(465건)을 표시. `renderChartPromptBar` 첫 인자(미사용)는 `leftData` 유지 — 시그니처/타 호출부 무영향. 일자별 추세 차트(`renderChartDayTokens`/`renderChartDayCost`, 전역) 및 카테고리 B 렌더는 무수정. +3/−5.
+
+### 영향 파일
+
+- `monitoring/script.js`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/agent/스킬/검증축 추가 없음. 잘못된 주간 필터 로직을 제거하는 순수 버그 수정.
+
 ## v001.110.0
 
 > 통합일: 2026-05-29
