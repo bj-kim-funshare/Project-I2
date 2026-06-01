@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.567.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#221
+> Work repo: data-craft-mobile (merge e1b9a8b)
+
+### 페이즈 결과
+
+- **Phase 1 — 알림 fetch 진단 강화 + DTO 안전 파싱** (commit `2ae8c97`):
+  - `lib/api/notification_api.dart` `getNotifications()` 를 try/catch 로 감싸 catch 블록에서 `debugPrint('[notification_api] fetch failure: ...\nresponse=...\nerrorResponse=...')` 로 raw response + DioException.response?.data 동시 노출 후 rethrow. (response 변수는 try 밖 nullable.)
+  - `lib/api/dto/notification.dart` 의 int cast 들을 안전 패턴으로 변경 — `id: (json['id'] as num).toInt()`, `userId: ... (num).toInt()`, `isRead: (json['isRead'] as num?)?.toInt() ?? 0`, `unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0`, `DeleteReadResponseDto.deleted` 동일. `payload` 는 `dynamic` 으로 받아 String 이 아니면 `jsonEncode` 로 직렬화 → DTO 표면 타입 (`int id`, `String? payload`) 유지로 호출부 호환.
+  - `lib/screens/inbox/inbox_screen.dart` error widget 에 `SelectableText(err.toString(), ...)` 한 줄 추가 — 다음 재현 시 root-cause 가 화면에 직접 노출.
+
+**검증 절차**: Chrome web (현재 기동 중 http://localhost:5174) 로그인 → Inbox 탭 진입.
+- 정상: 알림 리스트 또는 빈 상태.
+- 회귀: 에러 텍스트가 `TypeError: ...` (DTO cast 문제) 또는 `DioException [unknown]: XMLHttpRequest error` (CORS preflight 차단) 로 식별 가능. DevTools Console 의 `[notification_api] fetch failure` 로그 함께 확인.
+
+**blocker (분리 후속)**:
+- CORS preflight 가설 미검증 — debugPrint 로그가 사실로 판명되면 `data-craft-server` CORS 설정에 `localhost:5174` origin 허용 핫픽스 별도 필요.
+- DTO cast 안전화로도 미해소 시 미알려진 BE 응답 변종 가능 — debugPrint 출력이 핫픽스 입력.
+
+advisor 사전 PASS (CORS 가설 추가 권고) + 사후 PASS (advisory: 자동 hot-reload 미작동 시 브라우저 강제 새로고침).
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `lib/api/notification_api.dart`
+  - `lib/api/dto/notification.dart`
+  - `lib/screens/inbox/inbox_screen.dart`
+
 ## v001.566.0
 
 > 통합일: 2026-05-29
