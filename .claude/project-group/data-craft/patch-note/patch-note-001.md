@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.598.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #233
+
+데이터 뷰어 캘린더 뷰 **디자인(설정) 모드**의 "열 정보 편집" 버튼을 별도 툴바 막대에서 헤더 네비게이션으로 이동하고, 그 아래 구분선을 제거. **data-craft(fs-data-viewer) 단독, BE/DB 무수정.**
+
+### 페이즈 결과
+- **Phase 1 (refactor)**: `FsCalendarChart` 의 설정모드 전용 툴바 블록(우측정렬 막대 + 하단 `border-b` 구분선)을 통째 제거하고, "열 정보 편집" 버튼을 캘린더 헤더 우측 네비게이션의 날짜 이동 `>`(ChevronRight) 아이콘 **우측**으로 이동. 버튼 콜백(`onOpenColumnManager`)을 `FsCalendarChart → FsCalendar → CalendarHeader` 로 prop 전달하고, 설정 모드일 때만(`isSettingMode`) 콜백을 넘겨 버튼을 조건부 렌더. 버튼 외형은 이웃 버튼(Today/chevron)과 동일한 pill 계열(`rounded-full border border-gray-300 h-8 hover:bg-gray-100`)로 통일하고 기존 인라인 hover 핸들러 제거. `Settings2` 아이콘 + `t.gantt.editProjectInfo` 라벨, 열 관리 다이얼로그 오픈 동작은 보존.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/calendar/FsCalendarChart.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar/FsCalendar.tsx`
+- `packages/fs-data-viewer/src/widgets/calendar/calendar/CalendarHeader.tsx`
+
 ## v001.597.0
 
 > 통합일: 2026-06-01
