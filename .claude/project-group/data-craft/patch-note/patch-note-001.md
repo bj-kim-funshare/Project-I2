@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.583.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #225 (핫픽스1)
+
+디자인 모드 사이드바 툴팁 모서리 번쩍임의 **실제 근본 원인 수정**. v001.574.0 의 `skipDelayDuration={0}`(instant-open 경로 제거) 은 *불완전한 진단*이었음 — 적용 후에도 위 행의 "복사" 버튼 → 아래 행 복사 버튼으로 마우스를 옮길 때 경계에서 툴팁이 화면 모서리에 순간 번쩍이는 현상이 재현되었다. 코드 검증으로 확인한 진짜 원인은 **툴팁 앵커 분리**: 행의 액션 버튼들이 `hidden group-hover:flex` 컨테이너(`SortableTreeItem.tsx`) 안에 있어, 소스 행이 hover 를 잃으면 컨테이너가 `display:none` 되고 닫히는 중인 툴팁의 Radix popper 앵커 rect 가 0×0 으로 붕괴 → floating-ui 가 좌상단 모서리에 재배치(exit 프레임). 항상 보이는 드래그 핸들이 번쩍이지 않았던 점이 이 진단을 뒷받침한다. (v574 는 이력 보존을 위해 수정하지 않으며, v574 의 `skipDelayDuration={0}` 도 belt-and-suspenders 로 유지.)
+
+### 페이즈 결과
+
+- **Phase 2 (핫픽스1)** (`cb37897`): 공유 shadcn `TooltipContent`(`src/shared/ui/shadcn/tooltip.tsx`)의 `<TooltipPrimitive.Content>` 에 `hideWhenDetached` 추가. Radix floating-ui `hide`(referenceHidden) 미들웨어가 앵커 분리 시 `visibility:hidden` 을 transform 과 **동일 렌더에서 atomic 하게** 적용 → 모서리 잔상 프레임 없음. `hideWhenDetached` 는 Popper.Content prop 이며 `TooltipContentImpl` 이 미인식 prop 을 그대로 forward 하므로 import/타입 변경 불필요. 앱 전역 공유 컴포넌트라 모든 툴팁에 일괄 적용. +1, 단일 파일. lint 게이트(`pnpm typecheck:all && pnpm lint`) PASS(오류 0).
+
+### 영향 파일
+
+- `data-craft:src/shared/ui/shadcn/tooltip.tsx`
+
 ## v001.582.0
 
 > 통합일: 2026-06-01
