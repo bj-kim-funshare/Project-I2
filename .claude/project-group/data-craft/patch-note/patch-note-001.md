@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.602.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스4)
+
+#230 핫픽스3 이 권한 관리를 웹 안내로만 막아 실제 조회가 안 되던 것을, 실엔드포인트 연결로 조회 동작하게 수정. **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[버그] 권한 관리 조회 실엔드포인트 연결** (`permission_api.dart`·`permission_settings_screen.dart`): 모바일 권한 관리가 **백엔드에 존재하지 않는 `/api/permission`** 을 호출 → 플랜 게이트에서 403(PLAN_NOT_ALLOWED)으로 항상 막혀 조회 자체가 불가했음(핫픽스3 은 이를 웹 안내로 가렸을 뿐). 웹이 실제로 쓰는 **`/api/roles`** 로 `_listPath` 변경 — 봉투 `{data:{roles:[...]}}` 구조가 기존 `PermissionGroupsResponse`/`PermissionGroupDto`(BE `RoleInfo` 와 동일 스키마)와 정확히 일치하여 파싱 무수정 동작. `/api/roles` 는 오너 또는 `permission_manage` 보유자에게 200 — 이는 모바일 메뉴 노출 조건과 동일하므로, 권한 관리 메뉴가 보이는 계정은 조회가 정상 동작한다(미보유 계정은 403→웹 안내, 웹이 탭을 숨기는 동작과 정합).
+- **[FE] 역할별 권한 라벨 표시**: 권한 카운트만 보이던 읽기 전용 카드에, 역할별 권한 키(`design_mode`·`user_manage` 등 8종)를 `permissionKey*` ARB 라벨 칩(Wrap)으로 표시 — 웹 RoleCard 의 권한 뱃지와 동일 정보. 권한 0개면 `permissionNoneAssigned`("권한 없음"/"No permissions"). 읽기 전용·웹 편집 안내·403 처리는 유지.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/api/permission_api.dart` (list 경로 `/api/permission`→`/api/roles`; write 경로는 미사용 잔존)
+- `lib/screens/me/settings/permission_settings_screen.dart`
+- `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb` (permissionNoneAssigned 추가)
+
 ## v001.601.0
 
 > 통합일: 2026-06-01
