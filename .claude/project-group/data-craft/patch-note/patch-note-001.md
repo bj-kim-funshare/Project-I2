@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.587.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스6)
+> Work repo: data-craft-server (merge 034f1e8)
+
+### 핫픽스6 — ORDER BY 별칭 큰따옴표 (case-fold 참조측 잔여)
+
+**핫픽스2(별칭 case-fold) 결함의 참조측 잔여.** `column "groupid" does not exist` (`GET /api/external-data/groups` 500). 핫픽스2는 `AS "camelCase"` **별칭 정의**를 전수 큰따옴표 처리했으나, 그 별칭을 **`ORDER BY`에서 참조**하는 곳은 누락 — `ORDER BY groupId`의 `groupId`가 pg에서 `groupid`로 접혀 정의된 `"groupId"`를 못 찾음.
+
+### 진단·수정
+- `externalData.model.ts:83`: `ORDER BY groupId DESC` → `ORDER BY "groupId" DESC`. **단일 사이트** — 전수 정밀 스캔 결과 `ORDER BY`/`GROUP BY`/`PARTITION BY`에서 비인용 camelCase 별칭 참조는 이 1건뿐(나머지는 snake_case 컬럼·테이블접두사·`CASE`로 정상). 1파일 1줄.
+- tsc/lint/build 0, 잔여 비인용 ORDER/GROUP BY camelCase 0.
+
+### 검증 (런타임)
+- 크래시 함수 `findExternalDataGroups('funshare')`(마스터 실패 호출) 직접 실행 → `column "groupid"` 없이 24 그룹 반환(sample `groupId=1670 name=[폼] 새 폼 16`).
+
+### 회고 — case-fold 클래스 양면 종결
+핫픽스2(정의측 `AS "alias"`) + 핫픽스6(참조측 `ORDER BY "alias"`)으로 pg 식별자 소문자 접힘 결함은 **정의·참조 양면 종결**. #220 누적 런타임 결함 9종(로그인→사용자→레이아웃→집계→간트→외부데이터). 향후 결함은 함수/식별자 외(타입·연산자·세션) 영역 의심.
+
 ## v001.586.0
 
 > 통합일: 2026-06-01
