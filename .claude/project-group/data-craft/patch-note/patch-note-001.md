@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.570.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#222 (핫픽스2)
+> Work repo: data-craft-mobile (merge 8d21e9b)
+
+### 핫픽스 결과
+
+마스터가 바텀 네비게이션 아이콘/높이 개선 시안 제공. #222 가 도입한 `lucide_icons_flutter` 를 활용해 바텀 네비 아이콘을 시안 정합으로 교체 + 높이 증가.
+
+> 절차 메모: 본 핫픽스는 #222(인증 화면 통일) PENDING gate 로 진입했으나 변경 영역은 #216 의 바텀 네비 셸(`bottom_nav_bar.dart`)이다. #216 이 close 되어 재진입 불가하고 #222 가 lucide 자산을 공급하므로 #222 핫픽스로 처리 — 절차상 적법, 식별 가능하도록 명시.
+
+- **핫픽스2 — 바텀 네비 아이콘 시안 정합 + 높이 증가** (commit `254bda2`):
+  - 아이콘 5종 Material → LucideIcons 교체: 홈 `home_outlined`→`house`, 페이지 `article_outlined`→`file`, 알림 `inbox_outlined`→`mail`, 채팅 `chat_bubble_outline`→`messageSquare`, 나 `person_outline`→`user`.
+  - 라벨 '홈'/'페이지'/'알림'/'채팅'/'나' 한글 유지 (마스터 명시: 시안의 Inbox/DM 영어 미반영).
+  - 높이 증가: top padding 8→14, 아이콘 size 22→24, 아이콘-라벨 간격 3→5, 하단 여백 4→10.
+  - 핫픽스12의 배지 잘림 root-cause 처치 (Stack `clipBehavior: Clip.none` + `Positioned(top:-3, right:-7)`) + 색값 (brand/ink3/danger) 무변경 — 회귀 방지.
+
+### 검증 절차
+
+- **flutter run 재기동 권장** (코드 변경은 hot-reload 가능하나 안정성 위해).
+- 바텀 네비 5탭 아이콘이 시안과 동일 모양인지 (특히 `file` 빈 문서 / `messageSquare` 말풍선 꼬리 여부), 높이가 충분한지 마스터 시각 확인.
+
+### blocker / 후속 (advisor #2 advisory)
+
+- **아이콘 모양 정합은 시각 검증 영역**: lucide `file`/`messageSquare` 가 시안의 빈 문서/꼬리 말풍선과 정확히 일치하는지는 코드 검증 불가 — 어긋나면 변형 식별자(`fileText`/`messageCircle` 등)로 핫픽스3.
+- **높이 충분성**: 총 약 +14px 증가. 부족 시 padding 값 추가 1줄 핫픽스.
+- **배지 비율**: 아이콘 22→24 변경으로 절대 좌표 배지의 시각 비율 약간 변화 가능 (잘림은 없음).
+
+advisor 사후 PASS (advisory — 모양/높이 시각 검증은 마스터 확인 영역).
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `lib/screens/main_shell/widgets/bottom_nav_bar.dart`
+
 ## v001.569.0
 
 > 통합일: 2026-06-01
