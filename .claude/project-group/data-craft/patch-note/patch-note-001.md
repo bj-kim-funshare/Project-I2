@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.589.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스2)
+
+v001.586.0(핫픽스1) 후속 마스터 시각 핫픽스 2건. 기능 무변경, 시각/문구만 조정.
+
+### 변경 내용
+
+- **속성 카드 행 구분선 제거** (`ffa797db`): 속성(너비/단위/단위 위치/기본값) 각 행을 가르던 `InlineFieldB` 전체폭 구분선(`border-b`)을 제거하고, 각 텍스트 필드(`BareInputB`) 자체의 하단 밑줄만 남겼다. 이중선/과밀 정리. (`last` prop 은 인터페이스 유지, 구조분해에서만 제거해 미사용 변수 회피.)
+- **위치·정렬 문구 단축** (`ffa797db`): ko i18n `columnMenu.moveToFirst`/`moveToLast` 를 '열을 가장 앞으로 이동'/'열을 가장 뒤로 이동' → '가장 앞으로'/'가장 뒤로' 로 단축. en/ja/zh·types.ts 무변경(해당 키는 본 메뉴 위치·정렬 버튼 전용).
+
+### 결과 형태 (마스터 확인 권장)
+
+- 속성 텍스트 행(너비/단위/기본값)은 우측 입력부 밑줄만 표시. **단위 위치(좌/우 Seg) 행은 텍스트 필드가 아니므로 하단선 없음** — "텍스트필드 하단선만 남겨" 지시의 정확한 결과. 시안에서 단위 위치 행에도 선이 필요하면 추가 핫픽스로 조정.
+
+### 영향 파일
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/InlineFieldB.tsx`
+- `packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts`
+
+### 검증 결과
+
+- Lint gate (`pnpm typecheck:all && pnpm lint`): exit 0 (0 errors).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+
 ## v001.588.0
 
 > 통합일: 2026-06-01
