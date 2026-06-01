@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.599.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스3)
+
+#230 의 권한 관리·사용자 관리 모바일 화면이 BE 플랜/권한 게이트로 403 오류를 내던 것을, 플랜 관리처럼 **조회 전용 + 웹 편집 안내**로 전환. **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[FE] 권한 관리 조회 전용 전환** (`permission_settings_screen.dart`·`permission_controller.dart`): `GET /api/permission` 이 `PLAN_NOT_ALLOWED`(403) 로 막히던 화면. 생성(AppBar 버튼)·이름변경·삭제·재정렬(ReorderableListView) 등 편집 UI 와 관련 다이얼로그 전부 제거 → 비편집 ListView + 상단 view-only 안내 배너(`permissionViewOnlyNotice`). `PermissionState.webOnly` 플래그 추가 — `_load()` 에서 `DioException` 403 포착 시 에러 위젯 대신 lock 아이콘 + 친화 안내(`permissionWebOnlyUnavailable`) 표시, 그 외 에러는 정상 전파.
+- **[FE] 사용자 관리 조회 전용 전환** (`employee_settings_screen.dart`·`employee_controller.dart`): `GET /api/roles` 가 `PERMISSION_DENIED`(403) 로 `Future.wait` 전체를 오염시켜(유저 목록 3종은 200 임에도) 화면이 통째로 에러나던 문제. `roles()` 를 별도 try/catch 로 분리해 실패 시 `[]` 폴백 → 유저 목록은 정상 렌더. 승인/거부/활성토글/역할변경 등 편집 UI 전부 제거하고 이름·이메일·전화·역할명(`ApprovedEmployeeDto.roleName` 직접)·활성여부 읽기 표시 + 상단 view-only 안내 배너(`employeeViewOnlyNotice`). 초대 링크 카드는 복사(클립보드)만 — 쓰기 없음 — 유지.
+- 컨트롤러의 public write 메서드는 미호출 상태로 잔존(public 이라 lint 무관). `flutter analyze` 신규 에러/경고 0.
+
+### 알려진 후속
+- `lib/screens/me/settings/widgets/employee_card.dart`·`permission_group_card.dart` 두 위젯이 이제 임포터 0건 데드코드(편집 UI 제거로). 다음 정리 패스에서 삭제 판단 권장(관련 ARB 키 일부 orphan 가능 — 컴파일 무해).
+- 권한·사용자 편집은 웹에서 수행(마스터 지침). 모바일 편집 지원은 BE 플랜/권한 게이트 정합 이후 별도 검토.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/me/settings/permission_settings_screen.dart`, `lib/state/permission_controller.dart`
+- `lib/screens/me/settings/employee_settings_screen.dart`, `lib/state/employee_controller.dart`
+- `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb`
+
 ## v001.598.0
 
 > 통합일: 2026-06-01
