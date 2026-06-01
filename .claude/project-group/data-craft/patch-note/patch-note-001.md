@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.580.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스3)
+> Work repo: data-craft-server (merge ffc52a0)
+
+### 핫픽스3 — binary UUID 함수 결함 (HEX/UNHEX → pg uuid)
+
+**결함 클래스: MySQL binary(16) UUID 함수가 pg에 없음.** 마이그레이션에서 UUID 컬럼이 `binary(16)`→pg `uuid` 타입으로 바뀌었으나 앱 SQL은 MySQL `HEX()`/`UNHEX()`를 계속 사용 → `function hex(uuid) does not exist`(`GET /api/builder/layout/:id` 500 등). 마스터 제보(레이아웃 조회).
+
+### 진단·수정 (SQL-only)
+- **출력** `LOWER(HEX(col))` → **`replace(col::text, '-', '')`** — pg `uuid::text`(하이픈 소문자)에서 하이픈 제거 → MySQL과 동일한 32자 하이픈없는 소문자 hex. 실측 동일 확인. 20건(+bare HEX 1).
+- **입력** `UNHEX(?)` → **`?::uuid`** — pg는 하이픈없는 32자 hex 문자열을 uuid로 캐스트. 2건(builder.layout).
+- **`hexToBuffer(x)` Buffer 바인딩 32곳은 무변경** — pg가 Node Buffer를 uuid 파라미터로 직접 받고 WHERE 매칭도 정확함을 실측 확인(count=1). JS 측 변경 불필요 → 최소 범위.
+- `logger.middleware`의 `chalk.hex('#D2691E')`는 JS 색상 함수라 제외(SQL 아님).
+- 3파일 30건. tsc/lint/build 0, 잔여 HEX/UNHEX(chalk 제외) 0.
+
+### 검증 (런타임 라운드트립)
+- 크래시 함수 `findAreasByLayoutId` 직접 실행: layout 9 → 2 areas, `areaId`가 32자 하이픈없는 hex(`/^[0-9a-f]{32}$/`). 마스터 실패 요청 layout 307 → 에러 없이 0 areas(해당 레이아웃 영역 없음). `function hex(uuid)` 크래시 해소.
+- 라운드트립: 출력 hex → `WHERE area_id = $1::uuid` 재조회 match=1(출력↔입력 정합).
+
+### 회고 — 결함이 엔드포인트별로 순차 노출됨
+#220 누적 런타임 결함이 로그인→레이아웃 순으로 엔드포인트마다 드러나는 중(예약어 user / 별칭 case-fold / UUID 함수). 모두 정적 게이트(tsc/lint)가 못 보는 드라이버-계약 클래스라 실 사용으로만 포착됨. 바이너리/UUID·날짜·JSON 등 binary 핸들링 있는 엔드포인트에서 같은 클래스가 한두 개 더 나올 수 있음 — 동일 방식으로 신속 처리.
+
 ## v001.579.0
 
 > 통합일: 2026-06-01
