@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.594.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #232
+
+태블릿(아이패드·갤럭시탭) 대상 PWA 홈화면 설치 안내 — 로그인하면 플랫폼별 안내 배너를 화면 중앙 하단에 노출한다. 안드로이드는 `beforeinstallprompt` 기반 원터치 설치, iOS(iPad)는 Safari 수동 추가 방법을 모달로 안내. **FE 단독(data-craft), BE/DB 무수정.**
+
+### 페이즈 결과
+
+- **Phase 1** (`0945d64f`): PWA 셸 인프라 신설. `index.html`에 manifest 링크 + iOS/Android 웹앱 메타태그(`apple-mobile-web-app-capable` 등) + `theme-color`(#7c3aed), `public/manifest.webmanifest`(standalone, 308×308 favicon 아이콘), `public/sw.js`(무캐시 네트워크 패스스루 — 데이터 신선도 보존). `main.tsx`는 `import.meta.env.PROD`에서만 SW 등록(dev HMR 간섭 회피).
+- **Phase 2** (`27798015`): 플랫폼 감지 + 설치 상태 훅. `beforeInstallPromptCapture.ts`가 React 마운트 이전에 `beforeinstallprompt`/`appinstalled`를 모듈 수준 캡처(구독자 통지, `prompt()` 1회 소모 후 null). `usePwaInstall` 훅이 `android-tablet`/`ios-tablet`/`other` 분기 — 태블릿 게이트(짧은 변 ≥600px + coarse 포인터, iPadOS-as-Mac 처리)로 폰·데스크톱 제외.
+- **Phase 3** (`2ccafc82`): 안내 UI. 하단 중앙 고정 배너 2종(안드로이드: 안내문+설치+X / iOS: 추천문구+방법보기+X, 자동 소멸 없음) + iOS 가이드 Radix Dialog 모달(공유→홈 화면에 추가 3단계 + 비-Safari 안내, `createPortal` 미사용). ko/en i18n `pwa.*` 추가.
+- **Phase 4** (`b428f9c7`): `PwaInstallPrompt` 오케스트레이터(훅+배너+모달 결합, 얼리 리턴 가드는 훅 호출 이후 배치 — rules-of-hooks 준수) 신설 후 `RootLayout`에 마운트 → 로그인(AuthGuard) 후 전 페이지 오버레이.
+
+### 검증
+- 메인 세션 독립 검증: 페이즈별 6단계 diff 검증 통과, lint 게이트(`pnpm typecheck:all && pnpm lint`) 4회 PASS(0 errors), 프로덕션 빌드(`tsc -b && vite build`) 통과, `dist/manifest.webmanifest`·`dist/sw.js`·`dist/favicon.png` + index.html 메타 보존 실측.
+- advisor 계획/완료 PASS.
+
+### 운영 메모
+- **iPad 홈화면 설치 후 첫 실행 시 재로그인 필요** — 설치형 PWA는 Safari와 쿠키/스토리지가 격리됨(CS 응대 대비).
+- 설치 실측은 https 배포본 필요 — SW는 PROD에서만 등록되며 설치 기준이 https(또는 localhost)임.
+- iOS는 `beforeinstallprompt` API 부재로 자동 설치 불가 — 버튼은 방법 안내만 제공(애플 정책).
+- 정식 maskable 192/512 아이콘 세트는 후속 과제(현재 308×308 favicon 재사용).
+
+### 영향 파일
+data-craft:
+- 신규: `public/manifest.webmanifest`, `public/sw.js`, `src/features/pwa-install/lib/beforeInstallPromptCapture.ts`, `src/features/pwa-install/lib/usePwaInstall.ts`, `src/features/pwa-install/ui/AndroidInstallBanner.tsx`, `src/features/pwa-install/ui/IosInstallBanner.tsx`, `src/features/pwa-install/ui/IosInstallGuideModal.tsx`, `src/features/pwa-install/ui/PwaInstallPrompt.tsx`, `src/features/pwa-install/index.ts`
+- 수정: `index.html`, `src/main.tsx`, `src/app/router/RootLayout.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
 ## v001.593.0
 
 > 통합일: 2026-06-01
