@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.578.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스2)
+> Work repo: data-craft-server (merge 7d4621b)
+
+### 핫픽스2 — pg 비인용 식별자 소문자 접힘 결함 (SQL camelCase 별칭 큰따옴표)
+
+**결함 클래스: PostgreSQL unquoted identifier case-folding** — Phase 11a의 예약어 `user` 와 같은 계열의 pg 식별자 규칙 문제. 방언 그리드상 같은 자리(식별자 인용).
+
+핫픽스1로 dev psql 기동 후 마스터가 로그인 시 `USER_NOT_APPROVED`(403) 제보. 진단 결과 별도 승인 문제가 아니라 **pg가 따옴표 없는 컬럼 별칭을 소문자로 접는 것**이 근본 원인:
+
+- 쿼리 `SELECT is_owner AS isOwner ...` → pg는 별칭을 **`isowner`**(소문자)로 반환. MySQL은 `isOwner` 대소문자 보존.
+- 앱 코드가 `row.isOwner` 로 읽으면 **`undefined`** → `!user.isOwner` 가 `true` → owner 면제 실패 → `USER_NOT_APPROVED`. (admin 은 `is_owner=1` owner라 면제됐어야 함.)
+- **증상은 로그인에 국한되지 않음** — 별칭 컬럼을 읽는 모든 코드가 `undefined`를 받는 광범위 결함(클라이언트/플랜/프로모션/뷰어 등 전반). 로그인은 가장 먼저 드러난 증상일 뿐.
+
+### 수정 (마스터 선택지 A)
+- **SQL camelCase 별칭 전수 큰따옴표**: `AS camelCase` → `AS "camelCase"` (정규식 `\bAS ([a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*)\b` → `AS "$1"`). **54파일 535건**. pg가 대소문자를 보존해 MySQL 이전과 **100% 동일 형태** 반환 — 읽기 측 코드 무변경(최저위험).
+- 따옴표 없는 소문자 별칭(`AS name`)·대문자 캐스트(`AS CHAR`)·기존 따옴표 별칭은 정규식상 비대상. 잔여 비인용 camelCase 별칭 0, 이중 따옴표 사고 0.
+
+### 검증 (NODE_ENV=dev, engine=postgres)
+- **admin(owner)**: `isOwner=1`(number, truthy), `companyId='funshare'` → `USER_NOT_APPROVED` 조건 `false`(owner 면제 정상). `signin(admin, 틀린 비번)` → `INVALID_CREDENTIALS`(승인 게이트 통과해 비번 검증 도달).
+- **일반 승인 사용자**(user@funshare/starbox918): `isOwner=0`(number)·`isApproved=1`·`isActive=1` → 승인·활성 게이트 통과.
+- client.model 등 다른 파일 별칭도 camelCase 보존 확인. 정적 게이트 build/lint/tsc 0.
+
+### 회고
+정적 게이트(tsc/lint)는 별칭 대소문자 반환 형태를 못 잡음 — 드라이버 계약 변화(예약어·식별자 대소문자·타입·이스케이프)는 **로컬 psql 실동작 검증으로만** 포착. #220 누적 런타임 결함 5건(11a user / 11b timestamp / 11c ESCAPE / 핫픽스2 별칭 case-fold + 엔진 플립)이 모두 이 교훈을 반복.
+
+### 마스터 조치
+라이브 dev 서버(`pnpm dev`, ts-node `--watch src`)는 머지된 src 변경에 **핫리로드**돼야 함 — 자동 반영 안 되면 재기동. 이후 로그인 정상 동작.
+
 ## v001.577.0
 
 > 통합일: 2026-06-01
