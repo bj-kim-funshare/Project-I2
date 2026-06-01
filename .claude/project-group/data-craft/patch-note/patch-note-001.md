@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.597.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #230 (핫픽스2)
+
+#230 핫픽스1 의 프로필 아바타 폴백이 Flutter web 에서 동작하지 않던 것을 신뢰성 있게 수정. **모바일 단독(data-craft-mobile), BE/DB 무수정.**
+
+### 변경 내용
+
+- **[버그] 프로필 아바타 웹 폴백 신뢰성 수정** (`profile_image_section.dart`·`me_screen.dart`): 핫픽스1 은 `CircleAvatar(backgroundImage: NetworkImage, onBackgroundImageError:)` 로 로드 실패 시 이니셜 폴백을 시도했으나, **Flutter web 에서 `onBackgroundImageError` 가 네트워크 이미지 실패(CORS/인증/404) 시 신뢰성 있게 발화하지 않아** 빈 연한 하늘색 원만 표시됐다. foreground `Image.network` + `errorBuilder`(웹에서 신뢰성 있게 발화) + `loadingBuilder` 를 `ClipOval` 로 감싼 패턴으로 교체 → 이미지 없음/로드 실패/로딩 중 모두 결정적으로 한 글자 이니셜 폴백 표시. 계정 정보 아바타(radius 44)와 ME 헤더 아바타(`_AvatarWidget`, radius 36) 양쪽에 동일 적용(동일 결함 클래스 일괄 제거). 핫픽스1 의 `_imageLoadFailed`/`_lastUrl`/`_imageError` 잔재 제거. CircleAvatar 배경 틴트·테두리/그림자·업로드/삭제 버튼·진행 오버레이 보존.
+
+### 알려진 후속 (별도 진단)
+- 본 수정은 **폴백 표시**를 정상화한 것이며, 실제 프로필 이미지가 떠야 하는 환경이라면 이미지 미표시 자체는 별도 원인일 수 있음: `Image.network`(브라우저 `<img>` 로더)는 Dio 인터셉터를 거치지 않아 **Bearer 인증 헤더가 첨부되지 않음** → 인증 보호 이미지 URL 은 로드 실패할 수 있음. CORS/URL 유효성 포함 별도 진단 필요(BE 협의 가능성).
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/me/settings/widgets/profile_image_section.dart`
+- `lib/screens/me/me_screen.dart`
+
 ## v001.596.0
 
 > 통합일: 2026-06-01
