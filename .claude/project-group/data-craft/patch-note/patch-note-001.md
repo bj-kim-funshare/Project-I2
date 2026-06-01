@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.577.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#220 (핫픽스1)
+> Work repo: data-craft-server (merge 560ecda)
+
+### 핫픽스1 — dev 기본 엔진 postgres 전환 + .env PG_* 좌표
+
+#220 본작업으로 SQL이 pg 방언으로 전환됐으나 엔진 기본값이 `mysql`이라, dev 서버 기동 시 pg SQL(`"user"` 등)을 MySQL에 보내 로그인이 `SQL syntax ... near '"user"'` 500으로 깨지는 상태였다(마스터 라이브 로그 제보). 마스터 지시("env가 dev면 이제부터 psql 사용", "백엔드 전부 psql 전용 무방 — 배포 때 prod도 psql로 간다")에 따라 dev를 psql로 플립.
+
+- **`src/config/constant.ts`** — `DB_ENGINE` 결정 3단계: 명시 `DB_ENGINE` env override 우선 → 없으면 `NODE_ENV=production`은 `mysql`(prod DB freeze, PROD-1 컷오버 전까지) → 그 외(dev)는 `postgres`. dev 미설정 시 자동 psql.
+- **`.env`** (git-tracked) — dev psql 좌표 additive 추가: `PG_HOST=127.0.0.1` / `PG_PORT=5432` / `PG_USER=starbox` / `PG_PASSWORD=`(비번 없음, 로컬 peer/trust). 기존 `DB_*`(MySQL) 무수정. DB명은 기존 `DB_NAME`(`data_craft_dev`) 재사용. `PG_*_PROD` 페어/가드는 비범위(PROD-1에서 prod psql 좌표 확보 시 도입 — 마스터 결정).
+
+### 동작 특성
+- **dev** → psql 자동 연결. **prod** → 직전 배포 MySQL 빌드 그대로(freeze). 명시 `DB_ENGINE=mysql` override 시 dev도 MySQL(되돌림 안전판).
+- SQL은 Phase 2 이후 pg 전용이라 mysql2 연결 경로는 사실상 사문화(드라이버/타입은 되돌림용 보존). 사실상 psql 타깃.
+
+### 검증 (NODE_ENV=development, DB_ENGINE override 없음 → engine=postgres)
+- 엔진 default = `postgres` 확인. prod 경로 = `mysql`, 명시 override 존중 확인.
+- **크래시 경로 end-to-end 복구 입증**: `signinController → signin → findUserByEmail`(`"user"` 인용)이 psql에서 정상 실행 → 잘못된 비번 시 `INVALID_CREDENTIALS`(앱 로직 도달), 더 이상 SQL syntax 에러 없음.
+- 실 모델 함수 다수 PASS: user.model(`"user"` 인용 조회 4종)·client.model(JOIN `"user"`)·roles.model(`FROM role`)·promotion.model 읽기.
+- 엔진 플립은 config-only(SQL 무변경)이므로 #220 Phase 11의 그리드 런타임 검증(pivot+ESCAPE+whereclause+sp_bulk 5/5)이 본 빌드에 그대로 유효.
+- 정적 게이트 build/lint/tsc 0.
+
+### 비고
+- `.env` push 시 보안 경고(BILLING_MASTER_KEY)가 떴으나, `.env`는 본 그룹의 명시 정책상 **기존부터 git-tracked·origin 존재**이며 본 핫픽스 diff는 비밀 아닌 `PG_*` 4줄 additive뿐 — 신규 노출 없음(선존 정책 조건). 투명 기록 차원 명시.
+- 라이브 dev 서버는 마스터가 본인 프로세스를 **재기동**해야 반영(현재 구버전 빌드 가동 중, 포트 점유로 미접촉).
+
 ## v001.576.0
 
 > 통합일: 2026-06-01
