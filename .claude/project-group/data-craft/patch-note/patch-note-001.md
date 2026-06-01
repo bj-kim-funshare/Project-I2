@@ -1,5 +1,60 @@
 # data-craft — Patch Note (001)
 
+## v001.568.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#222
+> Work repo: data-craft-mobile (merge 227a842)
+
+### 페이즈 결과
+
+- **Phase 1 — auth 전용 토큰 + Wordmark/Badge 위젯 + lucide 패키지** (commit `3bb17b5`):
+  - `pubspec.yaml`/`pubspec.lock`: `lucide_icons` (2023-06-29 비활성) 배제, `lucide_icons_flutter 3.1.14+2` (2026-05-25 활성) 도입.
+  - `lib/screens/auth/auth_tokens.dart` 신규 — 웹 `tokens.css` 의 `--auth-*` 14종을 light/dark 두 셋 Dart top-level `const` 로 미러 (authBg, authCard, authInk1~4, authFieldRule, authRule, authPanel, authCtaBg, authCtaInk, authRed, authBlue + Dark suffix).
+  - `lib/screens/auth/widgets/auth_wordmark.dart` 신규 — 웹 `Wordmark.tsx` 미러, 작은 inline (lucide grid mark + "DataCraft" 텍스트, authInk1).
+  - `lib/screens/auth/widgets/auth_page_badge.dart` 신규 — 웹 `PageHead.tsx` badge 미러 (36×36, authInk1→#3D3D40 135° gradient, 9px radius, icon prop).
+  - 식별자 검증 게이트 통과 — `eye`/`eyeOff`/`mail`/`lock`/`user`/`key`/`phone`/`arrowLeft`/`check`/`grid`/`layoutGrid` 11종 모두 패키지 소스 실재 확인.
+
+- **Phase 2 — 인증 5화면 색·아이콘 웹 통일** (commit `429d06b`):
+  - `auth_text_field.dart`: filled=true, fillColor=authCard, 8px radius, focused border `authInk1 1.5px`, error border `authRed`, label `authInk2`.
+  - `common_signin_screen.dart`: 72×72 그라디언트 로고 블록 → `AuthWordmark()` + `AuthPageBadge(icon: LucideIcons.user)` 폼 헤더로 교체. Scaffold bg=`authBg`, FilledButton `styleFrom(backgroundColor: authCtaBg, foregroundColor: authCtaInk)`, OutlinedButton border=`authFieldRule`, Divider=`authRule`.
+  - `common_signup_screen.dart` / `company_signup_screen.dart` / `forgot_password_screen.dart`: AppBar bg=`authBg`, `LucideIcons.arrowLeft` 백 버튼, StepIndicator 주위 `Theme` wrap (primary=`authInk1`, outlineVariant=`authFieldRule`), 각 step 헤더 `AuthPageBadge(key/mail/user)`, FilledButton/TextButton 색 정합.
+  - `company_signin_screen.dart`: Scaffold bg=`authBg`, FilledButton authCtaBg, visibility→eye/eyeOff. TenantHeader 위젯은 그대로 유지 (영향 파일 외).
+  - Material Icons → LucideIcons 일괄: `visibility(_off)_outlined` → `eye`/`eyeOff`, `arrow_back` → `arrowLeft`. 색 `authInk3`/`authInk1`, size 18/22.
+  - **전역 theme 무수정 원칙 준수** — `app_theme.dart` 무수정, 화면 단위 `Theme` wrap 으로 한정 (ME/Inbox/셸 영향 0).
+
+### 검증 절차
+
+1. Chrome web (localhost:5174) 로그아웃 → `/auth/signin` 진입.
+2. 5화면 순회: 일반 로그인 / 일반 회원가입 3step / 기업 로그인 / 기업 회원가입 3step / 비번찾기 2step.
+3. 시각 정합 확인: 배경 `#F7F7F5` 오프화이트, 입력 카드 `#FFFFFF`, 보더 `#D9D9D5`, CTA 버튼 검정 `#111113`, 비번 토글 lucide Eye/EyeOff, 로고 영역 작은 AuthWordmark + AuthPageBadge dark gradient.
+4. 웹 (`:5173`) 동일 화면 side-by-side 비교.
+
+### blocker / 후속 (advisor #2 advisory)
+
+- **StepIndicator done 색 미구분**: 회원가입/비번찾기 진입 시 done 단계가 active 와 같은 `authInk1` 으로 보임 (진행 단서 손실). `step_indicator.dart` 가 본 플랜 영향 파일 외라 미수정. done = `authBlue` 1줄 핫픽스 가능.
+- **TenantHeader 그라디언트 잔존**: `company_signin_screen` 의 TenantHeader 가 `colorScheme.primary` (파란) 그라디언트 — 헤더만 파랑, 본문은 검정 CTA. `tenant_header.dart` 본 플랜 외, 별도 핫픽스 시 `authInk1/#3D3D40` 으로 정합.
+
+advisor 사전 PASS + 사후 PASS (advisory 2건 — 위 후속).
+
+### 영향 파일
+
+- data-craft-mobile:
+  - `pubspec.yaml`, `pubspec.lock`
+  - `lib/screens/auth/auth_tokens.dart` (신규)
+  - `lib/screens/auth/widgets/auth_wordmark.dart` (신규)
+  - `lib/screens/auth/widgets/auth_page_badge.dart` (신규)
+  - `lib/screens/auth/common_signin_screen.dart`
+  - `lib/screens/auth/common_signup_screen.dart`
+  - `lib/screens/auth/company_signin_screen.dart`
+  - `lib/screens/auth/company_signup_screen.dart`
+  - `lib/screens/auth/forgot_password_screen.dart`
+  - `lib/screens/auth/widgets/auth_text_field.dart`
+
+### 병행 후속
+
+- 직전 PENDING 플랜 #221 (알림 fetch 진단 + SelectableText) — 마스터 검증 미완. 새 에러 텍스트 확인 후 핫픽스 또는 플랜 완료.
+
 ## v001.567.0
 
 > 통합일: 2026-06-01
