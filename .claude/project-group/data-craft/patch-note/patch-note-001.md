@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.588.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: funshare-inc/data-craft#229
+> Work repo: data-craft (merge `b3ee51b`)
+
+### 페이즈 결과
+- **Phase 1** (fix, `1d1d811`): 행 연결 그룹 편집 모달(`RowLinkGroupManageDialog`) 전체 다크모드 대응. 모달은 Radix `Dialog.Portal` 로 `document.body` 에 렌더되어 뷰어 다크 스타일(`.fs-data-viewer-container`)이 닿지 않고 셸이 `bg-white` 라 다크에서 모달 전체(헤더·사이드바·우측 속성 패널·푸터)가 흰색이었다. 구조적 중립색(`bg-white`/`border-gray-200`/`text-gray-*`/`bg-gray-50`)을 var 토큰(`bg-card`/`border-border`/`text-foreground`/`text-muted-foreground`/`bg-muted`)으로 전환해 라이트 외관을 유지하면서 다크 자동 전환되도록 했고, 의도적 warm 표면(사이드바 베이지 `bg-[#FAF8F5]`, 검색 input, 리스트 활성 항목, 세그먼트/취소 버튼)은 `dark:` 변형을 추가했다. 연한 violet 배경(모드 배지·hero)·destructive 적색 버튼·disabled 상태는 다크 가독성에 맞춰 튜닝했다. 우측 패널 내부 입력/토글/액션(`MenuItemRenderer` 위임)은 이미 var 토큰이라 자동 대응.
+- **Phase 2** (chore, `0cbe839d`): 푸터 우측 solid-violet 버튼 문구를 `t.common.close`("닫기") → `t.common.save`("저장")로 변경. 모든 편집이 입력 즉시 라이브 저장되므로 동작 변경 없이 문구만 교체(`onClick`·"취소" 버튼 유지). 기존 4개 로케일 `t.common.save` 재사용 — 신규 i18n 키 없음.
+
+### 영향 파일
+- `data-craft`:`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+
+### 검증
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 양 페이즈 exit 0. ※ 신선한 워크트리는 sibling 뷰어 패키지 dist(gitignored tsup) 미빌드라 루트앱 tsc 가 모듈 미해석(TS2307) → `build:packages` 선행 후 통과(환경 이슈, 코드 무관).
+- 다크 "눈부심" 해소는 렌더 육안 확인 영역 — 라이트→다크 토글 후 모달 열어 사이드바/우측 카드/푸터/액센트 가독성 + 라이트 회귀 없음(베이지 보존) 확인 필요. fs-data-viewer 는 루트앱 src alias 라 빌드 불필요, 머지 후 하드 리프레시(Cmd+Shift+R)로 반영.
+
 ## v001.587.0
 
 > 통합일: 2026-06-01
