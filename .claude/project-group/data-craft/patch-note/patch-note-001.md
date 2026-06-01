@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.592.0
+
+> 통합일: 2026-06-01
+> 플랜 이슈: #223 (핫픽스5)
+
+마스터 핫픽스 2건: 고정 해제 저장 실패(런타임 버그) 수정 + 위치·정렬 항상 활성 상호배타 토글. **BE+FE 교차 저장소.**
+
+### 변경 내용
+
+- **[BE 버그] columnProperty boolean → smallint 명시 변환** (`98098366`): `enableSorting`/`enableAggregation` 토글을 저장하면 `invalid input syntax for type smallint: "true"` 런타임 오류로 saveChanges 배치 전체가 실패(고정 해제도 같은 배치에 묶여 실패). FE 가 JS boolean 을 보내는데 generic `columnProperty` 경로가 raw 로 push → MySQL tinyint 는 암묵 변환하지만 pg smallint 는 거부. `change.columnSettings.ts` + `change.subGridColumn.ts` 의 generic 경로에 `typeof boolean → 1/0` 명시 변환 추가(메인 그리드 + 서브그리드 동일 결함 동시 수정). `frozen`(enum 문자열) 등 비-boolean 은 무변경. **lint/typecheck 검증 불가한 DB 계약 런타임 픽스** — 마스터 pg 저장 수동 검증 필요.
+- **[FE] 위치·정렬 항상 활성 + 고정 상호배타 토글** (`e73c16ae`): 그리드 팩토리(`menuItems.ts`)가 항상 왼쪽/오른쪽 고정 양쪽을 emit + `active` 플래그(현재 고정 방향). 클릭 시 같은 방향이면 해제(none), 다른 방향이면 전환(상호배타). 고정 클릭 시 메뉴를 닫지 않아 토글 상태가 보임(의도된 동작 변경). 맨앞/맨뒤 이동 버튼은 disabled 제거로 항상 활성(onClick 내부 가드 유지로 끝단 클릭은 안전 no-op). `ColumnMenuVariantB` 위치 클러스터를 `item.active` 직접 읽기로 단순화, `unfreeze-from-*` 해상 로직 제거(해당 role 은 union 에 잔존하나 미emit, dead-but-safe). `ColumnMenuItem.active?` 필드 추가.
+
+### 영향 파일
+
+**data-craft-server** (`funshare-inc/data-craft-server`, branch `i-dev`):
+- `src/services/dataViewerChange/change.columnSettings.ts`
+- `src/services/dataViewerChange/change.subGridColumn.ts`
+
+**data-craft** (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/features/grid/lib/gridMenuTypes.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/ColumnMenuVariantB.tsx`
+
+### 검증 결과
+
+- Lint gate: data-craft-server `pnpm lint` exit 0; data-craft `pnpm typecheck:all && pnpm lint` exit 0 (0 errors).
+- advisor 완료 검증(#2): 5-perspective 전 항목 PASS.
+- 미수행(마스터 수동 검증): ① pg 에서 열 정렬/집계 토글 저장 → smallint 오류 없이 영속(서브그리드 포함). ② 위치·정렬 4 버튼 항상 활성, 좌/우 고정 상호배타 토글(다른쪽 선택 시 전환, 같은쪽 재클릭 시 해제), 고정 클릭 시 메뉴 유지.
+
 ## v001.591.0
 
 > 통합일: 2026-06-01
