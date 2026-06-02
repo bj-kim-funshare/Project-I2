@@ -21649,3 +21649,25 @@ data-craft:
 
 ### 검증
 - 머지 후 i-dev `pnpm typecheck:all && pnpm lint` 통과(0 errors). 렌더 전용 CSS sticky 결함이라 정적 게이트 미검출 — 실제 헤더-본문 동기 거동은 마스터 하드 리프레시 후 시각 확인(좌/우 고정·다중 고정·그룹 동반·모드 변동) 영역.
+
+## v001.617.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스6
+
+**"페이지" 타이틀 제거 (마스터 지시).** 검색창·"모든 페이지" 제거(v001.615.0)에 이어 마스터가 "페이지" 타이틀 텍스트도 제거 요청. 화면을 페이지 트리만 남도록 최소화.
+
+### 변경 내용 (핫픽스6, `d201c0c`)
+- `page_screen.dart` 의 displaySmall "페이지" 타이틀 행 제거 → 상단 `SizedBox(height: 8)` 여백만 유지, 흰 패널 페이지 트리가 화면을 채움.
+- 미사용 ARB 키 `pageTitle`(ko `@pageTitle` 메타 포함) 제거. (바텀 네비 라벨은 `navPage` 별도 유지.)
+- 흰 패널·행 스타일·아이콘 무채색·실데이터는 이전 그대로.
+
+### 영향 파일
+data-craft-mobile:
+- 수정: `lib/screens/page/page_screen.dart`, `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb`
+
+### 검증
+- `flutter analyze` 0 에러. `pageTitle` 소스 참조 grep 0건. dev 서버 재기동 후 마스터 시각 확인.
+
+### 현재 화면 구성
+- 페이지 탭 = 흰 패널 페이지 트리(실 `/api/builder/pages` 데이터)만. 타이틀·검색창·"모든 페이지" 라벨·즐겨찾기/최근 카드·추가/새 페이지 버튼 모두 없음. 트리 행 = chevron(좌) + 무채색 아이콘 + 이름(부모 굵게), 카운트 없음.
