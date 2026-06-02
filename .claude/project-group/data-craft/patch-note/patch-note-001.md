@@ -21470,3 +21470,30 @@ data-craft-mobile:
 - 실 페이지 API 연동(웹 측 페이지 엔드포인트 존재) — 모바일 Dio 클라이언트 + includeAuth 인증 계약.
 - 바텀 네비 뱃지(스크린샷 Inbox 4/DM 2 vs 현재 7/2) — 공유 셸 스코프 밖으로 미변경.
 - 즐겨찾기·최근·추가·새 페이지 실 동작.
+
+## v001.609.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스1
+
+**마스터 피드백 반영 전면 재작업.** v001.607.0(정적 목업) 이 마스터 의도와 어긋나 핫픽스로 교정: (1) 즐겨찾기·최근·추가(+)·새 페이지 4개는 "구현하지 말라"는 지시였는데 inert 시각요소로 잘못 렌더 → **완전 삭제**, (2) 페이지 목록을 가짜 목업(지어낸 카운트·이름)으로 만들어 데이터 크래프트 웹과 다르게 표시됨 → **실 API 연동, 목업 0%, 웹 ViewSidebar 동일 구조**로 재작성.
+
+### 변경 내용 (핫픽스1)
+- **데이터층 신설** (`35dfa82`): 실 엔드포인트 `GET /api/builder/pages` 를 호출하는 `page_api.dart` + `PageDto`(웹 BuilderPage 필드 매핑) + `page_controller.dart`(`AsyncNotifier`, view-mode 필터 `isVisible != false && isActive != false`) + `page_icon.dart`(웹 `getDefaultPageIconName` 동일 타입 기본 아이콘: 자식=Dot, 셀렉터=Folder, 루트+자식=LayoutDashboard, 루트단독=FileText; 모두 const top-level).
+- **UI 재작성 + 목업 제거** (`6cd7c36`): `PageScreen` → `ConsumerWidget`, `pageControllerProvider` 실데이터 소비(loading/error/empty + RefreshIndicator). `PageTree` 는 flat list 를 `parentId` groupBy + 레벨별 `order` 정렬로 1단 트리 조립. `PageTreeItem` 은 아이콘+이름+우측 chevron(단일 const + AnimatedRotation)만 — **카운트 배지 제거**. 즐겨찾기/최근 카드·`+`버튼·새 페이지 링크·검색바·"모든 페이지" 헤더(웹 ViewSidebar 미존재) 전면 삭제. 목업 파일 4개(`page_models.dart`·`page_search_bar.dart`·`page_shortcut_cards.dart`·`page_section_header.dart`) 삭제, 미사용 ARB 키 5개 제거 + `pageLoadError` 추가.
+
+### 영향 파일
+data-craft-mobile:
+- 신규: `lib/api/dto/page.dart`, `lib/api/page_api.dart`, `lib/state/page_controller.dart`, `lib/screens/page/page_icon.dart`
+- 재작성: `lib/screens/page/page_screen.dart`, `lib/screens/page/widgets/page_tree.dart`, `lib/screens/page/widgets/page_tree_item.dart`
+- 삭제: `lib/screens/page/page_models.dart`, `lib/screens/page/widgets/page_search_bar.dart`, `lib/screens/page/widgets/page_shortcut_cards.dart`, `lib/screens/page/widgets/page_section_header.dart`
+- 수정: `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb`
+
+### 검증
+- `flutter analyze` 0 에러. cleanup grep(목업 식별자·즐겨찾기·카운트) 0건. advisor 완료 5관점 PASS.
+- 런타임 시각 일치는 dev 서버 재기동 후 Chrome 확인.
+
+### 알려진 후속 (런타임 데이터 의존 — 시각 확인 후 필요 시)
+- 커스텀 `page.icon`(lucide ~1500종 임의 문자열) 미지원 — 타입 기본 아이콘만 적용. 정밀 매핑은 후속.
+- API 인증/빈 응답 시 에러·빈 상태 노출(`/api/builder/*` 는 includeAuth 예외이나 테넌트 가드 상이 시 진단).
+- 활성 행 강조·페이지 네비게이션은 본 스코프 외(웹은 선택 페이지 하이라이트).
