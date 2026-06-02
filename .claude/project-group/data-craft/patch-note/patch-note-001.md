@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.608.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #236
+
+### 개요
+
+데이터 뷰어에서 **열 생성 시 기본 열 제목이 영어 모드에서도 한국어**('텍스트'·'숫자'·'날짜' 등)로 지정되던 결함 수정. #210/#218/#219가 타입 선택기 *표시명*은 번역했으나, 열 생성·저장 경로가 raw 한국어 `type.name`을 기본 제목으로 사용하던 이중 용도 분리 잔여였음. 생성 기본 제목을 선택기와 동일한 `getColumnTypeName(t, type.id, type.name)` 접근자로 라우팅 → 생성자 UI 언어로 저장(이후 편집 가능), ko/미정의 키는 fallback 유지로 무회귀.
+
+### 페이즈 결과
+
+- **Phase 1** (`8158830`): fs-data-viewer `FsGridColumnGenerator.tsx` `addColumnInternal` 의 기본 제목 라우팅 (`type.name` → `getColumnTypeName(t, …)`).
+- **Phase 2** (`44fadd95`): 동일 결함 잔여 3개 사이트 — fs-data-viewer `columnCrud.ts`(`context.t`), `ViewColumnManagerDialog.tsx`(`generateAutoTitle`, useCallback deps에 t 추가), fs-sub-data-viewer `columnCrud.ts`(`context.t`) 라우팅. (초기 1-파일 계획에서 전수 grep 으로 4개 사이트 확장 — 컬럼매니저·서브뷰어 재노출 방지.)
+
+### 범위 밖 (확인)
+- `columnBasic.ts`(×3 뷰어) = rename 경로 `inputTitle || 'Untitled'`(영어 폴백) · rename/gantt 핸들러 = 사용자 입력 제목 · column-type `name` 정의 = ko fallback 유지(번역은 접근자 담당) · fs-external = 타입명 생성 경로 없음.
+
+### 검증
+merged i-dev: `pnpm typecheck:all` EXIT 0 · `pnpm lint` 0 errors · `validateColumnName(…, (type|columnType).name)` 잔존 0건.
+
+### 영향 파일
+- data-craft:packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx
+- data-craft:packages/fs-data-viewer/src/features/grid/lib/column-management/columnCrud.ts
+- data-craft:packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx
+- data-craft:packages/fs-sub-data-viewer/src/features/grid/lib/column-management/columnCrud.ts
+
 ## v001.606.0
 
 > 통합일: 2026-06-02
