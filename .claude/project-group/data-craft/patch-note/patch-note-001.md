@@ -21722,3 +21722,20 @@ data-craft:
 
 ### 검증
 - Phase 1 BE: `pnpm lint` 통과 + `tsc --noEmit` exit 0. Phase 2·3 FE: `pnpm typecheck:all && pnpm lint` 통과(0 errors, 기존 warning 85). advisor 계획·완료 5관점 양쪽 PASS. 정적 게이트 통과 — 모달 렌더·메일 발신 거동은 마스터 런타임 검증 영역.
+
+## v001.620.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #240 (funshare-inc/data-craft) — 핫픽스1
+
+**문의 모달 숫자 입력 스피너(증감 버튼) 제거 (핫픽스1, 마스터 지시).** v001.618.0 의 엔터프라이즈 문의 모달에서 페이지/그룹/사용 인원 입력을 `<Input type="number">` 로 두어 브라우저 기본 위아래 스피너 화살표가 노출됐다. 마스터 지시로 세 숫자 입력 모두에서 스피너를 제거 — 코드베이스 표준 패턴(`[appearance:textfield]` + `::-webkit-inner-spin-button`/`::-webkit-outer-spin-button` `appearance-none`, `UpgradeStepPayment` 좌석 입력 선례)을 그대로 적용했다. text 입력(저장공간·최대 파일 사용량)과 Textarea(사내 시스템 활용)는 스피너가 없어 미변경.
+
+### 페이즈 결과
+- **Phase 4 / 핫픽스1** (`236cfe6`): `EnterpriseContactDialog` 의 pages·groups·userCount number 입력 3개에 스피너 제거 클래스 추가.
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/subscription/ui/EnterpriseContactDialog.tsx`
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` 통과(0 errors). 스피너 비표시는 렌더 전용 CSS — 실제 화살표 제거 확인은 마스터 하드 리프레시 후 시각 검증 영역.
