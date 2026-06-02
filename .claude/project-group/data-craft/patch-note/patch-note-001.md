@@ -21854,3 +21854,23 @@ data-craft-mobile:
 - 전 페이즈 게이트 통과: data-craft `pnpm typecheck:all && pnpm lint` 0 errors, data-craft-mobile `flutter analyze` 0 errors. advisor 계획(#1)·완료(#2) 양쪽 BLOCK 없음.
 - **수동 검증 순서(중요 — 머지 후 양쪽 재기동 필수)**: ① `data-craft` 에서 `i-dev` pull → `pnpm dev`(5173) **재기동** ② `data-craft-mobile` 에서 `i-dev` pull → `flutter run -d chrome` **재기동**(flutter web 은 머지 코드 반영에 재기동 필요) ③ 로그인 → 페이지 탭 → 페이지 행 탭 → 웹뷰 상세가 웹 임베드와 동일하게 위젯 콘텐츠 렌더 ④ write 권한 페이지=입력/제출 가능, read 전용=조회만 ⑤ 부모 chevron 탭=펼침, 행 본문 탭=상세 진입 분리 확인. 웹을 재기동 안 하면 stale 코드로 e2e 가 조용히 실패하므로 순서 엄수.
 - **후속(미해결)**: (a) accessLevel read 전용 게이팅의 **위젯 전수 동작 검증**은 본 플랜 감사 범위 초과로 후속 이관(프레임워크·24 소비자 기보유, 개별 위젯 read UX 완전성은 미확인). (b) 웹뷰 내 토큰 만료 시 v1=reload, **자동 refresh 브리지**(네이티브 JS 채널)는 후속. (c) `lib/l10n/gen/` 은 .gitignore 대상 → `flutter run`/`gen-l10n` 빌드 시 신규 ARB 키로 재생성(프로젝트 기존 관례).
+
+## v001.625.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #240 (funshare-inc/data-craft) — 핫픽스3
+
+**문의 발송 성공인데 "발송 실패" 토스트 — 응답 봉투 불일치 교정 (핫픽스3, 마스터 제보).** 마스터가 "서버에는 오류 안 나오는데 화면에서는 토스트로 문의 발송 실패"를 제보. 근본 원인은 응답 봉투 계약 불일치였다 — data-craft FE `apiClient` 는 응답에서 `response.data` 를 읽고(표준 봉투 = `buildAuthResponse(req, payload)` → `{ account, user, accessToken, data: payload }`), 모든 billing 컨트롤러가 이 봉투를 쓴다. 그런데 `contact.controller` 의 Enterprise 문의만 bare `res.json({ success: true })` 로 반환해 `data` 키가 없었고, FE `sendEnterpriseInquiry` 의 `if (!response.data) throw` 가 항상 발동 → false "발송 실패" 토스트가 떴다. **메일 자체는 BE 200 으로 정상 발송**(마스터가 본 무에러 서버 + 화면 실패 = 정확히 이 증상). regression 이 아니라, enterprise 카드가 v001.618.0 Phase3 로 처음 선택 가능해지기 전엔 이 엔드포인트가 호출된 적이 없어 봉투 결함이 잠복(activation 이 들춘 latent bug)했던 것.
+
+### 페이즈 결과
+- **Phase 6 / 핫픽스3** (`2d46025`): `contact.controller` 의 성공 응답을 다른 12개 컨트롤러와 동일하게 `res.json(buildAuthResponse(req, { success: true }))` 로 정합. 검증·`inquirerEmail`·서비스 호출 로직 불변. (부수 효과로 토큰 갱신 봉투도 정상 동반.)
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/controllers/contact.controller.ts`
+
+### 후속 (범위 밖)
+- `src/controllers/resetPassword.controller.ts` 도 bare `res.json({ success: true, message })` 를 반환 — 동일 봉투 결함 클래스. 현재 미발현이라면 해당 FE 호출부가 `response.data` 를 읽지 않을 뿐이며, 계약은 깨져 있으므로 봉투 정합 후속 권장. (`subscription.controller.ts` 의 `{ data: { plans } }` 는 `data` 키가 있어 FE 동작 정상 — 토큰 갱신 봉투만 누락된 미세 항목.)
+
+### 검증
+- eslint exit 0 + `tsc --noEmit` exit 0. wire 계약 결함이라 정적 게이트로는 본디 미검출(FE/BE 독립 컴파일) — 마스터 BE dev 서버 리로드 후 문의 제출 시 성공 토스트 + 메일 수신 시각 확인 영역.
