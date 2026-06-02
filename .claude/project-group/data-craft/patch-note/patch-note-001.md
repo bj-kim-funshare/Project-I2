@@ -21629,3 +21629,23 @@ data-craft-mobile:
 
 ### 검증
 - `flutter analyze` 0 에러. removal grep(검색·라벨 식별자·키) 0건. dev 서버 재기동 후 마스터 시각 확인.
+
+## v001.616.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #237 (funshare-inc/data-craft) — 핫픽스1
+
+**그리드 뷰 "열 고정" 헤더-본문 sticky 어긋남 — 진짜 원인 교정(핫픽스1).** v001.613.0(1차)이 헤더 트랙 길이 문제로 오진하여 GroupHeaderRow spacer 패턴을 미러링했으나, 마스터 하드 리프레시 검증에서 본문 고정 열은 붙고 헤더만 밀리는 현상이 그대로 재현돼 1차가 틀렸음이 확정됐다. 실제 원인은 헤더/풋터 트랙이 `style={{ minWidth: 'max(fit-content, 100%)' }}` 를 쓰는데, `fit-content`(맨 키워드)가 `max()` 안에서 유효한 `<length-percentage>` 가 아니라 **선언 전체가 무효 처리·드롭** → 트랙 폭이 콘텐츠 전체가 아닌 뷰포트 폭으로 잡혀, sticky 헤더 고정 열이 한 뷰포트쯤 스크롤하면 containing-block 경계에서 해제되던 것이었다. 본문 행(`DataRow`)은 유효한 `w-fit`(`width: fit-content`)을 써서 끝까지 유지됐고, 이 차이가 "본문은 되는데 헤더만 안 되는" 증상을 한 줄로 설명한다(grep 으로 무효 패턴이 메인 그리드 헤더/풋터 트랙에만, 유효 패턴이 작동하는 본문 행에만 쓰임을 1:1 확인).
+
+### 페이즈 결과
+- **Phase 2 / 핫픽스1** (`fa50c5f0`): 헤더·그룹헤더·집계 트랙을 본문 `DataRow` 와 동일한 `w-fit min-w-full`(유효 `width: fit-content` + `min-width: 100%`) 로 전환해 sticky containing-block 을 콘텐츠 전체 폭으로 정합. 동시에 1차의 무효/유해 변경을 전부 되돌림 — `GridHeader` 의 `FIXED_COLUMN_WIDTH` import·trailing spacer 제거, `GridBody` 의 무효 minWidth 제거(본문은 원래 정상), `AggregationRow` 의 1차 회귀 복구(1차에서 유효 `fit-content` → 무효 `max(fit-content,100%)` 로 바꿔 오히려 집계 행을 깨뜨렸던 것 교정). `useScrollSync` clamp 는 sub-pixel/잔여 비대칭 방어로 유지, 주석만 갱신.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`, `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`, `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`, `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/GroupHeaderRow.tsx`, `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+
+### 후속 (범위 밖)
+- `LastRowDropZone.tsx` 도 동일한 무효 `max(fit-content,100%)` 패턴을 쓰나 sticky 고정 열이 없어 본 sticky 버그와 무관 — 일관성 차원의 정리는 후속 과제로 남김.
+
+### 검증
+- 머지 후 i-dev `pnpm typecheck:all && pnpm lint` 통과(0 errors). 렌더 전용 CSS sticky 결함이라 정적 게이트 미검출 — 실제 헤더-본문 동기 거동은 마스터 하드 리프레시 후 시각 확인(좌/우 고정·다중 고정·그룹 동반·모드 변동) 영역.
