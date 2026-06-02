@@ -21527,3 +21527,27 @@ data-craft-mobile:
 - 부모 노드 초기 펼침은 BE `defaultExpanded` 값 의존(접혀 보이면 루트 강제 펼침 후속).
 - 검색 중 매칭 자식 보유 부모 자동 펼침 미적용(수동 펼침) — UX 후속.
 - 커스텀 `page.icon` 미지원(타입 기본 아이콘만).
+
+## v001.611.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스3
+
+**제외 4개 요소 완전 제거 + 페이지별 실 아이콘.** 핫픽스2가 "이 디자인으로 하라"는 지시를 과해석해 즐겨찾기·최근·추가(+)·새 페이지 4개를 다시 넣은 것을 교정. 마스터 일관 지시("이 4개는 만들지 마라")대로 4개를 완전 삭제하고, 사진의 "나머지"(타이틀·검색바·"모든 페이지"·페이지 트리)만 실데이터로 유지.
+
+### 변경 내용 (핫픽스3, `56bf07f`)
+- **4개 요소 완전 제거**: 타이틀행 원형 `+` 버튼 삭제, `PageShortcutCards`(즐겨찾기/최근 카드) 위젯 파일 삭제, `PageSectionHeader`의 "+ 새 페이지" 링크 삭제(="모든 페이지" 라벨만 잔존). 미사용 ARB 키 3개(pageFavorites·pageRecent·pageNewPage) 제거. removal grep 0건.
+- **페이지별 실 아이콘**: `page_icon.dart`에 60종 lucide 이름→IconData top-level const 맵 추가. `page.icon` 값을 정규화(소문자·하이픈/언더스코어/공백 strip) 후 매핑되면 그 아이콘, 미매핑이면 기존 타입 기본(자식=Dot·셀렉터=Folder·루트+자식=LayoutDashboard·기본 FileText) 폴백.
+- 검색바·"모든 페이지" 라벨·페이지 트리(실데이터, 카운트 없음)는 유지. 트리 행 스타일(chevron 좌측+아이콘+이름+divider)은 핫픽스2 그대로(미변경).
+
+### 영향 파일
+data-craft-mobile:
+- 수정: `lib/screens/page/page_screen.dart`(+버튼·카드 제거), `lib/screens/page/widgets/page_section_header.dart`(라벨만), `lib/screens/page/page_icon.dart`(실 아이콘 맵), `lib/l10n/app_ko.arb`·`app_en.arb`(키 제거)
+- 삭제: `lib/screens/page/widgets/page_shortcut_cards.dart`
+
+### 검증
+- `flutter analyze` 0 에러. removal grep(4요소·키) 0건. advisor 완료 5관점 구조 PASS.
+
+### 알려진 후속 / 잔존 리스크 (시각 확인 후)
+- 트리 행 스타일은 핫픽스2 유지 — 마스터 디자인 거부가 행 스타일 자체였다면 추가 핫픽스 필요.
+- 아이콘은 lucide 라인 아이콘(사진의 컬러 이모지 아님). page.icon 이 맵 외 이름이면 타입 기본으로 떨어져 페이지별 구분이 약할 수 있음 — 매핑 확장/값 진단 후속.
