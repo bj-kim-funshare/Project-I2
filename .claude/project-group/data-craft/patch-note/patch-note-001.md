@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.622.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #243
+
+### 개요
+
+QA 보고("행그룹 적용 상태에서 행추가 시 추가된 행이 즉시 표시되지 않고 F5 후에야 확인됨")를 코드로 검증해 **실재 결함**임을 확인하고 수정. fs-data-viewer 서버 페이징 "grouped store 동기화" 결함 클래스(#169에서 삭제·일괄입력·단일셀 3경로만 수정)의 미수정 잔존 경로였음. `notifyRowAdded` 가 `rowCacheRef`(flat)만 갱신하고 그룹핑 모드의 렌더 소스인 `groups` state 를 동기화하지 않아, 새 행이 캐시엔 있으나 화면 미표시 → F5 시 서버 재로드로만 표시되던 문제.
+
+### 페이즈 결과
+
+- **Phase 1 — notifyRowAdded 그룹 state 동기화 (`2603a64`)**: `useServerPagingOrchestrator.ts` 의 `notifyRowAdded` insertedRows(부분 업데이트) 경로에 `setGroups` in-place 갱신 추가. 그룹핑 활성 시에만, 각 새 행의 그룹기준열 값으로 `updateCellInLoadedRow` 와 동일한 find-or-create 타깃 그룹 로직을 적용해 타깃 그룹 선두 삽입 + `rowCount` 증가(immutable ref-replace + `changed` 가드). 매칭 그룹 없으면 신규 그룹 생성(빈값 행 → 빈값 그룹, 마스터 결정: 그룹기준열 값 기준 배치). `loadPage(0)` 미추가(저장 큐 경합 회피, in-place 로 즉시 가시성 충족), `setGroups`/`isGroupingActive`/`groupingColumnId` 를 useCallback deps 에 추가. batch 경로(insertedRows 없음)는 기존 full-clear+reload 보존(무회귀).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/server-paging/useServerPagingOrchestrator.ts`
+
+### 수동 검증 (마스터)
+
+dev 서버에서 fs-data-viewer 를 행그룹 적용 상태로 두고 — ① 행 추가(상단/위/아래) 시 새 빈 행이 F5 없이 즉시 (그룹기준열 값에 맞는) 그룹에 표시되는지, ② 기존에 빈값 그룹이 없던 상태에서 추가 시 빈값 그룹이 신규 생성되어 헤더와 함께 표시되는지, ③ 비그룹핑 모드 행 추가 무회귀, ④ 일괄입력 행 추가가 그룹핑 모드에서 무회귀인지 확인. fs-data-viewer 는 루트 앱 vite alias 가 src 직결이라 빌드 불필요 — 머지 후 **하드 리프레시**로 반영.
+
 ## v001.619.0
 
 > 통합일: 2026-06-02
