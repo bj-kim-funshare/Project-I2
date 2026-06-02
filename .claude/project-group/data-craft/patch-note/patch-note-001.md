@@ -21804,3 +21804,20 @@ data-craft:
 ### 검증
 - 워크트리 신선 생성으로 패키지 dist 미빌드 → 루트 앱 tsc 가 cross-package 모듈 미검출(변경 무관). `pnpm build:packages` 로 dist 생성 후 `pnpm typecheck:all && pnpm lint` exit 0(에러 0, 기존 warning 85). 제거된 `hasGroupHeader` prop 의 외부 소비자 부재는 grep + 전 패키지 typecheck 통과로 이중 확인. advisor 계획·완료 5관점 양쪽 PASS.
 - **시각 정합 미수행(마스터 검증 영역)**: main 세션은 렌더 불가. 실기 확인: 열을 2개 이상 그룹으로 구성 → 뷰모드 진입 → 헤더가 phantom band 없이 그룹40+컬럼40=80px 로 정렬, 우측 add-button 열·가로/세로 구분선 정합 확인(하드 리프레시 필요, fs-data-viewer 는 dev src alias). add-button `+` 위치(컬럼행 레벨)·잔여 구분선 미세 정합은 시각 결과에 따라 핫픽스 후보.
+
+## v001.623.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #240 (funshare-inc/data-craft) — 핫픽스2
+
+**문의 모달 "활용 계획" 입력칸 전체 너비 + 높이 5배 (핫픽스2, 마스터 지시).** v001.618.0 의 엔터프라이즈 문의 모달에서 "사내 시스템 도입·활용 계획" 입력에 공유 `Textarea` 를 dress 없이 그대로 써서, 컴포넌트 기본값에 `w-full`·`min-height` 가 모두 없어 좁고 ~2줄 높이로 작게 렌더됐다. 마스터 지시로 해당 Textarea 에 `className="w-full min-h-[280px]"` 를 추가 — 모달 전체 너비를 쓰고 기존 대비 약 5배 높이를 확보했다. 다른 필드·모달 폭은 미변경.
+
+### 페이즈 결과
+- **Phase 5 / 핫픽스2** (`257c55b`): `EnterpriseContactDialog` 의 systemsUsage Textarea 에 `w-full min-h-[280px]` 적용.
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/subscription/ui/EnterpriseContactDialog.tsx`
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` 통과(0 errors). 280px Textarea + 상단 5개 입력 행을 합쳐도 모달 총 높이 ~700px 로 노트북 뷰포트 내 — 정적 확인. 실제 크기감은 마스터 하드 리프레시 후 시각 검증.
