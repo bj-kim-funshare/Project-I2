@@ -21551,3 +21551,22 @@ data-craft-mobile:
 ### 알려진 후속 / 잔존 리스크 (시각 확인 후)
 - 트리 행 스타일은 핫픽스2 유지 — 마스터 디자인 거부가 행 스타일 자체였다면 추가 핫픽스 필요.
 - 아이콘은 lucide 라인 아이콘(사진의 컬러 이모지 아님). page.icon 이 맵 외 이름이면 타입 기본으로 떨어져 페이지별 구분이 약할 수 있음 — 매핑 확장/값 진단 후속.
+
+## v001.612.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #238 (funshare-inc/data-craft)
+
+**영역 컨트롤바 세로 스크롤 가림 방지.** 디자인 모드 영역/서브영역 컨트롤바(우측 상단)는 드로어가 열릴 때 가로로 밀려 드로어에 가려지지 않게 되어 있었으나, 영역이 뷰포트보다 길어 세로 스크롤로 상단이 화면 위로 사라지면 컨트롤바도 함께 가려졌다. QA 요청에 따라 가로 회피와 동일 원리를 세로축에도 적용해, 컨트롤바가 스크롤 뷰포트 상단 가장자리에 계속 고정되어 항상 접근 가능하도록 했다(드로어 상태와 무관하게 상시 동작).
+
+### 페이즈 결과
+- **Phase 1** (`4860689`): 세로 핀 훅 `useScrollPinOffset` 신설 — `.layout-content` 스크롤 컨테이너 기준으로 컨테이너 상단이 뷰포트 위로 사라질 때 `top` 오프셋을 동적 계산(rAF 스로틀·passive scroll·resize, 하단 클램프). 기존 가로 보정 훅 `useDrawerOverlap` 무손상 가산 설계. AreaControls 가 이 훅을 사용해 인라인 `style.top` 을 기존 `right` 시프트와 병합(`top` transition 미부여로 즉시 추종, 미스크롤 시 8px=기존 `top-2` 동일).
+- **Phase 2** (`5bf0d92`): 행분할 서브영역 컨트롤바(SubAreaControls)에 동일 훅 적용. `containerRef` 가 SubArea 셀을 가리켜 핀이 해당 서브영역 내부로 자연 한정.
+
+### 영향 파일
+data-craft:
+- 신규: `src/widgets/layout-canvas/hooks/useScrollPinOffset.ts`
+- 수정: `src/widgets/layout-canvas/ui/AreaControls.tsx`, `src/widgets/layout-canvas/ui/SubAreaControls.tsx`
+
+### 검증
+- 루트 앱 `tsc -p tsconfig.app.json` 통과(페이즈별) + 변경 파일 eslint 통과. advisor 계획/완료 5관점 PASS. 실제 스크롤 핀 동작은 수동/QA 시각 확인 영역.
