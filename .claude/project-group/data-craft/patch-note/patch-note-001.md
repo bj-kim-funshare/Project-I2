@@ -21587,3 +21587,24 @@ data-craft:
 
 ### 검증
 - 머지 후 i-dev 에서 `pnpm typecheck:all && pnpm lint` 통과(0 errors). advisor 계획/완료 5관점 통과. 렌더 전용 CSS sticky 결함이라 typecheck/lint/build 로는 미검출 — 실제 헤더-본문 동기 거동은 마스터 수동 시각 확인(좌/우 고정·다중 고정·그룹 동반·모드 변동) 영역.
+
+## v001.614.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스4
+
+**사진 색상 일치.** 핫픽스1~3에서 기능·구조(실데이터·요소 제거)만 맞추고 사진의 색을 반영하지 못해, 페이지 목록이 회색 스캐폴드 바탕에 그대로 얹혀 "회색 목록"으로 보였다(사진은 흰색 목록 패널). 마스터 지적("색을 보라, 아이콘 말고")대로 색상을 사진에 맞췄다.
+
+### 변경 내용 (핫픽스4, `4f1c4cb`)
+- **목록을 흰색 패널로**: `page_screen.dart` data 분기의 스크롤 영역을 흰색 Container(상단 둥근 모서리 12 + 상단 #E2E8F0 hairline)로 감싸 트리가 흰 바탕에 렌더. 화면 바탕은 연회색 `#F5F6F8` 유지(사진과 동일).
+- **사진 색상 매칭**: 검색바 채움 `#F1F5F9`(흰색→연회색), placeholder/돋보기 `#94A3B8`. 트리 이름 `#0F172A`(부모 w700/자식 w500), 셰브론·아이콘 무채색 `#64748B`(아이콘 색 미적용 — 웹 동일), 구분선 `#F1F5F9`.
+
+### 영향 파일
+data-craft-mobile:
+- 수정: `lib/screens/page/page_screen.dart`, `lib/screens/page/widgets/page_search_bar.dart`, `lib/screens/page/widgets/page_tree_item.dart`
+
+### 검증
+- `flutter analyze` 0 에러(잔존 9건은 범위 밖 기존 deprecation). 색·렌더는 typecheck/analyze 미검출 영역 → dev 서버 재기동 후 마스터 시각 확인.
+
+### 비고
+- 색/시각 정합은 렌더를 봐야 확정되는 영역으로, 본 핫픽스 사이클에서 main 세션이 화면을 직접 못 봐(스크린 캡처 권한 제약) 사진 파일·테마 hex 대조로 색을 맞춤. 추가 불일치 시 구체 위치/색 지정 또는 캡처 허락 후 정정.
