@@ -9,10 +9,10 @@ connection_style: DB_* 환경변수
 
 # data-craft — db 환경 규정
 
-## 전환 상태 (Roadmap-6 — 2026-05-29)
+## 전환 상태 (DEV 전환 완료 — 2026-06-02)
 
-- **engine 전환 진행 중**: MySQL → PostgreSQL (+ 후속 TimescaleDB 도입). dev 선구축 후 prod 2단계 컷오버(PostgreSQL 전환 → 안정화 소킹 → TimescaleDB 적용). 본 `engine: postgresql` 은 전환 타깃을 선언한다.
-- **prod DB 작업 동결**: db.md `engine` 은 전역 단일 필드라 "dev=psql / prod=mysql" 혼재를 표현할 수 없다. 따라서 PROD 컷오버(Roadmap-6 PROD-1) 완료 전까지 **prod DB 대상 `task-db-structure` / `task-db-data` 실행을 동결**한다 — 전환 기간 DB 작업은 dev(psql) 대상만. prod 는 기존 MySQL 이 계속 가동한다.
+- **DEV 전환 완료**: dev 는 PostgreSQL 라이브 가동 — 앱 드라이버 mysql2→pg 전환(#220) + data_values `HASH(group_id)` 재파티션 + 빌드 DDL psql 정합(#239) 완료. prod 는 아직 MySQL 로 **PROD 컷오버 대기**. `engine: postgresql` 은 이제 dev 라이브와 일치한다(prod 와는 전역 단일 필드 한계로 불일치). 후속 TimescaleDB 도입 여부는 별도 결정(본 status 범위 외). (구 Roadmap-6 은 폐기 — 이후 전환 작업은 plan-enterprise 이슈 구동.)
+- **prod DB 작업 동결**: db.md `engine` 은 전역 단일 필드라 "dev=psql / prod=mysql" 혼재를 표현할 수 없다. 따라서 PROD 컷오버 완료 전까지 **prod DB 대상 `task-db-structure` / `task-db-data` 실행을 동결**한다 — 전환 기간 DB 작업은 dev(psql) 대상만. prod 는 기존 MySQL 이 계속 가동한다.
 - **소스 MySQL 접속 좌표 별도 보존**: 인벤토리/ETL 용도로 기존 MySQL(dev=`data_craft_dev` / prod=`data_craft_production`, `mysql2`, `DB_*`) 접속 정보를 각 저장소 `.env` 의 기존 변수 + `~/db-backups` 백업으로 유지한다. psql 컷오버 후에도 MySQL 을 read-only 폴백으로 일정 기간 보존(롤백 대비).
 
 ## 핵심 정책
@@ -41,6 +41,6 @@ connection_style: DB_* 환경변수
 
 ## Connection
 
-- **전환 후**: `data-craft-server` 가 `pg` 패키지로 PostgreSQL 직접 연결. 드라이버 전환(`mysql2` → `pg`)은 Roadmap-6 DEV-1 앱 계층 작업에서 수행하며, 전환 완료 전 현행 코드는 `mysql2` 로 동작한다. 풀 설정 / 트랜잭션 패턴은 server 코드 참조.
+- **전환 후 (dev 적용 완료)**: `data-craft-server` 가 `pg` 패키지로 PostgreSQL 직접 연결. 드라이버 전환(`mysql2` → `pg`)은 #220 에서 완료(dev 기본 엔진 postgres). dev 는 `pg` 라이브이며 mysql2 경로는 되돌림용 보존(사문화). prod 는 컷오버 전까지 MySQL(`mysql2`) 로 가동. 풀 설정 / 트랜잭션 패턴은 server 코드 참조.
 - FE 측 (data-craft / data-craft-mobile / data-craft-ai-preview) 은 직접 DB 접속하지 않고 `data-craft-server` REST API 경유.
 - 환경별 차등 시크릿 운영은 dev.md §"env 환경별 차등 변수 표준 — BE 페어 패턴" 참조.
