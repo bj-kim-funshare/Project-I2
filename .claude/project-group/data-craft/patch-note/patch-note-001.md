@@ -21608,3 +21608,24 @@ data-craft-mobile:
 
 ### 비고
 - 색/시각 정합은 렌더를 봐야 확정되는 영역으로, 본 핫픽스 사이클에서 main 세션이 화면을 직접 못 봐(스크린 캡처 권한 제약) 사진 파일·테마 hex 대조로 색을 맞춤. 추가 불일치 시 구체 위치/색 지정 또는 캡처 허락 후 정정.
+
+## v001.615.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스5
+
+**검색창·"모든 페이지" 라벨 제거 (마스터 지시).** 색상 일치(v001.614.0) 이후 마스터가 검색창과 "모든 페이지" 텍스트 제거를 요청. 화면 최소화 — "페이지" 타이틀 + 흰 패널 페이지 트리(실데이터)만 남김.
+
+### 변경 내용 (핫픽스5, `a497861`)
+- `PageSearchBar`(검색창)·`PageSectionHeader`("모든 페이지" 라벨) 위젯 파일 삭제 + page_screen 에서 제거.
+- `PageScreen` 을 ConsumerStatefulWidget → **ConsumerWidget** 으로 단순화(검색 state `_searchController`/`_query` 제거).
+- `PageTree` 에서 `query` 파라미터·로컬 필터(`_filterNodes`) 제거 — 전체 페이지 트리 그대로 렌더.
+- 미사용 ARB 키 2개(`pageSearchHint`·`pageAllPages`) 제거. 흰 패널·행 스타일·아이콘 무채색은 v001.614.0 유지.
+
+### 영향 파일
+data-craft-mobile:
+- 수정: `lib/screens/page/page_screen.dart`, `lib/screens/page/widgets/page_tree.dart`, `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb`
+- 삭제: `lib/screens/page/widgets/page_search_bar.dart`, `lib/screens/page/widgets/page_section_header.dart`
+
+### 검증
+- `flutter analyze` 0 에러. removal grep(검색·라벨 식별자·키) 0건. dev 서버 재기동 후 마스터 시각 확인.
