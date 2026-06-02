@@ -21570,3 +21570,20 @@ data-craft:
 
 ### 검증
 - 루트 앱 `tsc -p tsconfig.app.json` 통과(페이즈별) + 변경 파일 eslint 통과. advisor 계획/완료 5관점 PASS. 실제 스크롤 핀 동작은 수동/QA 시각 확인 영역.
+
+## v001.613.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #237 (funshare-inc/data-craft)
+
+**데이터 뷰어 그리드 뷰 "열 고정" 헤더-본문 sticky 어긋남 수정.** 고정 열을 켠 상태에서 가로 스크롤을 하면 어느 지점까지는 고정 열의 본문 셀과 열 제목(헤더)이 함께 고정돼 따라오다가, 특정 지점부터 헤더만 밀려나고 본문 셀만 고정된 채로 남는 결함이 있었다(재현: 왼쪽 고정·그룹 헤더 미설정). 원인은 `position: sticky` 의 containing-block(트랙) 해제 지점이 헤더 행과 본문 행에서 서로 다르게 잡히는 구조적 비대칭으로, 코드(`useScrollSync.ts`)가 이미 "별도 후속"으로 명시해 두고 그룹 헤더 표면(`GroupHeaderRow`)만 트랙 내부 trailing spacer 로 선행 패치해 둔 미완 영역이었다. 그룹 헤더가 이미 쓰던 검증된 계약(트랙 내부 trailing spacer + 내부 wrapper `minWidth: max(fit-content,100%)`)을 열 제목 행·본문·집계 행에도 동일 적용해, 세 표면의 sticky 고정 열이 전 스크롤 구간에서 동일 지점까지 함께 고정되도록 통일했다. 좌/우 고정·그룹 유무·모드 무관.
+
+### 페이즈 결과
+- **Phase 1** (`786d884`): 네 sticky 표면을 GroupHeaderRow 계약으로 통일. `GridHeader.tsx` — `headerScrollRef` 내부 flex 트랙 말미에 `FIXED_COLUMN_WIDTH.addMenu`(40px) `flex-shrink-0` spacer 삽입(`ColumnAddButton` 은 트랙 밖 sibling 유지; RowMenuColumn 재배치 안 하는 방향 (a) 채택). `GridBody.tsx` — 본문 스크롤 컨테이너 내부 `flex-1` wrapper 에 `minWidth: max(fit-content,100%)` 부여. `AggregationRow.tsx` — 집계 행 inner flex `minWidth` 를 `fit-content` → `max(fit-content,100%)` 보완(agg-menu 셀은 이미 트랙 내부). `useScrollSync.ts` — stale "별도 후속" 주석을 #237 해소로 갱신, sub-pixel 방어 clamp 는 유지.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`, `packages/fs-data-viewer/src/widgets/grid-table/components/GridBody.tsx`, `packages/fs-data-viewer/src/widgets/grid-table/components/grid-footer/AggregationRow.tsx`, `packages/fs-data-viewer/src/features/grid/hooks/useScrollSync.ts`
+
+### 검증
+- 머지 후 i-dev 에서 `pnpm typecheck:all && pnpm lint` 통과(0 errors). advisor 계획/완료 5관점 통과. 렌더 전용 CSS sticky 결함이라 typecheck/lint/build 로는 미검출 — 실제 헤더-본문 동기 거동은 마스터 수동 시각 확인(좌/우 고정·다중 고정·그룹 동반·모드 변동) 영역.
