@@ -21410,3 +21410,37 @@ Phase 2 dispatch 시 phase-executor sub-agent (Sonnet 4.6) 가 main 세션의 `c
 - gh-pages 실제 publish (`npx gh-pages -d apps/web/dist`) — 본 plan 스코프 외, 마스터 수동 또는 deploy 워크플로 별도 정의.
 
 ## v001.1.0 — Commit&Push 대기중
+
+## v001.607.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft)
+
+모바일 "페이지" 탭의 placeholder("Coming Soon")를 디자인 스크린샷대로의 페이지 화면으로 교체. 정적 목업 데이터 기반, 한국어/영어 양국어(UI 크롬). 즐겨찾기·최근·추가(+/새 페이지)는 시각요소만 두고 동작 미구현(마스터 명시 제외).
+
+### 페이즈 결과
+- **Phase 1** (`341906a`): UI 크롬용 `page*` ARB 키 7개(ko+en, pageTitle/pageSearchHint/pageFavorites/pageRecent/pageAllPages/pageNewPage/pageEmpty) 추가 + `page_models.dart` 신규(const `PageNode` + 스크린샷 정확 일치 `kMockPageTree`). 트리 노드 라벨은 의도적으로 i18n 미키화(원어 유지).
+- **Phase 2** (`430a552`): `PageScreen`(StatefulWidget) 상단부 — displaySmall "페이지" 타이틀 + 원형 브랜드블루 `+` IconButton(inert), 검색바, 즐겨찾기(별)·최근(시계) 바로가기 카드 2개(inert), "모든 페이지" 섹션헤더 + "+ 새 페이지" inert TextButton. 모든 lucide 아이콘 const top-level 참조(DDC web StackOverflow 예방).
+- **Phase 3** (`8212206`): 확장형 페이지 트리(`PageTreeItem`/`PageTree`) — 단일 const chevron + AnimatedRotation 펼침/접힘, 이모지·이름·카운트 pill, 1단 중첩 들여쓰기; 검색바 로컬 클라이언트 필터(`_filterNodes` 재귀, 대소문자 무시, 부모-자식 매칭 보존); `app_router.dart` `/page` → `PageScreen` 교체 + `page_placeholder.dart` 삭제.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb` (page* 키)
+- `lib/screens/page/page_models.dart` (신규)
+- `lib/screens/page/page_screen.dart` (신규)
+- `lib/screens/page/widgets/page_search_bar.dart` (신규)
+- `lib/screens/page/widgets/page_shortcut_cards.dart` (신규)
+- `lib/screens/page/widgets/page_section_header.dart` (신규)
+- `lib/screens/page/widgets/page_tree.dart` (신규)
+- `lib/screens/page/widgets/page_tree_item.dart` (신규)
+- `lib/router/app_router.dart` (수정)
+- `lib/screens/page/page_placeholder.dart` (삭제)
+
+### 검증
+- 각 페이즈 `flutter analyze` 0 에러(잔존 9건은 범위 밖 기존 deprecation info). lint 게이트는 dev.md `pnpm typecheck`(Flutter 부적합) 사유로 `flutter analyze` 대체(#230 운영 선례).
+- advisor 계획/완료 5관점 모두 PASS. 시각 일치 확정은 dev 서버 재기동 후 Chrome 검증(PENDING 게이트).
+
+### 알려진 후속 (명시 deferred)
+- 실 페이지 API 연동(웹 측 페이지 엔드포인트 존재) — 모바일 Dio 클라이언트 + includeAuth 인증 계약.
+- 바텀 네비 뱃지(스크린샷 Inbox 4/DM 2 vs 현재 7/2) — 공유 셸 스코프 밖으로 미변경.
+- 즐겨찾기·최근·추가·새 페이지 실 동작.
