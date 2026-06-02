@@ -21780,3 +21780,27 @@ data-craft:
 ### 검증
 - 워크트리 신선 생성으로 패키지 dist 미빌드 → 루트 앱 tsc 가 cross-package 모듈 미검출 8건(변경 무관). `pnpm build:packages` 로 dist 생성 후 재실행 → `pnpm typecheck:all && pnpm lint` exit 0(에러 0, 기존 warning 85). advisor 계획·완료 5관점 양쪽 PASS.
 - **재현 미수행(마스터 시각 검증 영역)**: main 세션은 렌더 불가. 코드 메커니즘은 완전 추적됐고, 모든 fresh grouped load 가 `reset()→setGroups(null)` 로 수렴하므로 수정은 트리거 경로 전체를 커버한다. 실기 확인: 행그룹 적용 후 그룹 컬럼/필터/정렬 변경 → 비최상위 그룹이 ▶ 로 표시·첫 그룹만 데이터 노출 → 그룹 펼치기 클릭 시 행 lazy 로드(2단 조작 불요).
+
+## v001.622.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #242 (funshare-inc/data-craft)
+
+**열그룹 뷰모드 헤더 높이 불일치(phantom band) 수정 (QA 검증·해결).** QA 보고: 열그룹 편집에서 여러 열을 그룹으로 구성하면 뷰모드 헤더 영역의 높이·구분선 정렬이 일관되지 않다. 코드 추적으로 결함을 확정했다 — 헤더는 열그룹이 하나라도 있으면(`hasGroupHeader`) 그룹행(40px)+컬럼행(40px) 2행으로 렌더되는데, `ColumnAddButton`(우측 `+`/열 추가 열)이 컬럼행 래퍼(`GridHeader.tsx` `<div className="flex">`, flex 기본 `align-items: stretch`) 안에서 그룹 존재 시 높이가 `80px`(`ColumnAddButton.tsx` `hasGroupHeader ? 80 : 40`)로 설정된다. 그 결과 같은 flex 행의 헤더 스크롤 div 가 80px 로 stretch 되지만 내부 `ColumnHeader` 셀은 40px(상단 정렬)라 하단 40px 가 빈 회색 밴드(phantom band)로 남고, add-button 박스가 헤더 콘텐츠보다 40px 아래로 돌출했다(열그룹 없을 때는 add-button=40 → stretch 없음 → 정상이라 "열그룹 구성 시"에만 재현). `ColumnAddButton` 의 높이를 항상 40px 로 고정해 컬럼행 stretch 를 차단, phantom band 를 제거했다(헤더 = 그룹행40+컬럼행40=80px). 미사용이 된 `hasGroupHeader` prop 은 타입·destructure·`GridHeader` 호출부에서 함께 제거했다. 동일 결함이 복제된 형제 뷰어 패키지(`fs-sub-data-viewer`·`fs-external-data-viewer`)에도 같은 수정을 미러링했다. 스크롤 동기화(`useScrollSync`)·sticky/frozen·`GroupHeaderRow` addMenu 스페이서(#237 영역)는 비접촉.
+
+### 페이즈 결과
+- **Phase 1** (`ffe3430`): `fs-data-viewer` 의 `ColumnAddButton` 높이 40 고정 + `hasGroupHeader` prop 제거, `GridHeader` 호출부 prop 전달 제거.
+- **Phase 2** (`30cb0e2`): `fs-sub-data-viewer`·`fs-external-data-viewer` 두 형제 패키지에 Phase 1 과 동일 수정 미러링.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/grid-header/ColumnAddButton.tsx`
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- 수정: `packages/fs-sub-data-viewer/src/widgets/grid-table/components/grid-header/ColumnAddButton.tsx`
+- 수정: `packages/fs-sub-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+- 수정: `packages/fs-external-data-viewer/src/widgets/grid-table/components/grid-header/ColumnAddButton.tsx`
+- 수정: `packages/fs-external-data-viewer/src/widgets/grid-table/components/GridHeader.tsx`
+
+### 검증
+- 워크트리 신선 생성으로 패키지 dist 미빌드 → 루트 앱 tsc 가 cross-package 모듈 미검출(변경 무관). `pnpm build:packages` 로 dist 생성 후 `pnpm typecheck:all && pnpm lint` exit 0(에러 0, 기존 warning 85). 제거된 `hasGroupHeader` prop 의 외부 소비자 부재는 grep + 전 패키지 typecheck 통과로 이중 확인. advisor 계획·완료 5관점 양쪽 PASS.
+- **시각 정합 미수행(마스터 검증 영역)**: main 세션은 렌더 불가. 실기 확인: 열을 2개 이상 그룹으로 구성 → 뷰모드 진입 → 헤더가 phantom band 없이 그룹40+컬럼40=80px 로 정렬, 우측 add-button 열·가로/세로 구분선 정합 확인(하드 리프레시 필요, fs-data-viewer 는 dev src alias). add-button `+` 위치(컬럼행 레벨)·잔여 구분선 미세 정합은 시각 결과에 따라 핫픽스 후보.
