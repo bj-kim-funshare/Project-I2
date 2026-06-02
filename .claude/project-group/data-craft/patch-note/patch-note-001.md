@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.606.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #219
+
+#210(메인앱 다국어) 후속 — 뷰어 패키지 3종(fs-data-viewer / fs-external-data-viewer / fs-sub-data-viewer)의 raw 하드코딩 한국어를 전부 각 패키지 `useI18n()` 중앙 번역 시스템으로 편입. **웹 뷰어 패키지 단독, BE/DB 무수정.** 4언어(ko/en/ja/zh) — ko 원본 · en 실번역 · ja/zh = ko 복제(무회귀, 실번역 후속). 저장값(셀 데이터)은 ko 불변, 표시만 지역화.
+
+### 메커니즘
+뷰어 패키지 i18n 은 메인앱(react-i18next `t('key','기본값')`)과 달리 `useI18n()` 이 중첩객체 `t = translations[language]` 를 반환(`t.area.key` 접근). `types.ts` 의 `TranslationKeys` 가 ko/en/ja/zh 4언어 키 parity 를 tsc 컴파일타임에 강제. .ts(비-React) 모듈은 `t` 파라미터 주입 또는 `translations[DEFAULT_LANGUAGE]` 정적 접근.
+
+### 페이즈 결과 (3패키지, 총 36 커밋)
+- **fs-data-viewer** (Phase 1·2·2D·2E .tsx / 3A~3D .ts·integrity / 4 nationData): 공유 셀렌더러·다이얼로그·컬럼생성기·그리드·헤더·뷰(칸반/간트/캘린더)·print 클러스터·entities enum 라벨(getColumnTypeName 등 기존 accessor 재사용)·무결성 검사 메시지·국가명 데이터.
+- **fs-external-data-viewer** (Phase 5·6·6B .tsx / 7A~7D .ts): fs-data-viewer 키 미러. print 스텝(GridRowSelectStep 등) 키 사전 확정.
+- **fs-sub-data-viewer** (Phase 8·9 .tsx / 10A~10E .ts): fs-external 미러 + 분기 파일(멀티선택/투표/컬러피커/중요도/캘린더오버레이).
+
+### 주요 아키텍처 결정
+- **대형 데이터 리스트(≥50건)**: 국가명(`nationData.ts` `WORLD_COUNTRIES_SORTED` 205건)·enum 데이터는 중앙 type 비대화 회피를 위해 `dateRangeLabels` 선례의 **로컬 4언어 모듈 + accessor**(`getCountryLabel(ko, language)`)로 처리. `WORLD_COUNTRIES_SORTED`(ko) 불변 = 저장/선택값 로케일 독립.
+- **무결성 검사 메시지(~120건, IntegrityCheckDialog 표출)**: **additive `messageKey` 설계** — `FsGridIntegrityError/Warning` 에 optional `messageKey`+`messageParams` 추가, `addErrorKey`/`addWarningKey` + `resolveIntegrityTemplate(t,...)`, 다이얼로그가 렌더타임 지역화. `assertGridModelIntegrity` throw 경로는 `translations[DEFAULT_LANGUAGE]` 정적 해석(미캐치 = React error boundary).
+- **🚫 carve-out**: `resetRowAction.ts`·`computeAutoFillChanges.ts` 의 로그/lastUpdate 문자열은 **DB 영속 셀값**이라 지역화 시 감사로그 로케일 의존 → 한국어 유지(번역 대상 아님). 검색 키워드 `tags.ts`·언어선택기 네이티브명도 제외(마스터 명시).
+
+### 런타임 핫픽스
+로딩 오버레이 6종(ViewModeLoadingOverlay/SubGridLoadingOverlay/GanttLoadingMore/LoadingStates)이 I18nProvider **외부** 렌더로 `useI18n()` throw → `useI18nOptional()`(DEFAULT_LANGUAGE 폴백) 전환. lint/tsc 미검출, 마스터 보고 후 해소.
+
+### 영향 파일
+data-craft (`funshare-inc/data-craft`, branch `i-dev`):
+- `packages/fs-data-viewer/src/**` — .tsx 컴포넌트·.ts(print/lib/entities/integrity)·`shared/config/i18n/{types.ts,translations/{ko,en,ja,zh}.ts}`·`shared/config/nationData.ts`
+- `packages/fs-external-data-viewer/src/**` — 동일 구조
+- `packages/fs-sub-data-viewer/src/**` — 동일 구조
+
+### 검증 결과
+- `pnpm typecheck:all && pnpm lint`: 0 errors (전 페이즈, 4언어 parity tsc 강제). build:packages 10/10.
+- 완료 게이트: 실표시 raw_display 0/0/0(fs-data-viewer 잔존 27 = console.error 멀티라인 + JSX 주석 거짓양성), 무결성 string-form addError 0/0/0, window.alert 한국어 0/0/0.
+- advisor 계획·완료 검증 5관점 PASS.
+
+### 알려진 후속 (별도 plan 권장)
+- **#210 audit 스크립트 3대 사각**: `i18n_categorize.py` 가 백틱 템플릿 리터럴·`window.alert/confirm`·멀티라인 JSX 텍스트를 미검출(본 plan 은 수동 sweep 으로 보완). audit 스크립트 보강 권장.
+- **ja/zh 실번역**: 현재 ko 복제(무회귀). 실 일본어·중국어 번역 후속.
+- **ColumnMenuVariantB.tsx**(plan #234 가 본 plan 진행 중 i-dev 에 도입한 신규 컴포넌트): 자체 raw 한국어(`속성`·`표시·동작`·`위치·정렬`·`왼쪽/오른쪽 고정` 등) 보유 — #219 스코프 외(시작 시점 미존재), i18n 후속 필요.
+
 ## v001.605.0
 
 > 통합일: 2026-06-01
