@@ -21873,3 +21873,23 @@ data-craft:
 ### 검증
 - 쿼리 키 소비처 grep 으로 단일 소비자(`PaymentHistorySection.tsx`) 확정 — 훅 arity 변경의 다른 파급 없음. 워크트리에 루트 node_modules 심링크 후 eslint(변경 2파일) exit 0 / 루트 앱 `tsc -p tsconfig.app.json --noEmit` exit 0(에러 0). advisor 계획·완료 5관점 양쪽 PASS.
 - **실기 확인(마스터 검증 영역)**: 결제 이력 41건 이상 계정으로 플랜 관리 탭 진입 → 하단 페이지네이션 끝(`N/N`)까지 이동 시 모든 페이지에 결제 항목 표시·빈 페이지 없음, 페이지당 최대 5건, 표시 총 페이지 수 = `ceil(전체건수/5)` 일치 확인(하드 리프레시 권장).
+
+## v001.626.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #240 (funshare-inc/data-craft) — 핫픽스3
+
+**문의 발송 성공인데 "발송 실패" 토스트 — 응답 봉투 불일치 교정 (핫픽스3, 마스터 제보).** 마스터가 "서버에는 오류 안 나오는데 화면에서는 토스트로 문의 발송 실패"를 제보. 근본 원인은 응답 봉투 계약 불일치였다 — data-craft FE `apiClient` 는 응답에서 `response.data` 를 읽고(표준 봉투 = `buildAuthResponse(req, payload)` → `{ account, user, accessToken, data: payload }`), 모든 billing 컨트롤러가 이 봉투를 쓴다. 그런데 `contact.controller` 의 Enterprise 문의만 bare `res.json({ success: true })` 로 반환해 `data` 키가 없었고, FE `sendEnterpriseInquiry` 의 `if (!response.data) throw` 가 항상 발동 → false "발송 실패" 토스트가 떴다. **메일 자체는 BE 200 으로 정상 발송**(마스터가 본 무에러 서버 + 화면 실패 = 정확히 이 증상). regression 이 아니라, enterprise 카드가 v001.618.0 Phase3 로 처음 선택 가능해지기 전엔 이 엔드포인트가 호출된 적이 없어 봉투 결함이 잠복(activation 이 들춘 latent bug)했던 것.
+
+### 페이즈 결과
+- **Phase 6 / 핫픽스3** (`2d46025`): `contact.controller` 의 성공 응답을 다른 12개 컨트롤러와 동일하게 `res.json(buildAuthResponse(req, { success: true }))` 로 정합. 검증·`inquirerEmail`·서비스 호출 로직 불변. (부수 효과로 토큰 갱신 봉투도 정상 동반.)
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/controllers/contact.controller.ts`
+
+### 후속 (범위 밖)
+- `src/controllers/resetPassword.controller.ts` 도 bare `res.json({ success: true, message })` 를 반환 — 동일 봉투 결함 클래스. 현재 미발현이라면 해당 FE 호출부가 `response.data` 를 읽지 않을 뿐이며, 계약은 깨져 있으므로 봉투 정합 후속 권장. (`subscription.controller.ts` 의 `{ data: { plans } }` 는 `data` 키가 있어 FE 동작 정상 — 토큰 갱신 봉투만 누락된 미세 항목.)
+
+### 검증
+- eslint exit 0 + `tsc --noEmit` exit 0. wire 계약 결함이라 정적 게이트로는 본디 미검출(FE/BE 독립 컴파일) — 마스터 BE dev 서버 리로드 후 문의 제출 시 성공 토스트 + 메일 수신 시각 확인 영역.
