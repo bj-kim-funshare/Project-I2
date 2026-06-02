@@ -21497,3 +21497,33 @@ data-craft-mobile:
 - 커스텀 `page.icon`(lucide ~1500종 임의 문자열) 미지원 — 타입 기본 아이콘만 적용. 정밀 매핑은 후속.
 - API 인증/빈 응답 시 에러·빈 상태 노출(`/api/builder/*` 는 includeAuth 예외이나 테넌트 가드 상이 시 진단).
 - 활성 행 강조·페이지 네비게이션은 본 스코프 외(웹은 선택 페이지 하이라이트).
+
+## v001.610.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #235 (funshare-inc/data-craft) — 핫픽스2
+
+**마스터 피드백 재반영 — 사진 디자인 전체 복원.** 핫픽스1(v001.609.0)이 "웹과 동일 = 데이터만 실데이터"를 "디자인까지 웹 사이드바처럼 밋밋하게"로 과해석해 스크린샷 디자인(검색바·즐겨찾기/최근 카드·섹션헤더·카드형 행)을 제거한 것을 교정. 마스터 지시("이 디자인으로 하라고")대로 **스크린샷 디자인 전 요소를 복원**하되 트리는 실데이터, 카운트 배지는 제외("빼").
+
+### 변경 내용 (핫픽스2)
+- **크롬 위젯 복원** (`7f15c6b`): `PageSearchBar`(검색바), `PageShortcutCards`(즐겨찾기/최근 — 컬러 아이콘 배경 amber/green, inert), `PageSectionHeader`("모든 페이지" + "+ 새 페이지" inert) 재생성. 제거됐던 ARB 키 5개(pageSearchHint·pageFavorites·pageRecent·pageAllPages·pageNewPage) ko/en 재추가.
+- **화면·트리 사진 디자인 재작성** (`c5bf45f`): `PageScreen` → `ConsumerStatefulWidget`(검색 state). 타이틀 + 원형 브랜드블루 `+`(inert) + 검색바 + 카드 + 섹션헤더를 AsyncValue 외부 배치(로딩/에러 중에도 크롬 유지), 본문은 `pageControllerProvider.when` 실데이터. `PageTreeItem`은 chevron 좌측(단일 const + AnimatedRotation, 리프는 정렬 placeholder) + `pageIcon()` 실아이콘 + 이름(부모 bold) + divider, **카운트 배지 완전 제외**. 검색바는 실 페이지 이름 로컬 필터.
+
+### 디자인 결정
+- 즐겨찾기·최근·추가(+)·새 페이지 4개 = 화면엔 사진대로 존재하되 **동작 없음(inert)** — "구현 안해도 돼"의 의미.
+- 트리는 사진 샘플 이름이 아니라 `/api/builder/pages` 실 페이지 데이터(웹과 동일). 아이콘도 실 페이지 아이콘(타입 기본 lucide, 웹 동일).
+- 카운트 배지는 실 출처 부재 + 마스터 지시로 제외.
+
+### 영향 파일
+data-craft-mobile:
+- 신규: `lib/screens/page/widgets/page_search_bar.dart`, `page_shortcut_cards.dart`, `page_section_header.dart` (복원)
+- 재작성: `lib/screens/page/page_screen.dart`, `lib/screens/page/widgets/page_tree.dart`, `lib/screens/page/widgets/page_tree_item.dart`
+- 수정: `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb` (ARB 키 재추가)
+
+### 검증
+- `flutter analyze` 0 에러. 카운트/pill/badge grep 0건. advisor 완료 5관점 PASS.
+
+### 알려진 후속 (시각 확인 후 필요 시)
+- 부모 노드 초기 펼침은 BE `defaultExpanded` 값 의존(접혀 보이면 루트 강제 펼침 후속).
+- 검색 중 매칭 자식 보유 부모 자동 펼침 미적용(수동 펼침) — UX 후속.
+- 커스텀 `page.icon` 미지원(타입 기본 아이콘만).
