@@ -21739,3 +21739,22 @@ data-craft:
 
 ### 검증
 - `pnpm typecheck:all && pnpm lint` 통과(0 errors). 스피너 비표시는 렌더 전용 CSS — 실제 화살표 제거 확인은 마스터 하드 리프레시 후 시각 검증 영역.
+
+## v001.621.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #244 (funshare-inc/data-craft)
+
+**행그룹 뷰모드 — 펼침(▼) 아이콘 vs 빈 데이터 불일치 수정 (QA 검증·해결).** QA 보고: 행그룹 적용 후 뷰모드에서 모든 그룹 아이콘이 펼침(▼)으로 표시되지만 실제로는 맨 위 그룹만 데이터가 보이고, 접기(▶)→펼침(▼) 2단 조작을 해야만 하위 데이터가 나타나는 현상. 코드 추적으로 결함을 확정했다 — 아이콘(`BodyRowList.tsx:170`)과 데이터(`useTableView.ts:687` `groupedRows`)는 동일한 `collapsedGroups` 상태를 읽지만, 서버 페이징 그룹은 비최상위 그룹의 행을 lazy 로드(접힘→펼침 토글 시에만 `loadGroupRows`)한다. 근본 원인은 `useGridGrouping.ts:62` 의 "첫 그룹만 펼치고 나머지 접기" 초기화(`initializeWithFirstExpanded`)가 `initializedRef` latch 로 훅 생명주기당 1회만 실행되고, 이 latch 를 리셋하는 `expandAllGroups` 가 데드코드(미호출)라는 점. 그 결과 그룹 컬럼/필터/정렬 변경 등으로 새 grouped 데이터(첫 그룹 행만 포함)가 로드돼도 latch 가 풀리지 않아 비최상위 그룹이 `collapsedGroups` 에 안 들어가고 → 모두 ▼ 로 보이나 행이 비어 보였다. 새 grouped 데이터셋 로드 신호(`serverPaging.groups` 의 null 전이)에 latch 를 리셋해 초기화가 재적용되도록 고쳐, 비최상위 그룹이 접힘(▶)으로 표시되고 실제(미로드) 데이터 상태와 일치하게 했다(동일 데이터셋 내 사용자 토글은 보존).
+
+### 페이즈 결과
+- **Phase 1** (`82bf9d8`): `useGridGrouping` 에 `resetGroupInit()`(`initializedRef.current=false`) 추가·export, `useTableView` 에 `serverPaging.groups === null` 시 `resetGroupInit()` 호출하는 effect 추가 → 기존 init effect 가 새 groupKeys 로 재실행되어 첫-그룹-펼침 재적용.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/features/grid/hooks/useGridGrouping.ts`
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+### 검증
+- 워크트리 신선 생성으로 패키지 dist 미빌드 → 루트 앱 tsc 가 cross-package 모듈 미검출 8건(변경 무관). `pnpm build:packages` 로 dist 생성 후 재실행 → `pnpm typecheck:all && pnpm lint` exit 0(에러 0, 기존 warning 85). advisor 계획·완료 5관점 양쪽 PASS.
+- **재현 미수행(마스터 시각 검증 영역)**: main 세션은 렌더 불가. 코드 메커니즘은 완전 추적됐고, 모든 fresh grouped load 가 `reset()→setGroups(null)` 로 수렴하므로 수정은 트리거 경로 전체를 커버한다. 실기 확인: 행그룹 적용 후 그룹 컬럼/필터/정렬 변경 → 비최상위 그룹이 ▶ 로 표시·첫 그룹만 데이터 노출 → 그룹 펼치기 클릭 시 행 lazy 로드(2단 조작 불요).
