@@ -21671,3 +21671,29 @@ data-craft-mobile:
 
 ### 현재 화면 구성
 - 페이지 탭 = 흰 패널 페이지 트리(실 `/api/builder/pages` 데이터)만. 타이틀·검색창·"모든 페이지" 라벨·즐겨찾기/최근 카드·추가/새 페이지 버튼 모두 없음. 트리 행 = chevron(좌) + 무채색 아이콘 + 이름(부모 굵게), 카운트 없음.
+
+## v001.618.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #240 (funshare-inc/data-craft)
+
+**엔터프라이즈 플랜 문의 흐름 활성화.** 플랜 업그레이드 모달에서 영구 비활성이던 "엔터프라이즈" 카드를 선택 가능하게 만들고, 선택 후 "다음" 클릭 시 결제 단계를 건너뛰고 문의 모달로 직행하도록 했다. 문의 모달은 필요 규모(페이지·그룹·저장공간·최대 파일 사용량·사용 인원)와 사내 시스템 도입·활용 계획을 입력받아, 기존 이메일 인증 시스템과 동일한 SMTP(nodemailer) 인프라로 문의 메일을 발송한다. 수신처는 **help@funshare.co.kr**, 메일 본문 최상단에는 **문의자(로그인 계정 이메일)** 가 표기되며 이 값은 클라이언트 입력이 아니라 인증 세션(`req.user.email`)에서 서버가 확정한다(위조 불가). 공유 컴포넌트인 `UpgradeStepSelect`/`UpgradeStepPayment` 를 함께 쓰는 `PlanLimitExceededDialog`(플랜 한도 초과 강제 다이얼로그)에도 동일 분기를 적용해, 한도 초과 시 필요 플랜이 enterprise 로 산정되던 잠복 결함(이전엔 선택 자체가 막힘)도 함께 해소했다.
+
+### 페이즈 결과
+- **Phase 1 / BE** (`7019a1c`): `contact.service.ts` 의 `EnterpriseInquiryParams` 를 6필드(pages/groups/storage/maxFileUsage/userCount/systemsUsage)로 교체, 수신처 기본값을 `help@funshare.co.kr` 로 변경, HTML 본문 최상단에 문의자 이메일 라인 추가 + replyTo·제목에 사용. `contact.controller.ts` 는 `AuthRequest` 로 취급해 `req.user.email` 을 권위 소스로 사용(body 의 email 미신뢰)하고 6필드 필수 검증.
+- **Phase 2 / FE** (`880e2bf`): `EnterpriseContactDialog` 폼을 새 6필드로 교체(name/email/company 제거 — 이메일은 서버 확정), 페이지/그룹/사용 인원은 숫자 입력·저장공간/최대 파일 사용량은 텍스트 입력·사내 시스템 활용은 Textarea. 상단에 로그인 계정 이메일 read-only 안내. `billingApi.sendEnterpriseInquiry` 파라미터 6필드로 교체. ko/en i18n 10개 신규 키 parity 추가(기존 키 보존).
+- **Phase 3 / FE** (`dbb2698`): `UpgradeStepSelect` 의 `isUpgradable` 을 수정해 free 만 항상 비활성, enterprise 는 현재 플랜이 아니면 선택 가능. `UpgradeDialog`·`PlanLimitExceededDialog` 양쪽에 `EnterpriseContactDialog` 렌더 + `onNext` 엔터프라이즈 분기(결제 단계 skip, 문의 모달 직행). `UpgradeStepPayment` 의 기존 문의 분기는 도달 불가·무해로 미수정.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/contact.service.ts`, `src/controllers/contact.controller.ts`
+
+data-craft:
+- 수정: `src/features/subscription/ui/EnterpriseContactDialog.tsx`, `src/features/subscription/api/billingApi.ts`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`, `src/features/subscription/ui/UpgradeStepSelect.tsx`, `src/features/subscription/ui/UpgradeDialog.tsx`, `src/features/subscription/ui/PlanLimitExceededDialog.tsx`
+
+### 알려진 동작 / 미해결
+- **`0` 입력 엣지**: FE 는 숫자 필드에 "0" 입력을 통과시키지만 BE 가 `!pages` 식으로 0 을 미입력으로 취급해 400(일반 "필수 항목" 메시지)을 반환한다. B2B 문의 의미상 0(페이지/그룹/인원)은 무효이므로 수용 가능하나, 사용자에겐 일반 메시지로 보인다. 필요 시 FE 검증을 최소 1 이상으로 명시하는 후속.
+- **런타임 미검증(마스터 시각 확인 영역)**: 중첩 Radix Dialog(UpgradeDialog 내 EnterpriseContactDialog)의 포커스/ESC 거동(`PromotionPurchaseDialog` 선례로 동작 기대) 및 실제 SMTP 발신 성공(기존 인증 메일 인프라 재사용이라 회귀 가능성 낮음).
+
+### 검증
+- Phase 1 BE: `pnpm lint` 통과 + `tsc --noEmit` exit 0. Phase 2·3 FE: `pnpm typecheck:all && pnpm lint` 통과(0 errors, 기존 warning 85). advisor 계획·완료 5관점 양쪽 PASS. 정적 게이트 통과 — 모달 렌더·메일 발신 거동은 마스터 런타임 검증 영역.
