@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.619.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #239
+
+data-craft-server 의 DB 기술 문서를 현 dev psql 현실(data_values HASH(group_id) 재파티션·PK 2-tuple·엔진 psql·create_next_month 제거)에 정합. PROD-1 컷오버가 prod psql 을 fresh build 할 때 결함을 상속하지 않도록 빌드 DDL·프로즈·레거시 표기를 일괄 교정. db.sql/* 본문은 prod MySQL 베이스라인이라 무수정(index.md 헤더 주석만).
+
+### 페이즈 결과
+- **Phase 1 — psql 빌드 DDL 교정 (`01b1d0d`)**: run1-tables.up.sql data_values `RANGE(created_at)` 22파티션 → `HASH(group_id)` MOD 8(p0..p7), PK `(value_id,group_id,created_at)` → `(value_id,group_id)`. run2-routines.up.sql 의 create_next_month_data_values_partition 함수 정의+헤더 언급 제거. run1-plan.md 틀린 근거("PG RANGE+HASH 미지원" — PG v11+ 지원) 교정 + 파티션 설계절 HASH 재서술. run2-plan.md 파티션 함수/pg_cron 절 제거. run1-tables.down.sql 은 DROP CASCADE 라 무변경.
+- **Phase 2 — 핵심 스키마 프로즈 (`f38933f`)**: DB/README.md data_values PK 3-tuple→2-tuple, 파티션 설명 HASH(group_id), 엔진 dev=PostgreSQL/prod=MySQL(동결) 명확화. README.md "Database" 라인 분리.
+- **Phase 3 — 마이그레이션 문서 + 레거시 표기 (`7490206`)**: page6-data-management.md·mysql-to-pg-mapping.md 의 create_next_month/구 파티션 참조 정정(MySQL prod 전용·dev DROP 명시), mysql-inventory.md·psql-audit.md 현행 포인터 1줄, db.sql/index.md "MySQL prod 베이스라인 — 수정 금지" 헤더(db.sql 본문 무수정).
+- **수정 (`55051b6`)**: 통합 스윕이 잡은 run2-plan.md/run1-plan.md 의 재파티션 이전 검증 기록(21파티션·partition_fn 존재·base_tables 수)을 "pre-repartition 원본 기록"으로 명시 주석 + 현행 수치 inline 보강(역사 보존).
+
+### 영향 파일
+data-craft-server:
+- `docs/migration/ddl/`: run1-tables.up.sql, run2-routines.up.sql, run2-routines.down.sql, run1-plan.md, run2-plan.md
+- `DB/README.md`, `README.md`
+- `docs/page6-data-management.md`
+- `docs/migration/`: mysql-to-pg-mapping.md, mysql-inventory.md, psql-audit.md
+- `db.sql/index.md`
+
+### 후속
+- **`/group-policy data-craft`** — db.md 전환 상태(DEV-1 완료 · data_values HASH 재파티션)를 반영. 마스터 "다하면 바로 정책 스킬 쓸거야" 의 다음 단계.
+- **PROD-1 컷오버** 시 교정된 `run1-tables.up.sql` 로 prod psql fresh build → dev 와 동일 HASH(group_id) 구조 생성(rebuild 불필요).
+
 ## v001.608.0
 
 > 통합일: 2026-06-02
