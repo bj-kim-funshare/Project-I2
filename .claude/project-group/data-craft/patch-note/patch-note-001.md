@@ -21821,3 +21821,36 @@ data-craft:
 
 ### 검증
 - `pnpm typecheck:all && pnpm lint` 통과(0 errors). 280px Textarea + 상단 5개 입력 행을 합쳐도 모달 총 높이 ~700px 로 노트북 뷰포트 내 — 정적 확인. 실제 크기감은 마스터 하드 리프레시 후 시각 검증.
+
+## v001.624.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #241 (funshare-inc/data-craft)
+
+**모바일 페이지 상세 화면 — 웹뷰 + 리액트 임베드(권한 기반 읽기/쓰기).** 모바일 "페이지" 탭에서 페이지를 누르면 그 페이지의 위젯 콘텐츠를 권한(accessLevel)에 따라 읽기/쓰기로 보여주는 상세 화면을 신규 구현. 플러터 재구현 대신 웹(data-craft)에 이미 존재하는 임베드 모드(`/:pageId?embed=true`, 19종 위젯 렌더러·권한 런타임 보유)를 모바일 웹뷰로 재사용한다(마스터 "리액트로 구축 + 기존 위젯 방식 참고" 의도). 신규 작업은 위젯이 아니라 **웹뷰 인증 브리지**: 모바일 access token 을 URL fragment(`#dc_token=`)로 임베드에 주입(플러터 웹 cross-origin iframe 은 JS 주입 불가 → URL 전달이 유일 경로), 임베드 진입부가 토큰을 시딩하고 쿠키 refresh 의존을 우회한다. BE/DB·CORS 무수정(웹뷰가 web origin 으로 로드 → 기존 allowlist 적중). 2-repo 플랜(data-craft 웹 + data-craft-mobile).
+
+### 페이즈 결과
+- **Phase 1** (`f523826`, data-craft): `AuthProvider` 모듈 진입 시점(쿠키 refresh 이전 동기)에 `seedFragmentToken()` 추가 — `#dc_token=` 를 fs-api 인메모리 스토어에 시딩, 시딩된 토큰은 `initializeAuth()` 의 Bearer 경로로 사용, 만료 시 signin 리다이렉트 루프 회피(v1=비인증 낙하). 비-fragment 경로 무변경.
+- **Phase 2** (`5998d5a`, data-craft): `useModeSynchronizer({ isEmbed })` — embed 시 `isDesignMode=false` 고정(setMode 부수효과 차단), `BuilderPage` embed 분기 `isDesignMode={false}` 명시. accessLevel('read'/'write') 게이팅은 기보유(`LayoutCanvas.tsx:246-247` → `PageReadOnlyProvider`, 24 위젯 소비) → forceViewMode 경로에서도 동일하게 흐름을 재사용.
+- **Phase 3** (`b646e84`, mobile): `flutter_inappwebview ^6.1.5`(웹 지원) 의존성 + `lib/config/web_config.dart` 신설(`webBaseUrl` 단일 출처, dev 5173 / prod `--dart-define`).
+- **Phase 4** (`5e162d3`, mobile): `PageWebViewScreen`(신규) — token 사전 갱신 후 임베드 URL(`$webBaseUrl/$pageId?embed=true#dc_token=…`) 로드, 로딩/에러/미인증 크롬(theme·i18n). `dio_client.dart` 401 인터셉터 인라인 refresh 를 재사용 `refreshAccessToken()` 헬퍼로 추출(재시도 네트워크 실패 시 유효 토큰 보존으로 시맨틱 개선). `/page/:id` 라우트(`/page` 브랜치 하위, 셸 유지).
+- **Phase 5** (`a6d83d9`, mobile): `page_tree_item` 행 탭→`context.push('/page/{id}')`(리프·부모 공통), chevron 은 `GestureDetector(opaque)` 로 펼침 토글만 처리해 분리("행 탭=상세, chevron=펼침").
+
+### 영향 파일
+data-craft:
+- 수정: `src/app/providers/AuthProvider.tsx`
+- 수정: `src/pages/builder/BuilderPage.tsx`
+- 수정: `src/pages/builder/hooks/useModeSynchronizer.ts`
+
+data-craft-mobile:
+- 신규: `lib/config/web_config.dart`
+- 신규: `lib/screens/page/page_web_view_screen.dart`
+- 수정: `lib/api/dio_client.dart`
+- 수정: `lib/router/app_router.dart`
+- 수정: `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb` (pageDetailTitle·pageDetailNotAuthenticated 신규, pageLoadError·commonRetry 재사용)
+- 자동생성: `pubspec.lock`, `macos/Flutter/GeneratedPluginRegistrant.swift`, `windows/flutter/generated_plugin_registrant.cc`, `windows/flutter/generated_plugins.cmake`
+
+### 검증
+- 전 페이즈 게이트 통과: data-craft `pnpm typecheck:all && pnpm lint` 0 errors, data-craft-mobile `flutter analyze` 0 errors. advisor 계획(#1)·완료(#2) 양쪽 BLOCK 없음.
+- **수동 검증 순서(중요 — 머지 후 양쪽 재기동 필수)**: ① `data-craft` 에서 `i-dev` pull → `pnpm dev`(5173) **재기동** ② `data-craft-mobile` 에서 `i-dev` pull → `flutter run -d chrome` **재기동**(flutter web 은 머지 코드 반영에 재기동 필요) ③ 로그인 → 페이지 탭 → 페이지 행 탭 → 웹뷰 상세가 웹 임베드와 동일하게 위젯 콘텐츠 렌더 ④ write 권한 페이지=입력/제출 가능, read 전용=조회만 ⑤ 부모 chevron 탭=펼침, 행 본문 탭=상세 진입 분리 확인. 웹을 재기동 안 하면 stale 코드로 e2e 가 조용히 실패하므로 순서 엄수.
+- **후속(미해결)**: (a) accessLevel read 전용 게이팅의 **위젯 전수 동작 검증**은 본 플랜 감사 범위 초과로 후속 이관(프레임워크·24 소비자 기보유, 개별 위젯 read UX 완전성은 미확인). (b) 웹뷰 내 토큰 만료 시 v1=reload, **자동 refresh 브리지**(네이티브 JS 채널)는 후속. (c) `lib/l10n/gen/` 은 .gitignore 대상 → `flutter run`/`gen-l10n` 빌드 시 신규 ARB 키로 재생성(프로젝트 기존 관례).
