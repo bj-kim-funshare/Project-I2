@@ -21821,3 +21821,22 @@ data-craft:
 
 ### 검증
 - `pnpm typecheck:all && pnpm lint` 통과(0 errors). 280px Textarea + 상단 5개 입력 행을 합쳐도 모달 총 높이 ~700px 로 노트북 뷰포트 내 — 정적 확인. 실제 크기감은 마스터 하드 리프레시 후 시각 검증.
+
+## v001.624.0
+
+> 통합일: 2026-06-02
+> 플랜 이슈: #246 (funshare-inc/data-craft)
+
+**플랜 관리 결제 이력 페이지네이션 limit 정합 — 뒷쪽 절반 빈 페이지 결함 해소 (QA 보고 검증·교정).** "플랜관리 화면 하단 페이지 이동이 일정 페이지(QA 계정 기준 6페이지)부터 동작하지 않는다"는 QA 보고를 FE/BE 전 구간 코드 추적으로 검증한 결과 실재하는 구조적 결함으로 확인했다. 설정 다이얼로그 플랜 관리 탭의 결제 이력(Payment History) 섹션에서, FE 훅 `usePaymentHistory(page)` 가 `getPaymentHistory(page)` 호출 시 `limit` 을 넘기지 않아 **API 기본값 10건/페이지**로 조회하면서, 총 페이지 계산은 `Math.ceil(total / ITEMS_PER_PAGE)` 의 **5건 기준**을 써서 표시 총 페이지 수가 실제의 약 2배로 부풀려졌다. 그 결과 `page > ceil(total/10)` 인 뒷쪽 절반 페이지가 빈 화면이 되어 "페이지 이동이 안 됨"으로 보였다(빈 페이지 시작점은 계정 결제 건수에 따라 가변 — "6페이지"는 절대값 아님). 설계 의도(`ITEMS_PER_PAGE=5`, UI 단일 진실원)에 맞춰 요청 `limit` 을 5로 일치시켜 해소했다. BE 는 이미 `limit`(1~50 클램프) 을 반영하므로 서버 변경 불필요.
+
+### 페이즈 결과
+- **Phase 1** (`b4d3c80`): `usePaymentHistory(page, limit)` 로 `limit` 인자 추가(기본 10) + `subscriptionKeys.paymentHistory` 캐시 키에 `limit` 포함 + `getPaymentHistory(page, limit)` 전달. `PaymentHistorySection` 은 `usePaymentHistory(page, ITEMS_PER_PAGE)` 로 호출 — `ITEMS_PER_PAGE`(5) 값은 그대로 단일 진실원 유지. `billingApi.getPaymentHistory` 는 기존 `limit` 시그니처라 미변경. 변경 후 BE 가 5건/페이지 반환 → `ceil(total/5)` 가 실제 페이지 수와 정확히 일치 → 빈 페이지 소멸.
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/subscription/model/subscriptionQueries.ts`
+- 수정: `src/widgets/settings-dialog/ui/plan/PaymentHistorySection.tsx`
+
+### 검증
+- 쿼리 키 소비처 grep 으로 단일 소비자(`PaymentHistorySection.tsx`) 확정 — 훅 arity 변경의 다른 파급 없음. 워크트리에 루트 node_modules 심링크 후 eslint(변경 2파일) exit 0 / 루트 앱 `tsc -p tsconfig.app.json --noEmit` exit 0(에러 0). advisor 계획·완료 5관점 양쪽 PASS.
+- **실기 확인(마스터 검증 영역)**: 결제 이력 41건 이상 계정으로 플랜 관리 탭 진입 → 하단 페이지네이션 끝(`N/N`)까지 이동 시 모든 페이지에 결제 항목 표시·빈 페이지 없음, 페이지당 최대 5건, 표시 총 페이지 수 = `ceil(전체건수/5)` 일치 확인(하드 리프레시 권장).
