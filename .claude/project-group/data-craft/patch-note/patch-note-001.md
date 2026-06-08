@@ -22582,3 +22582,31 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음). PopoverArrow 소비처는 온보딩 단독(grep 확인).
 - **런타임 시각 검증(마스터)**: 3번째 화살표 시도 — 마스터 dev 재기동(web 5173) 후 꼬리 표시 확인 필요. 여전히 안 보이면 추가 추측 대신 스크린샷 + devtools 렌더 DOM(`<svg>` vs `<span>`) 확인으로 진단 예정. prod 무관.
+
+## v001.649.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #252 (funshare-inc/data-craft) · 핫픽스2
+
+**정밀 재검증(2라운드)에서 발견된 프로모션 서브시스템 결함 차단(BE).** 마스터 지시로 read-only 감사 4종(회귀·KST헬퍼·상태전이·프로모생애주기)을 돌려, 핫픽스1(A/B/C)·표준모델·날짜·상태전이 정상 확인 + 신규 심각 결함 클러스터(프로모 × `'2999-12-31'` 센티넬) 발견. advisor 설계 검증 후 코드 수정. **근본 원인**: 프로모 구매가 `plan_expires_at`를 `nextBillingAt`로 쓰는 mid-cycle 일할인데, 프로모 대상(신규가입·미결제) free 사용자는 `plan_expires_at='2999-12-31'` 센티넬을 가져 `remainingDays`≈355,000 → 천문학적 청구 + 갱신 cron 영구 미픽업.
+
+### 페이즈 결과
+- **핫픽스2-D** (`a2e72f0`, data-craft-server): 프로모 구매/견적을 **정액 첫-기간 청구**로 전환. `purchasePromotion`·`getPromotionQuote`의 일할 블록(~44줄 순감)을 `p.monthlyPrice × seats(협업)/1(비협업)` 정액으로 교체(갱신 계약 `snapshotMonthlyPrice × seats`와 정합). 구매 시 Phase A 트랜잭션 내에서 `plan_expires_at = 구매일+1개월(KST 앵커)` + `billing_anchor_day`(set-once) 세팅 → **갱신 cron 정상 픽업**. 미사용 import(PLAN·proration 헬퍼·snapshot price) 정리.
+- **핫픽스2-E** (`e5c8b07`, data-craft-server): **센티넬 proration 차단 가드**. `calculateProrationDiff` 진입부에 `kstParts(nextBillingAt).year >= 2999`면 `BadRequestError('PRORATION_BILLING_DATE_NOT_INITIALIZED')` throw — 기존 미백필 프로모 client(구매 전 생성분)의 좌석변경/업그레이드를 천문학적 과청구 대신 **명시적 에러로 전환**(clamp 아닌 block — "백필 필요"를 강제 불변식화, advisor 결정). 정상 유료 client(year<2999)는 미발화.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/promotion.service.ts`, `src/services/billingSubscription.service.ts`
+
+### 검증
+- 정적: `eslint .` 0 + `tsc --noEmit` 0.
+- 런타임: **월별 회귀 9,132원 무변**(가드 미발화), **센티넬(2999) 입력 시 가드 throw** 확인. 프로모 정액 청구는 `p.monthlyPrice × seats` 산식 검토.
+- advisor: 설계 검증(clamp vs block → block 채택, 이중청구 없음 확인) + 완료 게이트(#2) PASS. `getPromotionQuote`의 activePromotionId 분기 제거 = 구매 차단(already-active)으로 도달 불가한 dead-path 확인.
+
+### ⚠️ 후속 작업 (이번 핫픽스 범위 밖 — 마스터 결정 대기)
+1. **`task-db-data` (DB 작업)**: 기존 `plan_expires_at='2999-12-31'` 보유 프로모 client 일괄 백필(실 만료일 세팅) — 이들은 가드로 과청구는 막혔으나 좌석변경 차단·갱신 미픽업 상태이므로 백필 필요. `payment_history`의 과거 `promotion-proration`/`upgrade-proration` 천문학적 실청구 이력 감사 포함. dev 프로모 0건, prod=MySQL 동결(별도 인증 필요).
+2. **data-craft FE**: 프로모 구매 다이얼로그 `subscription.proratedPriceNote`("잔여일 수가 차감된 가격") 라벨을 정액 청구 의미로 정정.
+
+### 비고
+- 본 핫픽스는 **전진 수정 + 방어 가드**(코드)로 완결. 기존 클라이언트 구제는 위 후속1(DB)에 의존.
+- "연간 고객이 프로모 구매 시 chargedAmount=0" 우려는 프로모 자격(new_signup/unpaid)이 유료 고객 배제 → 비도달로 확인(핫픽스1-A 회귀 아님).
