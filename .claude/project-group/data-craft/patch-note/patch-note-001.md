@@ -22059,3 +22059,28 @@ data-craft-server:
 
 ### 검증
 - eslint exit 0 + `tsc --noEmit` exit 0. wire 계약 결함이라 정적 게이트로는 본디 미검출(FE/BE 독립 컴파일) — 마스터 BE dev 서버 리로드 후 문의 제출 시 성공 토스트 + 메일 수신 시각 확인 영역.
+
+## v001.632.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #241 (funshare-inc/data-craft) — 핫픽스1
+
+**모바일 페이지 상세를 "웹 임베드 그대로 복사" → "모바일 전용 React 뷰 신규"로 재구축(핫픽스1).** 본플랜(v001.624.0)은 데스크탑 빌더 임베드(`/:pageId?embed=true`)를 모바일 웹뷰에 그대로 띄워, 데스크탑 데이터 그리드(드래그 핸들·체크박스·가로 오버플로)가 430px 모바일에서 사용 불가였다(마스터 "웹을 참고만하고 모바일 전용으로 재구축"). 또 로딩 스피너가 영구 회전하는 버그가 있었다. 핫픽스1 은 마스터 확정(별도 모바일 React 뷰 신규 + 데이터 뷰어=행→카드/리스트)에 따라 data-craft 에 **모바일 전용 라우트 `/m/:pageId`** 를 신설해(데스크탑 임베드 무수정, 웹은 패턴만 참고) 레이아웃 세로 스택 + 뷰어 카드/리스트로 렌더하고, 모바일 웹뷰를 이 라우트로 리포인트 + 로딩 버그를 고쳤다. 데이터/권한/인증 계층(useLayout·viewerApi·useCurrentPageAccessLevel·Phase1 토큰 시딩)은 90%+ 재사용, UI 만 모바일 네이티브로 신규.
+
+### 페이즈 결과
+- **Phase 6** (`edea181`, data-craft): `/m/:pageId` 라우트(AuthGuard, RootLayout 제외) + `MobilePageView` 셸 — useLayout/usePageStore/useCurrentPageAccessLevel 재사용, `MobileLayoutRenderer`(Section/Area 세로 풀폭 스택), `MobileWidgetDispatcher`(text=네이티브 / 뷰어 6종=MobileViewerCard 슬롯 / 나머지 12종=MobileUnsupportedWidget 플레이스홀더).
+- **Phase 7** (`c811004`, +`496a7d8` 빌드수정, data-craft): `MobileViewerCard` — `fs_api viewerApi`(getViewerMeta·getPagedGridData·getGroupedGridData·saveChanges) 재사용, 그룹 헤더(라벨+건수)+행→카드(컬럼명:값, `cellFormat.ts` 타입별 포맷, fs-data-viewer parser), 비그룹 offset/limit 페이징, write 권한 시 텍스트류 7종 셀 탭편집(`MobileCellEditor`). 누락 `useMemo` import 로 prod build 실패한 것을 빌드게이트로 잡아 수정(typecheck:all&&lint 미검출, `pnpm build` 통과 확인).
+- **Phase 8** (`75a1efb`, data-craft-mobile): `PageWebViewScreen` URL → `/m/:pageId` 리포인트 + 로딩 스피너 멈춤 수정(웹 cross-origin iframe `onLoadStop` 비발화 → `onProgressChanged>=100`/`onLoadStop`/7초 안전망 타이머 중 첫 신호로 완료, 멱등·dispose 정리, 서브리소스 에러 무시).
+
+### 영향 파일
+data-craft:
+- 신규: `src/pages/mobile/MobilePageView.tsx`, `MobileLayoutRenderer.tsx`, `MobileWidgetDispatcher.tsx`, `widgets/MobileTextWidget.tsx`, `widgets/MobileViewerCard.tsx`, `widgets/MobileUnsupportedWidget.tsx`, `widgets/MobileCellEditor.tsx`, `lib/cellFormat.ts`
+- 수정: `src/app/router/index.tsx`
+
+data-craft-mobile:
+- 수정: `lib/screens/page/page_web_view_screen.dart`
+
+### 검증
+- data-craft: `pnpm typecheck:all && pnpm lint` 0 errors + **`pnpm build:packages && pnpm build`(prod, tsc -b && vite build) exit 0**(10996 modules) — 표준 게이트가 놓친 누락 import 를 빌드게이트가 검출·수정. data-craft-mobile: `flutter analyze` 0 errors. advisor 핫픽스 완료 검증 BLOCK 없음.
+- **수동 검증 순서(중요 — 양쪽 재기동 필수)**: ① `data-craft` `i-dev` pull → `pnpm dev`(5173) **재기동**(신규 `/m/:pageId` 라우트가 stale 빌드면 모바일이 404 → "모바일 변경이 깨진 것"으로 오인됨, 실제론 웹 stale) ② `data-craft-mobile` `i-dev` pull → `flutter run -d chrome` **재기동** ③ 페이지 탭 → 행 탭 → 모바일 전용 화면(세로 스택, 뷰어=그룹 카드/리스트, 로딩 스피너 정상 사라짐) ④ write 권한 = 텍스트류 셀 탭 편집, read = 조회만.
+- **1차 명시 제외(후속)**: ① 뷰어/텍스트 외 17종 위젯(입력·폼·파일·셀렉터 등) = "곧 지원" 플레이스홀더 → 후속 모바일 네이티브 구현. ② 복합 타입 셀(select·user·date·file 등) 쓰기 에디터 = 후속(현재 텍스트류 7종만 편집). ③ 그룹 내부 행 '더 보기' 페이징·user 타입 사용자명 resolving = 후속.
