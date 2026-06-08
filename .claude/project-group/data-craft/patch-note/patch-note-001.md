@@ -22426,3 +22426,25 @@ data-craft-server:
 - advisor: 핫픽스 완료 게이트(#2) PASS — A/B/C 간 공유 상태 없음(A=일할 산식, B/C=갱신 트리거 경로 분리). 연간 가격 변경은 마스터 승인 사항.
 - **수동 e2e(후속)**: ① 연간 사용자 인원추가 견적이 12× 인상된 정확 금액인지 ② NULL-앵커 계정 갱신 후 anchor 영속화 ③ 협업 프로모 예약 인원변경이 다음 갱신서 snapshot_seats/client.seats에 반영되는지. dev 유료/프로모 행 확보 후 검증.
 - **가격 영향 주의**: A는 연간 일할 요금 ~12× 인상(선재 과소청구 교정). prod 반영 전 비즈니스 확인 권장. dev(psql)만, prod=MySQL 동결.
+
+## v001.644.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스1 — 버튼 라벨 변경·"오늘만 닫기" 추가·말풍선 화살표 수정.** v001.641.0 의 디자인모드 힌트에 대한 마스터 시각 피드백 3건 반영(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 4 (핫픽스1)** (`12631d90`):
+  - ① 기존 확인 버튼 라벨 "확인" → **"앞으로 보지 않기"** (서버 영속 dismiss, 동작 동일·라벨만).
+  - ② **"오늘만 닫기"** 버튼 신규(확인 버튼 왼쪽, 배경 없는 회색 글자 ghost). 오늘 하루만 닫고 익일 재노출 — localStorage 날짜 기반(`dc_hint_snooze_{prefKey}`, 레포 `usePlanExpiryNotification` 패턴 미러). 계정 영속 아님(브라우저 단위). onboardingStore 에 `snoozed` Set + `isSnoozedToday`/`markSnoozed`/`snoozeToday` 추가, 노출 게이트에 `!snoozed.has(prefKey)` 합류(마운트 시 동기 반영으로 깜빡임 없음).
+  - ③ 말풍선이 사각형으로만 보이던 문제 — `PopoverArrow` 에 `width=14 height=7` 명시 + `stroke-border`(strokeWidth 없어 no-op) 제거, `fill-popover` 유지로 화살표가 실제 렌더되도록 수정.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`, `src/features/onboarding/model/hintRegistry.ts`, `src/features/onboarding/model/onboardingStore.ts`, `src/features/onboarding/lib/useOnboardingHint.ts`, `src/features/onboarding/ui/OnboardingHint.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 미검증(후속·마스터 시각 확인)**: ① `fill-popover` 가 실제 화살표 색으로 해석되는지 — 미해결 시 `style={{ fill: 'hsl(var(--popover))' }}` 로 교체(hotfix2 후보). ② 테두리 있는 PopoverContent + 채움-only 화살표라 화살표 밑변에 테두리 선 seam 가능(shadcn 기본 한계). ③ 말풍선 open 중 디자인 버튼 hover 시 기존 Tooltip "디자인모드로 전환" 과 이중 노출 가능(후속 정리 후보). ④ "오늘만 닫기" 는 브라우저 단위(계정별 아님) — 의도와 다르면 서버 snooze 행으로 전환 필요. prod 무관(DB/BE 무변경).
