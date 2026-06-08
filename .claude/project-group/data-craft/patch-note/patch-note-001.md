@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.629.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #243 (핫픽스2)
+
+### 개요
+
+#243 핫픽스2 — 핫픽스1(v001.627.0)이 **단일 선택 상자 등 "컬럼 레벨" 본문 스타일 컬럼에서 실패**한 것을 교정. 핫픽스1의 `setRowMapVersion` bump 는 행 레벨 메모만 갱신해, 컬럼 레벨 렌더러 클로저에 스타일이 박히는 단일-선택 타입은 진입 시 배경색이 적용되지 않았음(텍스트 컬럼은 배경색 스타일 대상이 아니라 정상으로 보였던 것 = 핫픽스1은 컬러-스타일 컬럼에 사실상 placebo).
+
+### 원인
+
+단일-선택 셀 배경색은 `FsGridRenderer.generateCellRenderer` 의 렌더러 클로저에서 계산되고, 그 클로저는 `useTableView` 의 `baseCustomColumns`(컬럼 레벨 useMemo, deps `[viewerModel.columnModelList, mode, stableCellRendererFactory]`)에서 1회 생성된다. 그룹핑 진입 시 `columnModelList` **배열 정체성이 바뀌지 않으므로** `baseCustomColumns` 가 재계산되지 않아 렌더러 클로저가 stale → 단일-선택 본문 스타일 미적용. 행 추가가 이를 살리는 이유는, 행 추가 흐름이 `onRefresh()`=`triggerRerender`(`useGridDataLoader.ts`)를 호출하고 이것이 `setViewerModel((prev)=>({...prev, rowModelList:[...], columnModelList:[...]}))` 로 **columnModelList 새 배열**을 만들어 `baseCustomColumns` 재계산을 강제하기 때문. 그룹핑 초기 로드 경로엔 이 호출이 없었음.
+
+### 페이즈 결과
+
+- **Phase 3 (핫픽스2) — 그룹핑 초기 로드 성공 시 onRefresh 호출 (`cfa3822`)**: `useServerPagingOrchestrator.ts` 의 `doInitialLoad` 그룹핑 분기 onSuccess 에서 기존 `setRowMapVersion` 직후 `onRefresh()`(triggerRerender)를 호출 → columnModelList 정체성 갱신 → `baseCustomColumns` 재계산 → 단일-선택 등 컬럼 레벨 렌더러 클로저 재생성 → 진입 즉시 본문 스타일 적용(행 추가와 동일 메커니즘). `UseServerPagingOptions` 에 `onRefresh: () => void` 추가, `useTableView` 의 `useServerPaging` 호출부에서 전달. 행 레벨 backup 으로 핫픽스1의 `setRowMapVersion` bump 유지. useServerPaging 호출부는 useTableView 단 1곳이라 required 옵션 안전.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/server-paging/useServerPagingOrchestrator.ts`
+- `packages/fs-data-viewer/src/features/grid/hooks/useServerPaging.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts`
+
+### 수동 검증 (마스터)
+
+행그룹 적용 뷰에 **단일 선택 상자** 컬럼(예: 상태) 본문 스타일(배경색)을 저장한 상태로 페이지 (재)진입 → 행 추가 없이 즉시 배경색이 적용되는지 하드 리프레시 후 확인. 다른 컬러-스타일 타입(우선순위 등)도 동일 확인. 비그룹핑 진입·행 추가(#243 본 작업)·일괄입력 무회귀 확인. (fs-data-viewer 는 루트 앱 vite alias 가 src 직결이라 빌드 불필요 — 하드 리프레시로 반영.)
+
 ## v001.628.0
 
 > 통합일: 2026-06-08
