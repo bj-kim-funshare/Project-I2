@@ -22240,3 +22240,29 @@ data-craft-server:
 - **수동 e2e(중요 — 병렬 DB 마이그레이션 머지 후 성립)**: dev 서버에서 회원가입 → ① 사업자번호 **빈 값** 제출 → 가입 성공, `client.business_number = NULL` ② **인증 완료** 번호 → 가입 성공(기존 동작) ③ 번호 **입력 후 미인증** 상태 제출 → "인증 필요" 에러로 차단. (DB 마이그레이션 전에는 ①이 BE 검증은 통과해도 `client` insert(NOT NULL PK)에서 실패 — 코드 정합만 확인 가능.)
 - **의존성**: 빈-값 가입의 DB persist 는 별도 `/task-db-structure` 세션(`client.business_number` nullable 전환, company_id 정체성 승격)에 의존. dev(psql) 우선, prod(MySQL 동결) 별도 게이트.
 - **알려진 한계(후속 후보, 본 변경 도입 아님)**: ① BE 는 signup 시 NTS 재검증 안 함(기존 FE-신뢰) → API 직접 호출로 미인증 번호 주입 가능성은 선재 한계. ② BE 의 `validateBusinessNumber`/`existsClientByBusinessNumber` 에 untrimmed 값 전달 — FE 가 비숫자 strip + `/^\d{10}$/` 가 공백 거부라 현재 wire 계약상 안전(좁은 계약). ③ `is_verified` 컬럼 여전히 미기록. ④ `signupValidation.ts` 의 "사업자등록번호 인증이 필요합니다" 하드코딩 한국어(선재).
+
+## v001.638.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #252 (funshare-inc/data-craft)
+
+**구독 결제 일할/갱신을 업계 표준 모델로 전환(BE 코드).** 세 가지 변경: ① **갱신 앵커 클램프+복원** — 기존 `plan_expires_at + 31일/365일` 고정 가산(결제일 드리프트)을 `billing_anchor_day` 기반 월/년 가산 + 말일 클램프 + 원 앵커 복원으로 교체(Jan31→Feb28→Mar31). ② **일할 분모 실일수화** — 고정 31/365 → 이번 주기 실일수(`actualCycleDays`, 2월=28). ③ **변경 당일 포함** — 잔여일수를 익일 기준(`startOfTomorrow`)에서 변경일 포함·결제일 제외로 전환. 추가로 **모든 빌링 날짜 연산을 KST 캘린더일로 통일**해, pg `timestamp`를 KST(+09:00)로 파싱하면서 잔여일 계산은 서버 로컬 TZ `setHours()`를 쓰던 9시간 스큐(현행 21일 결제·6/2 추가 사례에서 17일=8,170원으로 잘못 산정되던 원인)를 제거했다. 선행 `client.billing_anchor_day` 컬럼(smallint·CHECK 1~31·nullable·백필)은 병렬 `/task-db-structure`가 dev(psql) 적용·i-dev 머지 완료. 본 플랜은 그 컬럼을 읽고/쓰는 BE 로직만 담당. FE(data-craft)는 자체 일할 계산이 없고 BE 견적값을 표시만 하므로 코드 변경 없음(라벨 의미 유효).
+
+### 페이즈 결과
+- **Phase 1** (`21e5692`, data-craft-server): 라이브러리 무의존 KST 빌링 날짜 유틸 신규(`src/utils/billing-date.util.ts`). `kstParts`/`kstDateAtMidnight`/`formatKstDateTime`/`daysInMonth`/`addMonthsAnchored`(말일 클램프+앵커 복원, 윤년 포함)/`cycleStartFor`/`actualCycleDays`/`remainingDaysInclusive`(당일 포함)/`resolveAnchorDay`(null 폴백) 9개. 순수 추가.
+- **Phase 2** (`3a38fd8`, data-craft-server): `billing_anchor_day` 읽기경로·타입 배선. `ClientRow`·`RenewableClient`에 `billingAnchorDay` 필드, `findClientByCompanyId`·`findActiveClientByCompanyId`·`findRenewableClients`·`findRetryableClients` SELECT에 컬럼 추가. `setBillingAnchorDayWithConnection`(`IS NULL` 가드 set-once) 신규. `resetExpiredPlan`에 `billing_anchor_day = NULL` 클리어 추가(3-fail 강등 후 재구독 stale-anchor 버그 차단 — advisor #1 지적).
+- **Phase 3** (`ef19a51`+`a50ca7c`, data-craft-server): 첫 결제 앵커 기록 + 앵커 기반 초기 만료. `executeFirstPayment` 트랜잭션 내 공유 `now`로 `addMonthsAnchored`+`formatKstDateTime` 만료 산출(UTC 저장→KST 재해석 9h 스큐 제거), `setBillingAnchorDayWithConnection`로 KST 결제일을 앵커 1회 기록. 미사용으로 남은 `calculateExpiresAt` 제거(인라인 일원화).
+- **Phase 4** (`d4603d4`, data-craft-server): 갱신 앵커 클램프+복원. `renewSingleClient`·`renewPromotionClient` 만료 연장을 `resolveAnchorDay`+`addMonthsAnchored`+`formatKstDateTime`로 교체, `setDate(+31/+365)` 드리프트 제거.
+- **Phase 5** (`f919094`, data-craft-server): 일할 실일수 분모+당일 포함, 3개 사이트 통일. `calculateProrationDiff`에 `currentAnchorDay` 인자 추가, `cycleDays`=`actualCycleDays(cycleStartFor(...))`, `remainingDays`=`remainingDaysInclusive`. 견적=실결제 앵커 일치: `getUpgradeQuote`·`getSeatChangeQuote`·`executeUpgradeWithDiff`(SELECT FOR UPDATE에 컬럼 추가) 모두 동일 앵커 전달. `promotion.service.ts` 2개 inline 블록도 헬퍼로 통일.
+
+### 영향 파일
+data-craft-server:
+- 신규: `src/utils/billing-date.util.ts`
+- 수정: `src/utils/index.ts`, `src/models/client.model.ts`, `src/services/billingScheduler.service.ts`, `src/services/billingSubscription.service.ts`, `src/services/billingRenewal.service.ts`, `src/services/promotion.service.ts`, `src/services/seatChange.service.ts`
+
+### 검증
+- 정적: 페이즈별 `pnpm lint`(eslint) 5/5 PASS. 완료 시 `tsc --noEmit` 전체 0 errors — eslint-only lint가 못 보는 wire/타입 계약(견적↔실결제 앵커 일치 등) 확인.
+- **실 함수 런타임 검증(ts-node)**: 실제 `calculateProrationDiff` 호출 — 워크드 예시(PREMIUM 14,900·앵커21·6/2 추가·1명) → `{remainingDays:19, cycleDays:31, chargeAmount:9132}`로 **목표 9,132원 정확 일치**(현행 8,170 → 표준 9,132, 실사용 19일 기준). 2월 회귀: nextBilling 2/28·앵커31 → `cycleDays:28`(실일수 분모 작동). 유틸 단위: Jan31→Feb28→Mar31→Apr30(앵커 복원), 윤년 Feb29 복원, 연간 365/366 모두 통과.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음). #1에서 `resetExpiredPlan` stale-anchor·윤년 복원 케이스 보강.
+- **수동 e2e(후속 — 첫 유료 구독이 첫 통합 테스트)**: dev DB 현재 유료 계정 0건(백필 0행)이라, DB-로딩 end-to-end(`findClientByCompanyId`→견적→실결제 동일성)는 타입체크·diff로 보장되나 실제 row로는 미실행. dev에서 **첫 유료 구독 발생 시 첫 통합 검증** — ① 첫 결제 시 `billing_anchor_day`가 KST 결제일로 기록되는지 ② 인원 추가 견적이 9,132원류 실일수 산식으로 나오는지 ③ 갱신 cron이 앵커 복원으로 만료일을 끊는지 확인 권장.
+- **prod 미적용**: prod=MySQL 동결(db.md). 컬럼·코드 모두 dev(psql) 우선, prod 컷오버 후속.
