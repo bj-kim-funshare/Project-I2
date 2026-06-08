@@ -22321,3 +22321,29 @@ data-craft-mobile:
 ### 검증
 - data-craft `pnpm typecheck:all && pnpm lint` 0 + `pnpm build`(prod) exit 0. data-craft-mobile `flutter analyze` 0. 런타임(빈 콘텐츠 해소·스피너 해제)은 마스터 양쪽 재기동 후 시각 검증 영역(웹 5173 + 모바일 5174 재기동).
 - 누적 상태: 핫픽스1(모바일 전용 뷰 재구축)·핫픽스2(새로고침 세션 복원)·핫픽스3(빈 콘텐츠+스피너) 적용. 후속 미해결: 뷰어/텍스트 외 17종 위젯 모바일 네이티브화, 복합 타입 셀 쓰기 에디터, 그룹 내부 페이징·user명 resolving, 네이티브 쿠키(cookie_jar).
+
+## v001.640.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #250 (funshare-inc/data-craft)
+
+**사용자 입력 폼 QA 3건 수정 — 이미지 미리보기·스위치 목록/수정 불일치·신규 폼 저장 실패.** QA 지적 3건을 조사·분석·검증 후 근본 원인 기준으로 해결. work repo 2개(data-craft FE / data-craft-server BE).
+
+### 페이즈 결과
+- **Phase 1** (`04d3ef8c`, data-craft): 스위치/체크박스 수정화면 불리언 강제변환 정합. `BooleanFieldRenderer` 의 `(value as boolean) ?? false` 를 목록 셀과 동일한 `value === true || 'true' || 1 || '1'` 로 교체. 문자열 `'false'`/`'0'` 의 truthy 오판으로 목록 OFF·수정 ON 이던 불일치(QA #2) 해소.
+- **Phase 2** (`74fc0f80` + 보강 `dbe2091f` + lint핫픽스 `eb37eef6`, data-craft): 이미지 필드 실제 업로드 + 미리보기. `ImageUploaderField` 가 파일명 문자열만 저장하던 것을 `fileApi.uploadFile('form-image', field.id, …)` 로 실제 바이트 업로드 후 반환 uri 저장으로 교체. 편집 미리보기(`ImagePreviewGrid`)·목록 셀(`ImageCellThumb` 신규) 모두 `useImageLoader` 로 BE 이미지를 blob 로드, `data:` 직접 렌더·로드 실패 시 폴백(레거시 파일명 레코드 하위호환). BE 변경 없음(`/api/file` 기존 인프라 재사용). UX 계약 변화: 기존 즉시 base64 미리보기 → 업로드 완료 후 서버 로드 미리보기(네트워크 지연 존재).
+- **Phase 3** (`77b500fd`, data-craft-server): builder.model.ts uuid 파라미터 pg 정합. `form_id`/`widget_id`/`area_id` 가 pg `uuid` 컬럼인데 `hexToBuffer()` Buffer 를 넘겨 pg 드라이버가 bytea 로 전송 → `operator does not exist: uuid = bytea` 로 신규 폼 저장 실패(QA #3). 29개 호출부 전부 `?::uuid` 캐스트 + hyphenless hex 문자열로 교정(커밋 `0f6a52d` 패턴 완성), `hexToBuffer` 제거. QA 보고 증상(신규 폼 저장) 외 폼 편집·위젯·레이아웃 경로의 잠재 결함도 동일 결함 클래스로 일괄 복구(범위 의도적 확장 — 단일 결함 클래스 기계적 마이그레이션).
+
+### 영향 파일
+data-craft:
+- 신규: `src/widgets/form-widgets/ui/ImageCellThumb.tsx`
+- 수정: `src/features/form-builder/ui/BooleanFieldRenderer.tsx`, `src/features/form-builder/ui/ImageUploaderField.tsx`, `src/features/form-builder/ui/ImagePreviewGrid.tsx`, `src/features/form-builder/ui/UploaderFieldRenderer.tsx`, `src/widgets/form-widgets/ui/cellRenderers.tsx`
+
+data-craft-server:
+- 수정: `src/models/builder.model.ts`
+
+### 검증
+- 정적: data-craft 루트앱 `tsc -p tsconfig.app.json` 0 + `pnpm lint` 0 errors(`FormFieldValue` 유니온에 number 포함 — TS2367 무위험). data-craft-server `pnpm lint`(eslint) 0 + `tsc --noEmit` 0.
+- **라이브 dev PostgreSQL 런타임 검증(메모리 #220 강제)**: ① `form_list`/`form_widget`/`page_layout_widget` uuid 컬럼 타입 확인 ② 기존 Buffer 패턴(`form_id = decode(...,'hex')`) → `uuid = bytea` 에러 재현으로 근본원인 확정 ③ 신규 `?::uuid` 패턴으로 createForm INSERT + form_widget(createWidget) INSERT 를 트랜잭션 실행 → 양쪽 `INSERT 0 1` 성공 → ROLLBACK(데이터 미영속). 신규 폼 저장 체인 2왕복 전부 검증.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음). #2 사전 경고로 목록 셀 이미지 로드 누락(uri→bare `<img src>`)을 포착해 Phase 2 보강으로 반영(편집·목록 양쪽 완결).
+- **수동 시각 검증(후속)**: 편집/목록 이미지 미리보기·스위치 표시·신규 폼 저장 무에러는 마스터 재기동 후 시각 검증 영역(web 5173 + server 8000 재기동). **prod 미적용**: prod=MySQL 동결(db.md), dev(psql) 우선.
