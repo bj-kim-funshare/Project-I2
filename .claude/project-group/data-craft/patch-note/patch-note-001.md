@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.627.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #243 (핫픽스1)
+
+### 개요
+
+#243 핫픽스1 — 행그룹 사용 중 **이미 저장된 열 본문 스타일(`cellRendererModelList`)이 페이지 진입 시 즉시 반영되지 않고 행 추가를 한 번 해야 나타나던 버그** 수정. v001.622.0(#243 본 작업)이 `notifyRowAdded` 에 `setGroups`+`rowMapVersion` bump 을 넣은 뒤, 행 추가가 스타일을 살아나게 한 정황에서 같은 결함 클래스의 초기-로드 잔여로 식별됨.
+
+### 원인
+
+그룹핑 초기 로드(`useServerGrouping.doGroupedInitialLoad`)가 `setGroups` 만 호출하고 `rowMapVersion` 을 올리지 않음. 셀 렌더러를 생성하는 `customRowList` useMemo(deps `[rowModelList, rowMapVersion]`, useTableView.ts)는 그룹핑 모드에서 `rowModelList` 가 in-place mutate(ref 불변)되고 `rowMapVersion` 도 불변이라 재계산되지 않아, 셀이 stale 렌더러로 그려져 저장된 열 스타일을 무시. 비그룹핑 첫 페이지 로드는 `rowMapVersion` 을 올려(L227) 정상, 행 추가도 올려(`notifyRowAdded` L568) 그제야 반영되던 비대칭.
+
+### 페이즈 결과
+
+- **Phase 2 (핫픽스1) — 그룹핑 초기 로드 rowMapVersion bump (`2d5294f`)**: `useServerPagingOrchestrator.ts` 의 `doInitialLoad` **그룹핑 분기 전용** `onSuccess` 콜백(`if (isGroupingActive)` 내부, `doGroupedInitialLoad` 에 전달)에 `setRowMapVersion((v)=>v+1)` 1줄 추가. 비그룹핑 첫 페이지 로드(L227)·행추가(L568)와 동일한 버전 bump 시점 확보 → `customRowList` 즉시 재계산 → 진입 시 저장된 열 스타일 즉시 반영. 비그룹핑 경로·`loadGroupRows`·`setGroups` 무변경(추가만).
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/server-paging/useServerPagingOrchestrator.ts`
+
+### 수동 검증 (마스터)
+
+행그룹 적용 뷰에 열 본문 스타일을 저장해 둔 상태로 페이지 (재)진입 → 행 추가 없이 즉시 스타일이 반영되는지 하드 리프레시 후 확인. 비그룹핑 진입·기존 스타일 표시 무회귀 확인. (fs-data-viewer 는 루트 앱 vite alias 가 src 직결이라 빌드 불필요 — 하드 리프레시로 반영.)
+
 ## v001.622.0
 
 > 통합일: 2026-06-02
