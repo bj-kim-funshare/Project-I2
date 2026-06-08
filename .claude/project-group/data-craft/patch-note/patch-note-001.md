@@ -22266,3 +22266,25 @@ data-craft-server:
 - advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음). #1에서 `resetExpiredPlan` stale-anchor·윤년 복원 케이스 보강.
 - **수동 e2e(후속 — 첫 유료 구독이 첫 통합 테스트)**: dev DB 현재 유료 계정 0건(백필 0행)이라, DB-로딩 end-to-end(`findClientByCompanyId`→견적→실결제 동일성)는 타입체크·diff로 보장되나 실제 row로는 미실행. dev에서 **첫 유료 구독 발생 시 첫 통합 검증** — ① 첫 결제 시 `billing_anchor_day`가 KST 결제일로 기록되는지 ② 인원 추가 견적이 9,132원류 실일수 산식으로 나오는지 ③ 갱신 cron이 앵커 복원으로 만료일을 끊는지 확인 권장.
 - **prod 미적용**: prod=MySQL 동결(db.md). 컬럼·코드 모두 dev(psql) 우선, prod 컷오버 후속.
+
+## v001.639.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #241 (funshare-inc/data-craft) — 핫픽스3
+
+**모바일 페이지 상세 — 빈 콘텐츠 + 로딩 스피너 멈춤 2종 수정(핫픽스3).** 핫픽스1 로 모바일 전용 뷰가 렌더되기 시작했으나(데스크탑 그리드 사라짐·인증 동작 확인) 실기에서 ① 콘텐츠가 "페이지 내용이 없습니다"로 비고 ② 로딩 스피너가 영구 회전. 둘 다 코드로 근본 원인 확정 후 정밀 수정.
+
+### 페이즈 결과
+- **Phase 10** (`a72b414`, data-craft): `MobilePageView` 의 레이아웃 store 조회 키 교정. `loadLayout(pageId,…)` 은 `layout-${pageId}` 키로 저장(`layoutSelectors.ts:46`)하는데 조회는 `layouts[pageId]` 로 해 항상 undefined → 빈 콘텐츠였다. `layouts[\`layout-${pageId}\`]` 로 교정(데이터는 정상 로드돼 있었고 키 불일치만 문제). 위젯 조회(`widgets[area.widgetId]`)는 widgetStore 키와 일치 확인, 수정 불요. `pnpm build`(prod) 통과.
+- **Phase 11** (`cb8773d`, data-craft-mobile): 웹뷰 로딩 스피너 영구 표시 수정. Phase 8 은 폴백 타이머를 `onLoadStart` 안에서만 시작했으나 flutter web cross-origin iframe 에선 `onLoadStart`/`onLoadStop` 이 비발화 → 타이머 미시작 → `_isLoading` 영구 true. 타이머 시작을 항상 발화하는 `onWebViewCreated` 로 이동하고 `kIsWeb` 분기로 웹 3초/네이티브 7초 폴백 적용 → 스피너 확실히 해제.
+
+### 영향 파일
+data-craft:
+- 수정: `src/pages/mobile/MobilePageView.tsx`
+
+data-craft-mobile:
+- 수정: `lib/screens/page/page_web_view_screen.dart`
+
+### 검증
+- data-craft `pnpm typecheck:all && pnpm lint` 0 + `pnpm build`(prod) exit 0. data-craft-mobile `flutter analyze` 0. 런타임(빈 콘텐츠 해소·스피너 해제)은 마스터 양쪽 재기동 후 시각 검증 영역(웹 5173 + 모바일 5174 재기동).
+- 누적 상태: 핫픽스1(모바일 전용 뷰 재구축)·핫픽스2(새로고침 세션 복원)·핫픽스3(빈 콘텐츠+스피너) 적용. 후속 미해결: 뷰어/텍스트 외 17종 위젯 모바일 네이티브화, 복합 타입 셀 쓰기 에디터, 그룹 내부 페이징·user명 resolving, 네이티브 쿠키(cookie_jar).
