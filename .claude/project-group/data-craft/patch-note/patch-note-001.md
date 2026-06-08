@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.632.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #248
+
+### 개요
+
+데이터 뷰어 위젯 설정 드로어 "행 그룹" 결함 2건 수정: ① 행 그룹을 끄고 저장해도 새로고침하면 다시 켜짐(끄기 미영속), ② "그룹화 기준 컬럼" 드롭다운이 공란으로 표시(절대 공란 불가). 마스터 인가 라이브 psql 진단으로 근본원인 둘 다 확정.
+
+### 근본원인 (라이브 DB 진단 확정)
+
+- **#1 = BE psql 드라이버 계약 결함**: `data_viewer_setting.use_row_grouping` 등 뷰어 boolean 설정 컬럼은 전부 **smallint**(0/1)인데, 뷰어 gridSetting 쓰기 경로가 **JS boolean** 을 그대로 UPDATE 파라미터로 바인딩. node-postgres 가 boolean 을 `val.toString()` → 텍스트 `'true'`/`'false'` 로 직렬화 → psql `'false'::smallint` 강제변환 **ERROR** → UPDATE throw → 값 미변경 → 새로고침 시 직전 값(ON) 유지. 프로젝트 실제 `pg` 드라이버로 재현 확인(`JS false → smallint ERROR`). dev=psql 만 터지고 prod=MySQL 은 mysql2 의 boolean→tinyint 허용으로 통과 — tsc/lint/build 가 못 잡는 런타임 계약 결함.
+- **#2 = FE**: `SettingsPanel.tsx` 의 `<select value={currentField}>` 가 `currentField===''`(빈 값)·비적격일 때 매칭 `<option>` 이 없어 공란 렌더. `useRowGrouping` ON + `rowGroupingColumnField` 빈 값 조합에서 노출.
+
+### 페이즈 결과
+
+- **Phase 1 (BE, data-craft-server) — 뷰어 설정 boolean→smallint 변환 (`c57423f`)**: `change.utils.ts` 에 `BOOLEAN_SMALLINT_COLUMNS`(8 컬럼: use_description·show_id_column·show_aggregation·show_version_info·show_save_state·use_sub_grid·use_row_grouping·use_aggregation_mode) Set 과 `normalizeViewerSettingValue` 공유 헬퍼 추가 — boolean → `1`/`0`(`typeof==='boolean'` 가드), integer 컬럼 `''`→null 은 `convertEmptyToNull` 위임. `mergeViewerSettingsChanges` 3 분기 + `viewer.bulkSave.grid.ts processGridSettingUpdate` 모두 적용. **라이브 psql rolled-back UPDATE 로 산출값 0 의 영속 실측**(group 1274, rowCount=1, 1→0 후 ROLLBACK 복원). **prod-MySQL 무해 근거**: 기존 컬럼설정 쓰기 경로(`is_unique`·`enable_sorting` 등)가 이미 `1/0` 으로 mysql2 tinyint 에 정상 바인딩 중 → 동일 패턴 채택, prod 회귀 없음.
+- **Phase 2 (FE, data-craft) — 행 그룹 기준 컬럼 공란 방지 (`7337b52`)**: `SettingsPanel` 드롭다운 표시 폴백(`displayValue`) — 빈 값/비적격 시 첫 적격 컬럼 표시(절대 공란 방지, **영속 없음** — 사용자 직접 변경 시만 저장), 적격 0개일 때만 비활성 placeholder `'—'`. `rowGrouping.ts` 에 `parseInt` `NaN` early-return 가드(임의 컬럼 그룹화 방지). 흩어진 적격-컬럼 로직을 `rowGroupingHelpers.ts` 공유 헬퍼로 추출.
+
+### 알려진 캐비엇 / 후속
+
+- **비영속 표시 폴백 UX**: ON+빈 컬럼 **잔존 데이터** 한정으로 "드롭다운에 컬럼은 보이지만 데이터는 실제 그룹화 안 됨" 상태가 잠시 가능 — 사용자가 드롭다운을 직접 선택해야 실 그룹화. Phase 1 이 #1 을 닫으므로 신규 발생은 없음.
+- **`use_sub_grid` 동결함 동시 해소**: Phase 1 의 8 컬럼 일괄 교정으로 동일 결함 클래스(`useSubGrid` round-trip 미영속)도 함께 해결됨. 코드에 남은 `useViewerMetaLoader.ts:158-172` 의 `useSubGrid` Dev-1 조사 로그는 이제 정답 확인 상태 → 차기 사이클에서 제거/정리할 후속(이번 범위 밖).
+
+### 영향 파일
+
+**data-craft-server (BE):**
+- `src/services/dataViewerChange/change.utils.ts`
+- `src/services/viewer/viewer.bulkSave.grid.ts`
+
+**data-craft (FE):**
+- `packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/SettingsPanel.tsx`
+- `packages/fs-data-viewer/src/features/data-viewer/handlers/settings-handlers.ts`
+- `packages/fs-data-viewer/src/features/data-viewer/lib/rowGroupingHelpers.ts` (신규)
+- `packages/fs-data-viewer/src/features/grid/lib/grid-calculations/rowGrouping.ts`
+
 ## v001.631.0
 
 > 통합일: 2026-06-08
