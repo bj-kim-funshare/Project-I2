@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.634.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #249 (funshare-inc/data-craft)
+
+### 개요
+
+QA 제보 — **플랜관리 > 인원 관리** 예약(next-cycle) 토스트가 변경 전·후 인원 수를 항상 `0명 → 0명 변경 예약됨` 으로 표시하던 버그를 실제 변경 인원이 반영되도록 정정. FE-only 단일 파일 수정.
+
+### 페이즈 결과
+
+- **Phase 1 — 인원 관리 예약 토스트 인원 수 정정 (`3ba7af6b`)**: `SeatManageDialog` 의 `executeChange` next-cycle 분기 토스트가 인원 수를 백엔드 응답 echo 필드(`data.previousSeats` / `data.deltaQueued`)에서 읽었는데, next-cycle 모드 응답에서 이 값들이 0/undefined 로 돌아와 `0명 → 0명` 으로 렌더됐다. 보간 소스를 FE 권위 상태값으로 교체 — `prev: currentSeats`(= `status?.seats ?? 0`, 모달 "현재 정원"), `next: targetSeats ?? currentSeats`(사용자 입력 변경 후 인원). submit 가드(`handleDecreaseSubmit`)가 `isEmpty`/`isNoChange` 를 차단하므로 도달 시 `targetSeats` non-null·delta≠0 보장(`?? currentSeats` 는 TS null-가드). 즉시(immediate) 분기(`data.newSeats` 사용, 정상)는 무수정, i18n 키/플레이스홀더(`{{prev}}`/`{{next}}`) 동일하여 전 로케일 자동 반영.
+
+### 영향 파일
+
+data-craft:
+- 수정: `src/features/subscription/ui/SeatManageDialog.tsx`
+
+### 후속 (범위 밖)
+
+- **BE wire 결함**: next-cycle 응답의 `previousSeats`/`deltaQueued` 가 0/undefined 로 돌아오는 것은 `data-craft-server` 의 실제 결함. 본 FE 수정은 다이얼로그를 잘못된 echo 로부터 분리할 뿐 BE 계약 결함은 잔존 — `SeatChangeWithPasswordResponse` 의 다른 소비처 점검 + BE 응답 정합 후속 권장(마스터 판단).
+
+### 검증
+
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(88 pre-existing warnings, 0 errors). 신규 워크트리 1차 실행은 빌드 전 패키지 dist 부재(`TS2307` fs_* 모듈 8건)로 환경 실패 → `pnpm build:packages` 후 통과(본 변경과 무관).
+- advisor 완료 검증 PASS (advisor-fallback 경유 — advisor() 일시 과부하).
+- **수동 E2E**: 협업 플랜 + 인원 감소 시나리오 — 인원 관리 모달 진입(현재 정원 N) → 감소값 입력 → "예약하기" → 결제 비밀번호 통과 → 토스트 `인원 N명 → M명 변경 예약됨` 정상 표시 확인(이전 `0명 → 0명`). 루트 앱 src alias 라 머지 반영, 미반영 시 하드 리프레시.
+
 ## v001.633.0
 
 > 통합일: 2026-06-08
