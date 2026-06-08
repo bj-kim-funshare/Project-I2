@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.636.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #248 (핫픽스1)
+
+### 개요
+
+#248 핫픽스1 — Phase 1(BE)·Phase 2(FE) 통합 후에도 마스터가 "설정(끄기)은 정상이나 그룹화 기준 컬럼 드롭다운이 여전히 공란"으로 재보고. 라이브 데이터 진단으로 잔존 원인을 number↔string 타입 계약 불일치로 확정해 교정.
+
+### 잔존 원인 (라이브 데이터 확정)
+
+`data_viewer_setting.row_grouping_column_field` 는 **integer** 컬럼이고 BE 는 이를 `number | null` 로 응답(`viewer.types.ts:207`)한다. 그러나 FE 로드 매핑(`useViewerMetaLoader.ts:225`)이 **TypeScript `as string` 타입캐스트만** 하고 런타임 변환을 하지 않아, 새로고침 후 `viewerModel.rowGroupingColumnField` 가 **숫자**가 됐다. SettingsPanel 의 `isCurrentEligible = eligibleColumns.some(col => String(col.columnField) === currentField)` 가 `"4298" === 4298` → 항상 **false** → 실제 선택 컬럼을 매치하지 못해 드롭다운 공란/오표시. (라이브 확인: ON 뷰어 3건의 기준 컬럼 4298·6207·6887 = integer, 타입 user/text/singleSelect — 모두 적격.) Phase 1 이 영속을 실제로 동작시키면서 이 잠복 타입 결함이 전면 노출된 것.
+
+### 페이즈 결과
+
+- **Phase 3 (핫픽스1) — 행 그룹 기준 컬럼 로드 number→string 정규화 (`747272e`)**: `useViewerMetaLoader.ts` 의 `rowGroupingColumnField` 매핑을 `(... as string) || prev` → `viewerSetting.rowGroupingColumnField != null ? String(...) : prev` 로 교체. `!= null` 가드로 null/undefined 동시 처리, 값 있을 때 `String()` 으로 FE 모델 `string` 계약 회복. → `isCurrentEligible` 정상 true → Phase 2 표시 폴백과 무관하게 실제 그룹 컬럼명 표시. lint 게이트(turbo typecheck 8/8 + root tsc + lint 0 errors) 통과.
+
+### 시각적 메커니즘 메모
+
+마스터의 "공란" 정확한 시각적 양상(원본 코드의 중복-value disabled `'—'` 옵션 vs Phase 2 의 첫-적격 폴백)은 브라우저/refresh 상태에 따라 갈릴 수 있으나, 핫픽스1 은 비교 자체를 정상화하므로 어느 경로든 실제 그룹 컬럼 표시로 수렴.
+
+### 적용 안내 / 후속
+
+- **하드 리프레시 필요**: fs_data_viewer 는 src alias 로 동작하나 Vite Fast Refresh 가 hook 변경에 항상 적용되지는 않음 → 머지 후 브라우저 하드 리프레시 권장(미적용 시 "여전히 공란" 잔존 가능).
+- **동일 `as string` 클래스 후속 후보**: kanban/gantt 등 string 타입 FE 모델 필드를 BE number 응답에서 받는 다른 지점에도 동일 패턴이 잠복 가능 — 차기 사이클 audit + 일괄 정규화 후보(본 핫픽스 범위 밖).
+
+### 영향 파일
+
+**data-craft (FE):**
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+
 ## v001.635.0
 
 > 통합일: 2026-06-08
