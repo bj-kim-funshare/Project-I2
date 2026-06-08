@@ -22654,3 +22654,27 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
 - **런타임 시각(마스터, 5번째 화살표 반복)**: 화살표 자체 밑변선은 제거됨. 잔여 가능성 — `PopoverContent` 자체의 상단 border 가 접합부에 별도 선을 그릴 수 있음(다른 원인). 여전히 선 보이면 스크린샷+devtools(arrow `<svg>`+직전 content `border-top`)로 구분 진단 후 이중 삼각형 레이어 등으로 정리. prod 무관.
+
+## v001.652.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #250 (funshare-inc/data-craft) — 핫픽스2
+
+**사용자 입력 폼 QA 후속 2건(핫픽스2) — 신규 폼 저장 GROUP_NAME_DUPLICATE·일반 폼 필수 입력 인라인 안내.** 핫픽스1로 위젯 id uuid 문제가 풀린 뒤 드러난 잔존 2건을 근본 원인 기준 수정.
+
+### 페이즈 결과
+- **핫픽스2-#1** (`2fc8eb8`, data-craft-server): 신규 폼 저장이 `GROUP_NAME_DUPLICATE`(409)로 실패. 원인은 폼 삭제 시 연결 `data_group`을 정리하지 않아 orphan 그룹(`[폼] <이름>`, is_deleted=0)이 누적 → 폼명 재사용 시 그룹명 충돌(dev 17건 확인). ① `deleteForm`이 `deleteGroupRecursive`를 호출해 폼 삭제 시 그룹까지 cascade 정리(이름 해제+SP soft-delete, 폼 soft-delete 포함)하도록 수정, 커밋 후 `invalidateMetaCache`+`deletePhysicalFiles` best-effort. ② `createForm`의 그룹명 중복 처리를 self-heal로 전환 — 충돌 그룹이 active 폼 미참조(orphan)면 `deleteGroupRecursive`로 이름 해제 후 정상 생성, active 폼이 실제 사용 중일 때만 `GROUP_NAME_DUPLICATE` 유지. **데이터 마이그레이션 없이** 기존 orphan을 생성 시점에 자동 회수(정책상 ad-hoc DML 회피, canonical SP cascade 재사용으로 data_values까지 정리).
+- **핫픽스2-#2** (`03f3a7dc`, data-craft): 일반 폼(목록우선 아님)에서 저장 클릭 시 toast가 비가시라 "아무 반응 없음" + 마스터는 우선폼과 동일한 인라인 빨강 안내 요구. `useUserFormWidget.handleSave`가 toast 대신 `requiredErrors` 맵을 설정(누락 시 차단), `UserFormWidget`→`UserFormContent`→`FormRenderer`(`externalFieldErrors` prop)로 전달, `FormRenderer`가 레퍼런스 변경 시에만 내부 `fieldErrors`에 반영해 다이얼로그 경로와 동일한 필드별 빨강 "필수 입력 항목입니다." 표기. 필드 편집 시 해당 에러 자동 해제. toast(sonner) 제거.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/builder/builder.form.ts`
+
+data-craft:
+- 수정: `src/widgets/form-widgets/lib/useUserFormWidget.ts`, `src/widgets/form-widgets/ui/FormRenderer.tsx`, `src/widgets/form-widgets/ui/UserFormContent.tsx`, `src/widgets/form-widgets/ui/UserFormWidget.tsx`
+
+### 검증
+- 정적: data-craft-server `pnpm lint`+`tsc --noEmit` 0 / data-craft 루트앱 `tsc -p tsconfig.app.json`+`pnpm lint` 0 errors.
+- **라이브 dev pg 검증(#1)**: orphan 그룹 soft-delete 후 partial unique index(`data_group_unique ... WHERE is_deleted=0`)로 동일 그룹명 재삽입 성공(트랜잭션 ROLLBACK) — self-heal 이름 해제 불변식 확인. `deleteGroupRecursive`는 기존 viewer.deleteGroup 에서 검증된 canonical cascade 재사용.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — data 마이그레이션 대신 code-only self-heal 채택, `deleteGroupRecursive` 폼 soft-delete 가드(is_deleted=0) 확인.
+- 런타임 시각 검증(신규 폼 저장 성공·일반 폼 필수 빨강 안내)은 마스터 재기동 후 영역(web 5173 + server 8000). prod=MySQL 동결 미적용.
