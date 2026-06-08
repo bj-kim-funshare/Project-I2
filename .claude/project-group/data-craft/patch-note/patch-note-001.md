@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.631.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #243 (핫픽스3)
+
+### 개요
+
+#243 핫픽스3 — 핫픽스1·2가 **연속 실패**한 진짜 원인을 규명해 교정. 행그룹 진입 시 단일 선택 등 컬럼 레벨 본문 스타일(배경 반전)이 적용 안 되던 문제의 실제 경로는 핫픽스1·2가 고친 곳이 아니었음.
+
+### 진짜 원인 (사진+advisor+코드 3중 확증)
+
+그룹 데이터는 **두 경로**로 로드된다: ① `doGroupedInitialLoad.onSuccess` — 그룹 헤더 + **첫 그룹** 행(핫픽스1·2가 rowMapVersion·onRefresh 추가한 곳), ② **`loadGroupRows`**(`useServerGrouping.ts` L187) — **비-첫 그룹의 실제 행**(저장된 기본 펼침 그룹 포함, 진입 시 자동 로드). 코드 주석(`useTableView.ts` L630) "초기 응답엔 첫 그룹의 rows만 포함"이 이를 확증. `loadGroupRows`는 **모든 setGroups 경로 중 유일하게 refresh 신호가 전무**(rowMapVersion·onRefresh·onSuccess 없음)했고, 화면에 보이는 펼친 비-첫 그룹 행이 이 경로로 stale 렌더러로 그려져 컬럼 레벨 스타일이 미적용됐다. 핫픽스1·2는 헤더 경로(첫 그룹)만 고쳐 정작 보이는 비-첫 그룹 행을 놓쳤음.
+
+### 페이즈 결과
+
+- **Phase 4 (핫픽스3) — loadGroupRows 병합 후 refresh (`eecd7bd`)**: `useServerPagingOrchestrator.ts` 의 `loadGroupRows` 래퍼에서 `loadGroupRowsInternal` 을 await 한 뒤 `setRowMapVersion((v)=>v+1)` + `onRefresh()` 호출(행 추가 및 다른 모든 그룹-변경 경로와 동일 메커니즘). columnModelList identity 갱신 → `baseCustomColumns` 재생성 → 비-첫 그룹 행도 진입 즉시 본문 스타일 반영. doGroupedInitialLoad.onSuccess(핫픽스1·2)·비그룹핑 경로 무변경.
+
+### 영향 파일
+
+data-craft:
+- `packages/fs-data-viewer/src/features/grid/hooks/server-paging/useServerPagingOrchestrator.ts`
+
+### 수동 검증 (마스터)
+
+행그룹 적용 + 기본 펼침 그룹이 비-첫 그룹인 뷰(예: "높음" 기본 펼침)에 단일 선택 상자(예: 상태) 배경 반전 스타일을 저장한 상태로 페이지 (재)진입 → 행 추가 없이 즉시 배경색 적용되는지 하드 리프레시 후 확인. 첫 그룹·다른 그룹 펼침·비그룹핑·행 추가 무회귀 확인. (fs-data-viewer 는 루트 앱 vite alias 가 src 직결이라 빌드 불필요 — 하드 리프레시로 반영.)
+
 ## v001.630.0
 
 > 통합일: 2026-06-08
