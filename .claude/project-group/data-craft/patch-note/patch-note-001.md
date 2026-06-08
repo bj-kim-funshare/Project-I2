@@ -22448,3 +22448,26 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
 - **런타임 미검증(후속·마스터 시각 확인)**: ① `fill-popover` 가 실제 화살표 색으로 해석되는지 — 미해결 시 `style={{ fill: 'hsl(var(--popover))' }}` 로 교체(hotfix2 후보). ② 테두리 있는 PopoverContent + 채움-only 화살표라 화살표 밑변에 테두리 선 seam 가능(shadcn 기본 한계). ③ 말풍선 open 중 디자인 버튼 hover 시 기존 Tooltip "디자인모드로 전환" 과 이중 노출 가능(후속 정리 후보). ④ "오늘만 닫기" 는 브라우저 단위(계정별 아님) — 의도와 다르면 서버 snooze 행으로 전환 필요. prod 무관(DB/BE 무변경).
+
+## v001.645.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #250 (funshare-inc/data-craft) — 핫픽스1
+
+**사용자 입력 폼 QA 후속 3건(핫픽스1) — 신규 폼 저장 실패(위젯 id)·이미지 파일입력 UX·일반 폼 필수 검증.** v001.640.0 적용 후 QA 재검에서 발견된 3건을 근본 원인 기준 수정. 전부 data-craft(FE).
+
+### 페이즈 결과
+- **핫픽스1-#3** (`a932a002`, data-craft): 신규 폼 저장이 여전히 실패(`invalid input syntax for type uuid: "1780905450665-n11g2x6"`). 원인은 FE `generateId()`가 timestamp 기반 임시 id를 생성해 위젯 id로 전송 → BE `form_widget.widget_id`(pg uuid, `?::uuid`)가 거부. `generateId()`를 `crypto.randomUUID().replace(/-/g,'')`(hyphenless hex uuid)로 교체 → 위젯 id가 생성 시점부터 유효 uuid. (Phase 3의 BE `?::uuid`는 실제 uuid에 정상; FE 임시 id가 잔존 원인이었음.)
+- **핫픽스1-#1** (`b3955085`, data-craft): 이미지 미리보기는 나오나 네이티브 파일 입력이 "선택된 파일 없음"으로 표기되어 혼란. 네이티브 input을 `sr-only`로 숨기고 `buttonVariants` 스타일 `<label>` 커스텀 트리거로 교체(`useId` 안정 id), 이미지 유무에 따라 "이미지 변경"/"이미지 선택" 표기. 업로드/미리보기 로직 보존.
+- **핫픽스1-#2** (`b0e4efee`, data-craft): 필수 입력 검증이 "목록 우선" 폼에서만 동작하고 일반 폼 추가 시 누락(추가 후 데이터 목록 편집 시에만 제한 노출). 일반/individual 경로의 toolbar 저장(`useUserFormWidget.handleSave`)이 `FormRenderer` 검증을 우회하던 것을, 신규 `validateRequiredFields` 헬퍼(공유 `evaluateVisibilityConditions` 재사용 — 숨김 필드 제외)로 저장 전 검증하고 미충족 시 toast로 차단. (다이얼로그 경로의 인라인 에러와 달리 toast+차단 — 인라인 통합은 후속 과제.)
+
+### 영향 파일
+data-craft:
+- 신규: `src/widgets/form-widgets/lib/validateRequiredFields.ts`
+- 수정: `src/entities/form/model/formTypes.ts`, `src/features/form-builder/ui/ImageUploaderField.tsx`, `src/widgets/form-widgets/lib/useUserFormWidget.ts`
+
+### 검증
+- 정적: 루트앱 `tsc -p tsconfig.app.json` 0 · `pnpm lint` 0 errors(기존 86 warnings).
+- `generateId` 변경 안전성: timestamp 형식 의존(정렬·`includes('-')`·길이 검사) 없음 확인, `replaceFormId`는 값 매칭이라 무관, form id(서버 교체)·record id(불투명 키)·widget id(uuid 필요) 전부 정합. `evaluateVisibilityConditions([])`=true 확인(무조건 표시 필수 필드 정상 검증). `syncedFormFields`=field.id 키 `Record<string,string>` 확인(전건 차단 회귀 없음).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — generateId 타 소비처·syncedFormFields 형태 사전 검증.
+- 런타임 시각 검증(신규 폼 저장 성공·파일입력 표기·일반 폼 필수 차단)은 마스터 재기동 후 영역(web 5173 + server 8000). prod=MySQL 동결 미적용.
