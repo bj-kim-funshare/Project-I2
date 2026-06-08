@@ -22521,3 +22521,25 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
 - **런타임 후속(마스터 시각)**: 굵은 키워드가 `text-foreground` 라 일부 테마에서 popover 배경과 대비 낮을 가능성(시각 확인; 필요 시 색 토큰 조정). Trans 공백 처리 정상 여부 확인. prod 무관(DB/BE 무변경).
+
+## v001.647.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스3 — 말풍선 꼬리(화살표) 가시화.** 핫픽스1 이후에도 말풍선이 사각형으로만 보이고 튀어나온 꼬리가 없다는 마스터 시각 피드백 반영(FE-only, data-craft).
+
+### 근본 원인
+기존 `PopoverArrow` 는 `fill-popover`(말풍선 본체와 동일한 밝은색)로 칠한 얇은 SVG 폴리곤만 사용 → 밝은 페이지 배경 위 밝은 화살표라 윤곽이 없어 보이지 않음. 앱의 작동하는 Tooltip 화살표는 불투명 배경 + 회전 정사각형 방식이라 보임.
+
+### 페이즈 결과
+- **Phase 핫픽스3** (`8a85ce5e`): `PopoverArrow` 를 shadcn 정석 "테두리 있는 화살표" 패턴으로 교체. Radix Arrow `asChild` + `<span>` 으로 회전 정사각형(`rotate-45`)을 렌더, 돌출되는 위·왼쪽 두 모서리에만 `border-l border-t border-border` 적용해 밝은 배경에서도 꼬리 윤곽이 보이게 하고, `bg-popover` 로 본체와 동일 색 채움, `-translate-y-1/2` 로 안쪽 절반을 본체 아래 숨겨 깔끔한 말풍선 형태 유지(`@radix-ui/react-popover` 1.1.15 — asChild 지원 확인).
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음). PopoverArrow 소비처는 온보딩 단독(grep 확인).
+- **런타임 시각 검증(마스터)**: 3번째 화살표 시도 — 마스터 dev 재기동(web 5173) 후 꼬리 표시 확인 필요. 여전히 안 보이면 추가 추측 대신 스크린샷 + devtools 렌더 DOM(`<svg>` vs `<span>`) 확인으로 진단 예정. prod 무관.
