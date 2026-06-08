@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.630.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #245 (핫픽스1)
+
+### 개요
+
+#245 행 연결 QA 수정의 마스터 검증 후속 핫픽스. 결함 수정 2건(#4 단위 타입 보강·#7 정렬 토글 정정)과 기능 보강 1건(연결 그룹 제목 표시). 전 변경 `packages/fs-data-viewer`, BE 무수정.
+
+### 페이즈 결과
+
+- **Phase 5 (핫픽스1) — 단위 타입 보강·정렬 토글 정정·연결 그룹 제목 (`d057d14`)**:
+  - **결함 #4 (단위 타입 보강)**: `DISABLE_UNIT_TYPES`(공유 상수)에 `user`/`phone`/`email`/`link`/`multiSelect` 5종 추가. 전수 감사 결과 단위 입력 UI는 노출되나 셀 렌더러가 단위를 렌더링하지 않는 dead input으로 확인됨. 이 상수는 일반 열 메뉴(`menuItems.ts`·`createViewColumnMenuItems.ts`)와 행 연결 그룹 관리 다이얼로그가 **공유**하므로, 일반 열에서도 동일 5종의 단위 입력이 사라짐(의도된 정합화 — 렌더러가 단위를 무시하던 타입이라 시각적 회귀 없음).
+  - **결함 #7 (정렬 토글 정정)**: 행 연결 그룹 관리 [02 동작]의 정렬 허용 토글에서 잘못된 타겟 타입 가드(`DISABLE_SORTING_TYPES`)와 행 그룹 툴팁을 제거. 정렬은 행 그룹 여부와 무관하게 항상 토글 가능(정규 열 메뉴와 동일). 행 그룹/칸반 토글의 가드는 불변.
+  - **기능 보강 (연결 그룹 제목 표시)**: 행 연결 그룹 관리 다이얼로그 헤더에 연결된 원본 데이터 그룹의 종류·제목을 표시 — 뷰어=`{제목}`, 서브=`{부모 뷰어 제목} > {서브명}`, 폼=`{폼 제목}`, 일반(external)=`{제목}`. `requestConnectionGroups`로 `targetGroupId` 해석.
+
+### 영향 파일
+- data-craft:`packages/fs-data-viewer/src/features/grid/lib/helpers/column-restrictions.ts`
+- data-craft:`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+
+### 잔여 검토
+- **#7 정렬 의미론(후속 후보)**: 정렬 토글 UI는 복원했으나, 행 연결 셀 값이 `{"rowId","value"}` JSON으로 저장되고 정렬이 서버측(`buildSortParam` → `{columnId,direction}`)에서 수행되므로, 현재는 BE가 JSON 원문 기준으로 정렬한다(표시값 기준 정렬 아님). 표시값 기준 정렬은 BE 지원이 필요 — FE-only 범위 밖이라 후속 핫픽스/플랜 후보.
+- **"일반" 매핑 가정**: 그룹 종류 라벨에서 `external`을 "일반"으로 표기. 제품에 main/sub/external 3종만 존재하고 "일반"은 마스터 표현이라 가정 처리 — 정확한 라벨은 마스터 확인 시 정정 가능.
+
 ## v001.629.0
 
 > 통합일: 2026-06-08
