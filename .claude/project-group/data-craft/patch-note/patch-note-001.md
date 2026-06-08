@@ -1,5 +1,38 @@
 # data-craft — Patch Note (001)
 
+## v001.640.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #245 (핫픽스3)
+
+### 개요
+
+#245 행 연결 QA 3차 핫픽스 — 마스터 인가 dev psql 진단 + advisor 검증으로 "설정 복사 전혀 안됨"(#2/#3/#4)의 **정확한 근본 원인**을 규명·수정. 멀티-repo: data-craft(FE) + data-craft-server(BE).
+
+### 근본 원인 (지상 진실 — dev psql 실측)
+
+행 연결 열의 자체 `cell_renderer_model_list`(본문 스타일)가 **생성 시점에 영속되지 않음**. dev psql 실측: rowLink 5열 전부 own `cell_renderer_model_list` 비어 있음(소스에 7조건 스타일이 있는 singleSelect 열 포함). 스타일은 `custom_data_list` 스냅샷에만 존재 → hotfix2가 연속 fallback을 제거하며 빈 자체 필드가 노출됨. 원인 체인:
+- **FE** `changesToServerFormat.ts` 의 `columnAdd` 페이로드 매핑이 `cellRendererModelList`(및 `unit`/`unitPosition`)를 누락 — `addRowLinkColumns`가 만든 풍부한 템플릿을 6필드로 축소 전송.
+- **BE** `ColumnCreateInfo` 타입에 `cellRendererModelList` 부재 + columnAdd INSERT가 `cell_renderer_model_list` 컬럼 누락.
+
+### 페이즈 결과
+
+- **Phase 8 (FE, data-craft) — 생성 페이로드 보강 (`650fea8`)**: `convertColumn` + `columnAdd` createInfo에 `unit`/`unitPosition`/`cellRendererModelList` 전달 추가. 소스 본문 스타일·단위 스냅샷이 BE 생성 페이로드에 포함됨.
+- **Phase 9 (BE, data-craft-server) — 생성 시 스타일 영속 (`6297eb8`)**: `ColumnCreateInfo`에 `cellRendererModelList` 추가, columnAdd INSERT에 `cell_renderer_model_list` 컬럼+값(`JSON.stringify(... ?? [])`) 추가(? 12→13 정렬). 신규 행 연결 열 생성 시 본문 스타일이 자체 필드로 영속 → 렌더·편집기·편집·독립성 정상.
+
+### 영향 파일
+**data-craft (FE)**
+- `src/features/viewer/lib/changesToServerFormat.ts`
+
+**data-craft-server (BE)**
+- `src/types/dataViewer.types.ts`
+- `src/services/dataViewerPost.service.ts`
+
+### 잔여 검토
+- **레거시 열**: 본 수정은 **신규 생성** 행 연결 열에만 적용. 기존 5열(own 필드 빈 상태)은 hotfix2의 인메모리 hydration(셀 렌더 + 편집기 스냅샷 시드)으로 표시되며, 사용자가 편집·저장하면 own 필드로 승격. v1 합리적 범위.
+- **#1 단위 표시 미해결**: dev psql 실측상 own_unit은 영속되고(사용자 수동 설정), text 타입은 코드상 단위 렌더 정상(TextRenderer read-only `formatWithUnit`). 코드로 재현 불가 → 마스터의 **정확한 열 타입** 필요. 비-text 타입이면 해당 delegate Component의 read-only 단위 장식 부재가 유력 원인(dispatcher 수동 장식으로 보강 가능).
+- **subGridColumnAdd 경로**: 동일 누락(cellRendererModelList) 잔존 — 이번 핫픽스는 메인 뷰어 columnAdd만 수정(보고 범위). 서브그리드 행 연결 필요 시 후속.
+
 ## v001.636.0
 
 > 통합일: 2026-06-08
