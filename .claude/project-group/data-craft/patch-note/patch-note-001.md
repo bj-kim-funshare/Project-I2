@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.635.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #247
+
+헤더 3대 기능(사용자 입력 폼 / 내부 데이터 연결 / 외부 데이터 연동) 중 **내부 데이터 연결(Designer = `fs_relation_builder`)을 폐기**하고, 외부 데이터 연동에서 vestigial이던 **다중데이터그룹(`dataType:'multi'`) 분류 로직을 제거**. 'multi'는 외부데이터에서 읽기전용 렌더 플래그로만 쓰였고 실데이터 읽기는 릴레이션 미접근이라, 제거 후 전 그룹이 single 경로로 단일화됨. **기존 'multi' 그룹(외부데이터)은 일반 그룹(편집가능)으로 처리 — 의도된 동작.** 본 작업은 FE/BE 애플리케이션 코드만 다루며 DB(릴레이션 3테이블·SP·`sp_manage_data_group` sync·트리거)는 후속 task-db-structure 몫.
+
+### 페이즈 결과
+- **Phase 1 — BE relation 스택 제거 (`96cac6f`)**: relation 도메인 5파일(model/service/controller/route/types) 삭제 + index 배럴·permission(/api/relation 7건)·ERROR_LOG_MAP 정리. design_data_link 권한은 폼용 유지. (-1639)
+- **Phase 2 — BE external-data multi → single (`bdc7ac0`)**: externalData.model UNION ALL multi 브랜치·relation JOIN·findRelationByGroupId 제거, externalData.service getMultiGroupDetail/Data 삭제, 전 그룹 single/general 경로 단일화.
+- **Phase 3 — FE Designer/relation 제거 (`0e4f80e`)**: fs_relation_builder 패키지(91파일) + fs-api relation(api/types/endpoints) + data-relations 가이드 삭제, 헤더 onDesignerDialogOpen prop 체인(useHeaderDialogs→AppHeader→DesignModeToolbar→ManagementButtonGroup) 제거, i18n header 키 제거, package.json dep 제거 + pnpm-lock 재생성. (scope 확장 2건: DesignModeToolbar·contentLoader)
+- **Phase 4 — FE 다중데이터그룹 multi 제거 (`8e2172d` + lint `ad69a81`)**: 뷰어 탐색기 3패키지 + fs-api에서 DataGroupType/GeneralDataGroupType `'single'|'form'`으로 축소, ExternalDataDetailView isMulti 분기·multiCallbacks·DataTypeBadge multi·dataTypeMulti i18n 제거. ConnectionSelectionType·SelectOptions isMulti(별개 기능)는 보존.
+
+### 검증
+페이즈별 7c(diff·scope·grep) + P3/P4 build:packages 9/9 → 루트 앱 `tsc -p tsconfig.app.json` 0 errors → `pnpm lint` exit 0. 통합 grep 스윕 양 repo 잔여 0. advisor #1/#2 5관점 PASS.
+
+### 영향 파일
+- **data-craft-server**: `src/models/relation.model.ts`·`services/relation.service.ts`·`controllers/relation.controller.ts`·`routes/relation.ts`·`types/relation/`(삭제), `routes/index.ts`·`controllers/index.ts`·`services/index.ts`·`models/index.ts`·`middlewares/permission.middleware.ts`·`config/constant.ts`, `models/externalData.model.ts`·`services/externalData.service.ts`
+- **data-craft**: `packages/fs-relation-builder/`(삭제), `src/@types/fs_relation_builder.d.ts`·fs-api relation·data-relations 가이드(삭제), 헤더 4파일(AppHeader/useHeaderDialogs/DesignModeToolbar/ManagementButtonGroup), fs-api(api/index·endpoints·index·types/externalData), contentLoader.ts, i18n locales, 뷰어탐색기 3패키지(grid.ts·DataTypeBadge·lib/i18n·ExternalDataDetailView·multiCallbacks 삭제), package.json·pnpm-lock.yaml
+
+### 후속
+- **`/task-db-structure data-craft`** — 코드가 릴레이션 참조를 끊었으므로 이제 DB 정리: `sp_manage_data_group`의 relation-sync 블록 제거 + 릴레이션 3테이블(data_group_relation·data_relation_value·data_column_relation) + SP(sp_manage_group/column_relation) + 트리거 DROP. (237 'multi' 그룹 read-only→편집가능 동작은 코드 측에서 이미 반영.)
+
 ## v001.634.0
 
 > 통합일: 2026-06-08
