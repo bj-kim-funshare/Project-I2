@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.643.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #248 (핫픽스2)
+
+### 개요
+
+#248 핫픽스2 — Phase 1·2·핫픽스1 이후에도 마스터가 "그룹화 기준 컬럼 드롭다운이 여전히 공란"으로 재보고. **컴포넌트 오동정**이 잔존 결함의 진짜 원인이었음을 규명해 정확한 위치를 교정.
+
+### 오진 체인 (미래 독자 주의)
+
+마스터의 "**위젯 설정 드로어**"는 **페이지/대시보드 빌더의 뷰어 위젯 속성 드로어**(root-app `src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx`)였다. 그러나 Phase 2·핫픽스1 은 **뷰어 내부 설정 오버레이**(`fs_data_viewer` 패키지의 `SettingsPanel.tsx`)를 고쳤다. 두 컴포넌트가 **같은 "그룹화 기준 컬럼" 라벨**을 써서(`t.settings.rowGroupingColumn` vs `t('propertyDrawer.rowGroupColumnLabel')`) 라벨 grep 만으로는 구분 불가 — "위젯" 표현으로 디스앰비규에이션했어야 했다. (Phase 1 BE smallint 수정은 토글 영속에 실제로 필요했고 유효 — 위젯 드로어의 토글도 `setUseRowGrouping`→data_viewer_setting 경로를 타기 때문. Phase 2·핫픽스1 은 오버레이용 유효 방어 수정으로 보존.)
+
+### 진짜 원인 (라이브 데이터 + 마스터 확인 + advisor 검증)
+
+`ViewerGridSection` 의 `<Select value={rowGroupingColumnField}>` 는 값을 **위젯 속성**(`props.rowGroupingColumnField`)에서 읽는데, 옵션은 **라이브 뷰어 모델**(`viewerRef...columnModelList`)에서 온다. 행 그룹 토글 ON 핸들러(`handleUseRowGroup`)는 `viewerRef.setUseRowGrouping(true)` 만 호출하고 **컬럼을 위젯 속성에 설정하지 않는다**. 뷰어 내부는 첫 적격 컬럼(라이브 group 1422 = 6887 "우선순위")을 자동 배정해 **그룹핑은 동작**하지만, 위젯 속성은 `''` 로 남는다. 동기화는 단방향(위젯→뷰어, `Viewer.widget.tsx:195-228`, 빈값 early-return)뿐 — 역방향 부재. 결과: `<Select value="">` 가 매칭 SelectItem 없어 Radix placeholder(공란). 마스터의 "켜져있으면 반드시 기준열이 있는데 왜 공란?" 과 정확히 일치.
+
+### 페이즈 결과
+
+- **Phase 4 (핫픽스2) — 위젯 속성 드로어 그룹 기준열 역동기화 (`f9e8d78`)**: `ViewerGridSection.tsx` 에 (1) `viewerGroupField` state 추가, (2) columnModelList 폴링 useEffect 에서 `getViewerModel()` 을 1회 받아 `rowGroupingColumnField` 도 함께 읽어 `String()` 정규화(number↔string 안전) 후 state 저장 + 위젯 속성이 비고 뷰어가 실값을 가지면 `onChange` 로 1회 역동기화(영속), (3) Select 표시값을 `rowGroupingColumnField || viewerGroupField` 폴백으로 변경. 토글 ON 케이스는 `useRowGroup` deps 재실행으로 자동 커버. lint 게이트(root tsc 0 + eslint 0 errors) 통과.
+
+### 구현 메모
+
+- useEffect 의존성 배열에 `props.rowGroupingColumnField` / `onChange` 를 의도적으로 제외(eslint exhaustive-deps 경고 1건은 의도) — list 발견 시 1회 onChange 후 tick return 하여 useEffect 재실행 트리거를 차단(무한 루프 방지). 기존 effect 와 동일 패턴.
+
+### 적용 안내
+
+- root-app `src/` 변경이라 Vite **Fast Refresh 가 즉시 픽업** — dev 서버 재기동 불필요, **브라우저 하드 리프레시만으로 반영**.
+
+### 영향 파일
+
+**data-craft (root app):**
+- `src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx`
+
 ## v001.640.0
 
 > 통합일: 2026-06-08
