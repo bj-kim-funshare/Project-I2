@@ -22632,3 +22632,25 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — 방향은 Radix 네이티브로 보장(안쪽 파고듦 재발 불가).
 - **런타임 시각(마스터)**: 4번째 화살표 시도 — dev 재기동 후 확인. 바깥 방향은 보장되나 베이스(본체 접합부) seam 은 시각 확인 영역. 거슬리면 후속(drop-shadow 외곽선 또는 이중 삼각형 레이어). prod 무관.
+
+## v001.651.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스5 — 화살표·본체 사이 구분선 제거.** 핫픽스4 로 화살표 바깥 방향은 잡혔으나 화살표와 말풍선 사각형 사이에 구분선이 보인다는 마스터 시각 피드백 반영(FE-only, data-craft).
+
+### 근본 원인
+핫픽스4 의 `stroke-border` 가 삼각형 **세 변 전부**(말풍선과 맞닿는 밑변 포함)에 외곽선을 그려, 밑변 stroke 가 화살표·본체 사이 구분선으로 보임.
+
+### 페이즈 결과
+- **Phase 핫픽스5** (`0604f1ee`): 방향(Radix 네이티브 SVG, 바깥)은 유지하고 가시화 방식만 교체. `strokeWidth`/`stroke-border` 제거(밑변 선 제거), `fill-popover`(본체색 채움으로 무이음 병합) 유지, 두 빗변에만 외곽선이 생기도록 방향성 `drop-shadow` 2개(`drop-shadow(1px -1px 0 var(--border)) drop-shadow(-1px -1px 0 var(--border))`) 적용 — 둘 다 위 방향이라 밑변엔 그림자 없음. `overflow-visible` 로 그림자 클리핑 방지. (`--border` 는 oklch 라 `var(--border)` 직접 참조.)
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각(마스터, 5번째 화살표 반복)**: 화살표 자체 밑변선은 제거됨. 잔여 가능성 — `PopoverContent` 자체의 상단 border 가 접합부에 별도 선을 그릴 수 있음(다른 원인). 여전히 선 보이면 스크린샷+devtools(arrow `<svg>`+직전 content `border-top`)로 구분 진단 후 이중 삼각형 레이어 등으로 정리. prod 무관.
