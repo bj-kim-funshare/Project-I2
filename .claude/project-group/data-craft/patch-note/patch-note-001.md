@@ -1,5 +1,44 @@
 # data-craft — Patch Note (001)
 
+## v001.648.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #248 (핫픽스3 — 본 결함 최종 종결)
+
+### 개요
+
+#248 핫픽스3 — "위젯 속성 드로어의 그룹화 기준 컬럼 드롭다운 공란"의 **진짜 원인을 런타임 진단 프로브로 확정**해 종결. 4회 빗나간 끝에, 정적 분석이 "정상 동작해야 함"이라 단정하던 지점을 시각 디버그 프로브로 깨고 1차 런타임 증거를 확보했다.
+
+### 진짜 원인 (런타임 프로브 1차 증거)
+
+`ViewerGridSection`(빌더 위젯 속성 드로어)의 "그룹화 기준 컬럼" `<Select value={rowGroupingColumnField}>` 가 값을 위젯 속성에서 읽는데, **위젯 속성 `props.rowGroupingColumnField` 가 런타임에 숫자 `6887`** 이었다(타입 선언은 `string` 이나 위젯 config 가 number 로 로드 — 계약 위반). Radix Select 는 value 를 **문자열로 엄격 매칭**하므로, 숫자 `6887` ≠ `<SelectItem value="6887">`(문자열) → 매칭 실패 → 공란. 진단 프로브 출력이 직접 증명: `prop=6887`(따옴표 없음=number) · `raw="6887"(string)` · `cols=[...,6887,...]`.
+
+### 오진 → 정정 여정 (회고)
+
+- **Phase 1 (BE smallint)**: 토글 영속(끄기 미저장)에 **실제 필요했던 유효 수정** — 위젯 드로어 토글도 `setUseRowGrouping`→data_viewer_setting(smallint) 경로를 타기 때문. 보존.
+- **Phase 2 + 핫픽스1 (fs_data_viewer SettingsPanel)**: **라벨 충돌**("그룹화 기준 컬럼"이 뷰어 내부 오버레이와 빌더 드로어 양쪽에 존재)로 잘못된 컴포넌트를 고침. 해당 컴포넌트의 유효 방어 결함이라 보존.
+- **핫픽스2 (ViewerGridSection)**: 올바른 컴포넌트를 찾았으나 **빈-속성 케이스만 가정**(역동기화 + `|| viewerGroupField` 폴백). 숫자-속성 케이스는 truthy 라 폴백을 우회 — 미커버.
+- **진단 프로브**: 정적 분석의 "should work" 한계를 돌파, 위젯 속성이 number 임을 런타임에서 확인.
+- **핫픽스3**: `String()` 정규화로 종결.
+- **핵심 교훈**: 정적 분석이 2회 이상 "정상 동작해야 함"인데 실제 실패하면, 3번째 가설을 더 정교화하지 말고 **시각 디버그 프로브로 1사이클에 결판**하라.
+
+### 페이즈 결과
+
+- **Phase 5 (핫픽스3) — 위젯 속성 그룹 기준열 number→string 정규화 (`edc96a8`)**: `ViewerGridSection.tsx` line 34 의 `props.rowGroupingColumnField || ''` 를 `props.rowGroupingColumnField != null && !== '' ? String(...) : ''` 로 교체 → 숫자 6887 → 문자열 "6887" → Radix SelectItem "6887" 정확 매칭 → "우선순위" 표시. 핫픽스2 의 viewerGroupField 폴백·역동기화는 빈-속성/신규-토글 케이스용으로 보존. 임시 진단 프로브(diagText state·tick 스냅샷·debug div)는 동일 커밋에서 완전 제거. lint 게이트(root tsc 0 + eslint 0 errors) 통과.
+
+### 동결함-클래스 후속 후보 (이번 범위 밖)
+
+같은 number↔string 계약 위반이 data-craft 에 최소 3 레이어 존재: ① BE column smallint vs JS boolean(Phase 1), ② BE viewerSetting integer vs FE 모델 string(핫픽스1), ③ 위젯 config number vs 선언 string(핫픽스3). **kanban/gantt 등 다른 컬럼-id 위젯 속성에도 동일 패턴 잠복 가능** — 차기 사이클 audit 권장.
+
+### 적용 안내
+
+- root-app `src/` 변경이라 Vite Fast Refresh 즉시 픽업 — **브라우저 하드 리프레시만으로 반영**(dev 서버 재기동 불필요).
+
+### 영향 파일
+
+**data-craft (root app):**
+- `src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx`
+
 ## v001.646.0
 
 > 통합일: 2026-06-08
