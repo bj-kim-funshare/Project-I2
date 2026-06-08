@@ -22610,3 +22610,25 @@ data-craft-server:
 ### 비고
 - 본 핫픽스는 **전진 수정 + 방어 가드**(코드)로 완결. 기존 클라이언트 구제는 위 후속1(DB)에 의존.
 - "연간 고객이 프로모 구매 시 chargedAmount=0" 우려는 프로모 자격(new_signup/unpaid)이 유료 고객 배제 → 비도달로 확인(핫픽스1-A 회귀 아님).
+
+## v001.650.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스4 — 화살표 바깥 방향 복원.** 핫픽스3 의 화살표가 보이긴 하나 바깥(버튼 방향)이 아니라 안쪽(말풍선 내부)으로 파고든다는 마스터 시각 피드백 반영(FE-only, data-craft).
+
+### 근본 원인
+핫픽스3 의 `asChild` + 회전 정사각형(`<span rotate-45>`) 방식이 Radix Popper 의 화살표 배치와 어긋나, 테두리 모서리가 바깥이 아니라 안쪽을 향함.
+
+### 페이즈 결과
+- **Phase 핫픽스4** (`2ce55ee0`): `PopoverArrow` 를 Radix 네이티브 SVG `PopoverPrimitive.Arrow` 로 복원. Radix 가 SVG 화살표를 앵커 방향(바깥)으로 자동 배향하므로 방향이 구조적으로 보장됨(rotate/translate/asChild 제거). 첫 SVG 버전이 안 보였던 건 방향이 아니라 밝은색 문제였으므로, `fill-popover`(본체색 채움) + `stroke-border` + `strokeWidth=1`(테두리색 외곽선) + `overflow-visible`(stroke 클리핑 방지), `width=16 height=8` 로 밝은 배경에서도 보이는 바깥 방향 꼬리 구현.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — 방향은 Radix 네이티브로 보장(안쪽 파고듦 재발 불가).
+- **런타임 시각(마스터)**: 4번째 화살표 시도 — dev 재기동 후 확인. 바깥 방향은 보장되나 베이스(본체 접합부) seam 은 시각 확인 영역. 거슬리면 후속(drop-shadow 외곽선 또는 이중 삼각형 레이어). prod 무관.
