@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.646.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #245 (핫픽스4)
+
+### 개요
+
+#245 행 연결 QA 4차 핫픽스 — "행 연결 열 생성 시 열 순서(seq)가 0으로 들어가 순서가 깨지는" 결함의 **정확한 근본 원인**을 dev psql 실측 + 정밀 추적 + advisor 검증으로 규명·수정. BE 단일 repo(data-craft-server).
+
+### 근본 원인 (지상 진실 — 런타임 증명)
+
+`getNextColumnSeq`(dataViewerPost.service.ts) 의 SQL alias 가 **비인용** `as nextSeq`. PostgreSQL 은 비인용 식별자를 소문자로 접어(`nextseq`) 반환하는데(pgAdapter 는 rows 무가공 반환), JS 가 `rows[0]?.nextSeq`(camelCase)로 읽어 **항상 undefined → `?? 0`** → seq 가 늘 0. dev=psql 전환(5478e4f) 이후 생성된 모든 열에 영향(행 연결 열이 전환 후 첫 생성군이라 "행연결 한정"처럼 보였을 뿐, 실제론 전 열 공통). prod=MySQL 은 대소문자 무시라 마스킹됨. 메모리 `project_data_craft_mysql_pg_runtime_defects` 의 "식별자 소문자 접힘 — AS camelCase" 결함 클래스.
+
+### 페이즈 결과
+
+- **Phase 10 (BE `8166409`) — pg 별칭 인용 교정**: `dataViewerPost.service.ts` 의 동일 결함 클래스 3개 alias 를 인용부호로 교정(전 열 생성 seq 정상화):
+  - `getNextColumnSeq`: `as nextSeq` → `as "nextSeq"` (**보고된 결함 — 열 생성 seq=0**)
+  - `getNextRowSeq`: `as nextSeq` → `as "nextSeq"` (FE 가 명시 seq 전송으로 마스킹돼 있던 잠복 결함 선제 교정)
+  - `getNextExternalRowNum`: `as nextRowNum` → `as "nextRowNum"` (동일 잠복 결함)
+  - JS 읽기 측은 이미 camelCase 라 무변경. prod-MySQL 무해(대소문자 무시 + 인용 alias 양 엔진 호환).
+
+### 영향 파일
+**data-craft-server (BE)**
+- `src/services/dataViewerPost.service.ts`
+
+### 잔여 검토
+- **검증은 런타임 필요**: BE 재기동 후 **새 행 연결 열을 1개 생성**하여 psql 에서 seq>0 확인 필요(lint 는 이 결함을 못 잡음).
+- **기존 깨진 열 미복구**: 마스터 지시로 데이터 복구 제외 — 기존 행연결 테스트 그룹의 seq=0 열들은 그대로라 **새로고침해도 기존 그룹 순서는 여전히 깨져 보임**. 신규 생성 열부터 정상. 기존 순서 복구가 필요하면 별도 task-db-data 요청.
+- **범위 확장 고지**: 보고는 행연결 열 1건이나, 동일 파일 내 동일 결함 클래스 3개를 함께 교정(net-positive, 차기 동일 사이클 예방). 단 BE 전반의 `as camelCase` 광범위 감사는 별도 후속.
+- **제목=currency(₩)**: 타입 마이그레이션 테스트 결과로 추정 — 본 핫픽스 범위 외(필요 시 타입 복원 별도).
+
 ## v001.643.0
 
 > 통합일: 2026-06-08
