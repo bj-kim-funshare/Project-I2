@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.633.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #245 (핫픽스2)
+
+### 개요
+
+#245 행 연결 QA 2차 핫픽스 — 마스터 검증 후속의 **구조적** 수정. 연결(행 연결/연결) 설정 소유 모델 정정(#1/#3/#4, FE)과 열 타입 마이그레이션 연결 그룹 cascade(#2, BE). 멀티-repo: data-craft(FE) + data-craft-server(BE).
+
+### 페이즈 결과
+
+- **Phase 6 (핫픽스2 FE) — 연결 설정 소유 모델 (`574f9fb`+`befc292`+`d03ac08`)**: 행 연결 열은 생성 시 원본 설정을 자체 필드에 1회 스냅샷하고 이후 독립(편집·영속). BE는 rowLink 열의 `unit`/`optionList`/`cellRendererModelList`를 정상 영속·반환함을 검증.
+  - **#1 단위 소멸**: Phase 4에서 추가했던 reference 모드 단위 live-resync 이펙트(+캐시·import)를 **제거** — 매 마운트 시 원본 단위로 덮어써 사용자 편집을 클로버하던 원인. (참조 모드 '값' resync는 유지.)
+  - **#3/#4 설정 연속 추종 제거**: `rowLinkDelegateDispatcher`의 optionList configMetadata fallback과 `FsGridRowLinkCellRenderer`의 cellRendererModelList/스타일 연속 fallback을 제거 → 열 자체 필드가 렌더·편집기 모두의 권위. 레거시 열(자체 필드 비어 있고 스냅샷만 있는 경우) 대비: 마운트 시 1회 인메모리 hydration(스냅샷→자체 필드, saveChange 없음). 본문 스타일 편집기는 자체 필드가 비면 스냅샷에서 시드(`RowLinkGroupManageDialog`).
+- **Phase 7 (핫픽스2 BE) — 마이그레이션 cascade (`0628023`)**: `columnTypeChange.service.ts`의 type-change 트랜잭션 내(commit 직전)에 cascade 추가. rowLink/connection 열 설정을 조회 후 JS측 파싱·검증(`mappedTargetColumnId === columnId AND targetGroupId === groupId` 정확 일치)으로 false positive 제거, 매칭 rowLink의 `mappedTargetColumnType`(+`targetColumnMetadata`)을 새 타입으로 패치. pg(jsonb 객체)/MySQL(문자열) 이중 엔진 대응 파싱. connection은 타입 전용 저장 필드가 없어 의도적 스킵. 동일 트랜잭션이라 실패 시 전체 롤백.
+
+### 영향 파일
+**data-craft (FE)**
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkDelegateDispatcher.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+
+**data-craft-server (BE)**
+- `src/services/columnType/columnTypeChange.service.ts`
+
+### 잔여 검토
+- **레거시 열 첫 로드 1프레임**: 인메모리 hydration은 첫 렌더 후 이펙트로 적용 → 레거시 열 최초 로드 시 1프레임 무스타일 깜빡임 가능(편집 시 영속되어 이후 해소). 드문 레거시 한정 전환 비용.
+- **BE cascade 전역 스캔**: 현재 `viewer_type IN ('rowLink','connection')` 전수 조회 후 JS 검증. 쓰기는 전역 유니크 id(column_id/group_id) 정확 일치로 가드되어 **교차 테넌트(company) 변이 없음**(읽기만 전역). 대용량 시 `data_group.company_id` JOIN으로 스캔 범위 축소 최적화 후보.
+- connection 열은 cascade 패치 대상 아님(타입 저장 필드 부재) — 필요 시 별도 설계.
+
 ## v001.632.0
 
 > 통합일: 2026-06-08
