@@ -22369,3 +22369,26 @@ data-craft:
 - 정적: 각 페이즈 lint gate `pnpm typecheck:all && pnpm lint` 0 errors. `typecheck:all` 은 현재 `turbo run typecheck && tsc -p tsconfig.app.json --noEmit` 로 루트앱 tsc 포함(메모리의 "루트앱 타입체크 사각" 노트는 구버전 — 스크립트 보강으로 해소). 워크트리 fresh 환경이라 pnpm install + build:packages 선행 필요(패키지 dist 미빌드 TS2307 은 환경 문제).
 - advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
 - **런타임 미검증(후속)**: 말풍선 렌더/확인/영속(서버 PUT)·화살표 시각은 마스터 dev 재기동(web 5173) + 테스트 계정 `user_preference` 의 `hint.designModeSwitch` 행 부재 상태에서 시각 검증 영역. advisor #2 관찰: PopoverArrow `stroke-border` 에 strokeWidth 미지정 → 화살표 테두리 시각 어색 가능(핫픽스 후보). prod 무관(DB/BE 무변경).
+
+## v001.642.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #252 (funshare-inc/data-craft) · 핫픽스1
+
+**v001.638.0 표준 일할 전환 후, 복잡한 결제 시스템 전 차원(프로모션·인원·협업·개인·변경·연간) 논리 재검증 + 발견 결함 3건 핫픽스(BE).** 마스터 지시로 read-only 분석 에이전트 3종(금액 정합·앵커 생애주기·엣지/변경흐름)을 차원별로 돌려 확인된 결함을 교정. C는 민감 함수라 advisor 설계 검증 후 적용.
+
+### 페이즈 결과
+- **핫픽스1-A** (`12ec65e`, data-craft-server): **연간 일할 12× 과소청구 교정**(선재 결함, #126). full-cycle 연 결제는 `월×12×0.9`인데 일할 분자는 `월×0.9`만(÷365일)이라 연간 인원추가·업그레이드·프로모 잔존가치가 1/12로 계산되던 것을, 연 단가(`×12×9/10`)로 annualize. calculateProrationDiff(current·target yearly 분기) + promotion.service(purchasePromotion·getPromotionQuote 잔존가치) 4개 분자 라인. 프로모 자체 단가(p.monthlyPrice)·월별 분기는 무수정. **실측: 연간 100일 잔여 PREMIUM 1석 추가 = 44,087원(=floor(14900×12×0.9×100/365)), 구 산식 3,673원 대비 12.00×, 월별 9,132원 회귀 무변.**
+- **핫픽스1-B** (`2e34604`, data-craft-server): **NULL 앵커 폴백 드리프트 차단**. 미백필/레거시 NULL 앵커 행이 갱신마다 클램프된 `DAY(plan_expires_at)`로 재유도돼 28일 등에 고착되던 것을, 갱신 트랜잭션 내에서 `billing_anchor_day IS NULL`일 때 유도값을 set-once 영속화(renewSingleClient·renewPromotionClient 양 경로)해 첫 갱신 후 고정.
+- **핫픽스1-C** (`38f8797`, data-craft-server): **협업 프로모 next-cycle 인원변경 갱신 시 적용**(선재 결함). `renewPromotionClient`가 큐(`client_seat_change_requests`)를 적용하지 않아 협업 프로모 사용자의 예약 인원변경(특히 감원=강제 next-cycle)이 영구 미적용·`snapshotSeats` 고정이던 것을, `renewSingleClient` 패턴과 동일하게 Phase C 트랜잭션 내에서 `sumPendingDeltaForApply`→`snapshot_seats`(있을 때)+`client.seats` 갱신→`markApplied`로 차회 결제부터 반영. charge 순서·G8 락·SEC-SRV-45는 무수정(전부 Phase C 이전). **advisor 설계 검증 통과(현 결제 차회 무영향, active-user 재검증 미도입=기존 패턴 정합).**
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/billingSubscription.service.ts`, `src/services/promotion.service.ts`, `src/services/billingRenewal.service.ts`
+
+### 검증
+- 정적: `eslint .` 0 + `tsc --noEmit` 0 (3 fix 누적).
+- 런타임: A는 실 `calculateProrationDiff` 호출로 12× 교정·월별 회귀 무변 확인. B·C는 런타임 DB 검증 불가(프로모/NULL-앵커 행 부재) → tsc + 로직 트레이스 + advisor 설계 검증 의존(C diff가 승인 설계와 정확 일치).
+- advisor: 핫픽스 완료 게이트(#2) PASS — A/B/C 간 공유 상태 없음(A=일할 산식, B/C=갱신 트리거 경로 분리). 연간 가격 변경은 마스터 승인 사항.
+- **수동 e2e(후속)**: ① 연간 사용자 인원추가 견적이 12× 인상된 정확 금액인지 ② NULL-앵커 계정 갱신 후 anchor 영속화 ③ 협업 프로모 예약 인원변경이 다음 갱신서 snapshot_seats/client.seats에 반영되는지. dev 유료/프로모 행 확보 후 검증.
+- **가격 영향 주의**: A는 연간 일할 요금 ~12× 인상(선재 과소청구 교정). prod 반영 전 비즈니스 확인 권장. dev(psql)만, prod=MySQL 동결.
