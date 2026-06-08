@@ -22347,3 +22347,25 @@ data-craft-server:
 - **라이브 dev PostgreSQL 런타임 검증(메모리 #220 강제)**: ① `form_list`/`form_widget`/`page_layout_widget` uuid 컬럼 타입 확인 ② 기존 Buffer 패턴(`form_id = decode(...,'hex')`) → `uuid = bytea` 에러 재현으로 근본원인 확정 ③ 신규 `?::uuid` 패턴으로 createForm INSERT + form_widget(createWidget) INSERT 를 트랜잭션 실행 → 양쪽 `INSERT 0 1` 성공 → ROLLBACK(데이터 미영속). 신규 폼 저장 체인 2왕복 전부 검증.
 - advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음). #2 사전 경고로 목록 셀 이미지 로드 누락(uri→bare `<img src>`)을 포착해 Phase 2 보강으로 반영(편집·목록 양쪽 완결).
 - **수동 시각 검증(후속)**: 편집/목록 이미지 미리보기·스위치 표시·신규 폼 저장 무에러는 마스터 재기동 후 시각 검증 영역(web 5173 + server 8000 재기동). **prod 미적용**: prod=MySQL 동결(db.md), dev(psql) 우선.
+
+## v001.641.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**계정별 온보딩 말풍선(코치마크) 1차 — 디자인모드 힌트.** 처음 접속한 고객에게 헤더 "디자인모드로 전환" 버튼 아래 말풍선을 띄우고, "확인"을 누르면 해당 계정에서 다시 표시하지 않는다(브라우저/기기 무관 서버 영속). 이후 힌트 추가를 전제로 확장 가능한 레지스트리 구조로 구축. FE-only(data-craft), DB/BE 무변경 — 기존 `user_preference` + `GET/PUT /api/user-preference` 재사용(테마 동기와 동일 메커니즘). 모바일 제외.
+
+### 페이즈 결과
+- **Phase 1** (`d3f2e23b`, chore): shared Popover 에 `PopoverAnchor`(= PopoverPrimitive.Anchor)와 `PopoverArrow`(forwardRef 래퍼, fill-popover stroke-border) 를 추가하고 `src/shared/ui/index.ts` 에서 재노출. 이벤트 기반 controlled open 을 버튼에 anchor 하기 위한 선행 작업(동작 변경 없는 순수 export 확장).
+- **Phase 2** (`51823bed`, feat, lint핫픽스 1회 포함): onboarding 기능 슬라이스 신규. zustand store(`ensureLoaded()` loaded/loading 이중 가드 멱등 — getAll 1회로 `hint.` prefix + value `dismissed` 키만 Set 적재, `dismiss()` 낙관적 Set 갱신 후 비동기 서버 write, Set 불변 갱신), 힌트 레지스트리(`{id, prefKey, showOn, textKey, confirmKey, order}` + getHintById), hook(`open = loaded && !dismissed.has(prefKey) && showOn(ctx)`), UI 컴포넌트(`<OnboardingHint hintId>{children}</OnboardingHint>` → controlled Popover + PopoverAnchor asChild + 확인 버튼 + PopoverArrow, children 항상 렌더). 엔벨로프 처리는 themeServerSync.ts 미러. lint 초회 React Compiler "memoization could not be preserved"(수동 useCallback) → useCallback 제거(컴파일러 자동 메모)로 해소.
+- **Phase 3** (`f824c880`, feat): ViewModeToolbar 의 디자인 모드 전환 Tooltip 내부에서 `TooltipTrigger` 를 `<OnboardingHint hintId="designModeSwitch" ctx={{canDesign}}>` 로 감쌈(중첩 Radix Slot: PopoverAnchor asChild → TooltipTrigger asChild → Button; TooltipContent 는 Tooltip 직접 자식으로 유지해 툴팁 컨텍스트 보존). i18n ko/en 양쪽에 `onboarding` 최상위 섹션(`confirm`, `designModeSwitch.body`) 동일 키 구조 추가.
+
+### 영향 파일
+data-craft:
+- 신규: `src/features/onboarding/index.ts`, `src/features/onboarding/model/onboardingStore.ts`, `src/features/onboarding/model/hintRegistry.ts`, `src/features/onboarding/lib/useOnboardingHint.ts`, `src/features/onboarding/ui/OnboardingHint.tsx`
+- 수정: `src/shared/ui/shadcn/popover.tsx`, `src/shared/ui/index.ts`, `src/widgets/header/ui/ViewModeToolbar.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- 정적: 각 페이즈 lint gate `pnpm typecheck:all && pnpm lint` 0 errors. `typecheck:all` 은 현재 `turbo run typecheck && tsc -p tsconfig.app.json --noEmit` 로 루트앱 tsc 포함(메모리의 "루트앱 타입체크 사각" 노트는 구버전 — 스크립트 보강으로 해소). 워크트리 fresh 환경이라 pnpm install + build:packages 선행 필요(패키지 dist 미빌드 TS2307 은 환경 문제).
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **런타임 미검증(후속)**: 말풍선 렌더/확인/영속(서버 PUT)·화살표 시각은 마스터 dev 재기동(web 5173) + 테스트 계정 `user_preference` 의 `hint.designModeSwitch` 행 부재 상태에서 시각 검증 영역. advisor #2 관찰: PopoverArrow `stroke-border` 에 strokeWidth 미지정 → 화살표 테두리 시각 어색 가능(핫픽스 후보). prod 무관(DB/BE 무변경).
