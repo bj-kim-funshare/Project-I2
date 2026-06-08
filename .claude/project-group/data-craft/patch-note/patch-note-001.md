@@ -22216,3 +22216,27 @@ data-craft-mobile:
 ### 검증
 - `flutter analyze` 0 errors. 쿠키/withCredentials 런타임 동작은 정적 분석으로 검증 불가 → **마스터 수동 검증이 게이트**: data-craft-mobile `i-dev` pull → `flutter run -d chrome` 재기동 → 로그인(자동 로그인 ON) → 브라우저 **새로고침** → 로그인 유지 확인. (BE dev 서버 8000 기동 + 쿠키 SameSite dev=Lax, localhost 동일 site 이므로 전송됨.)
 - **한계(후속)**: 본 수정은 flutter web 의 브라우저 쿠키에 의존 — 네이티브(iOS/Android)는 쿠키 저장소(cookie_jar 등) 별도 필요, 본 핫픽스 범위 밖(마스터 web 테스트 환경 대상). "자동 로그인" 토글 자체의 shared_preferences 영속화(재방문 시 토글 기억)도 범위 밖.
+
+## v001.637.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #251 (funshare-inc/data-craft)
+
+**회원가입 사업자등록번호를 필수 → 선택으로 변경(FE+BE 코드).** 마스터 요구: "비워두거나 인증된 번호가 들어가 있어야 가입 가능, 인증 안 된 번호 입력 상태로는 가입 불가". 즉 게이트를 "비어있음 OR 정부 NTS API 인증됨"으로 바꾸고, **입력은 했으나 미인증인 중간 상태만 차단**한다. 기존 정부 API 검증 로직(`/validate-business-number`, NTS 호출)은 무수정 유지. DB 스키마 변경(`client.business_number` NOT NULL PK → nullable)은 마스터 결정에 따라 **별도 `/task-db-structure` 세션에서 병렬 진행** — 본 플랜은 코드만 담당하며 forward-correct(빈 값 시 NULL 전달). 빈-값 가입의 실제 persist 는 그 DB 마이그레이션 적용 후 e2e 성립.
+
+### 페이즈 결과
+- **Phase 1** (`c5f7994c`, data-craft): 회원가입 폼 사업자번호 선택화. `signupValidation.ts` 검증을 "빈 값이면 무에러 통과, 입력 시에만 10자리 형식 + `isBusinessNumberVerified` 인증 필수"로 반전. `CompanyInfoSection.tsx` 의 `<Field>` `required` 제거 + 라벨에 i18n "(선택)" 표기, 인증 후 필드 `disabled` 에서 `isBusinessNumberVerified` 제거 → 편집·삭제로 빈-상태 복귀 가능(기존 `handleBusinessNumberChange` reset 로직 발화, 인증 버튼 재출현). ko/en 로케일에 `businessNumberOptional` 키 parity 추가. (lint: typecheck:all 0 + eslint 0 errors.)
+- **Phase 2** (`1b7837e`, data-craft-server): 회원가입 API 선택화. `auth.controller.ts` 필수 필드 검증에서 `businessNumber` 제외, `auth.service.ts signup()` 이 값이 있을 때만 10자리 format 검증 + 중복 검증 수행(빈 값이면 둘 다 skip), `client.model.ts createClient` 가 빈 값/undefined → `NULL` insert(빈 문자열 금지·파라미터 타입 `string|null|undefined`), `auth.types.ts SignupRequest.businessNumber` optional 화. NTS 재검증은 signup 에 미도입(FE-신뢰 모델 유지). (lint: eslint 0 + tsc 0.)
+
+### 영향 파일
+data-craft:
+- 수정: `src/pages/auth/signup/signupValidation.ts`, `src/pages/auth/signup/CompanyInfoSection.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+data-craft-server:
+- 수정: `src/controllers/auth.controller.ts`, `src/services/auth.service.ts`, `src/models/client.model.ts`, `src/types/auth.types.ts`
+
+### 검증
+- 정적: data-craft `pnpm typecheck:all && pnpm lint` 0 errors(워크트리 `build:packages` 선행 후 root app tsc 포함 통과), data-craft-server `eslint .` 0 + `tsc --noEmit` 0. advisor 계획·완료 검증 BLOCK 없음.
+- **수동 e2e(중요 — 병렬 DB 마이그레이션 머지 후 성립)**: dev 서버에서 회원가입 → ① 사업자번호 **빈 값** 제출 → 가입 성공, `client.business_number = NULL` ② **인증 완료** 번호 → 가입 성공(기존 동작) ③ 번호 **입력 후 미인증** 상태 제출 → "인증 필요" 에러로 차단. (DB 마이그레이션 전에는 ①이 BE 검증은 통과해도 `client` insert(NOT NULL PK)에서 실패 — 코드 정합만 확인 가능.)
+- **의존성**: 빈-값 가입의 DB persist 는 별도 `/task-db-structure` 세션(`client.business_number` nullable 전환, company_id 정체성 승격)에 의존. dev(psql) 우선, prod(MySQL 동결) 별도 게이트.
+- **알려진 한계(후속 후보, 본 변경 도입 아님)**: ① BE 는 signup 시 NTS 재검증 안 함(기존 FE-신뢰) → API 직접 호출로 미인증 번호 주입 가능성은 선재 한계. ② BE 의 `validateBusinessNumber`/`existsClientByBusinessNumber` 에 untrimmed 값 전달 — FE 가 비숫자 strip + `/^\d{10}$/` 가 공백 거부라 현재 wire 계약상 안전(좁은 계약). ③ `is_verified` 컬럼 여전히 미기록. ④ `signupValidation.ts` 의 "사업자등록번호 인증이 필요합니다" 하드코딩 한국어(선재).
