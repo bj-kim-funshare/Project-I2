@@ -22471,3 +22471,22 @@ data-craft:
 - `generateId` 변경 안전성: timestamp 형식 의존(정렬·`includes('-')`·길이 검사) 없음 확인, `replaceFormId`는 값 매칭이라 무관, form id(서버 교체)·record id(불투명 키)·widget id(uuid 필요) 전부 정합. `evaluateVisibilityConditions([])`=true 확인(무조건 표시 필수 필드 정상 검증). `syncedFormFields`=field.id 키 `Record<string,string>` 확인(전건 차단 회귀 없음).
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — generateId 타 소비처·syncedFormFields 형태 사전 검증.
 - 런타임 시각 검증(신규 폼 저장 성공·파일입력 표기·일반 폼 필수 차단)은 마스터 재기동 후 영역(web 5173 + server 8000). prod=MySQL 동결 미적용.
+
+## v001.646.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스2 — 버블 본문 핵심 키워드 볼드.** 마스터 추가 시각 피드백(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 핫픽스2** (`d6a8e81b`): 말풍선 본문 문장에서 핵심 키워드를 굵게 처리. `OnboardingHint.tsx` 의 본문 렌더를 `t()` 직접 출력에서 react-i18next `<Trans>` 로 교체하고 `components={{ b: <strong className="font-semibold text-foreground" /> }}` 매핑 선언. i18n 본문 값의 핵심 키워드를 `<b>...</b>` 로 감쌈 — ko "디자인 모드"·"직접 편집", en "design mode"·"directly".
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/onboarding/ui/OnboardingHint.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 후속(마스터 시각)**: 굵은 키워드가 `text-foreground` 라 일부 테마에서 popover 배경과 대비 낮을 가능성(시각 확인; 필요 시 색 토큰 조정). Trans 공백 처리 정상 여부 확인. prod 무관(DB/BE 무변경).
