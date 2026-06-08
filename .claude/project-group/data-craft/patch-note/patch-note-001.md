@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.628.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #245
+
+### 개요
+
+QA 보고 행 연결(row-link) 기능 결함 8종을 코드로 검증(7건 REAL, #3은 소스상 이미 [저장] 라벨)하고 FE에서 일괄 수정. BE 무수정. 전 변경 `packages/fs-data-viewer` 단일 패키지. 근본 원인 2테마: (1) `RowLinkGroupManageDialog` 핸들러가 `onRefresh` 전 인메모리 모델 미변경(표준 패턴 위반) → #1/#2/#7, (2) 행 연결 셀 값이 `{"rowId","value"}` JSON 저장인데 일부 read 경로가 JSON 미파싱 → #8.
+
+### 페이즈 결과
+
+- **Phase 1 — 그룹관리 다이얼로그 모델 즉시 반영 + 동작 카드 가드 (`8fdacb3`+`33c44e4`)**: 열너비 `onChange` 가 `col.width` 즉시 반영 후 `onRefresh`→`saveChange`(#1/#2); 정렬허용 토글 `col.enableSorting` 낙관적 변경 + `DISABLE_SORTING_TYPES` 타겟 타입 가드(#7); 행그룹/칸반 `viewerModel.rowGroupingColumnField`/`kanbanColumnField` 낙관적 변경 + `useRowGrouping`/`DISABLE_ROW_GROUPING_TYPES`/`KANBAN_ALLOWED_COLUMN_TYPES` 가드 + `onRefresh` 복원(#7); 단위 input 을 타겟 타입 `DISABLE_UNIT_TYPES` 기준 게이팅(#4); footer `[취소]` 제거·`[저장]` 단일화(#3).
+- **Phase 2 — singleSelect delegate 단위 적용 (`94dc7c8`)**: `rowLinkDelegateDispatcher` singleSelect 분기에 fallback 과 동일 규칙의 단위 장식 추가(#5).
+- **Phase 3 — 조건부 스타일 평가 시 rowLink JSON 값 추출 (`1d49cd3`)**: `FsGridRenderer` 가 rowLink 셀의 JSON 에서 표시값을 추출해 조건 평가에 전달 → 조건부 텍스트 색상·조건 값 적용(#8). 비-rowLink 경로 불변.
+- **Phase 4 — 참조(reference) 모드 FE 재동기화 (`6549b76`)**: reference 모드 한정, 뷰어 로드 시 원본 값(`requestRowLinkGroupRows`)·단위(`requestConnectionColumns`)를 재조회해 표시 전용 in-memory 갱신(#6). `targetGroupId` in-flight Promise dedupe, diff-only 루프 가드, `cancelled` 언마운트 가드, BE write-back 없음.
+
+### 영향 파일
+- data-craft:`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+- data-craft:`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkDelegateDispatcher.tsx`
+- data-craft:`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts`
+- data-craft:`packages/fs-data-viewer/src/widgets/fs_grid_renderer/FsGridRenderer.tsx`
+
+### 잔여 검토
+- Phase 1 정렬허용 토글의 disabled 상태 tooltip 이 `t.columnMenu.rowGroupingTooltip` 을 재사용(정렬 전용 키 부재) — 타겟 타입이 `DISABLE_SORTING_TYPES` 일 때만 노출되는 경미한 i18n 불일치. 필요 시 핫픽스로 정정 가능.
+- #6 reference 재동기화는 그리드 경로(`FsGridRowLinkCellRenderer`) 한정 — kanban/calendar(`RowLinkRenderer`) 미적용. 런타임 재현(원본 값/단위 변경 후 새로고침)은 마스터 수동 테스트로 최종 확인.
+
 ## v001.627.0
 
 > 통합일: 2026-06-08
