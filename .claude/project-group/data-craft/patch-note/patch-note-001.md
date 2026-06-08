@@ -22166,3 +22166,22 @@ data-craft-mobile:
 - data-craft: `pnpm typecheck:all && pnpm lint` 0 errors + **`pnpm build:packages && pnpm build`(prod, tsc -b && vite build) exit 0**(10996 modules) — 표준 게이트가 놓친 누락 import 를 빌드게이트가 검출·수정. data-craft-mobile: `flutter analyze` 0 errors. advisor 핫픽스 완료 검증 BLOCK 없음.
 - **수동 검증 순서(중요 — 양쪽 재기동 필수)**: ① `data-craft` `i-dev` pull → `pnpm dev`(5173) **재기동**(신규 `/m/:pageId` 라우트가 stale 빌드면 모바일이 404 → "모바일 변경이 깨진 것"으로 오인됨, 실제론 웹 stale) ② `data-craft-mobile` `i-dev` pull → `flutter run -d chrome` **재기동** ③ 페이지 탭 → 행 탭 → 모바일 전용 화면(세로 스택, 뷰어=그룹 카드/리스트, 로딩 스피너 정상 사라짐) ④ write 권한 = 텍스트류 셀 탭 편집, read = 조회만.
 - **1차 명시 제외(후속)**: ① 뷰어/텍스트 외 17종 위젯(입력·폼·파일·셀렉터 등) = "곧 지원" 플레이스홀더 → 후속 모바일 네이티브 구현. ② 복합 타입 셀(select·user·date·file 등) 쓰기 에디터 = 후속(현재 텍스트류 7종만 편집). ③ 그룹 내부 행 '더 보기' 페이징·user 타입 사용자명 resolving = 후속.
+
+## v001.636.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #241 (funshare-inc/data-craft) — 핫픽스2
+
+**[앱 전역 auth 결함 — #241 페이지 상세와 무관, 핫픽스2 로 묶음] data-craft-mobile flutter web 새로고침 시 로그아웃 수정.** "자동 로그인 켜고 로그인해도 브라우저 새로고침하면 로그아웃" 증상. 근본 원인은 모바일 auth 가 body-token 전제로 작성됐으나 BE 는 쿠키 전용이라는 구조적 불일치(웹에서 사실상 동작한 적 없음): ① BE 는 refresh token 을 응답 body 로 주지 않고 HttpOnly 쿠키로만 발급(그룹 보안정책), `/api/auth/refresh` 도 `req.cookies.refreshToken` 만 읽음 → 모바일의 secure-storage refresh token 은 항상 비어 있음. ② Dio 에 `withCredentials` 미설정 → flutter web 에서 cross-origin(localhost:5174→8000) 쿠키를 저장·전송하지 못함. ③ `auth_controller.build()` 가드가 인메모리 access token 존재를 요구 → 새로고침으로 access token 소실 시 복원 시도 없이 unauthenticated. BE 무수정(동결) 전제로 **웹 앱의 쿠키 기반 흐름에 정렬**하여 FE-only 로 수정.
+
+### 페이즈 결과
+- **Phase 9 / 핫픽스2** (`2b5493e`, data-craft-mobile): ① 조건부 import 스텁 쌍(`web_credentials_stub.dart`/`web_credentials_web.dart`, `if (dart.library.html)`)으로 `BrowserHttpClientAdapter.withCredentials=true` 를 멀티플랫폼(android/ios/macos/web/windows) 안전하게 적용 — `createDioClient`·refresh Dio 양쪽(authApi 는 dioClient 공유). ② `refreshAccessToken()` 을 빈 body + 쿠키 기반으로 전환, 응답 파싱을 `data['auth']['accessToken']`(camelCase 중첩, signin 선례 동일)으로 교정. ③ `auth_controller.build()` 부팅 복원 체인 교체: access token 없으면 refresh(쿠키) 먼저 → 성공 시 autoSignin 으로 사용자/계정 복원 → 인증, 실패 시 조용히 unauthenticated. CORS 사전 확인(`Access-Control-Allow-Origin: http://localhost:5174` + `Allow-Credentials: true`).
+
+### 영향 파일
+data-craft-mobile:
+- 신규: `lib/api/web_credentials_stub.dart`, `lib/api/web_credentials_web.dart`
+- 수정: `lib/api/dio_client.dart`, `lib/state/auth_controller.dart`
+
+### 검증
+- `flutter analyze` 0 errors. 쿠키/withCredentials 런타임 동작은 정적 분석으로 검증 불가 → **마스터 수동 검증이 게이트**: data-craft-mobile `i-dev` pull → `flutter run -d chrome` 재기동 → 로그인(자동 로그인 ON) → 브라우저 **새로고침** → 로그인 유지 확인. (BE dev 서버 8000 기동 + 쿠키 SameSite dev=Lax, localhost 동일 site 이므로 전송됨.)
+- **한계(후속)**: 본 수정은 flutter web 의 브라우저 쿠키에 의존 — 네이티브(iOS/Android)는 쿠키 저장소(cookie_jar 등) 별도 필요, 본 핫픽스 범위 밖(마스터 web 테스트 환경 대상). "자동 로그인" 토글 자체의 shared_preferences 영속화(재방문 시 토글 기억)도 범위 밖.
