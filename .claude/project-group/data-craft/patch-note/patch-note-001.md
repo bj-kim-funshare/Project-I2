@@ -22814,3 +22814,31 @@ data-craft:
 ### 검증
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - **런타임 시각(마스터)**: dev 재기동 후 꼬리 밑이 상단선에 붙는지 확인. 여전히 미세 차이면 translate px 값만 조정. prod 무관.
+
+## v001.660.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #255 (funshare-inc/data-craft) · #252 후속
+
+**#252 핫픽스2가 남긴 코드 정리 3건(dev 한정, push/배포/prod 범위 밖).** 프로모 구매 정액 전환 후 미처리 정리 — per-seat 판정 중복 단일화 + 레거시 프로모 동시성 구간 + 프로모 라벨 정정.
+
+### 페이즈 결과
+- **Phase 1** (`f238d63`+`502c119`, data-craft-server): per-seat 판정(`planType===STANDARD||PREMIUM`) 6사이트 중복을 `config/constant.ts`의 공용 `isPerUserPlan`로 단일화(기존 seatChange 로컬 헬퍼 승격). combined 사이트의 `||...IsCollaboration` 프로모 분기 보존, 미사용 `PLAN_TYPE` import 정리. **순수 리팩터** — 실 `calculateProrationDiff` 월별 9,132·연간 44,087(12×) 무변 확인.
+- **Phase 2** (`c240584`, data-craft-server): `renewPromotionClient` Phase C seat-delta `baseSeats`를, 레거시 경로(`cp.snapshotSeats==null`)에서 stale `currentSeats` 대신 Phase C 트랜잭션 내 `findClientSeatsForUpdate`(FOR UPDATE 락) 재조회값으로 교체 — admin 인원변경 경합 창 제거. snapshot 경로·charge 순서·SEC-SRV-45 무변.
+- **Phase 3** (`63e30ee`, data-craft): 프로모 구매 라벨 `subscription.proratedPriceNote`를 정액 첫-결제 의미로 정정(ko "(프로모션 첫 결제 금액입니다.)"·en "(Promotion first payment amount.)"). 형제키(seatManage/billing proratedNotice) 미터치.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/config/constant.ts`, `src/services/billingSubscription.service.ts`, `src/services/billingRenewal.service.ts`, `src/services/seatChange.service.ts`
+
+data-craft:
+- 수정: `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- data-craft-server: `eslint .` 0 + `tsc --noEmit` 0. Phase 1 회귀(실함수): 9,132·44,087 무변. Phase 2: diff 트레이스(런타임 DB 검증은 프로모 행 부재로 불가, advisor 설계 검증).
+- data-craft: `pnpm typecheck:all && pnpm lint` PASS(0 errors).
+- advisor 계획(#1)·완료(#2) 5-perspective PASS. Phase 2 currentSeats 후속 사용 무영향·Phase 3 collab 경로 라벨 정합 확인.
+- 런타임/배포/prod 범위 밖(dev 정적 검증 종료, origin push 미수행).
+
+### 비고
+- 관련 task-db-data(기존 '2999' 프로모 client 백필)는 dev 진단 결과 **대상 0건·청구 감사 클린**으로 정정 SKIP(별도 완료). prod(MySQL 동결)는 범위 밖.
