@@ -56,7 +56,8 @@ projects:
 
 ## env 관리
 
-- env 파일은 각 저장소에서 git-tracked. 단일 env 공유 (개발/프로덕트 분리 없음).
+- env 파일은 각 저장소에서 git-tracked. 단일 env 공유 (개발/프로덕트 분리 없음) — 환경별 차등 값은 `{NAME}`/`{NAME}_PROD` 페어 + `NODE_ENV` 분기 (dev.md §"env 페어 패턴").
+- **PROD psql 컷오버 (Roadmap-6 PROD-1) — BE prod 배포 env 요건**: 컷오버 후 `data-craft-server` 는 **단일 pg 엔진**(#258, `DB_ENGINE` 토글 없음)으로 prod psql 에 접속한다. EC2(aws-deploy) `.env` 에 prod psql 좌표를 `_PROD` 페어로 주입 필수: `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD`(`PG_PORT` 는 5432 단일) + `DB_NAME_PROD`= psql DB명(`postgres`). ⚠️ **선행**: `constant.ts` 의 PG 좌표 `_PROD` 분기 코드가 미구현이라(db.md §전환 상태 "선행 코드 갭"), 이 코드 반영 + EC2 `.env` 주입이 **프롬프트 5 배포보다 먼저** 끝나야 prod BE 가 올바른 prod psql 로 접속한다(미반영 시 dev psql 로 오접속). 레거시 `DB_*`(MySQL) env 는 롤백 윈도우 동안 보존 후 폐기.
 
 ## 서버 인프라 메모
 
