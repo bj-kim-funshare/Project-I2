@@ -23026,3 +23026,28 @@ data-craft-server:
 - **런타임**: psql-audit 하네스 smoke 3/3 PASS(단일 pg 부팅·envValidator·디스포저블 클론 DB OK, fallbackMode=false). Phase 10 `?::uuid` 직접 psql 프로브 — 행 매칭 count 1·uuid_match true(hexToBuffer 바인딩 동치).
 - **전체 라우트 워크 미완(사전존재 결함)**: psql-audit full run 이 smoke 직후 fatal — `sp_manage_data_group`(psql SP)이 2026-06-08 relation cleanup 에서 드롭된 `data_group_relation` 테이블을 여전히 참조. **i-dev base(`25dba2a`) 대조 실행이 동일 지점·동일 fatal 재현 → #258 무회귀(byte-identical) 입증.** ⚠️ 이 결함은 #258 외 **별개 후속**(relation cleanup 의 BE/SP 완성 — 드롭된 테이블 참조 SP 정리 필요).
 - advisor 계획(#1)·완료(#2) PASS(BLOCK 없음).
+
+## v001.669.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #258 (funshare-inc/data-craft) — 핫픽스1
+
+**psql-audit 검증 하네스의 stale fixture 가드 → data-craft-server 전 라우트 psql 전수검증 완결(#258 마지막 verification 게이트).** #258 완료 후 full-route 워크가 smoke 직후 `relation "data_group_relation" does not exist` 로 fatal 했는데, 원인은 제품/DB 가 아니라 **검증 하네스 자체**였음 — `test/psql-audit/fixtures.ts` 가 relation 기능 폐기(2026-06-08 릴레이션 테이블 DROP)로 사라진 `data_group_relation` 을 무가드 SELECT. **제품 코드 무관**(앱 src·SP·트리거·뷰 어디에도 드롭 테이블 실행 참조 0, `/api/relation` 라우트 미마운트).
+
+### 페이즈 결과 (핫픽스1 · WIP: data-craft-server i-dev)
+- **핫픽스1** (`91fc945`, data-craft-server): `test/psql-audit/fixtures.ts` 의 `SELECT relation_id FROM data_group_relation LIMIT 1` 을 try/catch 로 감싸 부재 시 `primaryRelationId=null` 폴백(바로 아래 `data_link_source` 의 기존 tolerate 패턴과 동일). **검증 인프라 수정 — 제품 코드 무변경.**
+
+### 전 라우트 워크 결과 (207 라우트 × 2 사용자 = 406 레코드)
+- **pg-dialect 에러토큰 0** — 모든 라우트가 psql 에서 드라이버/방언 오류 없이 실행. (이로써 dev 단일 psql 체계가 코드·DB·전 라우트 레벨에서 입증.)
+- crash 플래그 3건은 **전부 비-pg 테스트 아티팩트, #258 도입 아님**(controllers/·SSE 라우트는 #258 sweep 범위 밖 — 무수정):
+  - `POST /api/subscription/webhook/toss` ×2 (HTTP 500): toss 웹훅 **서명 검증 throw**(`webhook.controller.ts` 가 하네스의 synthetic 무서명 페이로드 거부) — 정상 보호 동작.
+  - `GET /api/sse/connect` ×1 (TIMEOUT): SSE 장수명 스트림 — 하네스에서 구조적 timeout.
+- ok=27 · expected(2xx/4xx)=356 · skipped=20.
+
+### 영향 파일
+data-craft-server:
+- 수정: `test/psql-audit/fixtures.ts` (검증 하네스)
+
+### 검증
+- 하네스 full-route 워크 완주(이전엔 stale fixture 로 smoke 직후 fatal). pg-에러토큰 0/406. advisor #2 PASS(BLOCK 없음).
+- **결론**: #258 dev 단일 psql 전환은 코드(mysql2 0)·DB(드롭 테이블 무참조)·런타임(전 라우트 0 pg-crash) 3중 입증 완료. (env carve-out·prod MySQL 동결은 별개.)
