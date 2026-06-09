@@ -28,6 +28,18 @@ projects:
     build_command: pnpm build
     deploy_command: git checkout main && git push origin main:aws-deploy
     env_management: git-tracked
+  - name: data-craft-admin
+    role: FE
+    tool: none
+    deploy_excluded: true
+    build_command: pnpm build
+    env_management: git-tracked
+  - name: data-craft-admin-server
+    role: BE
+    tool: none
+    deploy_excluded: true
+    build_command: pnpm build
+    env_management: git-tracked
 ---
 
 # data-craft — deploy 환경 규정
@@ -42,6 +54,7 @@ projects:
 
 ## 배포 전략 요약
 
+- **`data-craft-admin` / `data-craft-admin-server` (관리자 콘솔, Roadmap-7 신규) — 배포 제외**(`deploy_excluded: true`, `deploy_command` 미부여, `tool: none`). 운영자 로컬에서 `pnpm dev` 로만 기동하는 콘솔이라 `pre-deploy` / `deploy_command` 대상이 아니다. `pre-deploy` 호출 시 본 2종은 배포 타깃에서 제외. (마스터 명시 — Roadmap-7)
 - `data-craft` (리더), `data-craft-ai-preview` (프리뷰), `data-craft-mobile` (모바일) — GitHub Pages 배포.
 - `data-craft-mobile` 은 **플러터 셸 안착 전까지 한시적 gh-pages 배포** (마스터 명시). 안착 후 Flutter WebView Shell 번들 형태로 재정의 예정 — 재정의 시 본 문서 갱신.
 - 모바일 빌드 산출물 = `apps/web/dist/` (확정 — 루트 `pnpm build` 시 apps/web 에 dist 생성).
