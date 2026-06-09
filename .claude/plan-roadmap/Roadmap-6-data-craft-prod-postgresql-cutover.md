@@ -8,6 +8,8 @@
 
 1️⃣ 🔴 /group-policy data-craft, 컷오버용 그룹 정책 전반 갱신 — **db.md** 연결정보(connection_style)를 레거시 MySQL DB_* → prod PostgreSQL PG_* 기준으로 보정, **deploy.md** 배포 env_management/deploy_command 에 PG_* 주입·단일 psql 엔진 반영(DB_ENGINE 잔재 정리), 그 외 **dev.md/group.md** 도 컷오버로 바뀔 정책 있으면 함께 보정
 
+🔴 /plan-enterprise data-craft, **BE prod psql 좌표 `_PROD` 분기** — `constant.ts` 의 `PG` 객체(HOST/USER/PASSWORD)를 `resolveDbName` 처럼 `NODE_ENV` 분기(`PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어 + `*_PROD_NOT_CONFIGURED` throw 가드)로 전환, `PG_PORT` 단일 유지, `.env`/`.env.example` 에 `PG_*_PROD` 키 + `DB_NAME_PROD=postgres`(prod psql DB명) 추가. 미반영 시 prod BE 가 dev psql 로 오접속 → **프롬프트 5(배포) 전 필수 선행**, 프롬프트 3·4(데이터 이관)와 독립이라 병렬 가능. (group-policy 프롬프트 2 에서 발견된 선행 코드 갭)
+
 🔴 /task-db-data data-craft, prod MySQL→psql **일반 데이터 이관** changeset 작성 — **pre-flight 게이트(이관 차단): 소스 prod MySQL 에서 `SELECT count(*) FROM (SELECT value_id, group_id FROM data_values GROUP BY 1,2 HAVING count(*)>1) t` = 0 확인, 0 아니면 이관 중단. prod psql 은 `data_values` 파티션 PK `(value_id, group_id)` 를 강제하므로 중복쌍 존재 시 벌크 로드가 중도 실패함(dev `data_values_pkey` 는 INVALID·비강제였으나 prod 빌드 DDL 은 올바르게 강제 — 프롬프트 1 발견).** 엔진변환(uuid·enum 대소문자·smallint 0/1·jsonb·timestamp·IDENTITY 재설정) + column_type 오분류 등 prod 데이터 호환 교정 + 릴레이션 테이블 제외. (결제는 다음 프롬프트로 분리)
 
 🔴 /task-db-data data-craft, **결제 전용 마이그레이션** changeset 작성 — billing_anchor_day 를 payment_history 첫 결제일(day)에서 파생 + billing_info 암호화(billing_key/카드) 보존 검증 + 이관 후 활성구독 전건 결제 대사(reconciliation). 실패 시 롤백 게이트
@@ -59,6 +61,7 @@ data-craft 프로덕션을 **MySQL → PostgreSQL 로 단일 컷오버**한다. 
 
 ### 병렬/순서
 - **그룹 1**(병렬): 프롬프트 1(소스 DDL 교정, data-craft-server 의 .sql) ↔ 프롬프트 2(db.md·deploy.md, Project-I2) — 서로 다른 파일/레포라 독립.
+- **BE PG_*_PROD 분기 코드**(그룹 1 다음 신규 프롬프트): prod psql(사설호스트/`postgres`)이 dev(127.0.0.1/`starbox`)와 좌표가 달라 `constant.ts` PG 단일변수로는 환경 분기 불가 — group-policy(프롬프트 2)에서 발견. data-craft-server **코드** 작업이라 데이터 이관(3·4, task-db-data changeset)과 **독립·병렬 가능**하나, **배포(5) 전 반드시 완료**(미반영 시 prod BE 가 dev psql 로 오접속).
 - 이후 순차: 일반 이관(3) → 결제 이관(4, payment_history 적재 후 anchor 파생) → 배포(5) → 기록(6) → dev 새로고침(7). 5·7 사이에 위 컷오버 운영 절차가 끼어든다.
 
 ### 산출물 매핑
