@@ -22734,3 +22734,23 @@ data-craft:
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
 - **런타임 시각(마스터, 6번째 화살표 반복)**: 메커니즘을 Tooltip 검증 방식으로 전환. 마지막 미지 변수 = 회전 다이아몬드의 바깥 두 변 식별(`border-l border-t`). 만약 윤곽이 반대쪽(안쪽 notch)이면 `border-r border-b` 로 한 토큰 flip 이 다음 수정. prod 무관.
+
+## v001.656.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #250 (funshare-inc/data-craft) — 핫픽스3
+
+**폼 위젯 레이아웃 저장 실패(핫픽스3) — prefixed area/widget id uuid 정규화.** 위젯 설정(레이아웃) 저장 시 `invalid input syntax for type uuid: "section-..."`(BUILDER-C-010, `createArea`)로 실패.
+
+### 페이즈 결과
+- **핫픽스3** (`97615fe`, data-craft-server): #220/#250 Phase 3 의 `hexToBuffer → ?::uuid` 마이그레이션이 `hexToBuffer` 의 **prefix-UUID 추출 정규식**을 함께 제거한 회귀. 레이아웃 area id 는 `section-`/`area-`/`subarea-` prefix 형태(prefix 는 area type 기반으로 read 시 `hexToAreaId` 가 생성, DB 엔 bare uuid 저장)인데, `createArea`/`createLayoutWidget` 가 prefixed 문자열을 그대로 `?::uuid` 에 넘겨 pg 가 거부. `builder.model.ts` 에 파일-로컬 `toUuidParam`(prefix/dash/hex → uuid 추출, 이전 hexToBuffer 정규식 복원·Buffer 대신 문자열) 추가 후 `createArea`(area_id)·`createLayoutWidget`(widget_id·area_id) 파라미터에 적용. 모델 계층 수정으로 `builder.layout.ts`(saveLayout)·`builder.page.ts`(페이지 복제) 양 호출자 모두 보호(page 경로는 hexToUuid dashed 라 기존 정상, harmless).
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/models/builder.model.ts`
+
+### 검증
+- 정적: `pnpm lint` 0 + `tsc --noEmit` 0.
+- **라이브 dev pg 검증**: prefix 제거 uuid(`afc95187-...`)가 `?::uuid` 캐스트 통과(기존 area row 와 PK 충돌 = 컬럼이 bare uuid 저장 확인) + fresh uuid 로 `page_layout_area` INSERT 성공(트랜잭션 ROLLBACK).
+- advisor 완료(#2) PASS(BLOCK 없음) — `builder.page.ts` 호출자 dashed uuid 라 회귀 무관·widget.id bare 라 dedup 일관성 확인.
+- 런타임 시각 검증(위젯 설정/레이아웃 저장 성공)은 마스터 재기동 후. prod=MySQL 동결 미적용.
