@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.688.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #266 (funshare-inc/data-craft) — 핫픽스2
+
+**dev LAN 접속 — `localhost`/`*.local`/LAN IP 어느 호스트로 열든 새로고침 로그인 유지.** v001.687.0(핫픽스1)로 `.local` 접속은 됐으나, FE 를 `localhost:5173` 으로 열면 API 가 `.local:8000`(`.env.local` 하드코딩)이라 FE↔API 가 cross-site → dev refresh 쿠키(SameSite=Lax)가 안 붙어 새로고침 시 로그아웃됐다(외부 PC=`.local:5173` 는 정상, 로컬만 깨짐). dev 에서 API/스토리지 base 를 "페이지를 연 호스트" 기준으로 동적 산출해 항상 same-site 로 통일.
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2, fix, data-craft)** (`d7cf12b`): `src/shared/config/env.ts` 의 `resolveUrl` **dev 분기만** `${window.location.protocol}//${window.location.hostname}:8000` 동적 산출로 교체. API_BASE_URL·BASE_STORAGE_URL 둘 다 이 함수로 흘러 dev 에선 항상 페이지 호스트의 BE(8000)를 가리킨다 → FE/API same host(same-site) → refresh 쿠키 유지. `import.meta.env.PROD` 분기는 byte-identical 로 보존 → vite build 시 dev 코드 dead-code 제거(prod 무영향, v001.684.0 와 동일 논거).
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/config/env.ts`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` PASS(0 errors, 87 warnings — 기존 baseline).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임(마스터 수동)**: `localhost:5173` 과 `byeolsangjaui-MacBookPro.local:5173` **둘 다** 에서 로그인 후 새로고침 시 세션 유지 확인. 외부 PC(`.local`) 동작 회귀 없는지 확인.
+
+### 비고
+- `.env.local` 의 `VITE_API_BASE_URL`/`VITE_BASE_STORAGE_URL` 은 본 변경 이후 **dev 에서 무시**된다(동적 산출 우선). 혼동 방지 위해 원래대로 `http://localhost:8000` 복원 권고(선택 — 둬도 무동작).
+- 외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스2`)=data-craft i-dev 머지(`d7cf12b`), 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. 버전 v001.688.0 = 685~687 이 병렬 잡(#267/#268/#261)·핫픽스1 로 선점되어 파일 max 실측 다음 채번.
+
 ## v001.686.0
 
 > 통합일: 2026-06-09
