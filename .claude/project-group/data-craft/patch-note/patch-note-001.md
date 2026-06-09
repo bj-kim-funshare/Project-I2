@@ -23369,3 +23369,33 @@ data-craft-server:
 
 ### 비고
 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft i-dev 머지(`0eb8521e`), 본 patch-note WIP(`-문서`)=Project-I2 main. PropertyDrawer 잠금은 클릭아웃 닫힘=모달 시맨틱 근거로 적용했으나 도킹형이라 캔버스 스크롤 차단 체감 시 해당 1훅 철회 핫픽스로 즉시 가역.
+
+## v001.682.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #264 (funshare-inc/data-craft) — 핫픽스1
+
+**내장 서브 그리드 "필터" 패널: 버튼 우측 배치 + 드롭다운 열린 채 패널 본문 클릭 시 패널 닫힘 잔존 결함 차단.** v001.678.0 Phase 2 가드가 막지 못한 "드롭다운 열림 상태에서 패널 본문 클릭 → 패널까지 닫힘" 경로를 좌표 기반 판정으로 해소하고, 마스터 추가 지시에 따라 패널을 필터 버튼 우측에 배치. FE-only(data-craft), 단일 파일 `SubGridFilterBar.tsx`.
+
+### 원인 (잔존 결함)
+패널 내부 열 선택 드롭다운은 Radix `Select`(기본 **modal**)다. 열려 있는 동안 Radix 가 페이지 `body` 에 `pointer-events: none` 를 깔아, 패널 본문 클릭 시 `e.target` 이 패널 밖 요소로 잡힌다 → Phase 2 의 `panelRef.contains(target)` 검사가 false 가 되어 외부클릭으로 오판 → `closePanel()`. `closest('[role="listbox"]')` 가드는 드롭다운 **항목** 클릭(pointer-events:auto)만 커버해 패널 본문 클릭 경로는 못 막았다. (`useBatchDialogOutsideClick.ts` critical-004 주석이 명시한 그 상황.)
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1, fix)** (`88cbdb8`):
+  1. **이벤트 수정** — 외부클릭 핸들러를 `mousedown`→`pointerdown` 전환(Radix DismissableLayer 와 동일 타이밍)하고, 기존 두 가드(closest listbox/popper, `contains`) 뒤에 **좌표 기반 `within()` 판정**을 추가. 클릭 좌표(`clientX/Y`)가 패널 또는 버튼 rect 안이면 닫지 않음 → Radix Select 의 `pointer-events:none` 상태에서도 패널 내부 클릭을 정확히 구분(critical-004 패턴). 드롭다운만 닫히고 패널 유지.
+  2. **위치 수정** — 패널 앵커를 `top: rect.bottom+4, left: rect.left`(버튼 아래) → `top: rect.top, left: rect.right+4`(버튼 우측 옆, 상단 정렬)로 변경. Phase 1 의 `adjustOverlayPosition` 뷰포트 클램핑 흐름은 그대로 유지(여전히 화면 밖으로 안 잘림).
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/fs_grid_sub/components/SubGridFilterBar.tsx`
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존 baseline).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각/동작(머지 후 마스터 수동)**: ①드롭다운 열린 상태에서 패널 본문 클릭 → 드롭다운만 닫히고 패널 유지 ②드롭다운/패널 각각 단독 클릭 동작 회귀 없음 ③필터 패널이 필터 버튼 우측에 나타나는지.
+
+### 알려진 비차단 / 해석 주의
+- **위치는 마스터 추가 지시 "버튼으로부터 출발해 우측으로"의 직역**(버튼 오른쪽 옆 배치). 필터 버튼은 헤더 우측 도구 묶음의 맨 왼쪽이라, 패널이 열리면 오른쪽의 열/행 개수 표시·설정 기어 위에 떠서 겹친다(포탈 오버레이라 정상, 회귀 아님). 다른 방향(예: 버튼 아래·왼쪽모서리 고정)을 원하면 앵커 1줄 변경으로 한 사이클 교정 가능.
+
+### 비고
+외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스1`)=data-craft i-dev 머지(`da8f6735`), 본 patch-note WIP(`-핫픽스1-문서`)=Project-I2 main(#263 선례와 동일 — 단일-WIP 핫픽스 carve-out 은 patch-note 가 I2 에 거주하는 외부 리더엔 부적합하여 2-WIP 로 확장 [[project_external_leader_patchnote_in_i2]]). 병렬 잡(#262·#265)이 v001.679~681 을 선점하여 본 엔트리는 v001.682.0.
