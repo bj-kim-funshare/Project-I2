@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.685.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #267
+
+### 개요
+
+온보딩 말풍선(코치마크) 6종에 **"안내받은 행동을 수행하면 닫기와 동일하게 세션 dismiss"** 동작을 도입. 마스터 지적 — 뷰 모드에서 `designModeSwitch` 말풍선이 디자인-모드 토글 버튼을 가리킬 때 그 버튼을 누르면(= 안내받은 행동 수행) 닫기를 누른 것과 동일해야 하고, 다시 뷰 모드로 돌아와도 새로고침 전까지는 재등장하지 않아야 한다. 기존에는 앵커 클릭이 `closeTransient` 를 부르지 않아 조건 재충족 시(뷰↔디자인 토글 등) 같은 말풍선이 재등장했다. 6종 전부 동일 결함 클래스로 일반화 해소.
+
+### 해결 방식 (중앙 단일 변경)
+
+`OnboardingHint.tsx` 의 `cloneElement` 호출부에서, 해당 힌트가 **표시 중(`open === true`)일 때만** 앵커 자식의 `onClick` 을 원본 핸들러 + `close()`(transient close)로 합성한다. 원본 핸들러를 먼저 실행한 뒤 `close()` 를 호출해 안내받은 행동이 완료된 후 닫히도록 보장. `open === false` 면 기존대로 `ref` 만 주입한다.
+
+- **직접 버튼형 4종**(designModeSwitch / addSection / addPage / userForm): 감싸는 자식이 곧 행동 버튼 → 클릭 시 합성 onClick 발화.
+- **areaControlBar**: 컨트롤바 div 합성 onClick 에 내부 3버튼(위젯추가/행분할/삭제) 클릭이 이벤트 버블링으로 도달 → "컨트롤바 사용 = 닫힘".
+- **emptyArea**: placeholder 클릭 또는 +버튼(형제 AreaControls)의 위젯 추가 → `allAreasEmpty=false` 자연 조건플립으로 숨김.
+- **`open` 가드 이유**: 다른 힌트 표시 중 미표시 힌트의 앵커를 눌러도 그 힌트가 미리 closed 처리되는 오류 방지.
+
+신규 i18n 문자열·의존성 없음.
+
+### 페이즈 결과
+
+- **Phase 1 (fix) — 온보딩 말풍선 act-to-dismiss (`d73ad165`, lint 핫픽스 `056e1d93`)**: `OnboardingHint.tsx` `cloneElement` 에 open-가드 onClick 합성 도입. lint 게이트에서 `ReactElement` 제네릭 미지정으로 `.props` 가 `unknown`(TS2571) 1건 발생 → props 타입 캐스트(`ReactElement<{ onClick?: ... }>`)로 1줄 수정 후 재통과. typecheck:all 0 / eslint 0 errors.
+
+### 검증 안내 (마스터 수동 확인 권장)
+
+본 변경은 **정적 분석(typecheck + eslint)만으로 검증**됨 — 메인 세션은 런타임 렌더를 보지 못한다(말풍선 영역 과거 다수 핫픽스 이력). 마스터는 머지 후 최소 다음 시나리오를 수동 확인 권장:
+- **핵심**: 뷰 모드 → 디자인-모드 토글 클릭 → 다시 뷰 모드 → designModeSwitch 말풍선 **재등장 안 함**. 새로고침 → 재등장.
+- addSection / addPage / userForm: 각 안내 버튼 클릭 후 조건 유지/재충족 시 재등장 안 함.
+- areaControlBar: 컨트롤바 버튼 클릭 후 재등장 안 함.
+- 새로고침 시 전체 재등장(영속 "앞으로 보지 않기" 미적용 시).
+
+> **참고(기존 동작)**: 우선순위 큐 특성상 designModeSwitch 를 닫고 디자인 모드에 진입하면 다음 힌트(섹션 없으면 addSection, 있으면 addPage)가 **즉시 노출될 수 있다** — 이는 큐의 의도된 동작이며 본 변경으로 새로 생긴 것이 아니다.
+
+### 적용 안내
+
+- root-app `src/` 변경이라 Vite Fast Refresh 픽업 — **브라우저 하드 리프레시만으로 반영**(dev 서버 재기동 불필요).
+
+### 영향 파일
+
+**data-craft (root app):**
+- `src/features/onboarding/ui/OnboardingHint.tsx`
+
 ## v001.648.0
 
 > 통합일: 2026-06-08
