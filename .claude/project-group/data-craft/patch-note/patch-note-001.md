@@ -22772,3 +22772,27 @@ data-craft:
 ### 검증
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
 - **런타임 시각(마스터)**: 화살표 외곽선이 바깥 돌출 두 변에 적용 — dev 재기동 후 꼬리가 버튼 방향 바깥으로 보이는지 확인. (화살표 시각 반복 회고: main 세션이 렌더를 못 봐 1px·옅은색·회전축을 정적으로 단정한 게 반복 원인. 결론 = 이 앱의 검증된 Tooltip 회전사각형 방식 + 마스터 시각 확정 기반 교정.) prod 무관.
+
+## v001.658.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #254 (funshare-inc/data-craft)
+
+**사용자 입력폼 위젯 이미지파일 겹침·깨짐 수정.** 사용자 입력폼을 페이지 위젯으로 배치했을 때 `이미지파일`(예: 직원 관리 목록의 증명사진)이 브라우저 깨진-이미지 글리프로 표시되고 썸네일이 겹쳐 보이던 문제 수정(FE-only, data-craft). 마스터 스크린샷으로 증상 위치(제출 데이터 목록 셀) 확정.
+
+### 페이즈 결과
+- **Phase 1 — 이미지 로드/디코드 견고화** (`61fce9eb`): 공유 훅 `useImageLoader` 가 `fileApi.loadImage`(Uint8Array) + 수동 `new Blob([...], { type: 'image/*' })`(잘못된 와일드카드 MIME) 로 Object URL 을 만들던 것을, 코드베이스의 검증된 패턴인 `fileApi.loadImageBlob`(=`response.blob()` 로 서버 실제 Content-Type 보존) 으로 교체. null 반환 시 `setImageUrl(null)` 로 실패 경로 통일(cleanup/revoke 보존). 추가로 `ImagePreviewItem`·`ImageCellThumb` 의 `<img>`(isData·imageUrl 분기 모두)에 `hasError`+`onError` 폴백을 달아 어떤 원인(레거시 truncated `data:` 값 / 디코드 불가 블롭)으로든 디코드 실패 시 깨진 글리프 대신 기존 텍스트·회색박스 폴백으로 graceful degradation.
+- **Phase 2 — 겹침 레이아웃 수정** (`23bb1d58`): 썸네일의 절대위치 겹침 스택(`absolute`+`left:index*Npx`+`zIndex`)을 비겹침 flex 인라인 배치로 교체. `ImagePreviewGrid`=`flex flex-wrap gap-2`, 목록 셀 `renderImageCell`=`flex items-center gap-1`. 사용되지 않게 된 `index`/`total` props 제거.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/file-attachment/ui/useImageLoader.ts`
+- 수정: `src/features/form-builder/ui/ImagePreviewGrid.tsx`
+- 수정: `src/widgets/form-widgets/ui/ImageCellThumb.tsx`
+- 수정: `src/widgets/form-widgets/ui/cellRenderers.tsx`
+
+### 검증
+- 정적: 루트앱 `tsc -p tsconfig.app.json --noEmit` 0 + eslint(변경 파일) 0 (Phase 1·2 각각).
+- advisor 계획(#1)·완료(#2) 모두 BLOCK 없음.
+- **런타임 시각 미검증(중요)**: main 세션은 렌더를 못 봄 — 깨진 이미지가 실제로 정상 표시되는지, 겹침이 해소됐는지는 마스터 재기동(dev=src alias, 하드 리프레시) 후 시각 확인 필요. "깨짐"의 단일 근본원인은 런타임 없이 미확정이라 두 원인을 모두 커버하는 방어적 수정(실제 Content-Type 보존 + onError 폴백)으로 접근.
+- **분리성/디스클로저(advisor #2)**: Phase 1(로드 견고화)과 Phase 2(레이아웃)는 독립 — 둘 중 하나만 유지/되돌림 가능. 목록 셀 표시 상한을 4→3장으로 조정(컬럼 max-w-150px 비겹침 수용) = 마스터 미요청 변경이므로 명시 — 4장 유지 원하면 핫픽스로 썸네일 축소(w-8) 또는 4번째 클리핑 선택 가능. 레거시 truncated `data:` 과거 데이터는 코드만으로 복구되지 않음(이후 #250 uri 저장 신규분은 정상, 폴백으로 글리프는 제거).
