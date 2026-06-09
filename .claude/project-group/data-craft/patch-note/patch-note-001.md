@@ -23212,3 +23212,32 @@ data-craft:
 - advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
 - **런타임 시각/동작(마스터, 하드 리프레시 — dev는 `fs_data_viewer`를 src alias로 사용해 빌드 불필요 [[project_data_craft_dev_src_alias]])**: ①어떤 타입 열에서도 열 메뉴에 '칸반보드 기준열 지정' 미표시 ②행 그룹 OFF → '행 그룹 지정' 칩 hover → "행 그룹을 사용할 때만..." 툴팁 ③중복 값 컬럼 → '고유값만 허용' 칩 hover → "중복 값이 존재하여..." 툴팁.
 - **알려진 콘솔 노이즈(동작 무관)**: 툴팁 `<div>`가 `<button>` 자식이라 React dev 모드가 `validateDOMNesting` 경고를 콘솔에 출력할 수 있음 — 렌더/동작에는 영향 없음. 마스터가 거슬리면 핫픽스로 `<div>`→`<span>` 또는 sibling 래핑 전환 가능.
+
+## v001.677.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #263 (funshare-inc/data-craft) — 핫픽스1
+
+**비활성 토글 툴팁 overflow 클리핑 수정.** v001.676.0에서 추가한 '행 그룹 지정'·'고유값만 허용' 비활성 토글 hover 툴팁이 열 메뉴 모달 밖으로 나가지 못하고 잘리던 문제를 수정. FE-only(data-craft), DB/BE·신규 dep 무변경.
+
+### 원인
+v001.676.0 Phase 2의 툴팁은 `SwitchChipB`에 직접 만든 `absolute bottom-full` `<div>`였는데, 토글 칩들이 `ColumnMenuVariantB` 스크롤 본문(`<div className="flex-1 overflow-auto p-[14px]">`) 안에 있어 그 `overflow-auto` 조상이 툴팁을 클리핑했다. footer '열 삭제' 툴팁이 멀쩡했던 건 footer가 overflow 컨테이너 바깥의 sibling이기 때문(같은 패턴을 복제했으나 ancestor 차이로 토글에는 안 통함).
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1, fix)** (`bcf85e2`): `SwitchChipB`의 직접 만든 absolute 툴팁(`relative group` + `group-hover:block` div)을 폐기하고, 뷰어 표준 `Tooltip` 컴포넌트(`shared/ui/Tooltip`, `@radix-ui/react-tooltip` 기반 `TooltipPortal`로 body에 포탈)로 교체. body 포탈이라 `overflow-auto` 조상의 클리핑을 완전히 우회 → 모달 경계 밖에서도 온전히 표시. `<button>`을 `<Tooltip content disabled={!(disabled && tooltip)} side="top" showArrow={false} contentClassName="bg-popover text-popover-foreground border border-border">`로 래핑(footer 삭제 툴팁과 동일한 popover 토큰 룩 유지, onClick 보존). 활성 칩은 Tooltip 내부 `disabled||!content` 가드로 순수 passthrough — 동작 변화 없음. `ColumnMenuButton` 등 60+ 사용처가 검증한 표준 패턴.
+
+### 부수 효과
+v001.676.0에서 알려졌던 `validateDOMNesting`(`<div>`가 `<button>` 자식) 콘솔 경고도 함께 해소 — 툴팁 DOM이 포탈로 `<button>` 밖에 렌더되기 때문.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/SwitchChipB.tsx`
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각(마스터, 하드 리프레시)**: 행 그룹 OFF·중복 값 컬럼에서 토글 hover → 툴팁이 모달 경계에 잘리지 않고 온전히 표시.
+- UX 참고(비차단): Radix 툴팁은 trigger 포커스에도 열리므로 키보드 탭으로 비활성 칩에 진입 시 툴팁이 뜰 수 있음(이전 hand-rolled 버전 대비 회귀 아님).
+
+### 비고
+외부 리더 핫픽스의 cross-repo 처리: 코드 핫픽스 WIP(`-핫픽스1`)는 data-craft i-dev, 본 patch-note WIP(`-핫픽스1-문서`)는 Project-I2 main으로 분리(스킬의 단일-WIP 핫픽스 carve-out은 patch-note가 I2에 거주하는 외부 리더에 맞지 않아 본 플랜 메인 흐름과 동일하게 2-WIP로 확장).
