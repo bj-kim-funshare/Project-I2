@@ -23734,3 +23734,29 @@ data-craft-server:
 
 ### 비고
 Roadmap-8 "data-craft 결제 시스템 결함 수정" 5플랜 중 1번(권한/접근). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함(마스터 인자에 push 키워드 없음 [[feedback_plan_enterprise_no_auto_push]]).
+
+## v001.687.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #274 (funshare-inc/data-craft)
+
+**data-craft-server 요금 계산 정합 수정 (Roadmap-8 #2 — #2·#5·#11·#15).** 견적과 실청구가 어긋나 과청구되거나, 갱신 좌석 적용 순서가 틀려 금액·기록이 모순되거나, 프로모션이 1개월 더 청구되거나, 취소→재개 후 옛 주기 예약이 살아 연간 청구되던 요금 계산 결함 4건을 수정. 정상 경로 청구 동작은 불변.
+
+### 페이즈 결과
+- **Phase 1 (fix, #2 CRITICAL)** (`2c41bdd`): `billingSubscription.service.ts` `executeUpgradeWithDiff`의 인원변경 스냅샷-단가 게이트를 `targetPlan === currentPlan`에서 `targetPlan === effectiveCurrentPlan && !replaceActivePromotion`로 변경. 협업 프로모션 client(plan_type='free', effectiveCurrentPlan=base_plan_type)의 즉시 인원추가 차액이 견적과 동일한 스냅샷 단가로 계산됨(기존 PLAN 정가 약 4배 과청구 해소). commitment 전환/replace는 정가 유지.
+- **Phase 2 (fix, #15)** (`65cf758`): `cancelSubscription`(트랜잭션 내)·`reactivateSubscription`에 `pending_billing_cycle` null 초기화 추가(기존 `pending_plan_type`만 초기화). 취소→재개 후 옛 주기 예약 잔존으로 인한 의도치 않은 연간 청구 차단(`deleteCard` 두-컬럼 패턴 정합).
+- **Phase 3 (fix, #11)** (`d2138c7`): `renewPromotionClient`의 retention 만료 비교 `newConsumed > snapshotMaxRetentionMonths` → `>=`. 총 유지 개월수가 정확히 `max_retention`이 됨(예 3개월 특가: Day0 구매+1차+2차 = 3회 청구 후 3차 갱신 시 강등, 기존 `>`는 4개월 청구). 안내 메일 산식은 자동 정합 → 무변경.
+- **Phase 4 (fix, #5)** (`8e61d93`): `renewSingleClient`에서 charge 전 고정 cutoff(`seatApplyCutoff`, NOW 1회)로 pending 좌석 델타를 read-only 선계산(신규 `sumPendingDeltaForApplyReadOnly`)해 `appliedSeats` 확정 → `amount`·charge `seatsAtPayment`·payment_history·로그 모두 `appliedSeats`로 통일. 트랜잭션 내 `sumPendingDeltaForApply`(FOR UPDATE)는 동일 cutoff로 호출해 charge한 행과 동일 행 적용(charged==applied). 좌석 감소 예약 시 옛 좌석 과금·기록 모순 해소. **부수 개선**: 트랜잭션 조건이 `netDelta !== 0` → `ids.length > 0`로 바뀌어 펜딩 델타 합이 0인 경우에도 도래한 요청을 'applied' 처리(큐 잔존 방지). 동시성 락(#6)은 본 플랜 범위 밖 — 미도입(client FOR UPDATE 0건 유지).
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/billingSubscription.service.ts`, `src/services/billingRenewal.service.ts`, `src/models/clientSeatChangeRequests.model.ts`
+
+### 검증
+- 네 페이즈 모두 `pnpm build`(tsc) exit 0 — `replaceActivePromotion`/`effectiveCurrentPlan` in-scope, 신규 헬퍼 타입 정합 확인. BE eslint는 타입에러 미검출이라 메인세션 tsc 직접 실행 [[feedback_data_craft_server_lint_no_tsc]].
+- #6 동시성 락 미도입 확인(`client ... FOR UPDATE` 0→0건 grep), `renewPromotionClient`(P3)와 `renewSingleClient`(P4) 함수 중복 변경 없음.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **별개 health 노트(회귀 아님)**: 미접촉 `src/types/db.ts:7` plan #258 잔존 `no-explicit-any` — affected_files 밖, lint-hotfix iter 미발화.
+
+### 비고
+Roadmap-8 5플랜 중 2번(요금 계산 정합). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. 후속 3번(프로모션 무결성)은 본 #11 변경 위에서 작업.
