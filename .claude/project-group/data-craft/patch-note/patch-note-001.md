@@ -23241,3 +23241,36 @@ data-craft:
 
 ### 비고
 외부 리더 핫픽스의 cross-repo 처리: 코드 핫픽스 WIP(`-핫픽스1`)는 data-craft i-dev, 본 patch-note WIP(`-핫픽스1-문서`)는 Project-I2 main으로 분리(스킬의 단일-WIP 핫픽스 carve-out은 patch-note가 I2에 거주하는 외부 리더에 맞지 않아 본 플랜 메인 흐름과 동일하게 2-WIP로 확장).
+
+## v001.678.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #264 (funshare-inc/data-craft)
+
+**내장 서브 그리드 "필터" 오버레이 2종 결함 수정.** 데이터 뷰어 안에 내장된 서브 그리드(`fs_grid_sub` 위젯)의 열 필터 오버레이가 (1) 화면 가장자리에서 잘리던 문제와 (2) 내부 드롭다운을 연 상태에서 패널을 클릭하면 드롭다운만이 아니라 패널까지 닫히던 문제를 수정. FE-only(data-craft), 단일 파일 `SubGridFilterBar.tsx`, DB/BE·신규 dep 무변경.
+
+### 대상 식별
+"내장 서브 그리드" = 메인 데이터 뷰어 패키지 `fs-data-viewer` 안의 `fs_grid_sub` 위젯(별개 패키지 `fs-sub-data-viewer` 아님). "필터" 오버레이 = `SubGridFilterBar`(필터 버튼 `title={t.subGrid.columnFilter}`) — `createPortal` 로 `document.body` 에 `position:fixed` 렌더되는 열 필터 패널.
+
+### 원인
+- **결함1(클리핑)**: 패널 위치 계산이 필터 버튼 rect 기준 `top: rect.bottom+4, left: rect.left` 만 쓰고 뷰포트 경계 클램핑이 전혀 없었음. 패널 폭 420~520px, 조건 목록 최대 700px 높이라 버튼이 우측/하단 가장자리에 있으면 화면 밖으로 잘림.
+- **결함2(패널까지 닫힘)**: 외부클릭 `mousedown` 핸들러가 target 이 `panelRef`/`buttonRef` 밖이면 패널을 닫는데, 내부 열 선택 드롭다운은 Radix `Select`(`SelectPrimitive.Portal`)로 `document.body` 직속 렌더 → `panelRef` 서브트리 밖. 드롭다운 항목/영역 클릭이 외부클릭으로 오판되어 패널 전체가 닫혔다.
+
+### 페이즈 결과
+- **Phase 1 (fix, `71b2605`)**: 위치 계산을 기존 유틸 `adjustOverlayPosition`(`widgets/utils/overlayPosition.ts`, `ColumnMenuDropdown` 선례) 재사용으로 보정. 패널 열림/`drafts.length` 변화 시 `requestAnimationFrame` 으로 `panelRef` 실제 렌더 크기를 측정한 뒤 뷰포트 경계 내로 클램핑, 측정 전까지 `visibility:hidden` 으로 미보정 위치 순간 노출(및 기존 좌상단 깜빡임)도 함께 차단.
+- **Phase 2 (fix, `ea73a83`)**: 외부클릭 `handleMouseDown` 에 `panelRef`/`buttonRef` 포함 검사 **이전** 가드를 추가 — `[role="listbox"]`(Select viewport) 또는 `[data-radix-popper-content-wrapper]`(popper 래퍼) 내부 클릭이면 early-return(닫지 않음). 확립된 critical-004 패턴(`batch-input-dialog/useBatchDialogOutsideClick.ts`) 재사용. 드롭다운만 닫히고 패널 유지, 드롭다운 비활성 시 패널 바깥 클릭 닫힘 동작은 보존.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/fs_grid_sub/components/SubGridFilterBar.tsx`
+
+### 검증
+- 정적: 각 페이즈 `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존 baseline).
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **런타임 시각/동작(머지 후 마스터 수동 — 메인 세션은 렌더 직접 확인 불가)**: ①필터 버튼을 화면 우측/하단 가장자리 근처에서 열어 패널이 잘리지 않고 뷰포트 안에 온전히 표시 ②열 선택 드롭다운을 연 뒤 항목 클릭/패널 영역 클릭 → 드롭다운만 닫히고 패널 유지 ③드롭다운 닫힌 상태에서 패널 바깥 클릭 → 패널 정상 닫힘(회귀 없음).
+
+### 알려진 비차단 사항
+Phase 1 재클램핑은 조건 추가/삭제 시 `adjustedPosition` 을 잠시 `null` 로 두어 한 프레임 `visibility:hidden` 깜빡임이 발생할 수 있음(키 입력이 아니라 조건 add/remove 시에만, `max-h-[700px]` 로 높이 plateau). `ColumnMenuDropdown` 과 동일한 패턴 특성으로 회귀 아님 — 마스터가 거슬리면 재측정 중 이전 좌표 유지로 핫픽스 가능.
+
+### 비고
+외부 리더 cross-repo 처리: 코드 WIP(`-작업`)는 data-craft i-dev, 본 patch-note WIP(`-문서`)는 Project-I2 main으로 분리(patch-note 가 I2 harness 에 거주 [[project_external_leader_patchnote_in_i2]]).
