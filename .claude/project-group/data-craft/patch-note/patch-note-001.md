@@ -22693,3 +22693,22 @@ data-craft:
 - (data-craft-mobile) (추가) node_modules/
 - (data-craft-mobile) (추가) packages/
 - (data-craft-mobile) (추가) tsconfig.tsbuildinfo
+
+## v001.654.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #22
+
+### 페이즈 결과
+
+- **Phase 1 (fix)**: `data-craft-server` `storage.model.ts` 의 `updateAllUrisForClientFolder` 첫 쿼리를 MySQL 전용 `UPDATE file f INNER JOIN file_group fg ... SET f.uri = ...` → PostgreSQL 네이티브 `UPDATE file f SET uri = REPLACE(f.uri, ?, ?) FROM file_group fg WHERE f.file_group_id = fg.id AND ...` 로 교체. dev psql 에서 클라이언트 폴더명 변경 경로가 syntax error(500) 로 깨지던 결함 해소. SET 대상 비별칭(`uri =`, pg 규칙), 파라미터 순서·개수·`?` 4개 불변. 같은 함수 나머지 3쿼리·시그니처 불변.
+
+### 검증
+
+- **psql dry-run**: 새 `UPDATE ... FROM` 문 `BEGIN; UPDATE 0; ROLLBACK;` exit 0(pg 문법 유효·실행 성공). 대조로 옛 `INNER JOIN` 문은 pg 에서 `ERROR: syntax error at or near "INNER"` 재현 — 결함 실재 + 수정 해소 양방향 입증.
+- advisor #1/#2 5-perspective PASS(BLOCK 없음). lint 게이트는 SQL 문자열을 못 보므로 위 dry-run 이 실질 검증.
+- prod MySQL 하위호환은 본 변경으로 깨지나 **의도** — prod psql 컷오버 동시 배포 전제(master 확인).
+
+### 영향 파일
+
+- (data-craft-server) (수정) src/models/storage.model.ts
