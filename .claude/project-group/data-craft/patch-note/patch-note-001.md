@@ -22880,3 +22880,29 @@ data-craft:
 - 동일 메커니즘(`externalFieldErrors` → `FormRenderer` ref-가드 effect → 필드별 빨강 인라인)이 hotfix2 `UserFormContent` 에서 검증됨. `formFields` field.id 키 정합 확인(read 측 name-vs-id 폴백은 hydrate 한정, 현재입력 formFields 무관).
 - advisor 완료(#2) PASS(BLOCK 없음) — 잘못된 컴포넌트 진단 정정, field-id 정합 확인.
 - **3번째 시도**: 이전 2회 실패는 잘못된 컴포넌트(도달 불가 경로) 때문. 본 수정은 올바른 컴포넌트 + 검증된 메커니즘. 런타임 시각 검증(추가 클릭 시 빈 필수 필드 빨강 안내)은 마스터 재기동 후; 여전히 미표시면 wrong-screen 이 아닌 runtime 결함 → 화면 디버그 프로브 단계. prod=MySQL 동결 미적용.
+
+## v001.663.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #256 (funshare-inc/data-craft)
+
+**탭 위젯 탭 제목 너비/말줄임 개편 — QA 6자 제한 불편 해소.** 탭 제목 글자 수 제한(6자)이 너무 작다는 QA 피드백을 받아, 고정 너비를 최소 너비 기반으로 바꾸고 글자 수 제한을 해제하며, 콘텐츠에 맞춰 너비가 늘어나되 최대 500px 에서 말줄임 처리하도록 변경.
+
+### 페이즈 결과
+- **Phase 1** (`8ea164ff`, data-craft): 탭 제목 표시 너비·말줄임 동작 변경. 가로 탭 트리거에 `max-w-[500px]` + `overflow-hidden` 추가(기존 `min-w-[100px] w-auto` 의 콘텐츠 신축 floor 100px 유지 → "7자 미만 최소 너비, 초과 시 콘텐츠 따라 신축, 500px cap"). 세로 탭의 고정 `w-[100px]` 을 `min-w-[100px] max-w-[500px]` 으로 전환(줄바꿈 유지). `TabsTrigger` 가 `inline-flex` 라 컨테이너 자체 truncate 는 무효이므로 `tab.label` 을 `<span>` 으로 감싸 방향별 분기 — 가로 `min-w-0 truncate`(overflow-hidden+text-ellipsis+whitespace-nowrap), 세로 `whitespace-normal break-words`.
+- **Phase 2** (`4629fe67`, data-craft): 탭 제목 글자 수 제한 해제. `TabItemRow`·`TabsPropertiesEditor` 의 `maxLength={TAB_LABEL_MAX_LENGTH}` 두 곳 제거, ko/en 힌트에서 "탭명 최대 N자" 세그먼트와 `max` 보간 삭제, 사용처가 사라진 `tabLabelLimit.ts` 파일 + `shared/lib/index.ts` 재수출 제거. 탭 *개수* 상한(`tabs.length >= 10`)은 유지.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/tabs-widget/ui/TabTriggerItem.tsx`
+- 수정: `src/widgets/property-drawer/ui/property-editors/TabItemRow.tsx`
+- 수정: `src/widgets/property-drawer/ui/property-editors/TabsPropertiesEditor.tsx`
+- 수정: `src/shared/i18n/locales/ko.ts`
+- 수정: `src/shared/i18n/locales/en.ts`
+- 수정: `src/shared/lib/index.ts`
+- 삭제: `src/shared/lib/tabLabelLimit.ts`
+
+### 검증
+- 정적: `pnpm typecheck:all`(패키지 dist 빌드 후) 0 + `pnpm lint` 0 errors(기존 warning 87건 무관). 상수/힌트 잔존 참조 0건.
+- advisor 계획(#1)·완료(#2) 모두 PASS(BLOCK 없음). 완료 Evidence 는 정적(diff+lint) 한정 — flex 내부 truncate 는 "되어야 함"이 어긋난 전례가 있는 지점(메모리 `feedback_static_should_work_instrument`).
+- **시각 확정 미완**: 메인 세션은 렌더 불가 → 마스터 스크린샷으로 가로/세로 · 짧은(≤7자)/긴/500px 초과 케이스 확인 필요. 어긋나면 PENDING 게이트 `핫픽스`. 세로 탭은 말줄임 미적용(줄바꿈) — 가정.
