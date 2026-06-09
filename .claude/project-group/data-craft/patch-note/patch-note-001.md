@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.689.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #261 (핫픽스1)
+
+v001.686.0 열 본문 스타일 조건 타입별 개편의 **fs-data-viewer 배선 누락** 수정. 메인 데이터 뷰어의 grid-table 열 메뉴 오프너(`features/grid/hooks/column-menu/menuItems.ts`)가 `openCellStyleDialog` 호출 시 `columnTypeId`/`optionList` 를 전달하지 않아, 다이얼로그가 `columnTypeId=undefined` 를 받고 **타입별 조건이 무력화**(텍스트 컬럼에서도 레거시 4버튼만 노출)되던 문제. Phase 4 가 FsSubGrid 오프너만 배선하고 메인 그리드가 실제 사용하는 menuItems 경로를 놓친 결함(신규 결함 아님, 배선 미스). sub/external 뷰어는 Phase 9·12 에서 이미 정상 배선되어 영향 없음.
+
+### 수정
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/types.ts`: `UseGridColumnMenuProps.openCellStyleDialog` 시그니처를 `(cellRendererModelList, columnTypeId?, optionList?)` 로 확장(sub/external 동일 형태).
+- `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`: 로컬 `createColumnMenuItems` 파라미터 타입 동반 확장 + 호출부에서 `columnModel.type.id`, `columnModel.optionList` 전달. 이로써 Phase 4 에서 완성된 useCellStyleDialog.open()→TableDialogs→다이얼로그 체인에 columnTypeId 가 흐른다.
+
+### 검증
+- 오프너 전수 확인: fs-data-viewer 의 cell-style 다이얼로그 open 경로 3종(menuItems / FsSubGrid / RowLinkGroupManageDialog) 모두 columnTypeId 전달 확인(숨은 4번째 없음).
+- lint 게이트 `pnpm typecheck:all && pnpm lint` PASS(TS2554 해소, 0 errors). advisor 핫픽스 검토 PASS(BLOCK 없음).
+- **런타임(마스터 수동)**: dev 재기동 후 텍스트 컬럼 본문 스타일 → 조건 버튼이 일치·불일치·포함·미포함·비어있음·채워짐으로 전환되는지 스크린샷 확인.
+
+### 비고
+회고: 다중 마운트/다중 오프너 기능은 활성 화면이 어느 오프너 경로를 쓰는지 먼저 grep 확정 후 배선 검증 필요(Phase 4 가 FsSubGrid 경로만 검증). [[project_external_leader_patchnote_in_i2]]
+
 ## v001.688.0
 
 > 통합일: 2026-06-09
