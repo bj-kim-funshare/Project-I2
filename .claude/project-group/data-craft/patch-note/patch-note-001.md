@@ -22678,3 +22678,18 @@ data-craft:
 - **라이브 dev pg 검증(#1)**: orphan 그룹 soft-delete 후 partial unique index(`data_group_unique ... WHERE is_deleted=0`)로 동일 그룹명 재삽입 성공(트랜잭션 ROLLBACK) — self-heal 이름 해제 불변식 확인. `deleteGroupRecursive`는 기존 viewer.deleteGroup 에서 검증된 canonical cascade 재사용.
 - advisor 완료(#2) 5-perspective PASS(BLOCK 없음) — data 마이그레이션 대신 code-only self-heal 채택, `deleteGroupRecursive` 폼 soft-delete 가드(is_deleted=0) 확인.
 - 런타임 시각 검증(신규 폼 저장 성공·일반 폼 필수 빨강 안내)은 마스터 재기동 후 영역(web 5173 + server 8000). prod=MySQL 동결 미적용.
+
+## v001.653.0
+
+> 통합일: 2026-06-09
+
+### 변경 파일
+
+- (data-craft-mobile) (수정) ios/Runner.xcodeproj/project.pbxproj
+- (data-craft-mobile) (수정) ios/Runner.xcworkspace/contents.xcworkspacedata
+- (data-craft-mobile) (추가) DataCraft.zip
+- (data-craft-mobile) (추가) apps/
+- (data-craft-mobile) (추가) ios/Podfile.lock
+- (data-craft-mobile) (추가) node_modules/
+- (data-craft-mobile) (추가) packages/
+- (data-craft-mobile) (추가) tsconfig.tsbuildinfo
