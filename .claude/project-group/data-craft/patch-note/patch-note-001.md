@@ -22973,3 +22973,23 @@ data-craft:
 ### 검증
 - 정적: `pnpm typecheck:all && pnpm lint` 0 errors.
 - **런타임 시각(마스터)**: dev 재기동 후 "닫기"가 왼쪽, 클릭 시 닫히고 뷰모드 재진입 시 재등장, "앞으로 보지 않기"는 영구 비표시 확인. prod 무관.
+
+## v001.667.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #256 (funshare-inc/data-craft) — 핫픽스1
+
+**탭 위젯 가로 탭 리스트 우측 넘침/스크롤 부재 해소(핫픽스1).** 마스터 보고(스크린샷): 탭 헤더가 길어지면 가로 탭 행이 위젯 우측 경계를 넘어 잘리고 가로 스크롤도 되지 않음. (v001.663.0 의 탭 제목 신축으로 행 총합 폭이 위젯 폭을 초과하는 상황이 드러남.)
+
+### 페이즈 결과
+- **핫픽스1** (`499fb5c7`, data-craft): 원인은 가로 `TabsList`(`TabsListSection.tsx`)가 `inline-flex w-auto` 라 부모 폭에 묶이지 않고 탭 콘텐츠 총합 폭으로 커지며 overflow 처리가 없던 것. 가로 분기를 `flex h-auto w-full max-w-full overflow-x-auto` 로 교체 — 위젯 폭에 묶고(`w-full`/`max-w-full`, shadcn 베이스 `inline-flex w-fit` 을 `flex`/`w-full` 로 오버라이드) 가로 스크롤(`overflow-x-auto`)을 활성화. 탭 아이템은 기존 `flex-none`(TabTriggerItem) 으로 폭을 유지하므로 컨테이너가 스크롤 뷰포트가 된다. 세로 분기는 `flex-col h-auto w-auto` 로 기존 동작 보존, `bg-transparent p-0 rounded-none`·gap·justify 클래스 변경 없음.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/tabs-widget/ui/TabsListSection.tsx`
+
+### 검증
+- 정적: `pnpm typecheck:all`(패키지 dist 빌드 후) 0 + `pnpm lint` 0 errors. advisor 완료(#2) PASS(BLOCK 없음).
+- **런타임 시각(마스터)**: dev 반영 후 긴 탭 행이 위젯 폭을 넘지 않고 가로 스크롤되는지 확인. macOS 기본 스크롤바는 트랙패드/스와이프 시에만 표시되므로 마우스 휠 가로 스크롤·트랙패드 가로 제스처로 확인(넘침이 사라진 것이 1차 신호). 여전히 스크롤 어포던스가 부족하면 후속으로 스크롤바 가시화(`[&::-webkit-scrollbar]:h-2`) 추가 가능.
+- **알려진 한계**: `tabAlignment` 가 center/end 일 때는 flex 의 알려진 동작상 좌측으로 잘린 부분이 스크롤로 도달 불가할 수 있음(마스터 케이스는 start 정렬이라 무관). 별도 보고 시 후속.
+- **범위**: 본 핫픽스는 가로 탭만 대상. 세로 탭의 세로 방향 넘침은 미보고 — 발생 시 추가 핫픽스.
