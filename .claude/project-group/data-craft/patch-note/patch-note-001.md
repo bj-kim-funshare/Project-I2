@@ -23051,3 +23051,23 @@ data-craft-server:
 ### 검증
 - 하네스 full-route 워크 완주(이전엔 stale fixture 로 smoke 직후 fatal). pg-에러토큰 0/406. advisor #2 PASS(BLOCK 없음).
 - **결론**: #258 dev 단일 psql 전환은 코드(mysql2 0)·DB(드롭 테이블 무참조)·런타임(전 라우트 0 pg-crash) 3중 입증 완료. (env carve-out·prod MySQL 동결은 별개.)
+
+## v001.670.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #259 (funshare-inc/data-craft)
+
+**데이터 뷰어 → 디자인 모드 → 열 메뉴 → "열 본문 스타일 편집" 다이얼로그 표의 헤더/본문 세로 구분선 정렬 어긋남 교정 (3개 뷰어 사본).** 헤더 행(`DialogTable.tsx`)과 본문 행(`DialogTableRow.tsx`)이 열 폭을 각자 독립으로 `flex` + per-cell `w-10/flex-[2]/flex-[3]/w-20/w-12` 클래스로 정의 → flex item `min-width:auto` 기본값으로 본문의 넓은 콘텐츠(스타일 6버튼·조건 위젯)가 grow 분배를 밀어내 헤더의 2:3 분할과 본문 폭이 어긋났음.
+
+### 페이즈 결과 (WIP: data-craft i-dev)
+- **Phase 1** (`cf8cb426`): 각 뷰어 사본 `types.ts` 에 공유 상수 `CELL_STYLE_GRID_TEMPLATE = '2.5rem minmax(0,2fr) minmax(0,3fr) 5rem 3rem'` 추가. `DialogTable.tsx`(헤더)·`DialogTableRow.tsx`(본문) 양쪽이 동일 상수를 import 하여 `display:grid` + `gridTemplateColumns` 로 적용, per-cell 폭 클래스 제거. 한 곳 정의 → 헤더/본문 inline 중복 없음(드리프트 면 구조적 제거). `minmax(0,Nfr)` 로 콘텐츠 주도 폭 확장(`min-width:auto`) 차단 → 세로 구분선 항상 동일 트랙으로 정렬. `border-r`/정렬/px 패딩/i18n 키 차이/Tooltip 등 기존 차이는 보존. 3개 사본(fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer) 동일 적용.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/cell-style-dialog/{types.ts, DialogTable.tsx, DialogTableRow.tsx}`
+- `packages/fs-sub-data-viewer/src/widgets/cell-style-dialog/{types.ts, DialogTable.tsx, DialogTableRow.tsx}`
+- `packages/fs-external-data-viewer/src/widgets/cell-style-dialog/{types.ts, DialogTable.tsx, DialogTableRow.tsx}`
+
+### 검증
+- 메인 세션 5단계(diff ⊆ 영향파일 9개, 구조 동일성) 통과. build:packages 9/9 성공. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (typecheck 전 패키지 통과, ESLint 0 error). advisor #1·#2 PASS.
+- 시각 검증은 PENDING 게이트에서 마스터 스크린샷으로 확정(메인 세션 렌더 블라인드). fs-data-viewer 는 dev src alias 라 빌드 불필요, sub/external 는 dist alias 라 반영엔 build:packages 필요.
