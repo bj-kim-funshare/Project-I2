@@ -23305,3 +23305,31 @@ data-craft:
 
 ### 비고
 외부 리더 핫픽스 cross-repo: 코드 WIP(`-핫픽스2`)=data-craft i-dev, 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main(핫픽스1과 동일 2-WIP 확장).
+
+## v001.680.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #265 (funshare-inc/data-craft)
+
+**column_type 결정 로직 단일 정규화 — "텍스트가 숫자형 열에 막혀 사일런트 손실" 재발 표면을 코드에서 구조적으로 종결.** 열은 viewer_type(화면)과 column_type(DB 검사규칙: 1=숫자/2=텍스트/3=날짜/4=불리언/100=rowId)을 따로 저장하는데, 둘이 어긋나면 data_values 트리거가 텍스트 값을 사일런트 롤백(새로고침 시 사라짐). #257(서브그리드 생성 경로) + task-db-data(레거시 6건 청소) 후속으로, 이번엔 잘못된 값이 **애초에 안 써지게** 코드 측 종결.
+
+전수 감사(Explore) 결과 실제 불안전 지점은 **단 1곳** — `getColumnTypeNumber` 가 `?? 1`(미매핑 시 숫자 강등). columnTypeChange 는 이미 미지정→에러 가드 보유(안전), 나머지(명시 리터럴·preserve-copy·이미 `?? 2`)도 안전. → 1지점 수정 + 매핑 단일 resolver 통일.
+
+### 페이즈 결과
+- **Phase 1** (`4145597`, data-craft-server): `viewer.types.ts` 에 정규 resolver `resolveColumnType(viewerType, {isSubGrid?})` 도입 — rowId 서브=100/메인=1 문맥 분기, 그 외 `VIEWER_TYPE_TO_COLUMN_TYPE ?? 2`(안전 기본=텍스트). 기존 `subGridColumnType` 을 이 resolver 위임으로 재정의(동작 불변). VIEWER_TYPE_TO_COLUMN_TYPE 단일 진실원 유지.
+- **Phase 2** (`cd4d2d9`, data-craft-server): `getColumnTypeNumber` → `resolveColumnType(typeId)` 위임(**`?? 1` 제거, 안전 기본 2** = 핵심 수정). `columnTypeChange` 는 `(targetType in VIEWER_TYPE_TO_COLUMN_TYPE) ? resolveColumnType(targetType) : undefined` 로 값만 일관화하고 **미지정 타입 → 에러 가드 보존**(동작 불변).
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/types/viewer.types.ts`
+- 수정: `src/services/dataViewerPost.service.ts`
+- 수정: `src/services/columnType/columnTypeChange.service.ts`
+
+### 검증
+- `pnpm build`(tsc) exit 0 + 변경 파일 eslint 0 (페이즈별 — eslint-only 게이트가 타입에러 누락하므로 tsc 포함, 메모리 `feedback_data_craft_server_lint_no_tsc`).
+- 정적 회귀: 미매핑 viewerType → 2(텍스트, 1 아님), rowId 서브=100/메인=1, date=3/boolean=4 유지, subGridColumnType 동작 불변.
+- advisor 계획(#1)·완료(#2) 모두 PASS(BLOCK 없음).
+
+### 효과 / 경계
+- 효과: 신규/미매핑 viewer_type 으로 열을 만들어도 column_type 이 숫자로 사일런트 강등되지 않음(최악도 텍스트=무손실) → 동일 DML 재청소 불필요.
+- 경계: 코드 레벨 강제(앱 단일 writer 전제). 향후 resolver 우회 신규 경로/직접 SQL 까지 물리 차단하려면 DB 불변식 트리거(defense-in-depth)가 별도 옵션 — 본 플랜 범위 밖. 기존 데이터 보정은 직전 task-db-data 완료. prod(MySQL) 동결과 무관(코드 변경은 환경 무관 적용).
