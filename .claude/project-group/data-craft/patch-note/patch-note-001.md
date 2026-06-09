@@ -47,6 +47,28 @@ data-craft (단일 monorepo, 66 files / +3776 -362):
 ### 비고
 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]].
 
+## v001.687.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #266 (funshare-inc/data-craft) — 핫픽스1
+
+**dev LAN 접속 — mDNS 호스트명(`*.local`) 접속 차단 해제.** v001.684.0(Phase 1)의 `host: true` 만으로는 LAN 노출은 되나, Vite 의 DNS-rebinding 보호(`server.allowedHosts`)가 `byeolsangjaui-MacBookPro.local` 같은 `*.local` 호스트명 요청을 차단했다("Blocked request. This host is not allowed."). IP 접속(192.168.x)은 통과하지만 mDNS 호스트명 접속이 막혀 마스터 테스트가 차단됨. `allowedHosts` 에 `.local` 을 추가해 해소.
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1, fix, data-craft)** (`2efca23`): `vite.config.ts` 의 `server` 블록에 `allowedHosts: ['.local']` 추가. 선행 점(`.`)은 suffix 매치라 기기명과 무관하게 모든 `*.local` mDNS 호스트를 허용한다. `host: true` 및 기존 `fs.allow` 는 그대로 보존. `server.*` 는 Vite dev 서버 전용이라 `vite build` 산출물 미반영 → 프로덕션 무영향(v001.684.0 와 동일 논거).
+
+### 영향 파일
+data-craft:
+- 수정: `vite.config.ts`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` PASS(0 errors, 87 warnings — 기존 baseline).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임(마스터 수동)**: FE Vite 재기동 후 다른 PC 브라우저에서 `http://byeolsangjaui-MacBookPro.local:5173` 접속 시 "Blocked request" 없이 로드되는지 확인.
+
+### 비고
+외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스1`)=data-craft i-dev 머지(`2efca23`), 본 patch-note WIP(`-핫픽스1-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. 버전 v001.687.0 = 병렬 실행된 #267(v001.685.0)·#261(v001.686.0) 이 앞 minor 를 선점하여 그 다음 채번(머지 충돌 양측 보존 해소).
+
 ## v001.685.0
 
 > 통합일: 2026-06-09
