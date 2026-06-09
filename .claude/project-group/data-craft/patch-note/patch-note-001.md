@@ -23071,3 +23071,27 @@ data-craft:
 ### 검증
 - 메인 세션 5단계(diff ⊆ 영향파일 9개, 구조 동일성) 통과. build:packages 9/9 성공. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (typecheck 전 패키지 통과, ESLint 0 error). advisor #1·#2 PASS.
 - 시각 검증은 PENDING 게이트에서 마스터 스크린샷으로 확정(메인 세션 렌더 블라인드). fs-data-viewer 는 dev src alias 라 빌드 불필요, sub/external 는 dist alias 라 반영엔 build:packages 필요.
+
+## v001.671.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #257 (funshare-inc/data-craft) — 핫픽스1
+
+**서브그리드 디자인모드 열 추가 후 부모 행 접었다 펴면 열이 사라지는 문제 수정.** 서브그리드에 열을 추가한 뒤 부모 행을 접었다 다시 펼치면 추가한 열이 보이지 않고, 전체 새로고침해야 나타나던 문제. 근본 원인은 bulkSave 경로(`viewer.bulkSave.column.ts` `processColumnAddedUpdate`)가 서브그리드 열 추가 시 부모 그룹의 `sub_grid_row_data_list`(columnFieldMap) 갱신과 부모 meta 캐시 무효화를 하지 않아, 재펼침 시 stale 캐시가 제공되던 것(전체 새로고침은 라이브 `data_column` 재조회라 정상 표시). POST 경로(`createSubGridColumn`)는 이미 부모 동기화를 수행 중 — 동일 패턴을 bulkSave 경로에 이식.
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1)** (`69ff8cd`, data-craft-server): `processColumnAddedUpdate` 끝에 부모 그룹 조회(`data_group JOIN data_viewer_row_setting`) 후, 서브그리드일 때 `updateSubGridRowDataList(parentGroupId)` + `invalidateMetaCache(parentGroupId)` 호출 추가. 메인 그리드(부모 없음)는 빈 결과라 무영향. column_type 로직(`?? 2`)은 변경 없음.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/viewer/viewer.bulkSave.column.ts`
+
+### 검증
+- 변경 파일 단독 eslint exit 0. (프로젝트 전체 `pnpm lint` 는 `src/types/db.ts:7 no-explicit-any` 1건으로 red 이나, 이는 **plan #258**(`a4a7791`)이 i-dev 에 도입한 선존 린트 부채로 본 핫픽스와 무관 — 본 핫픽스 파일은 clean. 별도 처리 대상.)
+- advisor #2 PASS(BLOCK 없음).
+- **⚠️ 시각 미검증**: 메인 세션은 렌더 불가. BE 진단은 증거 기반(POST 경로엔 동기화 있음/bulkSave 엔 없음)이나, 증상 해소는 FE 가 저장 후 부모 meta 를 재요청하는지에 의존(FE `useSubGrid.ts`/`useViewerMetaLoader.ts` 는 마운트시 1회 로드·재펼침 캐시 재사용). **이 핫픽스가 시각적으로 실패하면 다음 단계는 또 다른 정적 추정이 아니라 FE 계측**(임시 probe at `useSubGrid.ts:130-137` / `useViewerMetaLoader.ts:116`) — 메모리 `feedback_static_should_work_instrument`.
+
+### ⚠️ 동반 필수 후속 (버그2 — 코드 아님, DML)
+- **뷰 모드에서 추가 열 값이 새로고침하면 사라지는 문제(버그2)는 본 핫픽스로 안 고쳐진다 — 레거시 데이터 결함.** 일부 서브그리드의 '항목' 열(viewer_type=text)이 `column_type=1`(숫자형)로 저장돼 있어, 텍스트 입력이 숫자 트리거에 거부되어 사일런트 롤백(숫자 입력은 통과). dev psql 기준 현재 3건(group 1681·1682·1684 의 '항목').
+- 해결: 별도 **`/task-db-data data-craft`** — 서브그리드(parent_row_num IS NOT NULL) 열 중 viewer_type 이 비숫자(number/currency/percent/rowId 제외)인데 `column_type=1` 인 것을 `2`로 UPDATE. (메인 그리드 mismatch·메인 rowId=1 은 범위 외 — 별도 audit.)
+- 신규 추가 열은 이미 올바른 타입으로 생성됨(bulkSave `?? 2`) — 코드 결함 아님.
