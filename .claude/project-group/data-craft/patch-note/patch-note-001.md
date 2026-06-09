@@ -23425,3 +23425,30 @@ data-craft:
 
 ### 비고
 외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스2`)=data-craft i-dev 머지(`94fd3a3e`), 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]].
+
+## v001.684.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #266 (funshare-inc/data-craft)
+
+**dev 환경 LAN 접속 — 같은 와이파이의 다른 PC에서 data-craft dev FE 테스트 가능.** 맥북에서 FE/BE dev 를 띄운 상태에서 같은 네트워크의 다른 기기가 mDNS 호스트명으로 접속할 수 있도록 dev 서버 노출 + dev 전용 CORS 허용을 추가. 모든 변경은 dev 전용(빌드 산출물 미반영 / NODE_ENV 분기)으로 프로덕션 무영향.
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft)** (`eb0c2bd`): `vite.config.ts` 의 `server` 블록에 `host: true` 추가 → dev 서버가 모든 네트워크 인터페이스에 바인딩되어 LAN 의 다른 기기가 `:5173` 접속 가능. `server.*` 는 Vite dev 서버 전용 설정으로 `vite build` 산출물에 미반영 → gh-pages 프로덕션 배포 무영향.
+- **Phase 2 (feat, data-craft-server)** (`170daac`): `src/app.ts` 의 `allowedOrigins` 에 `process.env.NODE_ENV !== 'production'` 조건부 spread 로 dev 전용 패턴 2종(`*.local` mDNS 호스트명, `192.168.*` 사설망 IP fallback) 추가. 기존 3패턴(datacraft.ai.kr / *.localhost / 127.0.0.1) 및 origin 콜백 로직 완전 보존. 프로덕션 런타임 `allowedOrigins` 는 현행 3패턴과 동일(`cookie.ts` 의 NODE_ENV 분기 관례와 일치).
+
+### 영향 파일
+data-craft:
+- 수정: `vite.config.ts`
+
+data-craft-server:
+- 수정: `src/app.ts`
+
+### 검증
+- Phase 1: lint 게이트 `pnpm typecheck:all && pnpm lint` PASS(0 errors). dev 서버 기동 시 Network URL 출력으로 LAN 바인딩 확인.
+- Phase 2: `pnpm build`(tsc) PASS, 신규 lint 에러 0건. 프로덕션 분기에서 `allowedOrigins` 불변(코드상 NODE_ENV 가드 확인).
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **런타임(머지 후 마스터 수동)**: `.env.local` 의 `VITE_API_BASE_URL`/`VITE_BASE_STORAGE_URL` 을 `http://byeolsangjaui-MacBookPro.local:8000` 으로 설정(gitignored, 커밋 외) → FE/BE 재기동 → 다른 PC 브라우저에서 `http://byeolsangjaui-MacBookPro.local:5173` 접속·로그인 확인. mDNS 미지원 기기는 `192.168.0.157` IP 폴백.
+
+### 비고
+외부 리더 cross-repo: 코드 WIP 2종(`-작업-data-craft` / `-작업-data-craft-server`)=각 leader i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. `.env.local` 은 gitignored 로컬 파일이라 플랜 커밋 범위 밖(마스터 수동 설정).
