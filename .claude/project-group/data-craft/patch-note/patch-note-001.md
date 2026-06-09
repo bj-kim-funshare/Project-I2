@@ -1,5 +1,52 @@
 # data-craft — Patch Note (001)
 
+## v001.686.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #261
+
+데이터 뷰어 → 디자인 모드 → 열 메뉴 → **열 본문 스타일 편집** 모달의 조건 영역을 컬럼 타입 5분류별 연산자·전용 입력기로 전면 개편. 기존엔 `always/range/greater/less/equal` 5종 숫자 비교만 가능했고 평가 함수가 셀 값을 무조건 `parseFloat` 하여 텍스트·날짜·선택·불리언·태그 컬럼은 사실상 `equal`(문자열 일치)만 사용 가능했다. 3개 뷰어 패키지(fs-data-viewer · fs-sub-data-viewer · fs-external-data-viewer, 독립 소스 삼중 복제)에 동일 적용.
+
+### 타입 분류 (신규)
+- **분류1 텍스트형**(text·longText·link·phone·email·code·singleSelect·multiSelect·colorPicker·user·tag·nation·worldTime·document): 일치/불일치/포함/미포함/비어있음/채워짐
+- **분류2 숫자형**(number·currency·percent·formula·simpleFormula·progress·timer): 초과/이상/미만/이하/범위/일치/비어있음/채워짐 (timer=MM:SS↔초)
+- **분류3 불리언형**(boolean·checkbox): 참/거짓
+- **분류4 타임라인**(timeline): 시작·종료일 비교 / 날짜 포함 / 기간 길이(일수) / 비어있음·채워짐 (연산자 8종)
+- **분류5 날짜·시간형**(date·dateTime·time·deadline): 이전/이후/같음/범위/비어있음/채워짐 (달력 입력)
+- 값 입력기: 날짜=DatePicker(ISO), 선택=native select(옵션 라벨), 사용자=native select(ID), 타이머=MM:SS, 숫자=number, 텍스트=text
+- 본문 스타일 제거: log·lastUpdate·image·file·uniqueId·vote·rating (DISABLE_CELL_STYLE_TYPES 추가)
+- 본문 스타일 추가: document (제목 title 을 조건 값으로 사용)
+- 행 연결(rowLink): 연결한 대상 컬럼 타입(mappedTargetColumnType) 기준으로 연산자·평가 적용
+
+### 페이즈 결과 (13)
+- **Phase 1** (`33af0d1d`): 연산자 인벤토리 22종 additive 추가(기존 5키 보존) + getConditionTypesForColumnType 분류 매핑(미분류=레거시 5종 반환).
+- **Phase 2** (`cb77f234`): i18n cellStyle.operators / operatorValueLabels 4언어(ko/en/ja/zh) + types parity.
+- **Phase 3** (`6b68a368`): getComparableCellValue 정규화 + 타입 인식 getTargetCellRendererByValue(columnTypeId 미제공 시 레거시 경로 byte-identical). 빈 셀 early-return 을 레거시 경로 내부로 이동해 스칼라 빈 셀 isEmpty 동작.
+- **Phase 4** (`eb44099d`): 모달 컬럼모델 주입 배선(useCellStyleDialog 상태 + 렌더 경로 FsGridTableView→TableDialogs→다이얼로그 forward, 두 오프너 갱신).
+- **Phase 5** (`e42f31fc`): 타입별 조건 버튼(동적) + 전용 값 입력기(DatePicker/select/MM:SS/number/text).
+- **Phase 6** (`8e866019`): DISABLE_CELL_STYLE_TYPES — document 제거 + 7종 추가.
+- **Phase 7** (`4f69ae67`): 행 연결 대상 타입 기준 조건(mappedTargetColumnType + displayValue, 하위 렌더러 이중파싱 없음).
+- **Phase 8~10** (`f55f064b`·`76dd2f0f`·`5ea81e9b`): fs-sub-data-viewer 포팅(엔티티·i18n·disable / 평가엔진·배선 / 조건 UI).
+- **Phase 11~13** (`fb5aa89b`·`519e1d10`·`093739c8`): fs-external-data-viewer 포팅(동일 3분할).
+
+### 영향 파일
+data-craft (단일 monorepo, 66 files / +3776 -362):
+- fs-data-viewer: entities/{cell-condition.types, cell-condition-categories(신규), index}, widgets/fs_grid_renderer/{utils, FsGridRenderer}, widgets/cell-style-dialog/*, widgets/fs_grid_sub/FsSubGrid, widgets/grid-table/{FsGridTableView, components/TableDialogs}, widgets/cell-renderers/row-link/RowLinkGroupManageDialog, features/grid/lib/helpers/column-restrictions, shared/config/i18n/{translations 4종, types}
+- fs-sub-data-viewer · fs-external-data-viewer: 동일 미러(rowLink 없음, 오프너=features/grid/hooks/column-menu/menuItems + widgets/grid-table/components/TableDialogs)
+
+### 검증
+- 전 페이즈 lint 게이트 `pnpm typecheck:all && pnpm lint` PASS(0 errors). 최종 종합: typecheck:all exit0 · eslint 0 errors · build:packages 9/9(cross-package export gap 없음).
+- 직렬화 하위호환: conditionType 키 기반 lookup 으로 기존 저장 데이터 자동 복원, 레거시 5키 평가 의미 byte-identical 보존.
+- advisor 계획(#1)·완료(#2) 5-perspective 전부 PASS(BLOCK 없음).
+- **런타임(머지 후 마스터 수동)**: 메인 세션은 렌더 미확인 → 3개 뷰어에서 대표 매트릭스 스크린샷 검증 권장(텍스트·포함 / 날짜·이전 / 타이머·MM:SS / 문서·제목 / 타임라인·날짜포함 / 불리언·참 / 빈 스칼라 셀·비어있음 / 행연결 대상타입).
+
+### 잔존 제한
+- 행 연결 → 단일/복수선택·사용자 대상: 연산자 선택은 대상 타입 기준 정상 동작하나, 값 입력 피커가 rowLink 컬럼 자체 optionList(빈 값) 를 사용. `RowLinkGroupManageDialog` 의 `colCfg?.targetColumnMetadata?.optionList` 로 한 줄 보강 가능(후속).
+- fs-sub-data-viewer / fs-external-data-viewer 는 오프너에서 userList 접근 경로가 없어 `[]` 전달 → 두 뷰어의 사용자 타입 조건 입력 시 사용자 드롭다운이 비어있음(fs-data-viewer 메인 경로는 실제 userList 전달, 정상).
+
+### 비고
+외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]].
+
 ## v001.685.0
 
 > 통합일: 2026-06-09
