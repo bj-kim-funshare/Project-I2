@@ -23305,3 +23305,39 @@ data-craft:
 
 ### 비고
 외부 리더 핫픽스 cross-repo: 코드 WIP(`-핫픽스2`)=data-craft i-dev, 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main(핫픽스1과 동일 2-WIP 확장).
+
+## v001.680.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #262 (funshare-inc/data-craft)
+
+**오버레이 뒷배경 트랙패드 스크롤 누출 전수 수정.** 데이터 뷰어 그리드 디자인 모드 열 메뉴 모달에서 커서가 모달 내부에 있어도 트랙패드로 뒷배경이 가로·세로 스크롤되던 버그를 프로젝트 전반의 모달/다이얼로그/오버레이로 확대해 일괄 수정. FE-only(data-craft), DB/BE·신규 dep 무변경.
+
+### 원인 (결정적 1차 근거)
+뷰어 패키지에는 이미 검증된 `useScrollLock` 훅(body `overflow:hidden` + document-level wheel/touchmove `preventDefault`, `[data-scroll-container]` 예외)이 존재하나, 모달형 **커스텀 `createPortal` 오버레이** 일부가 이 훅을 호출하지 않아 뒷배경 스크롤이 누출됐다. Radix Dialog/AlertDialog 는 번들된 `RemoveScroll` 로 자체 잠금되어 대상 아님. 셀 렌더러 오버레이는 companion 훅으로 대부분 이미 잠금돼 있었다. 루트 앱(src/)에는 잠금 훅 자체가 부재했다. deterministic grep(파일+이웃 디렉토리 훅 3단계 반경)으로 미적용 모달형 포털을 식별.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `e6a1e9b`(+후속 `6369129`): 3개 뷰어 패키지 그리드 열/행 컨텍스트 메뉴(ColumnMenuDropdown·RowMenuDropdown ×3, SubGridColumnMenu, SubGridRowMenuDropdown, kanban ColumnHeader 색상 피커)에 `useScrollLock` + 보고 케이스 열 메뉴 본문(ColumnMenuVariantB) 내부 스크롤 영역 `data-scroll-container` 마킹.
+- **Phase 2 (fix)** `6ba8850`(+후속 `5232e56`): ColumnGroupDialog ×3 + AggregationDialog ×3 + AggregationDetailDialog ×3 잠금 + 내부 스크롤 영역 마킹, 열그룹 하위 패널(ColumnListPanel/GroupTabContent ×3) 마킹. AggregationPopover(앵커 추종 비모달)·TableDialogs(컨테이너) 스킵.
+- **Phase 3 (fix)** `0dd2c49`: 헤더 설정 다이얼로그 5종(Calendar/Kanban/Gantt 라벨·휴일·카드영역) + HolidayDatePicker ×3 + batch DatePickerOverlay ×3 잠금 + 내부 스크롤 영역 마킹.
+- **Phase 4 (fix)** `b9e722c`: 열 설정 래퍼 3종(Formula/SimpleFormula/Vote) + SubGridFilterBar 잠금 + 내부 스크롤 영역 마킹.
+- **Phase 4 정정** `7fe9eb8`: GanttUnclassifiedPanel 스크롤 잠금 철회 — 배경 스크롤 시 위치를 재계산하는 앵커 추종 팝오버라 AggregationPopover(스킵)와 동일 클래스로 일관화.
+- **Phase 5 (fix)** `a9d705c`: 루트 앱 `src/shared/hooks/useScrollLock.ts` 신설(뷰어 훅 이식, index.ts 재수출) + PropertyDrawer·MobileCellEditor·AddWidgetButton·ViewSidebar·DesignSidebar 적용. 사이드바는 태블릿/모바일 오버레이 모드(`isTablet && !isCollapsed`)에서만 잠금, 데스크탑 도킹 모드 미적용.
+
+### 시스템 사실 (재유도 방지)
+- 모달형 커스텀 포털 = `useScrollLock(open)` (early-return 가드보다 위, rules-of-hooks). 내부 스크롤 영역(`overflow-y-auto`/`max-h-*`)은 반드시 `data-scroll-container` 동시 부여(없으면 내부 스크롤 막힘 — Hotfix-001 over-block 트랩). 본 작업 전 페이즈에서 overflow 영역↔마커 1:1 검증.
+- 범위 경계: **앵커 추종/스크롤 시 재배치·닫힘 팝오버**(AggregationPopover, GanttUnclassifiedPanel)는 배경 스크롤과 공존이 설계 의도라 **잠금 제외**. Radix Dialog/AlertDialog 는 자체 잠금이라 대상 아님.
+- 루트 앱은 패키지 훅이 패키지-내부 비공개 surface 라 cross-import 대신 `src/shared/hooks/useScrollLock.ts` 사본을 둠(도메인별 사본 패턴, 기존 6벌과 동일).
+
+### 영향 파일 (data-craft, 48 files)
+- **fs-data-viewer / fs-sub-data-viewer / fs-external-data-viewer (뷰어 3패키지)**: grid-table `ColumnMenuDropdown`·`RowMenuDropdown`·`ColumnGroupDialog`·`AggregationDialog`·`AggregationDetailDialog`(+ 열그룹 하위 `ColumnListPanel`/`GroupTabContent`), `data-viewer-header/header-settings/HolidayDatePicker`, `batch-input-dialog/batch-delete/DatePickerOverlay`.
+- **fs-data-viewer 전용**: `fs_grid_sub/components`(SubGridColumnMenu·SubGridRowMenuDropdown·SubGridFilterBar), `kanban-board/.../ColumnHeader`, `grid-table/.../column-menu-b/ColumnMenuVariantB`, `column-settings-dialog/wrappers`(Formula/SimpleFormula/Vote), `data-viewer-header/header-settings`(CalendarLabel/CalendarHoliday/KanbanColumn/GanttLabel/KanbanCardAreas).
+- **루트 앱 src/**: 신규 `shared/hooks/useScrollLock.ts`(+`shared/hooks/index.ts`), `widgets/property-drawer/ui/PropertyDrawer`, `pages/mobile/widgets/MobileCellEditor`, `features/widget-placement/ui/AddWidgetButton`, `widgets/page-navigation/ui/ViewSidebar`·`DesignSidebar`.
+
+### 검증
+- 정적(페이즈별·정정 후): `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존). typecheck:all 이 `tsc -p tsconfig.app.json --noEmit` 포함 → 루트 src/ 도 커버.
+- advisor 계획(#1)·완료(#2) 5-perspective PASS(BLOCK 없음). 완료 시 GanttUnclassifiedPanel 일관성 지적 → 정정 반영.
+- **런타임 시각 검증 필요(마스터)**: lint/tsc 는 스크롤 동작을 못 봄. 보고 케이스(열 메뉴) + 내부 스크롤 보존 + PropertyDrawer(최상위 재검토 후보) + 사이드바 데스크탑/모바일 모드 차등.
+
+### 비고
+외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft i-dev 머지(`0eb8521e`), 본 patch-note WIP(`-문서`)=Project-I2 main. PropertyDrawer 잠금은 클릭아웃 닫힘=모달 시맨틱 근거로 적용했으나 도킹형이라 캔버스 스크롤 차단 체감 시 해당 1훅 철회 핫픽스로 즉시 가역.
