@@ -23138,3 +23138,28 @@ data-craft:
 ### 검증
 - 메인 세션 5단계(diff ⊆ 영향파일 6개, 구조 동일성) 통과. build:packages 9/9 성공. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (0 error / 87 warning). advisor #2 PASS(BLOCK 없음).
 - 시각 검증은 PENDING 게이트에서 마스터가 확인(메인 세션 렌더 블라인드). fs-data-viewer 는 dev src alias(빌드 불필요·하드 리프레시 반영), sub/external 는 dist alias(반영엔 build:packages 필요).
+
+## v001.674.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #257 (funshare-inc/data-craft) — 핫픽스3
+
+**서브그리드 신규 열의 값/열이 사라지는 근본 원인(서버 캐시 무효화 누락) 수정.** 핫픽스1(부모 sub_grid_row_data_list 동기화)으로도 증상이 남았던 이유를 실측(DB 읽기전용 + 코드 추적)으로 규명: `viewer.cache.ts` 의 `invalidateSubGridMetaCache()` 가 **정의만 되고 어디서도 호출되지 않는 dead code** 였다. 서브그리드 페이징(`querySubGridPaged`→pivot)이 사용하는 `subGridMetaCache.columnNameToIdMap`(부모 groupId 키, TTL 5분)이 열 추가 후에도 무효화되지 않아, pivot 이 **신규 열을 제외한 stale 컬럼맵**으로 생성됨 → 신규 열의 셀이 페이징 결과에서 누락 → 값을 입력해 `data_values` 에 저장돼도(DB 확인: 8643 열 값 존재) 화면엔 안 보이고, 새로고침해도 5분 TTL 동안 지속.
+
+### 페이즈 결과
+- **Phase 5 (핫픽스3)** (`7327c28`, data-craft-server): 서브그리드 열 구조 변경 3경로(`createSubGridColumn`·bulkSave `processColumnAddedUpdate`·`dataViewerChange/index` 커밋 후)에서 기존 `invalidateMetaCache(parentGroupId)` 직후 `invalidateSubGridMetaCache(parentGroupId)` 호출 추가. 캐시 키(부모 groupId)는 `setSubGridMetaCache(groupId,…)` 로 확인. `pnpm build`(tsc) exit 0 + eslint 0.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/dataViewerPost.service.ts`
+- 수정: `src/services/viewer/viewer.bulkSave.column.ts`
+- 수정: `src/services/dataViewerChange/index.ts`
+
+### 검증
+- `pnpm build`(tsc) exit 0, 변경 3파일 eslint 0. (프로젝트 전체 lint red 1건 `db.ts no-explicit-any` 은 plan #258 선존 부채.)
+- **확정 신호(마스터 확인 요청)**: 본 캐시는 TTL 5분이라, 만약 마스터가 열 추가~값 입력~새로고침을 **5분 이내**에 했고 값이 사라졌다면 이 캐시가 정확한 원인. 5분 넘겨 테스트 시 자가 해소(=캐시 가설 검증). 테스트 윈도우가 5분 이내였는지 확인하면 근본원인 1차 확정.
+
+### 남은 경계 (알려진 카브아웃)
+- **그룹핑 모드 서브그리드**는 `getCachedColumnMap(masterGroupId)`(서브그리드 id 키의 `metaCache`)를 사용 — 이는 `invalidateMetaCache(parentGroupId)` 로 안 지워지는 별도 키라 동일 클래스 잠복 가능. 마스터 케이스(리스트 모드)는 본 수정으로 해소. 그룹핑 모드 재현 시 별도 핫픽스.
+- 버그2의 레거시 '항목' 열(column_type=1) 데이터 보정은 별도 `/task-db-data data-craft` 사안(코드 무관).
+- 회고 메모리: eslint-only 게이트가 TS2305 은폐([[feedback_data_craft_server_lint_no_tsc]]), 렌더-only 추정이 서버 캐시 누락 4회 빗나감([[feedback_static_should_work_instrument]]) → DB 실측 + 코드 추적으로 결판.
