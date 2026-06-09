@@ -10,7 +10,7 @@
 
 🟢 /plan-enterprise data-craft, **BE prod psql 좌표 `_PROD` 분기** — `constant.ts` 의 `PG` 객체(HOST/USER/PASSWORD)를 `resolveDbName` 처럼 `NODE_ENV` 분기(`PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어 + `*_PROD_NOT_CONFIGURED` throw 가드)로 전환, `PG_PORT` 단일 유지, `.env`/`.env.example` 에 `PG_*_PROD` 키 + `DB_NAME_PROD=postgres`(prod psql DB명) 추가. 미반영 시 prod BE 가 dev psql 로 오접속 → **프롬프트 5(배포) 전 필수 선행**, 프롬프트 3·4(데이터 이관)와 독립이라 병렬 가능. (group-policy 프롬프트 2 에서 발견된 선행 코드 갭)
 
-🔴 /task-db-structure data-craft, **prod psql 빈 스키마 빌드** — 신규 prod PostgreSQL 인스턴스(`211.211.222.105:5432`, DB `postgres`)에 교정된 캐노니컬 빌드 DDL(`run1-tables.up.sql` → `run2-routines.up.sql`, 프롬프트 1 산출물)을 실행해 빈 스키마(테이블·HASH 파티션·FK·인덱스·루틴·트리거) 생성. **기존 캐노니컬 DDL 직접 실행 모드**(db-migration-author authoring 스킵 — 프롬프트 1이 이미 author·스크래치빌드 검증 완료한 `run*.up.sql` 을 그대로 prod 에 적용). 컷오버 다운타임 윈도우 내 prod 게이트 승인 후 실행. **데이터 적재(이관)는 프롬프트 3·4 — 이 빌드가 그 실행보다 선행**. ⚠️ 선행: prod psql **서버 자체가 프로비저닝**(PostgreSQL 설치·계정·네트워크 개방)되어 있어야 함 — 미프로비저닝 시 인프라 선행(스킬 범위 밖, 운영). 서버 가동·접속 가능 여부 사전 확인 필요.
+🔴 /task-db-structure data-craft, **prod psql 빈 스키마 빌드** — 가동 중인 prod PostgreSQL(`211.211.222.105:5432`, PG 17.9)에 greenfield 로 **`CREATE DATABASE data_craft_production`**(= 기존 MySQL prod DB 와 동일명) 후, 교정된 캐노니컬 빌드 DDL(`run1-tables.up.sql` → `run2-routines.up.sql`, 프롬프트 1 산출물)을 **직접 실행 모드**(db-migration-author authoring 스킵 — 프롬프트 1이 이미 author·스크래치빌드 검증 완료한 `run*.up.sql` 을 그대로 적용)로 빈 스키마(테이블·HASH 파티션·FK·인덱스·루틴·트리거) 생성. 컷오버 다운타임 윈도우 내 prod 게이트 승인 후 실행. **데이터 적재(이관)는 프롬프트 3·4 — 이 빌드가 그 실행보다 선행**. (서버 가동·접속 확인됨. 기존 `postgres`(빈)·`datacraft`(옛 stale 스키마) DB 는 타깃 아님 — 새 `data_craft_production` DB.)
 
 🔴 /task-db-data data-craft, prod MySQL→psql **일반 데이터 이관** changeset 작성 — **pre-flight 게이트(이관 차단): 소스 prod MySQL 에서 `SELECT count(*) FROM (SELECT value_id, group_id FROM data_values GROUP BY 1,2 HAVING count(*)>1) t` = 0 확인, 0 아니면 이관 중단. prod psql 은 `data_values` 파티션 PK `(value_id, group_id)` 를 강제하므로 중복쌍 존재 시 벌크 로드가 중도 실패함(dev `data_values_pkey` 는 INVALID·비강제였으나 prod 빌드 DDL 은 올바르게 강제 — 프롬프트 1 발견).** 엔진변환(uuid·enum 대소문자·smallint 0/1·jsonb·timestamp·IDENTITY 재설정) + column_type 오분류 등 prod 데이터 호환 교정 + 릴레이션 테이블 제외. (결제는 다음 프롬프트로 분리)
 
@@ -60,7 +60,8 @@ data-craft 프로덕션을 **MySQL → PostgreSQL 로 단일 컷오버**한다. 
 - **이관 호스트·타깃 psql 은 AWS 셧다운 대상서 제외**해야 함(같이 꺼지면 소스/타깃 소실).
 - **dev 새로고침(프롬프트 7)**: 실고객 PII·결제정보가 dev 로 유입 → 마스터 "상관없음" 결정. 단 **암호화 키가 dev/prod 다르면 복사된 billing_key 는 dev 에서 복호화 불가**(결제 기능 dev 테스트만 영향, 나머지 정상) — 키 정책만 확인.
 - prod 실제 스키마/데이터는 **이관 시점에 prod MySQL 에서 직접 덤프**해 드리프트 확정(git 이력 `db.sql/`은 참조용).
-- **prod psql 서버 프로비저닝은 인프라 선행(스킬 범위 밖)**: PostgreSQL 설치·계정·네트워크(방화벽/포트 5432 개방)는 운영이 별도 수행. `211.211.222.105:5432` 가동·접속 가능 여부 **미확인 — 스키마 빌드 프롬프트 실행 전 확인 필수**(미가동 시 빌드 connect 실패). prod psql 은 레거시 prod MySQL 과 동일 호스트 공존(psql 5432 vs MySQL 3306).
+- **prod psql 서버 — 가동·접속 확인됨**(2026-06-09): PostgreSQL **17.9**, `211.211.222.105:5432` TCP OPEN, postgres 계정 접속 OK. 레거시 prod MySQL 과 동일 호스트 공존(psql 5432 vs MySQL 3306). 기존 DB 2개는 **타깃 아님** — `postgres`(빈), `datacraft`(옛 stale 스키마: 릴레이션 테이블 잔존·`billing_anchor_day` 없음·비-파티션·데이터 0, 이전 빌드 잔재). 빌드는 **새 `data_craft_production` DB** 로.
+- **⚠️ BE `DB_NAME_PROD` 정정 필요(배포 전)**: #269 에서 `DB_NAME_PROD` 가 `postgres` 로 잘못 설정됨 → **`data_craft_production` 으로 정정**(원래 값이기도 함, .env + .env.example). 안 하면 prod BE 가 빈 `postgres` DB 로 붙음. 작은 BE 후속(plan-enterprise) — pre-deploy(프롬프트 5) 전 필수.
 
 ### 병렬/순서
 - **그룹 1**(병렬): 프롬프트 1(소스 DDL 교정, data-craft-server 의 .sql) ↔ 프롬프트 2(db.md·deploy.md, Project-I2) — 서로 다른 파일/레포라 독립.
