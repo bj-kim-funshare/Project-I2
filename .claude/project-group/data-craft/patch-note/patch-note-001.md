@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.690.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #269
+
+### 페이즈 결과
+- **Phase 1 (refactor, data-craft-server)** (`d9c3995`): BE PG 접속 좌표를 `NODE_ENV` `_PROD` 분기로 전환. `constant.ts` 에 `resolvePgCoord(prodKey, devKey, devDefault)` 헬퍼 추가 — prod 면 `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 사용(미설정 시 `*_PROD_NOT_CONFIGURED` throw, `resolveDbName` 의 `DB_NAME_PROD_NOT_CONFIGURED` 가드 패턴 동일), 아니면 dev `PG_*` 폴백. `PG.PORT` 단일 유지(양 환경 5432). `envValidator.ts` 의 PG 필수검증도 production 분기(prod: `PG_HOST_PROD`/`PG_PORT`/`PG_USER_PROD`, dev: 현행). 비밀번호는 envValidator 미검증(현행 시맨틱 유지) — prod throw 는 constant.ts 접근 가드로.
+- **Phase 2 (chore, data-craft-server)** (`ac81726`): `.env` 에 `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 키 + prod psql 좌표값 주입, `DB_NAME_PROD` 를 `data_craft_production` → `postgres`(prod psql DB명) 로 변경. `.env.example` 에 동일 키 3개를 빈값으로 추가 + `DB_NAME_PROD=postgres`. 기존 dev `PG_*` 키 무변경, `PG_PORT_PROD` 미추가.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/config/constant.ts`, `src/config/envValidator.ts`, `.env`, `.env.example`
+
+### 검증
+- Phase 1 변경 파일(`constant.ts`/`envValidator.ts`) eslint **clean** + `pnpm build`(tsc) exit 0 (BE eslint 게이트는 타입에러 미검출이라 메인세션 tsc 직접 실행 [[feedback_data_craft_server_lint_no_tsc]]). dev(`NODE_ENV!=production`)은 기존 `PG_*` 폴백 유지 — 회귀 없음.
+- Phase 2: `.env` 4변경(PG_*_PROD 3 + DB_NAME_PROD=postgres) + `.env.example` 키 추가 grep 확인. `.env` 는 eslint 대상 아님.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **별개 health 노트(회귀 아님)**: 미접촉 `src/types/db.ts:7` 의 기존 `@typescript-eslint/no-explicit-any` eslint 에러는 plan #258 잔존분(v001.689.0 에서도 동일 기록) — 본 작업 affected_files 밖이라 미수정, 별도 cleanup 후보.
+
+### 배경 / 비고
+- Roadmap-6 PROD-1 컷오버 **선행 코드 갭** 해소: prod psql(별도 사설 호스트/`postgres` 계정)이 dev(`127.0.0.1`/`starbox`)와 달라 단일 `PG_*` 변수로는 환경 분기 불가하던 문제. 단일 공유 git-tracked `.env` + NODE_ENV 분기 정책상 `_PROD` 페어 필수. **배포(Roadmap-6 프롬프트 5) 전 필수 선행**, 데이터 이관(프롬프트 3·4)과는 독립.
+- ⚠️ **시크릿 비고**: prod psql 비밀번호가 git-tracked `.env` 평문으로 커밋됨 — 마스터 명시 승인("어차피 git에 올라가") + 그룹 `.env` git-tracked 정책. 서브에이전트가 credential-leakage 분류기를 트리거(메커니즘 사실), 인가된 경로임을 기록. prod psql 이 사설망(`192.168.0.10`) 전용이 되며 git 저장 비밀번호가 해당 DB 의 최대 노출면 — **후속 보안 강화 후보**(시크릿 매니저 / EC2 로컬 `.env` override 로 prod 시크릿 분리, 컷오버 이후 별도 검토).
+- 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. 단일 work repo(N=1). origin push 안 함(마스터 인자에 push 키워드 없음 [[feedback_plan_enterprise_no_auto_push]]).
+
 ## v001.689.0
 
 > 통합일: 2026-06-09
