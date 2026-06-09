@@ -23163,3 +23163,28 @@ data-craft-server:
 - **그룹핑 모드 서브그리드**는 `getCachedColumnMap(masterGroupId)`(서브그리드 id 키의 `metaCache`)를 사용 — 이는 `invalidateMetaCache(parentGroupId)` 로 안 지워지는 별도 키라 동일 클래스 잠복 가능. 마스터 케이스(리스트 모드)는 본 수정으로 해소. 그룹핑 모드 재현 시 별도 핫픽스.
 - 버그2의 레거시 '항목' 열(column_type=1) 데이터 보정은 별도 `/task-db-data data-craft` 사안(코드 무관).
 - 회고 메모리: eslint-only 게이트가 TS2305 은폐([[feedback_data_craft_server_lint_no_tsc]]), 렌더-only 추정이 서버 캐시 누락 4회 빗나감([[feedback_static_should_work_instrument]]) → DB 실측 + 코드 추적으로 결판.
+
+## v001.675.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #260 (funshare-inc/data-craft)
+
+**디자인모드 온보딩 말풍선 5종 + 우선순위 큐.** 디자인모드 진입 후 한 화면에 1개씩(우선순위 순) 말풍선이 뜨고, "닫기"(세션 일시) 또는 "앞으로 보지 않기"(계정 영구) 하면 다음 조건 충족 말풍선으로 넘어가는 큐 동작. FE-only(data-craft), DB/BE·신규 dep 무변경.
+
+### 페이즈 결과
+- **Phase 1** (`5e8c8196`): 온보딩 큐 인프라. onboardingStore 에 세션 transient `closed` Set + `closeTransient`. coordinator `useActiveOnboardingHint`(mode/page/layout/permission → 전역 HintContext 조립 → order 정렬 후 `showOn && !dismissed && !closed` 첫 항목 = activeHintId, memoized). useOnboardingHint open=activeHintId===hintId, close=closeTransient(일시), confirm=dismiss(영구), ctx 반환. OnboardingHint 에 `placement` prop(기본 bottom) + 닫기→store, ctx prop 폐기. designModeSwitch showOn 을 뷰모드 한정으로 수정(디자인모드 큐 비차단). 신규 5개 hint def(order 2~6) 등록.
+- **Phase 2** (`754714b4`): 힌트 1·2·3 앵커. ①섹션추가(LayoutCanvas EmptyState 버튼, bottom) ②새화면추가(DesignSidebar 확장 버튼, right) ③사용자입력폼(ManagementButtonGroup TooltipTrigger, bottom — Tooltip 내부 중첩 Slot). onboarding.addSection/addPage/userForm.body i18n ko/en parity.
+- **Phase 3** (`869af6b7`): 힌트 4·5 앵커(영역). index 에 useActiveOnboardingHint export. AreaWidgetContent 는 `ctx.targetEmptyAreaId===area.id`(첫 섹션 첫 area) 일 때만 '빈 영역' 플레이스홀더를 OnboardingHint(emptyArea, bottom) 로 래핑. AreaControls 는 `activeHintId==='areaControlBar' && ctx.selectedSectionFirstAreaId===area.id` 일 때 컨트롤바 강제표시(cn 으로 `opacity-100` 후순위 추가 → hover gate 오버라이드) + OnboardingHint(areaControlBar, left) 래핑(훅은 early-return 이전). onboarding.emptyArea/areaControlBar.body i18n ko/en.
+
+### 힌트 우선순위 (order)
+1(뷰모드 designModeSwitch) → 2 addSection(섹션 0개) → 3 addPage(canEditPage) → 4 userForm(canEditDataLink) → 5 emptyArea(섹션有·선택無·전부빈·좌상단area) → 6 areaControlBar(섹션 선택, 첫 area).
+
+### 영향 파일
+data-craft:
+- 신규: `src/features/onboarding/lib/useActiveOnboardingHint.ts`
+- 수정: `src/features/onboarding/{index.ts, model/onboardingStore.ts, model/hintRegistry.ts, lib/useOnboardingHint.ts, ui/OnboardingHint.tsx}`, `src/widgets/header/ui/{ViewModeToolbar.tsx, ManagementButtonGroup.tsx}`, `src/widgets/layout-canvas/ui/{LayoutCanvas.tsx, AreaWidgetContent.tsx, AreaControls.tsx}`, `src/widgets/page-navigation/ui/DesignSidebar.tsx`, `src/shared/i18n/locales/{ko.ts, en.ts}`
+
+### 검증
+- 정적: 각 페이즈 `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **런타임 시각/동작(마스터, dev 재기동)**: ①디자인모드 섹션0 → #1 단독, 닫기→#2→#3 순(닫은 힌트 재등장 X) ②앞으로보지않기→리로드 후도 영구 비표시 ③섹션 추가→#4(좌상단 빈영역) ④섹션 선택→#5(첫 area 컨트롤바 강제표시+좌측 말풍선), 타 area 컨트롤바는 hover-only 유지 ⑤동시 2개 노출 없음. placement(right/left)가 뷰포트 충돌로 flip 되면 라이브러리 props(flip/offset)로 조정([[feedback_data_craft_popover_arrow_floating_ui]]). prod 무관.
