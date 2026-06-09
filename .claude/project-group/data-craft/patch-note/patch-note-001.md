@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.692.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #270
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-server)** (`86139ed`): `.env`·`.env.example` 의 `DB_NAME_PROD=postgres` → `data_craft_production` 정정. 각 1줄, 다른 키(DB_NAME/PG_*/PG_*_PROD) 무변경.
+
+### 영향 파일
+data-craft-server:
+- 수정: `.env`, `.env.example` (DB_NAME_PROD 값)
+
+### 배경 / 비고
+- **#269 후속 정정**: #269 Phase 2 에서 `DB_NAME_PROD` 를 `postgres` 로 잘못 설정(prod psql 서버의 빈 `postgres` DB 오인)한 것을 **`data_craft_production`(= #269 이전 원래 값, 기존 MySQL prod DB 와 동일명)으로 되돌림**. Roadmap-6 prod psql 서버 진단(PG 17.9 가동, 앱 타깃 DB=`data_craft_production` 마스터 확정)에서 발견.
+- **DB 미존재 커플링**: 본 정정 후 `DB_NAME_PROD=data_craft_production` 은 **아직 prod psql 에 존재하지 않는 DB** 를 가리킴 — 그 DB 는 roadmap 의 "prod psql 빈 스키마 빌드" 프롬프트(`CREATE DATABASE data_craft_production` + 교정 DDL)에서 생성. BE 설정은 정합하나, 런타임 접속은 빌드 후 가능. **이 정정 + 빌드 프롬프트 둘 다 pre-deploy(프롬프트 5) 전 완료 필수**(독립 선행 2건).
+- 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft-server i-dev, 본 patch-note(`-문서`)=Project-I2 main. origin push 안 함.
+
 ## v001.691.0
 
 > 통합일: 2026-06-09
