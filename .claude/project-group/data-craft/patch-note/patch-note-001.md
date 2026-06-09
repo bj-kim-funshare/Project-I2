@@ -22860,3 +22860,23 @@ data-craft:
 ### 검증
 - 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors. `pnpm build` exit 0 + 생성 CSS 에 `calc(1px - 50%)` 규칙 확인.
 - **런타임 시각(마스터)**: dev 재기동 후 꼬리 밑이 말풍선 상단선에 붙는지 확인. 미세 차이면 translate px 값만 ±조정(부호 규칙: 양수↑/음수↓). prod 무관.
+
+## v001.662.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #250 (funshare-inc/data-craft) — 핫픽스4
+
+**설정→사용자 설정 '추가' 필수 입력 인라인 안내(핫픽스4) — 올바른 컴포넌트에 적용.** 핫픽스1·2 의 일반 폼 필수 검증이 "설정 → 사용자 설정"의 '추가'에서 동작 안 함(토스트·인라인 모두 미표시).
+
+### 페이즈 결과
+- **핫픽스4** (`5d8f26ce`, data-craft): **이전 두 번의 수정이 잘못된 컴포넌트를 겨냥**한 것이 원인. "설정 → 사용자 설정"은 `UserFormWidget`(페이지 위젯)이 아니라 **`settings-dialog`의 `SettingsFormTabContent`** 가 렌더하며, `useFormWidgetSync` 를 직접 쓰고 자체 인라인 `FormRenderer` 를 둔다. '추가' 버튼(`SettingsFormActions` `onAdd` → `handleAdd`)이 검증 없이 `submitNewData()` 직행, 인라인 `FormRenderer` 에 `externalFieldErrors` 미전달이라 이전 수정(useUserFormWidget)이 도달 불가했다. `SettingsFormTabContent` 에 검증된 패턴 이식 — `validateRequiredFields` import, `requiredErrors` 상태, `handleAdd` 가 빈 필수값 시 `setRequiredErrors` 후 차단, 인라인 `FormRenderer`(`!form.listFirst` 분기)에 `externalFieldErrors={requiredErrors}` 연결. 다이얼로그 경로(데이터 목록/listFirst)는 기존 내부 검증 유지. `formFields` 는 field.id 키(FormRenderer onFieldChange(field.id)) 확인 — validator 오작동 없음.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx`
+
+### 검증
+- 정적: 루트앱 `tsc -p tsconfig.app.json` 0 + `pnpm lint` 0 errors.
+- 동일 메커니즘(`externalFieldErrors` → `FormRenderer` ref-가드 effect → 필드별 빨강 인라인)이 hotfix2 `UserFormContent` 에서 검증됨. `formFields` field.id 키 정합 확인(read 측 name-vs-id 폴백은 hydrate 한정, 현재입력 formFields 무관).
+- advisor 완료(#2) PASS(BLOCK 없음) — 잘못된 컴포넌트 진단 정정, field-id 정합 확인.
+- **3번째 시도**: 이전 2회 실패는 잘못된 컴포넌트(도달 불가 경로) 때문. 본 수정은 올바른 컴포넌트 + 검증된 메커니즘. 런타임 시각 검증(추가 클릭 시 빈 필수 필드 빨강 안내)은 마스터 재기동 후; 여전히 미표시면 wrong-screen 이 아닌 runtime 결함 → 화면 디버그 프로브 단계. prod=MySQL 동결 미적용.
