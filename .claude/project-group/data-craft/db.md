@@ -47,3 +47,12 @@ connection_style: PG_* 환경변수
 - **접속 좌표 (psql)**: `PG_HOST`/`PG_PORT`/`PG_USER`/`PG_PASSWORD` + DB명 `resolveDbName()`(`DB_NAME`/`DB_NAME_PROD`). 컷오버 후 prod 좌표는 `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어(NODE_ENV 분기). 풀 설정·타입파서·`?`→`$n` translatePlaceholders 어댑터는 server `config/` 코드 참조. ⚠️ PG 좌표 `_PROD` 분기는 `constant.ts` 에 **아직 미구현**(위 §전환 상태 선행 코드 갭).
 - FE 측 (data-craft / data-craft-mobile / data-craft-ai-preview) 은 직접 DB 접속하지 않고 `data-craft-server` REST API 경유.
 - 환경별 차등 시크릿 운영은 dev.md §"env 환경별 차등 변수 표준 — BE 페어 패턴" 참조.
+
+## 관리자 콘솔 DB 상호작용 (Roadmap-7 신규 — 마스터 명시)
+
+- **DB 인스턴스는 dev 1 / prod 1 유지** — 관리자용 별도 DB 인스턴스 신설 없음. 관리자 전용 테이블만 기존 data-craft DB 에 추가한다.
+- **신규 테이블 2종**:
+  - `user_events` — 사용자 행동/결제 분석 이벤트. **인입은 배포되는 data-craft 본체**(FE 계측 + data-craft-server 인입 엔드포인트)가 담당하고 관리자 콘솔은 읽기만 한다. dev psql + (Roadmap-6 PROD-1 빌드 DDL 편입으로) prod psql 양쪽. RANGE(created_at) 월별 + HASH 파티션(`data_values` 패턴 재활용). 로그인/비로그인 분리(`auth_state`/`user_id`/`anon_id`).
+  - `admin_email_verification` — 관리자 고정 단일 계정 2단계 로그인의 이메일 인증번호(code/expiry/attempt). **dev psql 전용**(prod 빌드 제외).
+- **`data-craft-admin-server` 는 pg 풀 2개**: ① **고정 dev psql 인증 풀**(`admin_email_verification` — 데이터 토글과 무관, 로그인은 항상 고정 dev 연결), ② **dev/prod 런타임 토글 데이터 풀**(프로모션 CRUD·`user_events` 읽기, `PG_*`/`PG_*_PROD` 재활용). ⚠️ 인증 코드를 토글된 prod psql 에 쓰지 말 것(보안 사고). prod 토글은 컷오버(Roadmap-6 PROD-1)의 `constant.ts` `PG_*_PROD` 분기 머지 전까지 차단.
+- **프로모션 테이블 4종**(`promotion`/`client_promotion`/`promotion_audit_log`/`promotion_business_lock`)은 스키마 무변경 — 관리자 콘솔이 토글 데이터 풀로 직접 CRUD(쓰기 전 `setPromotionAuditContext()` 호출 → 감사 트리거).
