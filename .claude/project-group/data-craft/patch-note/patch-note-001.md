@@ -23399,3 +23399,29 @@ data-craft:
 
 ### 비고
 외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스1`)=data-craft i-dev 머지(`da8f6735`), 본 patch-note WIP(`-핫픽스1-문서`)=Project-I2 main(#263 선례와 동일 — 단일-WIP 핫픽스 carve-out 은 patch-note 가 I2 에 거주하는 외부 리더엔 부적합하여 2-WIP 로 확장 [[project_external_leader_patchnote_in_i2]]). 병렬 잡(#262·#265)이 v001.679~681 을 선점하여 본 엔트리는 v001.682.0.
+
+## v001.683.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #264 (funshare-inc/data-craft) — 핫픽스2
+
+**내장 서브 그리드 "필터" 패널 위치: 버튼 우측 → 좌측 교정.** 마스터가 핫픽스1 의 우측 배치를 좌측으로 정정 — 패널이 필터 버튼 좌측에 나타나도록 앵커 방향만 뒤집음. FE-only(data-craft), 단일 파일 `SubGridFilterBar.tsx`, 이벤트(드롭다운 닫힘 차단) 로직은 무변경.
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2, fix)** (`d0453a5`): 패널 앵커를 `top: rect.top, left: rect.right+4`(버튼 우측) → `top: rect.top, left: rect.left − panelRect.width − 4`(버튼 좌측, 패널 우측 끝이 버튼 좌측 끝에 정렬)로 변경. 좌측 배치는 패널 폭에 의존하므로 앵커 계산을 `requestAnimationFrame`(panelRect 측정 시점) 내부로 이동. Phase 1 의 `adjustOverlayPosition` 뷰포트 클램핑(좌측 가장자리 초과 시 padding 으로 보정)과 hotfix1 의 외부클릭 좌표 가드는 그대로 보존.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/fs_grid_sub/components/SubGridFilterBar.tsx`
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존 baseline).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각(머지 후 마스터 수동)**: 필터 패널이 필터 버튼 좌측에 나타나는지 + 기존 이벤트 동작(드롭다운만 닫힘) 회귀 없는지.
+
+### 알려진 비차단
+- 좌측 배치라 패널이 열리면 버튼 왼쪽의 서브 그리드 제목 영역 위에 떠서 겹친다(hotfix1 우측-겹침의 대칭, 포탈 오버레이 정상·회귀 아님).
+- 엣지 케이스: 버튼이 화면 좌측 끝에 매우 근접하면 클램핑이 패널을 오른쪽으로 당겨 버튼과 겹칠 수 있음(임베드 서브 그리드 우측 도구 버튼 특성상 드묾). 보고 시 표준 "공간 없으면 반대편 플립" 패턴으로 교정 가능.
+
+### 비고
+외부 리더 핫픽스 cross-repo: 코드 핫픽스 WIP(`-핫픽스2`)=data-craft i-dev 머지(`94fd3a3e`), 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]].
