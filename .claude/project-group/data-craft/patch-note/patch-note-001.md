@@ -22712,3 +22712,25 @@ data-craft:
 ### 영향 파일
 
 - (data-craft-server) (수정) src/models/storage.model.ts
+
+## v001.655.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스6 — 화살표 구현 방식 전면 교체(툴팁 검증 방식).** 화살표가 다시 사라진 마스터 피드백 반영. 5번의 동일 축(SVG 폴리곤 fill/stroke/drop-shadow) 시도가 수렴하지 못해, 이 앱에서 **실제로 잘 렌더되는 Tooltip 화살표와 동일한 메커니즘**으로 전환(FE-only, data-craft).
+
+### 근본 원인
+SVG 폴리곤 + 옅은 `--border`(oklch 0.922) 외곽선/그림자는 흰 배경 위 1px 로는 보이지 않음(말풍선 본체는 shadow-md+꽉 찬 사각테두리로 보이는 것과 대조).
+
+### 페이즈 결과
+- **Phase 핫픽스6** (`d53e8eeb`): `PopoverArrow` 를 Tooltip(`tooltip.tsx`)의 검증된 회전 정사각형 패턴으로 교체. svg 에 직접 `size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45` 적용(다이아몬드화 + 본체 위로 겹침 → 본체 상단 테두리를 덮어 이음매 제거), `bg-popover fill-popover` 로 본체 색, 돌출되는 바깥 두 변에 `border-l border-t border-border` 로 밝은 배경에서도 보이는 꼬리 윤곽, `rounded-tl-[2px]`. asChild/width/height/drop-shadow/stroke 전부 제거.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각(마스터, 6번째 화살표 반복)**: 메커니즘을 Tooltip 검증 방식으로 전환. 마지막 미지 변수 = 회전 다이아몬드의 바깥 두 변 식별(`border-l border-t`). 만약 윤곽이 반대쪽(안쪽 notch)이면 `border-r border-b` 로 한 토큰 flip 이 다음 수정. prod 무관.
