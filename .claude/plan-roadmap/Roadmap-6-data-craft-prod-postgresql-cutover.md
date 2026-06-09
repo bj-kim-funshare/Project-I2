@@ -10,6 +10,8 @@
 
 🟢 /plan-enterprise data-craft, **BE prod psql 좌표 `_PROD` 분기** — `constant.ts` 의 `PG` 객체(HOST/USER/PASSWORD)를 `resolveDbName` 처럼 `NODE_ENV` 분기(`PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어 + `*_PROD_NOT_CONFIGURED` throw 가드)로 전환, `PG_PORT` 단일 유지, `.env`/`.env.example` 에 `PG_*_PROD` 키 + `DB_NAME_PROD=postgres`(prod psql DB명) 추가. 미반영 시 prod BE 가 dev psql 로 오접속 → **프롬프트 5(배포) 전 필수 선행**, 프롬프트 3·4(데이터 이관)와 독립이라 병렬 가능. (group-policy 프롬프트 2 에서 발견된 선행 코드 갭)
 
+🔴 /task-db-structure data-craft, **prod psql 빈 스키마 빌드** — 신규 prod PostgreSQL 인스턴스(`211.211.222.105:5432`, DB `postgres`)에 교정된 캐노니컬 빌드 DDL(`run1-tables.up.sql` → `run2-routines.up.sql`, 프롬프트 1 산출물)을 실행해 빈 스키마(테이블·HASH 파티션·FK·인덱스·루틴·트리거) 생성. **기존 캐노니컬 DDL 직접 실행 모드**(db-migration-author authoring 스킵 — 프롬프트 1이 이미 author·스크래치빌드 검증 완료한 `run*.up.sql` 을 그대로 prod 에 적용). 컷오버 다운타임 윈도우 내 prod 게이트 승인 후 실행. **데이터 적재(이관)는 프롬프트 3·4 — 이 빌드가 그 실행보다 선행**. ⚠️ 선행: prod psql **서버 자체가 프로비저닝**(PostgreSQL 설치·계정·네트워크 개방)되어 있어야 함 — 미프로비저닝 시 인프라 선행(스킬 범위 밖, 운영). 서버 가동·접속 가능 여부 사전 확인 필요.
+
 🔴 /task-db-data data-craft, prod MySQL→psql **일반 데이터 이관** changeset 작성 — **pre-flight 게이트(이관 차단): 소스 prod MySQL 에서 `SELECT count(*) FROM (SELECT value_id, group_id FROM data_values GROUP BY 1,2 HAVING count(*)>1) t` = 0 확인, 0 아니면 이관 중단. prod psql 은 `data_values` 파티션 PK `(value_id, group_id)` 를 강제하므로 중복쌍 존재 시 벌크 로드가 중도 실패함(dev `data_values_pkey` 는 INVALID·비강제였으나 prod 빌드 DDL 은 올바르게 강제 — 프롬프트 1 발견).** 엔진변환(uuid·enum 대소문자·smallint 0/1·jsonb·timestamp·IDENTITY 재설정) + column_type 오분류 등 prod 데이터 호환 교정 + 릴레이션 테이블 제외. (결제는 다음 프롬프트로 분리)
 
 🔴 /task-db-data data-craft, **결제 전용 마이그레이션** changeset 작성 — billing_anchor_day 를 payment_history 첫 결제일(day)에서 파생 + billing_info 암호화(billing_key/카드) 보존 검증 + 이관 후 활성구독 전건 결제 대사(reconciliation). 실패 시 롤백 게이트
@@ -43,7 +45,7 @@ data-craft 프로덕션을 **MySQL → PostgreSQL 로 단일 컷오버**한다. 
 ### 컷오버 실행 순서 (수동 오케스트레이션 — 프롬프트 산출물 활용)
 프롬프트(1~4)는 **산출물(교정 DDL·연결정보·일반/결제 이관 changeset)을 작성**하고, 실제 prod 실행은 다운타임 윈도우에서 운영으로 오케스트레이션한다:
 1. 프롬프트 1·2 산출물 준비(병렬 그룹 1).
-2. **신규 prod PostgreSQL 인스턴스 신설** + 교정 DDL(프롬프트 1)로 **빈 스키마 빌드**.
+2. **신규 prod PostgreSQL 인스턴스 신설**(서버 프로비저닝 — 인프라/운영) + 교정 DDL(프롬프트 1)로 **빈 스키마 빌드** = **이제 명시적 프롬프트**(`/task-db-structure prod psql 빈 스키마 빌드`, 코드 프롬프트 다음). 데이터 이관(3·4) 실행보다 선행.
 3. **AWS FE/BE 셧다운 + 자동복구(오토스케일/헬스체크 재기동) 차단** → 모든 쓰기(API+스케줄러) 정지. MySQL·새 psql 은 셧다운 대상서 **제외(살림)**, 점검 페이지 노출.
 4. **별도 호스트(꺼지지 않는 bastion/로컬)** 에서 프롬프트 3(일반)·4(결제) 이관 실행: MySQL→psql.
 5. **결제 대사 게이트**(프롬프트 4) — 활성구독 전건 다음청구일·금액·상태 대조. **실패 시 롤백**(MySQL 복귀, AWS 옛 스택 재기동).
@@ -58,11 +60,13 @@ data-craft 프로덕션을 **MySQL → PostgreSQL 로 단일 컷오버**한다. 
 - **이관 호스트·타깃 psql 은 AWS 셧다운 대상서 제외**해야 함(같이 꺼지면 소스/타깃 소실).
 - **dev 새로고침(프롬프트 7)**: 실고객 PII·결제정보가 dev 로 유입 → 마스터 "상관없음" 결정. 단 **암호화 키가 dev/prod 다르면 복사된 billing_key 는 dev 에서 복호화 불가**(결제 기능 dev 테스트만 영향, 나머지 정상) — 키 정책만 확인.
 - prod 실제 스키마/데이터는 **이관 시점에 prod MySQL 에서 직접 덤프**해 드리프트 확정(git 이력 `db.sql/`은 참조용).
+- **prod psql 서버 프로비저닝은 인프라 선행(스킬 범위 밖)**: PostgreSQL 설치·계정·네트워크(방화벽/포트 5432 개방)는 운영이 별도 수행. `211.211.222.105:5432` 가동·접속 가능 여부 **미확인 — 스키마 빌드 프롬프트 실행 전 확인 필수**(미가동 시 빌드 connect 실패). prod psql 은 레거시 prod MySQL 과 동일 호스트 공존(psql 5432 vs MySQL 3306).
 
 ### 병렬/순서
 - **그룹 1**(병렬): 프롬프트 1(소스 DDL 교정, data-craft-server 의 .sql) ↔ 프롬프트 2(db.md·deploy.md, Project-I2) — 서로 다른 파일/레포라 독립.
 - **BE PG_*_PROD 분기 코드**(그룹 1 다음 신규 프롬프트): prod psql(사설호스트/`postgres`)이 dev(127.0.0.1/`starbox`)와 좌표가 달라 `constant.ts` PG 단일변수로는 환경 분기 불가 — group-policy(프롬프트 2)에서 발견. data-craft-server **코드** 작업이라 데이터 이관(3·4, task-db-data changeset)과 **독립·병렬 가능**하나, **배포(5) 전 반드시 완료**(미반영 시 prod BE 가 dev psql 로 오접속).
-- 이후 순차: 일반 이관(3) → 결제 이관(4, payment_history 적재 후 anchor 파생) → 배포(5) → 기록(6) → dev 새로고침(7). 5·7 사이에 위 컷오버 운영 절차가 끼어든다.
+- **prod psql 빈 스키마 빌드**(코드 프롬프트 다음 신규): 프롬프트 1의 교정 DDL 을 신규 prod 인스턴스에 실행해 빈 스키마 생성. **데이터 이관(3·4) 실행의 선행**(스키마 없으면 적재 불가). 단 프롬프트 3·4의 changeset *저작* 자체는 빌드 없이도 가능 — 즉 빌드는 이관 *실행* 의 선행이지 *저작* 의 선행은 아님. prod 서버 프로비저닝(인프라)이 그 앞에 있어야 함.
+- 이후 순차: (스키마 빌드) → 일반 이관(3) → 결제 이관(4, payment_history 적재 후 anchor 파생) → 배포(5) → 기록(6) → dev 새로고침(7). 5·7 사이에 위 컷오버 운영 절차가 끼어든다.
 
 ### 산출물 매핑
 - 프롬프트 1 → `task-db-structure`(DDL 교정 파일). 프롬프트 2 → `group-policy`(db.md·deploy.md). 프롬프트 3·4·7 → `task-db-data`(일반/결제 이관·새로고침 changeset). 프롬프트 5 → `pre-deploy`(검증+배포). 프롬프트 6 → `patch-update`(patch-note). *DDL/DML 의 prod 실행과 AWS·QA·폐기는 운영 단계로 본 로드맵 설명의 실행 순서를 따름.*
