@@ -23274,3 +23274,34 @@ Phase 1 재클램핑은 조건 추가/삭제 시 `adjustedPosition` 을 잠시 `
 
 ### 비고
 외부 리더 cross-repo 처리: 코드 WIP(`-작업`)는 data-craft i-dev, 본 patch-note WIP(`-문서`)는 Project-I2 main으로 분리(patch-note 가 I2 harness 에 거주 [[project_external_leader_patchnote_in_i2]]).
+
+## v001.679.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #263 (funshare-inc/data-craft) — 핫픽스2
+
+**비활성 토글 툴팁이 메뉴 패널 뒤로 가려 안 보이던 문제 수정 (z-index).** 핫픽스1(v001.677.0)에서 표준 Radix Tooltip(body 포탈)로 전환해 클리핑은 풀었으나 툴팁이 아예 안 보이게 된 회귀를 수정. FE-only(data-craft), DB/BE·신규 dep 무변경.
+
+### 원인 (결정적 1차 근거)
+열 메뉴 패널 `ColumnMenuDropdown`은 `createPortal`로 `document.body`에 인라인 `zIndex: 9999` + 불투명 `bg-card`로 렌더된다. 핫픽스1이 도입한 표준 `Tooltip`의 `TooltipContent`는 하드코딩 `z-50`이며 역시 body로 포탈된다. 두 요소가 같은 body 레벨에 있으므로 z-index가 스택 순서를 결정 → 툴팁(z-50)이 패널(z-9999) **뒤로 가려져** 안 보였다. (핫픽스1의 포탈 전환이 클리핑은 고쳤지만 이 z-index 격차를 노출시킴.)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2, fix)** (`399a5e73`): `SwitchChipB`의 Tooltip `contentClassName`에 `z-[10000]` 한 클래스 추가 → 패널 위로 올라옴. `cn`이 `twMerge(clsx())`라 base `z-50`을 정확히 오버라이드. 다른 변경 없음(+1/-1).
+
+### 시스템 사실 (재유도 방지)
+포탈된 메뉴/오버레이는 인라인 `zIndex: 9999` 규칙을 쓰고, 그 **위**에 떠야 하는 툴팁/다이얼로그는 `z-[10000]` 규칙을 쓴다(ImageDialog·FileDialog·ConnectionConfigDialog overlay 등 6곳+ 선례). 포탈된 메뉴 안의 툴팁/오버레이는 이 값을 그대로 재사용할 것.
+
+### 진단 성격 (회고)
+같은 표면 2번째 핫픽스이나, 이번은 "코드가 있으니 동작해야 함"식 render-blind 추측이 아니라 **인라인 `zIndex:9999` + 하드코딩 `z-50` + 양쪽 body 포탈**이라는 CSS 스택 순서의 결정적 증거 + 코드베이스에 명문화된 수정값 적용. 직전 클리핑 결함이 실제 증명된 결함이었듯, 본 z-index 가림도 실제 증명된 결함이다. (만약 3번째 "안 보임"이 또 오면 그때는 가림이 아니라 트리거 미발화 — instrument 단계.)
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/SwitchChipB.tsx`
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존).
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **런타임 시각(마스터, 하드 리프레시)**: 행 그룹 OFF·중복 값 컬럼 토글 hover → 툴팁이 메뉴 패널 위에 온전히 표시.
+
+### 비고
+외부 리더 핫픽스 cross-repo: 코드 WIP(`-핫픽스2`)=data-craft i-dev, 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main(핫픽스1과 동일 2-WIP 확장).
