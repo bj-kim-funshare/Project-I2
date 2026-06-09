@@ -22906,3 +22906,32 @@ data-craft:
 - 정적: `pnpm typecheck:all`(패키지 dist 빌드 후) 0 + `pnpm lint` 0 errors(기존 warning 87건 무관). 상수/힌트 잔존 참조 0건.
 - advisor 계획(#1)·완료(#2) 모두 PASS(BLOCK 없음). 완료 Evidence 는 정적(diff+lint) 한정 — flex 내부 truncate 는 "되어야 함"이 어긋난 전례가 있는 지점(메모리 `feedback_static_should_work_instrument`).
 - **시각 확정 미완**: 메인 세션은 렌더 불가 → 마스터 스크린샷으로 가로/세로 · 짧은(≤7자)/긴/500px 초과 케이스 확인 필요. 어긋나면 PENDING 게이트 `핫픽스`. 세로 탭은 말줄임 미적용(줄바꿈) — 가정.
+
+## v001.664.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #257 (funshare-inc/data-craft)
+
+**데이터 뷰어 서브그리드 행 즉시 생성 실패(CELL_CREATION_FAILED) 수정.** 서브그리드에서 행을 즉시 생성("즉시 생성 v5.4.0", `POST /api/viewer/:groupId/post`)하면 `CELL_CREATION_FAILED: Type error: value must be a number` (callId VIEWER-C-005) 로 실패하던 문제를 수정. 근본 원인은 서브그리드 `rowId`(ID) 열이 `column_type=1`(숫자형)으로 생성되는데, 그 값은 부모행-자식행 합성 문자열(`"1629-1"`)이라 DB 숫자 검증 트리거(`^-?[0-9]+\.?[0-9]*$`)에 걸려 롤백되던 것. 이 합성 형식은 장식이 아니라 모든 서브그리드 읽기(페이징/집계/그룹핑)가 `rowId LIKE 'parent-%'` 로 자식 행을 필터링하는 핵심 동작이므로, 값을 바꾸는 대신 열을 rowId 특수 타입(`column_type=100`, 읽기측 `COLUMN_TYPE_NAMES[100]='rowId'` / `resolveColumnType` 와 정합, 트리거는 1/2/3/4 외 타입 무검증 통과)으로 생성하도록 고침. #215 회귀가 아니라 서브그리드 즉시생성 경로의 잠복 버그.
+
+### 페이즈 결과
+- **Phase 1** (`b78ae99`, data-craft-server): `src/types/viewer.types.ts` 에 `ROWID_SPECIAL_COLUMN_TYPE=100` 상수 + `subGridColumnType(viewerType)` 헬퍼(rowId→100, 그 외 기존 매핑·폴백 2) 추가. `dataViewerPost.service.ts` 의 `autoCreateMasterSubGrid` shared-config 분기·기본 ID열 분기 모두 헬퍼 사용으로 교체. 전역 `VIEWER_TYPE_TO_COLUMN_TYPE['rowId']`(=1)와 `createRow` 합성값 구성은 메인 그리드 숫자정렬·서브그리드 필터 의존 때문에 의도적으로 미변경.
+- **Phase 2** (`8d672fe` + lint `b5fe4d5`, data-craft-server): 권위 경로 `postSubGridViewer`(`viewer/viewer.subGrid.ts`) 의 `spColumns` 매핑도 동일 헬퍼 적용 → FE가 보낸 rowId 열도 100으로 생성. lint 1차에서 미사용 `VIEWER_TYPE_TO_COLUMN_TYPE` import 발생 → 핫픽스 1사이클로 제거 후 통과.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/types/viewer.types.ts`
+- 수정: `src/services/dataViewerPost.service.ts`
+- 수정: `src/services/viewer/viewer.subGrid.ts`
+
+### 검증
+- 정적: `pnpm lint` 0 errors (phase별 gate-runner, Phase 2 lint 핫픽스 1회). advisor 계획(#1)·완료(#2) 모두 BLOCK 없음 — Command Fulfillment 은 PASS-with-caveat(아래 필수 후속 참조).
+- **수동 시나리오 (필수 후속 DML 완료 후)**: group 1629 서브그리드 행 즉시 생성 200 / 신규 서브그리드 자동생성 시 rowId 열 column_type=100 / postSubGridViewer 경로 동일 / 서브그리드 페이징·집계 정상.
+
+### ⚠️ 필수 후속 (이번 머지로 해결 안 됨 — DML)
+- 본 코드 수정은 **앞으로 생성될** 서브그리드만 교정한다. **이미 존재하는 서브그리드(예: group 1629)의 rowId 열은 여전히 `column_type=1`** 이라 코드 머지만으로는 1629는 계속 실패한다.
+- 해결: 별도 **`/task-db-data data-craft`** — `data_group.parent_row_num IS NOT NULL` 인 그룹의 rowId 열 중 `column_type=1` → `100` UPDATE. 해당 서브그리드들은 그동안 insert 가 막혀 행 0건이므로 순수 메타데이터 보정(idempotent), 정리할 셀 데이터 없음. dev=psql / prod=MySQL 환경별 게이트.
+
+### 남은 경계 (알려진 카브아웃)
+- `dataViewerChange/change.subGridColumn.ts:72` 의 일반 열 추가 경로는 요청의 `col.columnType` 을 그대로 사용한다(헬퍼 미적용). 사용자가 rowId 열을 수동 추가하는 흐름은 실제로 없어 현재 무해하나, 헬퍼가 모든 경로에 보편 적용된 것은 아님.
+- 부수 발견(범위 외): `src/config/database.ts` pg OID 23(int4) 타입 파서 부재 — int4 컬럼이 문자열로 반환. 이번 트리거 에러와는 무관하나 TS측 숫자 비교 잠복 클래스, 별도 plan 후보.
