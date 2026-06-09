@@ -23690,3 +23690,27 @@ data-craft-server:
 
 ### 비고
 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. 단일 work repo(N=1) 케이스라 코드 WIP 1종. origin push 안 함(마스터 인자에 push 키워드 없음 [[feedback_plan_enterprise_no_auto_push]]).
+
+## v001.686.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #271 (funshare-inc/data-craft)
+
+**data-craft-server 결제/구독 권한·접근 보안 강화 (Roadmap-8 #1 — #4·#19·#18).** 프론트엔드가 UI를 가릴 뿐 백엔드 API가 무방비라 승인된 일반 회원이 직접 API 호출로 대표 카드 결제·구독 강등·결제이력 열람이 가능하던 접근 제어 공백 3건을 백엔드 검증 추가로 차단. 정당한 대표 호출 동작은 불변.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-server)** (`f1445a0`): `promotion.routes.ts` 의 `/purchase`·`/cancel` 핸들러 try 최상단에 `if (!req.isOwner) throw new BadRequestError('OWNER_ONLY')` 가드 추가(#4). 일반 회원의 대표 카드 프로모션 결제·구독 강등 차단. `/eligibility`·`/quote`(회원 조회용)와 app.ts 마운트 순서는 무변경 — 비대표 조회 접근 보존. `/cancel` 의 결제비밀번호(defense-in-depth)는 명시적 스코프 밖.
+- **Phase 2 (fix, data-craft-server)** (`8305dea`): ① `/billing/change-card` 에 `requirePaymentPassword()` 추가(#18, 다른 결제 변경 엔드포인트와 일치). ② `/billing/history` 에 `forceIncludeAuth` 추가(#19a). ③ `getPaymentHistoryController` 에 `if (!req.isOwner) throw new BadRequestError('OWNER_ONLY')` 추가(#19b) — 비대표의 회사 결제이력 열람 차단.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/routes/promotion.routes.ts`, `src/routes/subscription.ts`, `src/controllers/billing.controller.ts`
+
+### 검증
+- 두 페이즈 모두 `pnpm build`(tsc) exit 0 — import/타입 정합(BE eslint 게이트는 타입에러 미검출이라 메인세션 tsc 직접 실행 [[feedback_data_craft_server_lint_no_tsc]]).
+- 인라인 `req.isOwner` 가드는 기존 우세 패턴(billing.controller / seatChange.controller 12곳)과 일치 — `ownerOnlyMiddleware`(미사용) 대신 채택.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **별개 health 노트(회귀 아님)**: 미접촉 `src/types/db.ts:7` 의 기존 `@typescript-eslint/no-explicit-any` 는 plan #258 잔존분 — 본 작업 affected_files 밖, lint-hotfix iter 미발화.
+
+### 비고
+Roadmap-8 "data-craft 결제 시스템 결함 수정" 5플랜 중 1번(권한/접근). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함(마스터 인자에 push 키워드 없음 [[feedback_plan_enterprise_no_auto_push]]).
