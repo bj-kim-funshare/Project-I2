@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.693.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #273
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** (`656f6b1c`): `useScrollLock` 의 `preventScroll` 핸들러 "내부 스크롤 영역" 판정을 `[data-scroll-container]` 단독에서 `[data-radix-popper-content-wrapper]`(Radix 드롭다운/팝오버)·`[data-popover-portal]`(커스텀 portal 팝오버)까지 단일 `target.closest()` 셀렉터로 OR 확장. +3/-1, 다른 로직(리스너 등록·해제, body.overflow 설정, scrollLocked 플래그) 무변경.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/hooks/useScrollLock.ts`
+
+### 배경 / 비고
+- **증상**: 위젯 설정 드로어(`PropertyDrawer`)에서 위젯 타입 선택창(`WidgetTypeSelector` 내부 Radix `Select`)을 열면 드롭다운이 세로로 스크롤되지 않아, 맨 아래 "컨테이너 위젯" 그룹의 빈 컨테이너 항목(`empty-input`·`empty-viewer`·`empty-sub-viewer`·`empty-external-viewer`)을 선택할 수 없던 버그.
+- **근본 원인**: `PropertyDrawer` 가 열릴 때 활성화하는 `useScrollLock(isOpen)` 이 `document` 에 non-passive `wheel`/`touchmove` 리스너를 달고, 타깃이 `[data-scroll-container]` 내부가 아니면 `preventDefault()` 로 스크롤을 취소한다. Radix `SelectContent` 는 `document.body` 하위로 포탈되어 어떤 scroll-container 에도 속하지 않으므로(자체 `overflow-y-auto max-h` 보유에도 불구하고) 휠/터치가 전부 취소되었다.
+- **수정 정당성**: `PropertyDrawer.tsx:105-107` 의 click-outside 핸들러가 이미 `data-radix-popper-content-wrapper`·`data-popover-portal` 을 "드로어 내부"로 취급하는 기존 패턴을 그대로 미러링. 스크롤 차단을 **완화**만 하며(예외 추가), `body.overflow:hidden`(1차 방어선)으로 배경 스크롤 누수는 불가능.
+- **부가 효과**: 같은 드로어의 Popover 기반 picker(`TabContentSelector`·`ButtonTargetPopover`) 의 동종 잠복 버그도 함께 해소(동일 Radix 포탈 래퍼 사용).
+- **시각 검증 필요**: lint/typecheck 통과만으로 스크롤 동작은 검증 불가 — 마스터가 `pnpm dev` 기동 후 드로어 → 위젯 타입 Select → 휠 스크롤 → 빈 컨테이너 선택 흐름 확인 권장(태블릿 폭 touch 포함).
+- 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft i-dev, 본 patch-note(`-문서`)=Project-I2 main. origin push 안 함.
+
 ## v001.692.0
 
 > 통합일: 2026-06-09
