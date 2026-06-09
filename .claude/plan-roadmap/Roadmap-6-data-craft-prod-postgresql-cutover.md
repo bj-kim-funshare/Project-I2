@@ -4,11 +4,11 @@
 
 ## 프롬프트
 
-1️⃣ 🔴 /task-db-structure data-craft, prod 빌드 DDL 교정 — 소스 빌드 DDL(run1-tables.up.sql·run2-routines.up.sql)을 현 dev psql 실상태와 일치: 릴레이션 3테이블/SP 2개/sp_manage_data_group sync 블록 제거, billing_anchor_day(smallint, CHECK 1~31)·client.business_number 부분 unique·data_values HASH(group_id) 8파티션 반영
+1️⃣ 🟢 /task-db-structure data-craft, prod 빌드 DDL 교정 — 소스 빌드 DDL(run1-tables.up.sql·run2-routines.up.sql)을 현 dev psql 실상태와 일치: 릴레이션 3테이블/SP 2개/sp_manage_data_group sync 블록 제거, billing_anchor_day(smallint, CHECK 1~31)·client.business_number 부분 unique·data_values HASH(group_id) 8파티션 반영
 
-1️⃣ 🔴 /group-policy data-craft, 컷오버용 그룹 정책 전반 갱신 — **db.md** 연결정보(connection_style)를 레거시 MySQL DB_* → prod PostgreSQL PG_* 기준으로 보정, **deploy.md** 배포 env_management/deploy_command 에 PG_* 주입·단일 psql 엔진 반영(DB_ENGINE 잔재 정리), 그 외 **dev.md/group.md** 도 컷오버로 바뀔 정책 있으면 함께 보정
+1️⃣ 🟢 /group-policy data-craft, 컷오버용 그룹 정책 전반 갱신 — **db.md** 연결정보(connection_style)를 레거시 MySQL DB_* → prod PostgreSQL PG_* 기준으로 보정, **deploy.md** 배포 env_management/deploy_command 에 PG_* 주입·단일 psql 엔진 반영(DB_ENGINE 잔재 정리), 그 외 **dev.md/group.md** 도 컷오버로 바뀔 정책 있으면 함께 보정
 
-🔴 /plan-enterprise data-craft, **BE prod psql 좌표 `_PROD` 분기** — `constant.ts` 의 `PG` 객체(HOST/USER/PASSWORD)를 `resolveDbName` 처럼 `NODE_ENV` 분기(`PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어 + `*_PROD_NOT_CONFIGURED` throw 가드)로 전환, `PG_PORT` 단일 유지, `.env`/`.env.example` 에 `PG_*_PROD` 키 + `DB_NAME_PROD=postgres`(prod psql DB명) 추가. 미반영 시 prod BE 가 dev psql 로 오접속 → **프롬프트 5(배포) 전 필수 선행**, 프롬프트 3·4(데이터 이관)와 독립이라 병렬 가능. (group-policy 프롬프트 2 에서 발견된 선행 코드 갭)
+🟢 /plan-enterprise data-craft, **BE prod psql 좌표 `_PROD` 분기** — `constant.ts` 의 `PG` 객체(HOST/USER/PASSWORD)를 `resolveDbName` 처럼 `NODE_ENV` 분기(`PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` 페어 + `*_PROD_NOT_CONFIGURED` throw 가드)로 전환, `PG_PORT` 단일 유지, `.env`/`.env.example` 에 `PG_*_PROD` 키 + `DB_NAME_PROD=postgres`(prod psql DB명) 추가. 미반영 시 prod BE 가 dev psql 로 오접속 → **프롬프트 5(배포) 전 필수 선행**, 프롬프트 3·4(데이터 이관)와 독립이라 병렬 가능. (group-policy 프롬프트 2 에서 발견된 선행 코드 갭)
 
 🔴 /task-db-data data-craft, prod MySQL→psql **일반 데이터 이관** changeset 작성 — **pre-flight 게이트(이관 차단): 소스 prod MySQL 에서 `SELECT count(*) FROM (SELECT value_id, group_id FROM data_values GROUP BY 1,2 HAVING count(*)>1) t` = 0 확인, 0 아니면 이관 중단. prod psql 은 `data_values` 파티션 PK `(value_id, group_id)` 를 강제하므로 중복쌍 존재 시 벌크 로드가 중도 실패함(dev `data_values_pkey` 는 INVALID·비강제였으나 prod 빌드 DDL 은 올바르게 강제 — 프롬프트 1 발견).** 엔진변환(uuid·enum 대소문자·smallint 0/1·jsonb·timestamp·IDENTITY 재설정) + column_type 오분류 등 prod 데이터 호환 교정 + 릴레이션 테이블 제외. (결제는 다음 프롬프트로 분리)
 
