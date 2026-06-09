@@ -22842,3 +22842,21 @@ data-craft:
 
 ### 비고
 - 관련 task-db-data(기존 '2999' 프로모 client 백필)는 dev 진단 결과 **대상 0건·청구 감사 클린**으로 정정 SKIP(별도 완료). prod(MySQL 동결)는 범위 밖.
+
+## v001.661.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스9 — 화살표 상단선 정렬 방향 교정.** 핫픽스8(translate 더 음수)이 오히려 화살표를 더 아래로 내린 것을 보고, 회전 변환과 결합된 translate 좌표에서 **더 음수 = 더 아래**임을 확인하고 양수 방향으로 교정(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 핫픽스9** (`862b4933`): `PopoverArrow` 의 `translate-y` 를 음수(`calc(-50% - 5px)`)에서 양수 방향(`calc(1px - 50%)` = -50%+1px)으로 교정해 회전 다이아몬드 꼬리를 위로 올림(원래 -2px 대비 위로 ~3px). Tailwind `+` 부호 파싱 리스크 회피 위해 부호 없는 `calc(1px - 50%)` 형태 사용 — `pnpm build` 결과 CSS 에서 규칙 생성 검증 완료.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors. `pnpm build` exit 0 + 생성 CSS 에 `calc(1px - 50%)` 규칙 확인.
+- **런타임 시각(마스터)**: dev 재기동 후 꼬리 밑이 말풍선 상단선에 붙는지 확인. 미세 차이면 translate px 값만 ±조정(부호 규칙: 양수↑/음수↓). prod 무관.
