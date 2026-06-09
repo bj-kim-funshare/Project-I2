@@ -22935,3 +22935,22 @@ data-craft-server:
 ### 남은 경계 (알려진 카브아웃)
 - `dataViewerChange/change.subGridColumn.ts:72` 의 일반 열 추가 경로는 요청의 `col.columnType` 을 그대로 사용한다(헬퍼 미적용). 사용자가 rowId 열을 수동 추가하는 흐름은 실제로 없어 현재 무해하나, 헬퍼가 모든 경로에 보편 적용된 것은 아님.
 - 부수 발견(범위 외): `src/config/database.ts` pg OID 23(int4) 타입 파서 부재 — int4 컬럼이 문자열로 반환. 이번 트리거 에러와는 무관하나 TS측 숫자 비교 잠복 클래스, 별도 plan 후보.
+
+## v001.665.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스10 — 화살표를 FloatingArrow 라이브러리로 전환.** 화살표를 수동 CSS(회전 사각형·stroke·drop-shadow·translate)로 9회 깎으며 매번 어긋난 근본 원인은 메인 세션이 렌더를 못 봐 픽셀 튜닝이 블라인드였던 것. 전용 라이브러리에 위임(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 핫픽스10** (`cd2670f8`): OnboardingHint 의 Radix Popover(PopoverAnchor/PopoverContent/PopoverArrow) 기반 구현을 `@floating-ui/react` 의 `useFloating` + `FloatingArrow` + `FloatingPortal` 로 전면 교체. 화살표 위치·방향·본체 연결을 라이브러리가 계산(수동 px 튜닝 제거), `FloatingArrow fill=var(--popover) stroke=var(--border) strokeWidth=1 tipRadius=2` 로 테두리 꼬리. 앵커는 `cloneElement` 로 자식(버튼)에 `setReference` 부착 — 래퍼 DOM 없이 헤더 레이아웃 보존. arrow 미들웨어 ref 는 lint(refs 규칙) 때문에 콜백 ref(`setArrowEl`) 패턴 사용. `@floating-ui/react ^0.27.19` 를 package.json 에 명시 추가(기존 트랜지티브 해석분).
+
+### 영향 파일
+data-craft:
+- 수정: `package.json`, `pnpm-lock.yaml`, `src/features/onboarding/ui/OnboardingHint.tsx`
+- (참고: `src/shared/ui/shadcn/popover.tsx` 의 PopoverArrow 는 이제 미사용 — 본 핫픽스 범위에서 미정리)
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors, `pnpm build` exit 0.
+- **런타임 시각(마스터)**: dev 재기동 후 화살표가 본체에 깔끔히 붙고 바깥(버튼)으로 향하는지 확인. 어색하면 라이브러리 props(offset/tipRadius/strokeWidth)로 즉시 조정. prod 무관.
