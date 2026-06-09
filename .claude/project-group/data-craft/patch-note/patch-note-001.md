@@ -23118,3 +23118,23 @@ data-craft-server:
 - 버그1 시각 검증 여전히 미완(이번 수정으로 dev 기동 가능해졌으므로 이제 화면 확인 가능). 실패 시 FE 계측.
 - 버그2(레거시 '항목' 열 column_type=1)는 여전히 별도 `/task-db-data data-craft` DML 필요.
 - 프로젝트 전체 lint `db.ts no-explicit-any` 1건은 plan #258 선존 부채(무관).
+
+## v001.673.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #259 (funshare-inc/data-craft) — 핫픽스1
+
+**"열 본문 스타일 편집" 모달 안에 커서가 있을 때 트랙패드 스크롤이 뒷배경(데이터 뷰어 그리드)으로 새어나가 가로·세로로 스크롤되던 누수 차단 (3개 뷰어 사본).** 이 모달은 `createPortal(document.body)` 커스텀 모달인데, 다른 다이얼로그(ImageDialog·FileDialog 등)와 달리 공용 `useScrollLock` 훅을 호출하지 않아 배경 스크롤이 잠기지 않았다.
+
+### 페이즈 결과 (핫픽스1 · WIP: data-craft i-dev)
+- **핫픽스1** (`db337c88`): 코드베이스 표준 패턴(기존 `useScrollLock` 훅) 재사용. (1) 3개 뷰어 사본 `FsGridCellStyleDialog.tsx` 에 `useScrollLock(isOpen)` 추가(핸들러 훅 직후·early return 이전 = rules-of-hooks 준수). (2) 3개 사본 `DialogTable.tsx` 의 본문 스크롤 래퍼 div 에 `data-scroll-container` 부여 → 잠금 중에도 모달 내부 조건 목록 스크롤은 허용(ImageDialog 동일 방식). `useScrollLock` 이 `body.overflow=hidden` + `body.dataset.scrollLocked`(그리드 drag-scroll 차단 신호) + 비-passive wheel/touchmove preventDefault(deltaX·deltaY 양축) 로 배경 누수 차단.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/cell-style-dialog/{FsGridCellStyleDialog.tsx, DialogTable.tsx}`
+- `packages/fs-sub-data-viewer/src/widgets/cell-style-dialog/{FsGridCellStyleDialog.tsx, DialogTable.tsx}`
+- `packages/fs-external-data-viewer/src/widgets/cell-style-dialog/{FsGridCellStyleDialog.tsx, DialogTable.tsx}`
+
+### 검증
+- 메인 세션 5단계(diff ⊆ 영향파일 6개, 구조 동일성) 통과. build:packages 9/9 성공. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (0 error / 87 warning). advisor #2 PASS(BLOCK 없음).
+- 시각 검증은 PENDING 게이트에서 마스터가 확인(메인 세션 렌더 블라인드). fs-data-viewer 는 dev src alias(빌드 불필요·하드 리프레시 반영), sub/external 는 dist alias(반영엔 build:packages 필요).
