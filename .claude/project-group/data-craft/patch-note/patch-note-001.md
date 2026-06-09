@@ -23188,3 +23188,27 @@ data-craft:
 - 정적: 각 페이즈 `pnpm typecheck:all && pnpm lint` 0 errors.
 - advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
 - **런타임 시각/동작(마스터, dev 재기동)**: ①디자인모드 섹션0 → #1 단독, 닫기→#2→#3 순(닫은 힌트 재등장 X) ②앞으로보지않기→리로드 후도 영구 비표시 ③섹션 추가→#4(좌상단 빈영역) ④섹션 선택→#5(첫 area 컨트롤바 강제표시+좌측 말풍선), 타 area 컨트롤바는 hover-only 유지 ⑤동시 2개 노출 없음. placement(right/left)가 뷰포트 충돌로 flip 되면 라이브러리 props(flip/offset)로 조정([[feedback_data_craft_popover_arrow_floating_ui]]). prod 무관.
+
+## v001.676.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #263 (funshare-inc/data-craft)
+
+**데이터 뷰어 디자인 모드 열 메뉴 — 칸반 기준열 제거 + 비활성 토글 툴팁.** 디자인 모드 열 메뉴 모달에서 '칸반보드 기준열 지정' 토글을 전 타입에서 제거하고, 비활성 상태의 '행 그룹 지정'·'고유값만 허용' 토글이 사유를 hover 툴팁으로 실제 표시하도록 렌더링을 보강했다. FE-only(data-craft), DB/BE·신규 dep 무변경.
+
+### 페이즈 결과
+- **Phase 1 (fix)** (`2ff0a4d`): `menuItems.ts`에서 '칸반보드 기준열 지정' 토글 블록(`if isKanbanColumnAllowed && title !== 'ID'`)을 제거하고, 해당 블록에서만 쓰이던 `isKanbanColumnAllowed` 계산과 `KANBAN_ALLOWED_COLUMN_TYPES`·`createKanbanConfigChange` import를 함께 제거. 칸반 기능 본체(`widgets/kanban-board/*`, `KanbanColumnDialog`, `auto-assign-base-column`, `kanbanColumnField` 모델, `createKanbanConfigChange` 정의)와 `ColumnMenuRole` 유니온의 `'kanbanKey'` 엔트리·i18n `kanbanReference` 키는 무수정 보존(고아지만 무해 — 열 메뉴 UI 진입 경로 하나만 제거).
+- **Phase 2 (feat)** (`b8b09e1`): `SwitchChipB`에 `tooltip?: string` prop 추가 + `disabled && tooltip`일 때 footer '열 삭제' 버튼과 동일한 group-hover absolute 툴팁 렌더(버튼 className에 `relative group` 추가, div 래핑 없이 `grid-cols-2` 레이아웃 유지, `bg-popover`/`text-popover-foreground`/`border-border` 다크모드 토큰 클래스 verbatim 복제). `ColumnMenuVariantB` 토글 매핑에서 `tooltip={toggle.tooltip}` 전달. i18n 4개 파일(ko/en/zh/ja)의 `rowGroupingTooltip`("행 그룹을 사용할 때만 사용 가능")·`uniqueDisabledDueToDuplicates`("중복 값이 존재하여 사용 불가") 문구 in-place 갱신(키 추가 없음, `types.ts` 무수정). disabled/tooltip 데이터 배선은 `menuItems.ts`에 이미 존재 — 무수정.
+
+### 핵심 배경
+'행 그룹 지정'·'고유값만 허용' 토글의 `disabled` 조건과 `tooltip` 문자열은 이미 `menuItems.ts`에 존재했으나, 활성 렌더러 `SwitchChipB`가 `tooltip` prop을 받지/렌더하지 않아 화면에 안 떴다(footer '열 삭제' 버튼만 hover 툴팁 렌더). 따라서 (2)(3)은 "데이터는 있으나 렌더 누락 + 문구 정렬", (1)은 토글 블록 제거였다.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts`, `packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/{SwitchChipB.tsx, ColumnMenuVariantB.tsx}`, `packages/fs-data-viewer/src/shared/config/i18n/translations/{ko.ts, en.ts, zh.ts, ja.ts}`
+
+### 검증
+- 정적: 각 페이즈 `pnpm typecheck:all && pnpm lint` 0 errors(87 warnings, 기존).
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **런타임 시각/동작(마스터, 하드 리프레시 — dev는 `fs_data_viewer`를 src alias로 사용해 빌드 불필요 [[project_data_craft_dev_src_alias]])**: ①어떤 타입 열에서도 열 메뉴에 '칸반보드 기준열 지정' 미표시 ②행 그룹 OFF → '행 그룹 지정' 칩 hover → "행 그룹을 사용할 때만..." 툴팁 ③중복 값 컬럼 → '고유값만 허용' 칩 hover → "중복 값이 존재하여..." 툴팁.
+- **알려진 콘솔 노이즈(동작 무관)**: 툴팁 `<div>`가 `<button>` 자식이라 React dev 모드가 `validateDOMNesting` 경고를 콘솔에 출력할 수 있음 — 렌더/동작에는 영향 없음. 마스터가 거슬리면 핫픽스로 `<div>`→`<span>` 또는 sibling 래핑 전환 가능.
