@@ -22954,3 +22954,22 @@ data-craft:
 ### 검증
 - 정적: `pnpm typecheck:all && pnpm lint` 0 errors, `pnpm build` exit 0.
 - **런타임 시각(마스터)**: dev 재기동 후 화살표가 본체에 깔끔히 붙고 바깥(버튼)으로 향하는지 확인. 어색하면 라이브러리 props(offset/tipRadius/strokeWidth)로 즉시 조정. prod 무관.
+- ⚠️ **배포 주의**: 신규 직접 의존성(`@floating-ui/react`) 추가 — i-dev 를 당겨받는 환경(마스터 dev 체크아웃 포함)은 `pnpm install` 후 dev 재기동 필요(미실행 시 Vite "Failed to resolve import @floating-ui/react"). 본 통합 시 마스터 체크아웃 install 완료.
+
+## v001.666.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스11 — "닫기" 버튼(일시적 닫힘) + 좌측 배치, 오늘-스누즈 제거.** 마스터 요청: "오늘만 닫기"→"닫기"로 변경, 왼쪽 끝 배치, 누르면 그 시점에만 닫히고 조건 재충족 시 즉시 재등장(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 핫픽스11** (`d9e5f364`): ① 보조 버튼 라벨 "오늘만 닫기"→**"닫기"**(`onboarding.snoozeToday`→`onboarding.close`, ko "닫기"/en "Close"), 레지스트리 `snoozeKey`→`closeKey`. ② 액션 행을 `justify-between` 으로 바꿔 "닫기"를 **왼쪽 끝**, "앞으로 보지 않기"를 오른쪽에 배치. ③ 동작 = **일시적 닫힘**: OnboardingHint 에 컴포넌트 로컬 `closed` useState 추가, 노출 게이트 `open && !closed && hint`. 영속(서버/localStorage) 없이 그 순간만 닫고, 컴포넌트 리마운트(뷰모드 재진입 등 조건 재충족) 시 초기화되어 즉시 재등장. ④ 기존 오늘-스누즈 기제(localStorage `dc_hint_snooze_*`, SNOOZE_KEY_PREFIX/getTodayStr/isSnoozedToday/snoozed/markSnoozed/snoozeToday) 를 store·hook 에서 완전 제거.
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/onboarding/model/onboardingStore.ts`, `src/features/onboarding/lib/useOnboardingHint.ts`, `src/features/onboarding/model/hintRegistry.ts`, `src/features/onboarding/ui/OnboardingHint.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- 정적: `pnpm typecheck:all && pnpm lint` 0 errors.
+- **런타임 시각(마스터)**: dev 재기동 후 "닫기"가 왼쪽, 클릭 시 닫히고 뷰모드 재진입 시 재등장, "앞으로 보지 않기"는 영구 비표시 확인. prod 무관.
