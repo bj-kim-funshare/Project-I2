@@ -23564,3 +23564,30 @@ data-craft-server:
 
 ### 비고
 외부 리더 cross-repo: 코드 WIP 2종(`-작업-data-craft` / `-작업-data-craft-server`)=각 leader i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. `.env.local` 은 gitignored 로컬 파일이라 플랜 커밋 범위 밖(마스터 수동 설정).
+
+## v001.685.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #268 (funshare-inc/data-craft)
+
+**data-craft-server 죽은/미완성 코드 제거 — 미완성 B방식 결제(price-mirror) + 폐기된 예약 프로모션 orphan.** BE 결제 도메인 전수조사에서 도출된 2건의 죽은/미완성 코드를 제거. ① `CHARGE_MODE='price-mirror'`(PG B방식)는 실제 토스 호출 없이 amount 를 priceId 문자열에 인코딩/디코드하는 미완성 데모 스텁이라 운영 토글 시 가짜 동작 위험 → 전부 제거하고 `direct-amount`(A방식) 단일 경로로 정리. ② 이미 DB 컬럼까지 DROP 된 "예약 프로모션" 기능의 호출처 0건 orphan 알림 함수 제거. `direct-amount` 가 기존 운영 기본값이라 **런타임 결제 동작 불변**.
+
+### 페이즈 결과
+- **Phase 1 (refactor, data-craft-server)** (`179c97e`): `charge.service.ts` 의 `CHARGE_MODE` 환경분기 제거 → `charge()` 가 `chargeDirectAmount()` 를 직접 호출하도록 단순화하고 `chargePriceMirror`/`ensureTossPrice`/`priceCache`/`__clearPriceCacheForTest` 삭제. `tossPayments.service.ts` 의 `RegisterPriceArgs`/`registerPrice`/`chargeBillingByPrice` 스텁 삭제. `charge.types.ts` 의 B방식 주석 정정. `.env.example` 의 `CHARGE_MODE` 블록 제거. 제거 기능 전용 런북 `docs/runbook-charge-mode.md` 파일 삭제. `chargeDirectAmount`·SEC-SRV-45·`ChargeResult`/`ChargeMetadata`·실 토스 API 함수(`chargeBilling` 등) 전부 보존.
+- **Phase 2 (chore, data-craft-server)** (`0afbf8b`): `notification.service.ts` 의 호출처 0건 orphan export 함수 `createPendingPromotionAbandonedNotification`(JSDoc 포함 15줄) 제거. 나머지 알림 함수(`createPromotionUnavailableNotification`/`createPromotionExpiryNotification` 등) 전부 보존. DB 마이그레이션 화석 파일은 실행 이력 보존 결정에 따라 미삭제.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/charge.service.ts`, `src/services/tossPayments.service.ts`, `src/types/charge.types.ts`, `.env.example`
+- 삭제: `docs/runbook-charge-mode.md`
+- 수정: `src/services/notification.service.ts`
+
+### 검증
+- 두 페이즈 모두 `pnpm build`(tsc) exit 0 — dangling 참조 0건(BE eslint 게이트는 타입에러 미검출이므로 메인세션이 tsc 직접 실행 [[feedback_data_craft_server_lint_no_tsc]]).
+- 잔존 식별자 grep 0건: `CHARGE_MODE`/`price-mirror`/`registerPrice`/`chargeBillingByPrice`/`ensureTossPrice`/`chargePriceMirror`/`__clearPriceCacheForTest`/`priceCache`(Phase 1), `pending_promotion`/`pendingPromotion`/`createPendingPromotionAbandonedNotification`(Phase 2, src·test).
+- 결제 진입점 `charge()` 시그니처·반환형(`ChargeResult`) 불변. 4개 호출부(첫결제·갱신·업그레이드차액·좌석변경/프로모션구매)는 `charge()` 단일 진입점만 호출 — 동작 불변.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **별개 health 노트(회귀 아님)**: 미접촉 `src/types/db.ts:7` 의 기존 `@typescript-eslint/no-explicit-any` eslint 에러는 plan #258(config 단일 pg 엔진화) 잔존분 — 본 작업 affected_files 밖이라 미수정.
+
+### 비고
+외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. 단일 work repo(N=1) 케이스라 코드 WIP 1종. origin push 안 함(마스터 인자에 push 키워드 없음 [[feedback_plan_enterprise_no_auto_push]]).
