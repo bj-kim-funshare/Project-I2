@@ -23095,3 +23095,26 @@ data-craft-server:
 - **뷰 모드에서 추가 열 값이 새로고침하면 사라지는 문제(버그2)는 본 핫픽스로 안 고쳐진다 — 레거시 데이터 결함.** 일부 서브그리드의 '항목' 열(viewer_type=text)이 `column_type=1`(숫자형)로 저장돼 있어, 텍스트 입력이 숫자 트리거에 거부되어 사일런트 롤백(숫자 입력은 통과). dev psql 기준 현재 3건(group 1681·1682·1684 의 '항목').
 - 해결: 별도 **`/task-db-data data-craft`** — 서브그리드(parent_row_num IS NOT NULL) 열 중 viewer_type 이 비숫자(number/currency/percent/rowId 제외)인데 `column_type=1` 인 것을 `2`로 UPDATE. (메인 그리드 mismatch·메인 rowId=1 은 범위 외 — 별도 audit.)
 - 신규 추가 열은 이미 올바른 타입으로 생성됨(bulkSave `?? 2`) — 코드 결함 아님.
+
+## v001.672.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #257 (funshare-inc/data-craft) — 핫픽스2
+
+**핫픽스1이 도입한 빌드 크래시(TS2305) 즉시 교정.** 핫픽스1의 `viewer.bulkSave.column.ts` 가 `invalidateMetaCache` 를 `'../viewer'` 배럴에서 import 했으나 해당 배럴은 이 함수를 export 하지 않아(`viewer.cache.ts` 에 존재) ts-node dev 서버가 `TS2305: Module '"../viewer"' has no exported member 'invalidateMetaCache'` 로 크래시. import 경로를 `dataViewerPost.service.ts` 와 동일하게 `'./viewer.cache'` 로 분리 교정.
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2)** (`68ce5ca`, data-craft-server): import 한 줄을 둘로 분리 — `updateSubGridRowDataList` 는 `'../viewer'` 유지, `invalidateMetaCache` 는 `'./viewer.cache'` 로. 로직 변경 없음.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/viewer/viewer.bulkSave.column.ts`
+
+### 검증 (이번엔 tsc 포함)
+- **`pnpm build`(tsc) exit 0** — 전체 프로젝트 타입체크 통과(TS2305 해소). eslint(변경 파일) exit 0.
+- **회고/프로세스 결함**: data-craft-server lint 게이트는 `pnpm lint`(eslint)뿐이라 **타입 에러를 못 잡는다**. 핫픽스1의 잘못된 import 가 eslint 게이트를 통과해 dev 런타임에서야 발견됨. → BE 페이즈 검증에 `pnpm build`(tsc) 를 포함해야 함(메모리화 대상). 워크트리는 node_modules 미공유라 `pnpm install --prefer-offline`(~1s, store cache) 선행 필요.
+
+### 잔여 (변동 없음)
+- 버그1 시각 검증 여전히 미완(이번 수정으로 dev 기동 가능해졌으므로 이제 화면 확인 가능). 실패 시 FE 계측.
+- 버그2(레거시 '항목' 열 column_type=1)는 여전히 별도 `/task-db-data data-craft` DML 필요.
+- 프로젝트 전체 lint `db.ts no-explicit-any` 1건은 plan #258 선존 부채(무관).
