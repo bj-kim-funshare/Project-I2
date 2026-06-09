@@ -22993,3 +22993,36 @@ data-craft:
 - **런타임 시각(마스터)**: dev 반영 후 긴 탭 행이 위젯 폭을 넘지 않고 가로 스크롤되는지 확인. macOS 기본 스크롤바는 트랙패드/스와이프 시에만 표시되므로 마우스 휠 가로 스크롤·트랙패드 가로 제스처로 확인(넘침이 사라진 것이 1차 신호). 여전히 스크롤 어포던스가 부족하면 후속으로 스크롤바 가시화(`[&::-webkit-scrollbar]:h-2`) 추가 가능.
 - **알려진 한계**: `tabAlignment` 가 center/end 일 때는 flex 의 알려진 동작상 좌측으로 잘린 부분이 스크롤로 도달 불가할 수 있음(마스터 케이스는 start 정렬이라 무관). 별도 보고 시 후속.
 - **범위**: 본 핫픽스는 가로 탭만 대상. 세로 탭의 세로 방향 넘침은 미보고 — 발생 시 추가 핫픽스.
+
+## v001.668.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #258 (funshare-inc/data-craft)
+
+**data-craft-server BE 에서 mysql2/MySQL 잔재 완전 제거 — 단일 PostgreSQL 엔진화.** prod 도 배포 시점에 psql 컷오버를 동시 진행하므로 dual-engine 공존을 폐기(Option A — master 결정). dev 런타임은 이미 100% psql 이었고, 본 작업은 코드에서 mysql2 의존성·타입 import·엔진 토글·MySQL-스타일 잔재·레거시 파일을 걷어내는 정리. 완료 시 `grep -rn mysql2 src/` == 0. `pgAdapter`(`?`→`$n` 변환·affectedRows 헬퍼·PgConnectionAdapter·pg 타입파서)는 "MySQL"이 아니라 pg-native 인프라로 **유지**.
+
+### 페이즈 결과 (12 페이즈 · WIP A: data-craft-server i-dev)
+- **Phase 1** (`3e5c5e3`): pg-native DB 타입 모듈 `src/types/db.ts` 신설 — DbRow(←RowDataPacket)·DbConnection(←PoolConnection)·DbResultHeader(←ResultSetHeader/OkPacket).
+- **Phase 2~8** (`e46a6df`·`dc5f69d`·`819d881`·`65838f6`·`2c54f2e`·`f9bc8d1`·`87e47fd`): mysql2 타입 import 91파일 일괄 교체(models 38 + services 42 + types/middlewares/routes 11). named import + inline `import('mysql2/promise').X` 캐스트 모두 정규화, 디렉토리 깊이별 경로(`../types/db`·`../../types/db`·`./db`). 로직·SQL 무변경.
+- **Phase 9** (`a4a7791`): config 단일 pg 엔진화 — database.ts(mysqlPool/mysqlConfig/createPool·DB_ENGINE 분기 6 제거, getConnection→DbConnection 캐스트 제거, pg 타입파서 OID 1114 KST Date/OID 20 BIGINT·translatePlaceholders·attachAffectedRows 보존), pgAdapter(`implements DbConnection`, execute 제네릭 row-array `<T=DbRow[]>:[T,unknown[]]` 정렬), constant(DB·DB_ENGINE 제거, PG·resolveDbName 보존), envValidator(DB_* 제거·DB_ENGINE 게이트 제거·PG_* 무조건 필수).
+- **Phase 10** (`a1713c8`): MySQL-스타일 코드 잔재 정리 — inputStore `hexToBuffer`→`?::uuid`(builder.model 선례), sqlSanitizer `escapeIdentifier`(백틱·호출 0) 삭제.
+- **Phase 11** (`1627f8f`): 레거시 MySQL 파일 제거 — `db.sql/`(27)·`db.sql.backup`·루트 MySQL SQL 10종·mysql2 스크립트 5종·clone-test `shell_step_load.sh`, package.json `backfill:billing` 제거(-8209 lines).
+- **Phase 12** (`3f9f4ff`): `pnpm remove mysql2 --lockfile-only` — package.json/pnpm-lock 에서 mysql2 + 고아 transitive(denque·generate-function·long·lru-cache·named-placeholders·sqlstring) 제거.
+
+### 영향 파일
+data-craft-server:
+- 신설: `src/types/db.ts`
+- 수정: src/ 91파일 타입 import sweep + `src/config/{database,pgAdapter,constant,envValidator}.ts` + `src/models/inputStore.model.ts` + `src/utils/sqlSanitizer.ts` + `package.json` + `pnpm-lock.yaml`
+- 삭제: `db.sql/`(27) · `db.sql.backup` · 루트 MySQL SQL 10종(migration*.sql·rollback.step4/roadmap5/data_craft_test·hotfix-*·fix_sp_manage_data_group.sql) · `scripts/`(mysql2 5종) · `db-data-changes/20260528153934_clone-test/shell_step_load.sh`
+
+> 머지 충돌 해소: 루트 `capture.sql`/`forward.sql`/`rollback.sql` 은 병렬 task-db-data 잡(exec=dml-20260609112312)이 활성 작업파일로 사용 중이라 삭제 철회·보존(레거시 아님·mysql2 0).
+
+### 범위 밖 (master 지정)
+- `.env`/`.env.example` DB_* 좌표 보존(carve-out — 코드가 PG_*만 읽어 dead config 로 무해). envValidator 코드는 단일 pg 화(파일과 코드 구분).
+- LIKE→ILIKE, Option B(`?`→`$n` 전면 재작성), 주석 내 MySQL 언급(선택) 미포함.
+
+### 검증
+- **정적**: `tsc --noEmit` 0 errors(91파일 sweep+config 타입 정합 — 바인딩 타입 게이트). `grep -rn mysql2` == 0(src/·package.json·pnpm-lock). per-phase lint(eslint)은 WIP worktree node_modules 부재로 consolidated `tsc --noEmit` 로 대체(이 리팩터 클래스에선 동급 이상 신호 — 스킬 7c step6 절차 드리프트 명시).
+- **런타임**: psql-audit 하네스 smoke 3/3 PASS(단일 pg 부팅·envValidator·디스포저블 클론 DB OK, fallbackMode=false). Phase 10 `?::uuid` 직접 psql 프로브 — 행 매칭 count 1·uuid_match true(hexToBuffer 바인딩 동치).
+- **전체 라우트 워크 미완(사전존재 결함)**: psql-audit full run 이 smoke 직후 fatal — `sp_manage_data_group`(psql SP)이 2026-06-08 relation cleanup 에서 드롭된 `data_group_relation` 테이블을 여전히 참조. **i-dev base(`25dba2a`) 대조 실행이 동일 지점·동일 fatal 재현 → #258 무회귀(byte-identical) 입증.** ⚠️ 이 결함은 #258 외 **별개 후속**(relation cleanup 의 BE/SP 완성 — 드롭된 테이블 참조 SP 정리 필요).
+- advisor 계획(#1)·완료(#2) PASS(BLOCK 없음).
