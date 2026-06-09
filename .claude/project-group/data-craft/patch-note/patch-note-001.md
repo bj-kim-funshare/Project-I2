@@ -22754,3 +22754,21 @@ data-craft-server:
 - **라이브 dev pg 검증**: prefix 제거 uuid(`afc95187-...`)가 `?::uuid` 캐스트 통과(기존 area row 와 PK 충돌 = 컬럼이 bare uuid 저장 확인) + fresh uuid 로 `page_layout_area` INSERT 성공(트랜잭션 ROLLBACK).
 - advisor 완료(#2) PASS(BLOCK 없음) — `builder.page.ts` 호출자 dashed uuid 라 회귀 무관·widget.id bare 라 dedup 일관성 확인.
 - 런타임 시각 검증(위젯 설정/레이아웃 저장 성공)은 마스터 재기동 후. prod=MySQL 동결 미적용.
+
+## v001.657.0
+
+> 통합일: 2026-06-08
+> 플랜 이슈: #253 (funshare-inc/data-craft)
+
+**온보딩 말풍선 핫픽스7 — 화살표 외곽선 바깥 두 변으로 교정.** 핫픽스6 회전 정사각형의 테두리가 바깥이 아니라 안쪽 두 변에 그려져 화살표가 안으로 파이던 것을, 마스터 시각 확정에 근거해 정반대 두 변으로 교정(FE-only, data-craft).
+
+### 페이즈 결과
+- **Phase 핫픽스7** (`6cffacaf`): `PopoverArrow` 회전 다이아몬드의 외곽선을 `border-l border-t` → `border-r border-b` 로, 라운딩을 `rounded-tl-[2px]` → `rounded-br-[2px]` 로 교정. 마스터가 "안쪽으로 들어온다"고 확정해준 증거로 바깥 돌출 두 변을 특정(추측 아님). 나머지(rotate-45·translate·size·bg-popover·fill-popover) 불변.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/ui/shadcn/popover.tsx`
+
+### 검증
+- 정적: lint gate `pnpm typecheck:all && pnpm lint` 0 errors.
+- **런타임 시각(마스터)**: 화살표 외곽선이 바깥 돌출 두 변에 적용 — dev 재기동 후 꼬리가 버튼 방향 바깥으로 보이는지 확인. (화살표 시각 반복 회고: main 세션이 렌더를 못 봐 1px·옅은색·회전축을 정적으로 단정한 게 반복 원인. 결론 = 이 앱의 검증된 Tooltip 회전사각형 방식 + 마스터 시각 확정 기반 교정.) prod 무관.
