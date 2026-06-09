@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.691.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #269 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 3 (fix, data-craft-server)** (`228a4e7`): `.env` 의 `PG_HOST_PROD` 를 `192.168.0.10`(사설망) → `211.211.222.105`(기존 prod 공인 호스트) 로 정정. 한 줄 변경, 나머지 `PG_*_PROD`·`DB_NAME_PROD`·dev 키 불변.
+
+### 영향 파일
+data-craft-server:
+- 수정: `.env` (PG_HOST_PROD 값)
+
+### 배경 / 비고
+- v001.690.0 에서 주입한 prod psql 호스트(`192.168.0.10` 사설망)를 실제 prod 호스트로 정정. prod psql 은 **레거시 prod MySQL 과 동일 공인 호스트(`211.211.222.105`)에 공존**(psql 5432 vs MySQL 3306) — 컷오버 기간 양 DB 병행 후 MySQL 폐기(Roadmap-6 "MySQL 보존 후 폐기"). 공인 IP 라 AWS EC2 BE 가 직접 도달 — v001.690.0 에서 기록한 **사설 IP reachability 우려 해소**.
+- 외부 리더 cross-repo: 코드 WIP(`-핫픽스1`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-핫픽스1-문서`)=Project-I2 main. origin push 안 함.
+
 ## v001.690.0
 
 > 통합일: 2026-06-09
