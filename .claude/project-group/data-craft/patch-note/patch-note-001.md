@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.706.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft)
+
+**뷰어 조건 스타일 — 불리언 라벨 의미화 + 조건 표 "—" 제거.** 데이터 뷰어 → 그리드 뷰 → 디자인 모드 → 열 메뉴 → 열 본문 스타일 편집(조건부 서식 다이얼로그)의 두 결함을 한 묶음으로 수정. ① 스위치(`boolean`)·체크박스(`checkbox`) 타입 컬럼의 조건 옵션이 둘 다 무의미한 `참`/`거짓` 으로 표시되던 것을 타입별 의미 단어로 분기 — 스위치 → **켜짐/꺼짐**, 체크박스 → **선택/미선택**. ② 조건 표의 "조건" 열은 `ConditionSettingWidget` 만 렌더하는데 입력값 없는 연산자(`isEmpty`·`isNotEmpty`·`isTrue`·`isFalse`)가 값 자리에 `—` 만 표시되어 *어떤 조건인지 식별 불가*하던 것을, 열 타입과 무관하게 제대로 된 연산자 문구(비어있음·채워짐·켜짐/꺼짐·선택/미선택 등)로 렌더. 두 결함은 한 지점으로 수렴 — **(연산자 id + 컬럼 타입) 기준 라벨 해석 공용 헬퍼** `getOperatorLabel(id, t, columnTypeId)` 를 신설하고 추가-버튼 목록과 조건 표 양쪽에서 공유. 연산자 id(`isTrue`/`isFalse`)는 불변 유지하여 저장된 조건 데이터 모델 무변경. 동일 결함이 3개 뷰어 패키지(fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer)에 병렬 복제되어 있어 세 곳 모두 일관 수정.
+
+### 페이즈 결과
+- **Phase 1 (fix)** (`dc38119c`): fs-data-viewer(그리드 뷰 본체, 루트 앱 src alias). i18n 4언어(`ko/en/ja/zh`) `cellStyle.operators` 블록 + types.ts 에 `switchTrue`/`switchFalse`/`checkboxTrue`/`checkboxFalse` 4키 추가(4언어 parity tsc 강제). 공용 `getOperatorLabel.ts` 신설(`isTrue`/`isFalse` × `columnTypeId==='boolean'`→켜짐/꺼짐, `'checkbox'`→선택/미선택, 그 외 폴백; 나머지 연산자는 기존 operators[id]→switch 폴백→id 로직 이전)+index export. `ConditionButtons.tsx` 로컬 헬퍼 제거 후 공용 헬퍼에 `columnTypeId` 전달. `ConditionSettingWidget.tsx` 의 "—" 3개 분기(`NO_INPUT_OPERATORS`·isBoolean 가드·timeline isEmpty/isNotEmpty) → `getOperatorLabel(condId, t, columnTypeId)` 라벨 렌더(`italic` 제거). `always` 분기와 옵션 select placeholder `<option value="">—</option>` 는 의도적 제외.
+- **Phase 2 (fix)** (`4a4b9ee6`): fs-sub-data-viewer(서브 뷰어, dist alias)에 Phase 1 과 동일 변경 복제.
+- **Phase 3 (fix)** (`3bd33595`): fs-external-data-viewer(외부 데이터 뷰어, dist alias)에 Phase 1 과 동일 변경 복제.
+
+### 영향 파일
+data-craft (i-dev, 27 files — 패키지당 9):
+- 3개 뷰어 패키지 각각:
+  - `<pkg>/src/shared/config/i18n/types.ts`
+  - `<pkg>/src/shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+  - `<pkg>/src/widgets/cell-style-dialog/getOperatorLabel.ts` (신규)
+  - `<pkg>/src/widgets/cell-style-dialog/index.ts`
+  - `<pkg>/src/widgets/cell-style-dialog/ConditionButtons.tsx`
+  - `<pkg>/src/widgets/cell-style-dialog/ConditionSettingWidget.tsx`
+- `<pkg>` ∈ { `packages/fs-data-viewer`, `packages/fs-sub-data-viewer`, `packages/fs-external-data-viewer` }
+
+### 검증
+- 3개 페이즈 모두 lint 게이트 `pnpm typecheck:all && pnpm lint` EXIT 0 (0 errors, 89 기존 warnings). fresh 워크트리 `pnpm install` + `build:packages` 선행.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **정적 검증만 수행(메인세션 렌더 미관측)** — 마스터 수동 시각 검증 시나리오:
+  1. 데이터 뷰어 → 그리드 뷰 → 디자인 모드 → **스위치 컬럼** 열 메뉴 → 열 본문 스타일 편집 → 조건 추가 버튼이 "켜짐"/"꺼짐" 표시, 추가 후 조건 표 "조건" 열에 "켜짐"/"꺼짐"(이전 "—" 아님).
+  2. **체크박스 컬럼** 동일 경로 → "선택"/"미선택".
+  3. 텍스트/숫자 컬럼에서 "비어있음"/"채워짐" 조건 추가 → 조건 표에 "—" 아닌 라벨 표시.
+  4. 언어 전환(en/ja/zh) 시 라벨 정상 번역(On/Off·オン/オフ·开启/关闭, Selected/Unselected·選択/未選択·选中/未选中).
+  5. fs-data-viewer 는 src alias라 머지 즉시 반영(하드 리프레시).
+  6. ⚠️ **fs-sub-data-viewer / fs-external-data-viewer 는 dist alias** → 화면 반영에 `pnpm build:packages` + dev 서버 재기동 필요.
+
 ## v001.705.0
 
 > 통합일: 2026-06-10
