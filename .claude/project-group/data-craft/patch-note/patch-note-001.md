@@ -23847,3 +23847,27 @@ data-craft-server:
 
 ### 비고
 Roadmap-8 5플랜 중 2번(요금 계산 정합). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. 후속 3번(프로모션 무결성)은 본 #11 변경 위에서 작업.
+
+## v001.697.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #277 (funshare-inc/data-craft)
+
+**data-craft-server 프로모션 무결성 수정 (Roadmap-8 #3 — #3·#8·#20).** 1회성 프로모션 결제 실패 시 잠금이 안 풀려 정당한 재시도가 영구 차단되거나(#3 CRITICAL), 해지·재구매 반복으로 retention 한도를 초과 사용하거나(#8), 프로모션 갱신 실패가 재시도 정책에서 누락되던(#20) 프로모션 결함 3건을 수정. Roadmap-8 #2의 #11(retention `>=` 종료)을 보존한 채 증분 수정.
+
+### 페이즈 결과
+- **Phase 1 (fix, #20)** (`ff7855b`): `renewPromotionClient`의 charge 실패(grace) 경로에 FAILED payment_history 기록을 추가(try/catch). `renewSingleClient`의 'FAILED-' 센티넬 패턴(status='FAILED', promotionId·seatsAtPayment(협업)·planType='free'·billingCycle='monthly')으로 D-5/3/1 재시도 cron(30일 내 FAILED 이력)이 프로모션 실패도 포착. 정상플랜은 3회 재시도 후 1회 기록이나 프로모션은 1회 실패→grace 구조라 1회 실패마다 1행 기록(의도). line 244 #11 비교 미변경.
+- **Phase 2 (fix, #3)** (`880eae9` + `042f83f` tsc 정정): `promotion.model.ts`에 `releaseBusinessLock(businessKey, promotionId)` 헬퍼(`DELETE FROM promotion_business_lock`) 추가. `purchasePromotion`의 `businessKey`를 outer `let`으로 hoist하고 charge 실패·BILLING_KEY_NOT_FOUND 두 경로에서 `rollbackActivation` 직후 잠금 해제(try/catch). charge 성공 후 DB 저장 실패 경로는 잠금 유지(실결제 완료 → 재구매 차단 정당). **1차 커밋의 `logger.error` 객체인자가 TS2345(string 기대)를 내 2차 커밋에서 표준 `logger.error(string, err)` 시그니처로 정정 — BE eslint가 못 잡고 tsc 게이트가 포착한 사례 [[feedback_data_craft_server_lint_no_tsc]].**
+- **Phase 3 (fix, #8)** (`8120b0b`): `insertClientPromotion`에 `initialConsumed?`(기본 0, 하위호환) 인자 추가 — INSERT의 `retention_consumed_months` 리터럴 0을 바인딩 파라미터로. `purchasePromotion`이 insert 직전 `getConsumedRetentionForCompanyPromotion`로 누적(priorConsumed) 산출 → `priorConsumed >= maxRetentionMonths`면 차단, 아니면 `initialConsumed=priorConsumed`로 새 행 누적 초기화. `getPromotionEligibility`의 all/new_signup/unpaid_business_once 3분기에 `consumed >= maxRetentionMonths` 게이트. `getConsumedRetentionForCompanyPromotion`(SUM) 시맨틱 보존. #11의 `>=` 강등과 결합돼 해지·재구매 반복이 정확히 max 개월에서 종료. 첫 구매(priorConsumed=0)는 동작 불변. **A2 방식: 재구매 후 SUM 이중계산 가능하나 게이트를 보수적으로 더 차단할 뿐(안전 방향).**
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/billingRenewal.service.ts`, `src/services/promotion.service.ts`, `src/models/promotion.model.ts`
+
+### 검증
+- 세(네) 커밋 모두 `pnpm build`(tsc) exit 0. line 244 `newConsumed >= cp.snapshotMaxRetentionMonths`(#11) 보존 grep 확인, `getConsumedRetentionForCompanyPromotion` SUM 쿼리(line 444) 보존, charge 성공 후 DB 실패 경로 release 미추가 확인.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- 별개 health 노트(회귀 아님): 미접촉 `src/types/db.ts:7` plan #258 잔존 `no-explicit-any` — affected_files 밖, lint-hotfix iter 미발화.
+
+### 비고
+Roadmap-8 5플랜 중 3번(프로모션 무결성). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. 다음 4번(동시성·멱등 #7·#6·#14)에서 #6 갱신 동시성 락 별도 처리.
