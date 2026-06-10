@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.696.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #275
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)** (`304b48d`, +lint `fdfc694`): prod MySQL→psql 이관 **ETL 프레임워크** 신설 `scripts/prod-migration/`(connection·introspect·manifest·transform·reconcile·precheck·index). mysql2=마이그레이션 전용 devDep(#258 prod 제거 유지). **사전점검 게이트**: enum 값 집합 불일치·FK orphan fail-fast.
+- **Phase 2 (feat, data-craft-server)** (`efc0ab9`): 소·중 테이블 **INSERT 적재** — manifest small 테이블 FK 위상정렬 순회, per-column transform, 배치 parameterized INSERT(pg $n 상한 안전), 테이블당 트랜잭션 + TRUNCATE RESTART IDENTITY(idempotent).
+- **Phase 3 (feat, data-craft-server)** (`b5f763f`): 대용량 **스트리밍 COPY** — data_values(~320만)·data_viewer_row_setting(~122K) MySQL `.query().stream()`→COPY text 변환→`pg-copy-streams` STDIN, highWaterMark 메모리 상한. pg-copy-streams=devDep.
+- **Phase 4 (feat, data-craft-server)** (`c26f9e0`): **finalize** — IDENTITY 시퀀스 setval 리셋 + data_column.column_type viewer_type 불변식 교정(rowId 컨텍스트 의존은 카운트 출력·수동검토) + **무손실 최종 대사 게이트**(전 테이블 MySQL COUNT==psql COUNT, data_values 3,219,191 exact, uuid/jsonb spot-check, 불일치 throw·exit≠0). `--phase all` 풀런 시퀀스.
+
+### 영향 파일
+data-craft-server:
+- 신규: `scripts/prod-migration/{connection,introspect,manifest,transform,reconcile,precheck,index,migrate-tables,migrate-bulk,finalize}.ts`
+- 수정: `package.json`(devDep mysql2·pg-copy-streams + `migrate:prod` 스크립트), `pnpm-lock.yaml`
+
+### 변환셋 (확정, information_schema 실측)
+binary(16)=uuid 7컬럼(form_id·widget_id·area_id 류)→canonical uuid · json 26→jsonb · tinyint 47→smallint · datetime 82→timestamp(KST naive) · enum 14→passthrough(payment_history 대문자 등). 제외: 릴레이션 3테이블(타깃 없음)·결제계열(프롬프트 4).
+
+### 검증
+- 4페이즈 모두 scripts 타깃 tsc(project esModuleInterop) 0 + eslint clean. (BE pnpm lint 는 src/ 전용 eslint — scripts/ 별도 tsc [[feedback_data_craft_server_lint_no_tsc]].)
+- advisor 계획(#1)·완료(#2) PASS. rowId 행 손실 위험 없음(reconcile 가 data_column 전수 count, column_type UPDATE 만 제외).
+
+### 배경 / 비고 — ⚠️ 실행은 별도 게이트 단계
+- Roadmap-6 PROD-1 일반 데이터 이관. cross-engine bulk ETL(task-db-data 부적합 확정 → plan-enterprise).
+- **본 패치는 ETL 스크립트 저작까지**. 실제 적재(prod MySQL read→psql write)는 **PENDING 게이트 후 마스터 별도 인가로 dispatcher 가 `pnpm migrate:prod` 실행** → 무손실 대사 게이트 PASS 확인 → 그 후 `플랜 완료`. **대사 PASS 전 `플랜 완료` 금지.**
+- 실행 전 `data-craft-server/.env` `DB_NAME_PROD=data_craft_production`(#270 정정) 확인 필수 — stale 시 빈 postgres DB 오접속.
+- ⚠️ column_type 불변식: 불일치 시 data_values 트리거가 셀 저장 사일런트 롤백([[project_data_craft_column_type_invariant]]) — finalize 교정 대상. rowId 잔여는 실행 시 카운트 검토.
+- 외부 리더 cross-repo: 코드 WIP(`-작업`)=data-craft-server i-dev, 본 patch-note(`-문서`)=Project-I2 main. origin push 안 함.
+
 ## v001.695.0
 
 > 통합일: 2026-06-10
