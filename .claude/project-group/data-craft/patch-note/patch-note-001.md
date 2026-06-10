@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.722.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #289 (funshare-inc/data-craft) · 핫픽스1
+
+**결제 비밀번호 변경 인증 코드 검증 엔드포인트 403 PLAN_NOT_ALLOWED 해소 (핫픽스1).** v001.720.0 에서 신설한 `POST /api/user/payment-password/verify-code` 가 런타임에서 `permissionMiddleware` 의 플랜 권한 체크에 막혀 403 PLAN_NOT_ALLOWED 로 실패했다(마스터 인증 시도 시 관찰).
+
+### 원인
+Phase 1 이 라우트와 미들웨어 체인(authMiddleware+permissionMiddleware)은 등록했으나, `permission.middleware.ts` 의 `PLAN_ENDPOINTS` 플랜 허용목록에는 신규 엔드포인트를 추가하지 않았다. 기존 결제 비밀번호 엔드포인트(set/verify/exists/send-verification/change)는 "플랜 무관 — 모든 사용자 접근 허용" 블록에 등재돼 있었으나 verify-code 만 누락 → `isEndpointAllowedForPlan` 매칭 실패 → `ForbiddenError('PLAN_NOT_ALLOWED')`.
+
+### 수정 (`9628dfa`)
+`PLAN_ENDPOINTS` 의 결제 비밀번호 블록에 `'POST:/api/user/payment-password/verify-code'` 한 줄 추가. `getEndpointKey` 가 생성하는 엔드포인트 키와 정확히 일치하여 모든 플랜 사용자에게 접근 허용.
+
+### 영향 파일
+**data-craft-server (BE)**
+- src/middlewares/permission.middleware.ts
+
 ## v001.721.0
 
 > 통합일: 2026-06-10
