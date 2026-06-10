@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.713.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스6)
+
+온보딩 투어 마지막에 **저장 → 뷰 모드 전환** 안내 풍선 2종 신규 추가. 뷰어 생성 후 드로어를 닫으면 바로 "페이지 생성"(addPage) 풍선이 뜨던 것을, 그 앞에 저장·뷰모드 안내가 먼저 나오도록 함.
+
+### 페이즈 결과
+- **Phase 11 (feat, 핫픽스6)** (`661b22b5`): hint 2종 추가 — `saveLayout`(order 170): `isDesignMode && !propertyDrawerOpen && hasViewerWidget && hasUnsavedChanges`; `switchToViewMode`(order 180): 동일 조건에 `hasUnsavedChanges !== true`(저장 완료). 둘 다 `addPage`(200) 앞. `hasUnsavedChanges` true/false 상호배타로 저장→뷰모드 전환이 깔끔히 이어짐(저장 클릭 시 dirty=false → saveLayout 숨고 switchToViewMode 표시 → 뷰모드 전환 시 isDesignMode=false 로 종료). `HintContext` 에 `hasViewerWidget`(섹션 위젯 중 type==='viewer' 존재)·`hasUnsavedChanges`(layoutStore) 파생 추가. 앵커 = `DesignModeToolbar` 의 저장 Button·뷰모드 토글 Button, `OnboardingHint > TooltipTrigger asChild` 중첩(핫픽스1 규칙). saveLayout 은 hasUnsavedChanges true 일 때만 발화 → 비활성 저장 버튼 미지목. i18n ko/en.
+
+### 영향 파일
+data-craft (i-dev, 5 files):
+- `features/onboarding/model/hintRegistry.ts`
+- `features/onboarding/lib/useActiveOnboardingHint.ts`
+- `widgets/header/ui/DesignModeToolbar.tsx`
+- `shared/i18n/locales/{ko.ts, en.ts}`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS — 저장→뷰모드 트레이스 확인.
+- ⚠️ 뷰모드 전환 후 `designModeSwitch`(order 10, showOn isViewMode) 가 세션 초기 미dismiss 시 표면화될 수 있음(투어 종료 상태에서 약간 어색) — 필요 시 후속 가드. 실동작은 마스터 수동 시각 검증 권장.
+
 ## v001.712.0
 
 > 통합일: 2026-06-10
