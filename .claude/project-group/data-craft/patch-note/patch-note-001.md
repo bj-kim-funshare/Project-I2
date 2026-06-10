@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.705.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스3)
+
+온보딩 말풍선 `navigatorSwitchToFirst`(윗 섹션으로 전환) 풍선이 디자인 단계 후 아래 섹션(§2) 복귀 시 **재출현**하던 결함 수정. 풍선은 "한번 지시대로 이행하면 닫기와 동일하게 동작해 새로고침 전까지 재출현 금지"가 설계 계약인데, 네비게이터 hint 만 이를 위반.
+
+### 페이즈 결과
+- **Phase 8 (fix, 핫픽스3)** (`11ce405c`): 근본원인 = `OnboardingHint`는 앵커 `onClick` 에서 `close()`→`closeTransient(id)`(세션 `closed` Set)로 자기 억제하는데, `navigatorSwitchToFirst`/`widgetNavigatorSwitch` 의 앵커인 Radix `DropdownMenuTrigger`는 **pointerdown 으로 열려 click 이벤트가 포털 오픈에 소실** → 주입된 onClick 의 close 미발화 → `closed` 에 안 들어감. 네비게이터 hint 는 §2 텍스트 위젯에서 showOn 이 **재매칭**되므로 라운드트립(§2→§1→§2) 후 재출현(타이틀 체인 등 다른 hint 는 액션 후 조건이 영구 false 라 무관). 수정: `WidgetNavigatorDropdown.handleValueChange`(실제 섹션 전환=지시 이행 시점)에서 `activeHintId` 가 두 네비게이터 hint 중 하나면 `closeTransient(activeHintId)` 호출. 가드로 비-튜토리얼 네비게이터 사용 시 무영향.
+
+### 영향 파일
+data-craft (i-dev, 1 file):
+- `widgets/property-drawer/ui/WidgetNavigatorDropdown.tsx`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS — 라운드트립(§2→§1 타이틀→§2) 트레이스로 navigatorSwitchToFirst 가 closed 에 들어가 재출현 안 함을 확인.
+- ⚠️ 실동작(풍선 재출현 여부)은 마스터 수동 시각 검증 권장.
+
 ## v001.704.0
 
 > 통합일: 2026-06-10
