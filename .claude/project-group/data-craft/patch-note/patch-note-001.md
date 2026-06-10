@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.729.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #295 (funshare-inc/data-craft)
+
+**결제 엔드포인트 오너 검증 보완 3건 — 누락 가드 2건 보강 + `ownerOnlyMiddleware` 로 단일화(회귀 방지).** 결제 mutation 15개는 컨트롤러 내부에 `if (!req.isOwner)` 를 복붙하는 방식이라 한 줄 누락 시 무방비 출고되는 구조였고, 실제 2곳(upgrade-quote·payment-password set)이 누락된 채 출고됐다. 누락을 메우고 오너 검증을 라우트 미들웨어로 단일 진실 지점화했다. work repo = data-craft-server (BE). FE(data-craft)는 무변경(403 전환 영향 검증만).
+
+### 페이즈 결과
+- **Phase 1** (fix · `f8f63c1`): `getUpgradeQuoteController` 에 `companyId` 확인 직후 `ForbiddenError('OWNER_ONLY')`(403) 오너 가드 추가, `/billing/upgrade-quote` 라우트에 `forceIncludeAuth` 삽입해 형제 라우트와 체인 통일. 단일코드 수렴을 위해 `GET /billing/history`·`getSeatChangeQuoteController` 의 오너 거부 에러도 `BadRequestError`(400)→`ForbiddenError`(403) 정렬.
+- **Phase 2** (fix · `f7c2c9e`): `setPaymentPasswordController` 에 형제(`change`/`send-verification`/`verify-code`)와 동일한 `req.isOwner` + DB `findUserById` 재검증 이중 가드 추가. 결제비밀번호는 **회사 단위(COMPANY-scoped)** 로 확정 — `set`/`change` 가 동일 write 함수를 호출하는데 `change` 만 오너 게이트인 것은 누락이며, billingCleanup 이 회사 단위로 취급. `verify`/`exists`(읽기성)는 무변경.
+- **Phase 3** (refactor · `1137cf8`): `subscription.ts` 의 billing/* POST 12개 + `seats/change` 라우트에 `ownerOnlyMiddleware` 를 `authMiddleware` 직후 삽입, `billing.controller.ts`·`seatChange.controller.ts` 의 인라인 `BadRequestError('OWNER_ONLY')` 가드 제거. `companyId` 등 비-오너 체크는 보존.
+- **Phase 4** (refactor · `e1049bb`): `promotion.routes.ts` 의 `/purchase`·`/cancel` 에 `ownerOnlyMiddleware` 적용, 인라인 가드 제거, 미사용된 `BadRequestError` import 정리.
+
+### 동작 변화 (QA 참고)
+- 비오너 거부 에러가 전 결제 mutation에서 **403 `ForbiddenError('OWNER_ONLY')` 단일 코드**로 수렴(기존 400/403 혼재). FE 는 메시지 문자열 기반 처리라 무영향(`status===400/403` 분기 없음).
+- 오너 체크 시점이 `ownerOnlyMiddleware` 단계로 **앞당겨짐** — `renewalWindowGuard`·`requirePaymentPassword()` 이전. 비오너가 `/billing/payment` 등 호출 시 이전엔 PIN 미설정 등 다른 에러를 먼저 만날 수 있었으나 이제 즉시 403 OWNER_ONLY 로 거부(로그/QA 에서 거부 시점·에러 순서 변경).
+- 최종 상태: src/ 전역 `BadRequestError('OWNER_ONLY')` 0건, `ownerOnlyMiddleware` 적용 15개 mutation 라우트.
+
+### 영향 파일
+data-craft-server:
+- src/controllers/billing.controller.ts
+- src/controllers/seatChange.controller.ts
+- src/controllers/paymentPassword.controller.ts
+- src/routes/subscription.ts
+- src/routes/promotion.routes.ts
+
 ## v001.728.0
 
 > 통합일: 2026-06-10
