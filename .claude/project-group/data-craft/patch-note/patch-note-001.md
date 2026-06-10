@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.731.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #297 (funshare-inc/data-craft)
+
+**데이터 뷰어 디자인 모드 그리드 뷰 — 열 메뉴를 열 타입별로 정리(로그/마지막수정 정렬 불가화 · 버튼 타입 "열 타입 변경" 숨김 · 단일/복수 선택 "고유값만 허용" 숨김).** 그리드 열 헤더 메뉴가 모든 타입에 동일 항목을 노출해 의미 없는 항목이 떠 있었다. 3개 타입군에 대해 메뉴를 정리하고, 특히 정렬은 메뉴 토글 숨김에 그치지 않고 헤더 클릭 정렬까지 런타임 차단되도록 가드를 권위화했다. work repo = data-craft(FE), 변경은 `packages/fs-data-viewer/` 한정.
+
+### 페이즈 결과
+- **Phase 1** (feat · `aaa96a1`): `DISABLE_SORTING_TYPES` 에 `log`/`lastUpdate` 추가 + `isColumnSortable(columnModel)`(=`enableSorting && !isColumnTypeDisabled(type, DISABLE_SORTING_TYPES)`) 헬퍼 신설(`column-restrictions.ts`). 정렬의 진짜 런타임 가드인 `ColumnHeader.tsx` `canSort` 와 `useGridSort.ts` `handleColumnSort` 두 곳을 모두 `isColumnSortable` 기반으로 교체 → 로그/마지막수정 열은 메뉴 "열 정렬" 토글이 사라지고(해당 타입 유일 토글이라 "표시·동작" 섹션 자체 미렌더) 헤더 클릭 정렬도 차단.
+- **Phase 2** (feat · `ef22c6a`): `menuItems.ts` 의 "열 타입 변경" 노출 조건에 `columnModel.type.id !== 'button'` 가드 추가 → 버튼 열 메뉴에서 "열 타입 변경" 숨김. conversion-catalog 의 `EXCLUDED_COLUMN_TYPE_IDS` 는 무수정(버튼을 변환 타겟으로 쓰는 경로 무영향, 메뉴 레벨 surgical 차단).
+- **Phase 3** (feat · `0a1c521`): `ENABLE_UNIQUE_TYPES` 에서 `singleSelect`/`multiSelect` 제거(주석 22→20개). `isUniqueSupported()` 를 공유하는 메인 그리드 + 서브 그리드 메뉴 양쪽에서 두 타입의 "고유값만 허용" 토글 숨김. `enableUnique` 기본값은 이미 `false`(off), enforcement 는 `columnModel.enableUnique` 기반 타입 독립이라 무영향.
+
+### 동작 변화 (QA 참고)
+- **로그 / 마지막 수정** 열: 열 메뉴에 "열 정렬"(및 표시·동작 섹션) 미표시, 헤더 클릭해도 정렬 안 됨(정렬 화살표 안 뜸).
+- **버튼** 열: 열 메뉴에 "열 타입 변경" 미표시.
+- **단일 선택 / 복수 선택** 열: 열 메뉴에 "고유값만 허용" 미표시(메인 그리드·서브 그리드 공통).
+- 일반 텍스트/숫자 등 다른 타입은 정렬·고유값·타입변경 정상 노출/동작(무회귀).
+- dev 반영: 루트 앱이 `fs_data_viewer` 를 src alias 로 소비 → 빌드 불필요, 하드 리프레시로 반영.
+
+### 의도된 부수 효과 / 알려진 한계
+- **정렬 가드 권위화 부수 효과**: `isColumnSortable` 가 `DISABLE_SORTING_TYPES` 를 런타임 권위로 삼으므로, 기존부터 배열에 있던 `button`/`document`/`dualWidget`/`connection` 도 (메뉴 토글은 이미 숨겨져 있었으나 남아 있던) 헤더 클릭 정렬이 함께 차단됨 — 런타임을 기존 메뉴 제한과 일치시킨 의도된 강화(`rowId` 는 이미 `!isId` 로 제외).
+- **선택 타입 기존 데이터**: 이미 `enableUnique=true` 로 저장된 단일/복수 선택 열이 있으면 토글이 사라져 UI 로 끌 수 없음(enforcement 는 계속 동작). FE-only 범위라 데이터 강제 off 는 미수행 — 발생 시 task-db-data 로 별도 처리.
+- **정렬 영속화 미래 주의**: `useGridSort` 의 Item-14 persistence 계약(`initialSortState`/`onSortStateChange`)은 현재 어떤 consumer 도 wire 하지 않음(in-memory only, mount 시 `{null,null}` 리셋) → stale sortState 로 인한 stuck-state 발생 불가. 향후 누군가 `widgetModel.sortState` 영속화를 활성화하면 비정렬 타입에 대한 stale sortState 가 stuck-state(적용+화살표+해제불가)를 만들 수 있으므로, 그때 hydration sanity filter(`sortState.columnField` 가 `isColumnSortable` 아닌 컬럼이면 reset)를 함께 추가할 것.
+
+### advisor 검증
+- 계획(#1) / 완료(#2) 5관점 모두 PASS. 완료 시점 advisor 가 제기한 "영속 sortState stuck-state" 우려는 primary-source(양 consumer 가 persistence 미wire) 확인으로 현 코드에 미해당 판정.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/features/grid/lib/helpers/column-restrictions.ts
+- packages/fs-data-viewer/src/widgets/grid-table/components/ColumnHeader.tsx
+- packages/fs-data-viewer/src/features/grid/hooks/useGridSort.ts
+- packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+
 ## v001.730.0
 
 > 통합일: 2026-06-10
