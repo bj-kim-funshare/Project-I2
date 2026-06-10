@@ -1,5 +1,61 @@
 # data-craft — Patch Note (001)
 
+## v001.719.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스4
+
+**타임라인 조건 연산자 전면 재설계 + date/dateTime/time 조건 단위 정밀화 + 마감일 본문스타일 메뉴 제거 (핫픽스4).** 마스터 스펙에 따른 3개 영역 변경. 3개 뷰어 패키지(fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer) 동일 적용. 규모상 4개 서브커밋으로 분할 실행.
+
+### A. 마감일(deadline) 열 본문 스타일 메뉴 제거 (`a7d90f29`)
+마감일은 자체 스타일을 가지므로 열 메뉴의 "열 본문 스타일 편집" 항목을 노출하지 않도록 `column-restrictions.ts` `DISABLE_CELL_STYLE_TYPES` 에 `deadline` 추가(×3). (이전 핫픽스2의 deadline JSON `.date` 추출 eval 로직은 dead code 로 잔존 — 무해·미경유.)
+
+### B. 타임라인(C4) 9연산자 재설계 (`8bea4ead` 선언 + `cad89ad2` 평가)
+C4_OPERATORS 를 신규 9종으로 교체(기존 tl* ID·eval 은 backward-compat 로 보존, add-menu 에서만 제외). `toYmd`(로컬 Y/M/D 정수, TZ-robust) 기준 일자 비교. `new Date()`로 오늘 기준 연산.
+
+| 연산자 | 입력 | 의미 / eval |
+|---|---|---|
+| 조건일 이전 `tlBeforeDate` | 날짜1 | 기간 전체가 조건일보다 과거: `toYmd(end) < toYmd(cond)` |
+| 조건일 이후 `tlAfterDate` | 날짜1 | 기간 전체가 미래: `toYmd(start) > toYmd(cond)` |
+| 조건일 포함 `tlContainsDate` | 날짜1 | 조건일이 기간 내: `start ≤ cond ≤ end` |
+| 기간 시작 `tlTodayInRange` | 없음 | 오늘이 기간에 속함: `start ≤ today ≤ end` |
+| 기간 종료 `tlTodayPast` | 없음 | 오늘이 기간을 지남: `today > end` |
+| 기간 대기 `tlTodayBefore` | 없음 | 오늘이 시작 전: `today < start` |
+| 기간 길이(초과) `tlDurationGreater` | 자연수1 | 총 일자수 > 값 |
+| 기간 길이(미만) `tlDurationLess` | 자연수1 | 총 일자수 < 값 |
+| 기간 길이(일치) `tlDurationEqual` | 자연수1 | 총 일자수 == 값 |
+
+- **inclusive 기간 변경**: 기간 길이 = `(end-start)/86400000 + 1` (총 일자수, inclusive). 이전 `tlDurationGreater/Less` 의 exclusive 동작에서 변경 → 동일 기간이 1 더 크게 계산됨(예 6/11~6/19 = 9일).
+- **backward-compat**: 기존 저장된 `tlStartBefore/tlStartAfter/tlEndBefore/tlEndAfter/tlDurationBetween` 조건은 add-menu 에 더 이상 안 보이지만 평가 로직 잔존 → 이전 의미 그대로 매칭. 새 의미 원하면 조건 재설정 필요.
+
+### C. date / dateTime / time 조건 단위 정밀화 (`8bea4ead` 카테고리 + `cad89ad2` 평가 + `9827921e` UI)
+타입별 조건 입력·비교 단위 분리:
+- **날짜(date)**: DatePicker(일 단위) — 기존 유지.
+- **날짜+시간(dateTime)**: DatePicker + HH:mm 셀렉터 합성 입력, before/after/dateBetween 은 full datetime 비교(`new Date("YYYY-MM-DDTHH:mm")`), onDate 는 같은 캘린더 일자.
+- **시간(time)**: HH:mm 셀렉터 입력, 분(min) 단위 비교(`parseHmToMinutes`). 시간형 연산자 집합에서 `onDate`("같은 날" 무의미) 제외 → before/after/dateBetween + isEmpty/isNotEmpty. (이전 `new Date("14:30")` Invalid 로 깨지던 구조적 한계 해소 — 핫픽스2에서 보고했던 건.)
+- 시간/날짜+시간 단일값 입력은 핫픽스3 의 2영역(`flex:2`/`flex:3`) 레이아웃 채택(시각 일관).
+
+### 영향 파일
+data-craft (i-dev, 30 files — 3패키지 × 10): `<pkg>/src/` 의
+- `features/grid/lib/helpers/column-restrictions.ts`
+- `entities/cell-condition.types.ts` · `entities/cell-condition-categories.ts`
+- `shared/config/i18n/types.ts` + `translations/{ko,en,ja,zh}.ts`
+- `widgets/fs_grid_renderer/utils.ts`
+- `widgets/cell-style-dialog/ConditionSettingWidget.tsx`
+(`<pkg>` ∈ fs-data-viewer · fs-sub-data-viewer · fs-external-data-viewer)
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) 5-perspective PASS.
+- **정적 검증만 수행(메인세션 렌더 미관측)** — 마스터 수동 시각 검증 시나리오:
+  1. 타임라인 `조건일 이전` 6/10 + 셀 6/1~6/9 → 매칭(전체 과거). 셀 6/11~6/19 → 비매칭(이전 보고 케이스, 정상).
+  2. `기간 시작`(입력없음) 셀이 오늘 포함 → 매칭 / `기간 종료` 셀 end<오늘 → 매칭 / `기간 대기` 셀 start>오늘 → 매칭.
+  3. `기간 길이(일치)` 값=9 + 셀 6/11~6/19 → 매칭(9일 inclusive).
+  4. 시간 컬럼 `이전` 14:30 + 셀 09:00 → 매칭 / 16:00 → 비매칭.
+  5. 날짜+시간 컬럼 `이전` 2026-06-10T14:30 + 셀 06-10T10:00 → 매칭.
+  6. 마감일 컬럼 열 메뉴 → "열 본문 스타일 편집" 항목 없음.
+  7. fs-sub/external 은 dist alias → `pnpm build:packages` + dev 재기동 후 확인.
+- **기지 엣지(범위 외)**: tlDurationBetween 은 add-menu 에서 사라졌으나 정의/eval 잔존(무해); Chromium <87 outline-offset 음수값(핫픽스2 잔존).
+
 ## v001.718.0
 
 > 통합일: 2026-06-10
