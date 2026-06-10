@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.717.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스3
+
+**날짜/타임라인 단일값 조건 칸 개행 제거 + 2영역 중앙정렬 레이아웃 (핫픽스3).** 열 본문 스타일 편집 조건 표의 "조건" 열에서, 날짜·타임라인 단일값 연산자(시작일 이전/이후, 종료일 이전/이후, 날짜 포함, before/after/onDate)의 라벨과 날짜 값이 `justify-center`로 가운데 뭉치고, 날짜 픽커가 `w-28`(112px) 고정폭이라 한글 날짜("2026년 6월 10일")가 개행되던 외관 결함을 수정.
+
+### 페이즈 결과 (핫픽스3, Phase 6, fix · `e4c38afe`)
+- `renderDatePicker` 헬퍼에 `widthClass` 파라미터 추가(기본값 `'w-28'` 유지 → 두 값 분기 dateBetween 무영향).
+- 단일값 날짜 픽커 분기 2곳(isTimeline 날짜 연산자 최종 return, isDate 단일값 return)을 **2영역 레이아웃**으로 교체: 라벨 영역 `style={{ flex: 2 }}`(40%)·값 영역 `style={{ flex: 3 }}`(60%), 각 영역 `justify-center`(각자 영역 가로 중앙 정렬), 라벨 `whitespace-nowrap`, 값 픽커 `w-fit`(내용 맞춤) → 넓어진 60% 영역에서 날짜가 한 줄로 표시(개행 해소). 50/50 강제 아님(값 영역이 더 넓음).
+
+### 범위 / 미적용 (의도)
+- **본 핫픽스 = 마스터 지목 날짜·타임라인 단일값 분기 한정.** 동일 2영역 레이아웃을 숫자/선택/사용자/timer/기본 텍스트 분기에도 확장 원하시면 후속 핫픽스로 가능.
+- **dateBetween(날짜범위)** 두 날짜 픽커(w-28)는 무변경 — 두 한글 날짜가 좁은 칸에서 개행되는 동일 외관 문제가 잔존하나(360px 칸에 두 w-fit 픽커가 안 들어가 별도 전략 필요), 마스터 미보고로 범위 외.
+- **비율 2:3** 은 "값 영역이 더 필요"한 사례 우선 추정값 — 시각 검증 후 다른 비율(예: 1:2·3:5) 또는 라벨 shrink-content 로 재조정 가능.
+- v001.714.0(핫픽스2)에서 보고한 **time(시간) 컬럼 구조적 한계**(HH:mm 셀 vs DatePicker 임계값)는 여전히 미해결 — 본 핫픽스와 별건.
+
+### (참고) 타임라인 조건 미적용 보고 → 정상 동작 확인
+마스터 보고: "타임라인 시작일 이전 6/10 조건 + 셀 기간 6/11~ → 적용 안 됨". 실측 검증 결과 **정상 동작(결함 아님)**:
+- 셀 값 `YYYY-MM-DD~YYYY-MM-DD` → `parseTimelineValue` 가 `~` 분리, start = 첫 날짜.
+- tlStartBefore = `start < condDate` 엄격 비교. 보고 케이스 start=6/11, cond=6/10 → `6/11 < 6/10` = **false** → 비매칭 정상(6/11 은 6/10 *이전*이 아님).
+- 적용 확인용: ① 셀 시작일을 6/9(조건보다 앞)로 설정, 또는 ② 조건을 "시작일 이후 6/10"으로 변경 → `6/11 > 6/10` = true → 적용.
+- 평가기·렌더러(span 에 `textColor`/`backgroundColor` 적용) 모두 정상.
+
+### 영향 파일
+data-craft (i-dev, 3 files):
+- `packages/<pkg>/src/widgets/cell-style-dialog/ConditionSettingWidget.tsx` (`<pkg>` ∈ fs-data-viewer · fs-sub-data-viewer · fs-external-data-viewer)
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) 5-perspective PASS.
+- **정적 검증만 수행(메인세션 렌더 미관측)** — 마스터 수동 시각 검증: 날짜/타임라인 단일값 조건 추가 시 라벨·날짜가 각자 영역 중앙 정렬 + 날짜 개행 없음 확인. fs-sub/external 은 dist alias → `pnpm build:packages` + dev 재기동 후 확인.
+
 ## v001.715.0
 
 > 통합일: 2026-06-10
