@@ -24362,3 +24362,28 @@ data-craft (FE):
 
 ### 비고
 Roadmap-8 운영 후속 **1/2**(#6b 결제 윈도우 503의 FE 표시 처리). 이로써 서버 차단 정책이 사용자에게 친화 형태로 노출됨. 남은 후속 **2/2 = 7번**(cron·가드 TZ KST 명시, work_repo=data-craft-server). 코드 WIP(`-작업`)=data-craft FE i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+
+## v001.716.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #286 (funshare-inc/data-craft)
+
+**data-craft-server cron·차단 윈도우 TZ 명시 (KST, Roadmap-8 운영 후속 2/2 — 7번, 마지막).** node-cron(갱신 `0 1`·만료 `0 2`·알림 `0 9`·청소 `0 *`·토큰 `0 3`)과 `renewalWindowGuard`가 서버 시스템 로컬타임에 의존해 서버 TZ가 KST가 아니면(예 UTC) 의도한 KST 시각과 어긋나던 문제를, 둘 다 KST(Asia/Seoul) 기준으로 명시해 서버 TZ와 무관하게 결정적으로 동작하게 함.
+
+### 페이즈 결과
+- **Phase 1 (chore, #7a)** (`79643bd`): `src/index.ts`의 5개 `cron.schedule` 호출에 3번째 인자 `{ timezone: 'Asia/Seoul' }` 추가 — 서버 TZ가 비-KST여도 KST 기준 시각 발화. node-cron v4.2.1의 `TaskOptions.timezone` 지원 확인(.d.ts), 3인자 시그니처 유지. cron 식·콜백·동시성 가드 무변경.
+- **Phase 2 (fix, #7b)** (`5b3be0b`): `billing-date.util.ts`에 `kstHourMinute(date): { hour, minute }` 헬퍼를 `kstParts`와 동일한 +9h UTC 트릭으로 additive 추가. `renewalWindowGuard`가 시스템 로컬 `now.getHours()/getMinutes()` 대신 `kstHourMinute(new Date())`로 `currentMinutes`를 계산하도록 변경 — cron(Phase 1 KST 01:00)과 동일 기준으로 윈도우(00:50–01:10 KST) 판단. cronMinutes·환형 거리(`min(diff, 1440-diff)`)·503 응답·`kstParts`는 무변경.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/index.ts`, `src/middlewares/renewalWindowGuard.ts`, `src/utils/billing-date.util.ts`
+
+### 검증
+- 두 커밋 모두 `pnpm build`(tsc) exit 0. P1 timezone 옵션 5건 grep 확인, P2 가드 시/분 라인만 KST 교체·cronMinutes/환형거리/503/kstParts 무변경 diff 확인.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- 정상 동작은 서버가 이미 KST면 불변, 비-KST면 의도된 교정. 두 페이즈 동일 WIP 단일 머지(cron만 KST·가드는 로컬인 중간 상태 없음).
+
+### 비고
+Roadmap-8 운영 후속 **2/2**(마지막). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+
+> **🎯 Roadmap-8 사이클 전체 종결**: data-craft 결제 시스템 결함 정리 사이클이 **원 16건(5플랜 #271·#274·#277·#280·#283) + 운영 후속 2건(2플랜 #284·#286) = 총 7 플랜**으로 마무리. 사이클 시작 = 2026-06-09 결제 도메인 전수조사(23 신규 결함 도출) → 종결 = 본 패치(2026-06-10). 무시 확정 8건은 의도적 미수정. 잔여 운영 인지 사항: 서버 TZ가 이미 KST면 본 패치는 동작 불변(안전), #21 배포 후 과거 만료 auto_renew 고객 결제 재개(정상 회복 경로), db.ts:7 #258 잔존 lint(별개).
