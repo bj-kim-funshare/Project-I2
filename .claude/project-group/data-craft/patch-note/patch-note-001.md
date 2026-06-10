@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.698.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #276 (funshare-inc/data-craft)
+
+**Roadmap-7 트랙 A — 사용자 행동/결제 분석 이벤트 인입(자체 호스팅).** 외부 서비스 없이 data-craft 본체가 사용자 행동(페이지뷰·체류시간)·결제 funnel 이벤트를 수집해 `user_events`(dev psql, run3)에 적재. **로그인/비로그인 분리**: 비로그인=익명 `anon_id`(uuid), 로그인=서버가 JWT에서 도출한 `user_id`/`company_id`, 가입·로그인 시 `auth_link`로 anon→authed 스티치. 신뢰 경계 = `auth_state`/`user_id`/`company_id`를 **서버가 토큰에서 도출**(클라이언트 body 불신, 스푸핑 차단). work repo 2개(data-craft FE + data-craft-server BE).
+
+### 페이즈 결과
+- **Phase 1 (feat, BE)** (`7fce097` + `1efe2c1` tsc 정정): optional-auth 미들웨어(JWT 비-throw 추출) + 신규 `analyticsLimiter`(user/IP 듀얼키) + `POST /api/analytics/events`(공개 위치, authMiddleware 전) + controller/service/model(`user_events` 다중행 INSERT, 배치 ≤100) + `CALL_ID.analytics.ingest`. 응답 plain `{data:{ok:true,ingested}}`(buildAuthResponse 미사용 — 익명 토큰 없음). **2차 커밋: 서비스 catch의 `errorCatch`(never) 바로 호출이 TS2366 유발 → `return errorCatch(...)`로 정정. BE eslint 미포착·tsc 게이트 포착 [[feedback_data_craft_server_lint_no_tsc]].**
+- **Phase 2 (feat, FE)** (`c7b9a55`): 분석 코어 `src/shared/lib/analytics/` 5신규 — anonId(`dc_anon_uuid`, crypto.randomUUID) · types · client(track 버퍼/flush N=20·10s + visibilitychange·pagehide, 익명=sendBeacon→keepalive fetch, 인증=keepalive+Bearer, 에러 무해, HMR 가드) · useAnalyticsIdentity · index. 각 이벤트에 `anon_id` 상시 포함(인증 이벤트도 스티치 가능). 신규 의존성 0.
+- **Phase 3 (feat, FE)** (`a6e7adf` + `bf3a279` purity 정정): `usePageTracking`(라우트 변경→page_view, 이탈 시 dwell_ms 포함 page_view_end, StrictMode didMountRef 가드, visibilitychange/pagehide). RootLayout(로그인) + GuestGuard(게스트, 공유 레이아웃 부재 → rules-of-hooks 준수 위해 기존 useEffect 이후 배치 [[feedback_react_guard_after_hooks]]) 마운트. `authStore.setAuth` 단일 지점에 `track('auth_link')`+flush()(수동·자동 로그인 모두 스티치). **2차 커밋: 렌더 스코프 `useRef(Date.now())`가 react-hooks purity 위반 → `useRef(0)`(effect에서 설정)로 정정.**
+- **Phase 4 (feat, FE)** (`3c8462d`): 결제·구독 취소 전 흐름 track() 21개 — UpgradeDialog open/step(prevOpenRef + step useEffect 2축), payment_attempt/success/failed/downgrade_scheduled(mutation 콜백=진짜 전환점), CancelSubscriptionDialog open/confirm/success/failed, BillingSuccessPage(didTrackMount + billing_step_* verifying→paying→updating 전이)·BillingFailPage(callback_fail/retry/back). StrictMode 이중발화 가드.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/app.ts`, `src/config/constant.ts`, `src/middlewares/rateLimiter.middleware.ts`
+- 신규: `src/middlewares/optionalAuth.middleware.ts`, `src/routes/analytics.routes.ts`, `src/controllers/analytics.controller.ts`, `src/services/analytics.service.ts`, `src/models/analytics.model.ts`
+
+data-craft:
+- 신규: `src/shared/lib/analytics/{anonId,types,client,useAnalyticsIdentity,usePageTracking,index}.ts`
+- 수정: `src/app/router/RootLayout.tsx`, `src/app/router/AuthGuard.tsx`, `src/entities/auth/model/authStore.ts`, `src/features/subscription/ui/{UpgradeDialog,UpgradeStepSelect,UpgradeStepPayment,UpgradeStepComplete,CancelSubscriptionDialog}.tsx`, `src/pages/billing-callback/ui/{BillingSuccessPage,BillingFailPage}.tsx`
+
+### 검증
+- 페이즈별 게이트: BE tsc(`pnpm build`) exit 0, FE `pnpm typecheck:all && pnpm lint` exit 0(0 errors; 잔존 warnings는 미접촉 기존 파일). lint-hotfix 2회(Phase1 TS2366·Phase3 purity) code-fixer로 해소.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **e2e 미실행**: dev 서버 기동/실요청 적재 확인 미수행(기동 명시 없음 [[feedback_no_unrequested_dev_servers]]) — 후속 수동 검증 권장(비로그인 `/signup`→anonymous row, 로그인 후→authenticated+user_id, 가입 시 auth_link, 결제 플로우 funnel).
+
+### 비고 / 후속
+- **prod 미반영**: 본 트랙은 dev 완결. BE 인입이 prod 배포되려면 **Roadmap-7 P2(prod `user_events` additive CREATE, 컷오버 윈도우)** 선행 필수 — 미생성 시 prod 인입 500. 코드 WIP(`-작업`)=data-craft·data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+- **후속 고려**(이슈 #276 코멘트 기록): 전역 `apiLimiter`(300/분)가 `analyticsLimiter`보다 선적용 → 실효 상한 300/분(FE 배치라 충분, prod throttle 관측 시 `/api/analytics` 예외 후속); `anon_id` uuid 형식 검증 하드닝(현재 FE 항상 유효 전송).
+- **기능사용 액션단위 계측**(버튼클릭 등 큐레이트)은 본 트랙 제외 — page_view 화면단위로 충족, 액션단위는 트랙 D 대시보드 직전 큐레이트 후속(track() API 준비됨).
+
 ## v001.697.0
 
 > 통합일: 2026-06-10
