@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.694.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #261 (핫픽스3)
+
+데이터 뷰어에서 **이름이 긴 열의 셀 값이 저장은 되는데 화면에 빈칸으로 표시**되던 결함을 FE에서 원천 차단. 근본 원인: 서버의 동적 PIVOT SQL이 열을 **이름으로 alias**(`MAX(CASE … ) AS "<열이름>"`)하는데, **PostgreSQL 식별자 한계가 63 byte**라 한글(3 byte/자) 긴 이름이 63 byte로 잘림 → `transformToPagedRows`(paging.transform.ts)의 `columnNameToIdMap.get(잘린이름)`이 풀네임과 불일치해 undefined → **그 열 셀값이 READ에서 통째 드롭**. 진단: 런타임 프로브로 셀 cellValue=''(저장은 정상, 'asd'→DB 확인) 확인 + PG `NOTICE: identifier … will be truncated` 직접 재현. (예: 42자 한글 제목 = 78 byte)
+
+### 수정 (FE 열 제목 바이트 제한)
+- 신규 `shared/lib/columnTitleLimit.ts`: `truncateToByteLength(str, maxBytes=50)` — UTF-8 바이트 기준 절단(멀티바이트 문자 안 쪼갬, code point 순회), `MAX_COLUMN_TITLE_BYTES=50`(PG 63 byte − 다중그룹 alias 접미사 `_<alias>` 여유).
+- 열 제목 입력/저장 4경로에 적용(입력 onChange = 즉시 캡 + commit = 안전망):
+  - 메인 그리드: `features/grid/hooks/column-menu/menuItems.ts`(입력), `useColumnHandlers.ts`(저장)
+  - 서브 그리드: `widgets/fs_grid_sub/components/SubGridColumnMenu.tsx`(입력), `hooks/useSubGridColumnMenu.ts`(저장)
+  - 행 연결 그룹관리: `widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`(입력+commit)
+- 한글 ~16자 / 영문 50자까지 허용. 초과 입력은 안전 길이로 자동 절단.
+
+### 영향 파일
+data-craft (fs-data-viewer, 6 files):
+- 신규: `shared/lib/columnTitleLimit.ts`
+- 수정: `features/grid/hooks/column-menu/{menuItems.ts, useColumnHandlers.ts}`, `widgets/fs_grid_sub/components/SubGridColumnMenu.tsx`, `widgets/fs_grid_sub/hooks/useSubGridColumnMenu.ts`, `widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx`
+
+### 검증
+- typecheck:all exit0 · eslint 0 errors. 마스터가 제목 단축 시 값 즉시 복구되는 것 직접 확인(절단=근본원인 확정).
+- advisor 검증: pivot 절단 근본원인·범위(BE 무관, FE 제한으로 차단) 확정.
+
+### 잔존 / 후속
+- 본 FE 제한은 fs-data-viewer 경로의 신규/이름변경 제목만 차단. **sub/external 뷰어 제목 입력·rowLink 열 생성(RowLinkConfigDialog)·BE 직접 생성**은 미커버 — 필요 시 후속.
+- **더 견고한 정식 수정(후속 권장)**: `data-craft-server`의 `pivotBuilder.ts` alias를 **이름 → column_id 기반**(`AS "c<id>"`)으로 전환하고 소비처(paging.transform/row) id 역매핑 → 이름 길이 무관하게 영구 해결. 별도 BE plan-enterprise 대상.
+- 회고: color/fromJson/column_type 등 정적 가설로 핫픽스1·2를 이론 기반 선발(핫픽스2 cellRendererFromJson 복원력은 비load-bearing 죽은 코드). 런타임 프로브 도입 후에야 "저장 정상·READ 절단 드롭" 확정. 다중 마운트/서버 데이터 결함은 정적 단정 전 프로브 우선.
+
 ## v001.693.0
 
 > 통합일: 2026-06-09
