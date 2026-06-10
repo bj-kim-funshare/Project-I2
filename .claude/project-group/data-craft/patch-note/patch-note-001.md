@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.728.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #293 (funshare-inc/data-craft) · Roadmap-7 트랙 D
+
+**관리자 콘솔 분석 대시보드 — `user_events` 를 로그인/비로그인(auth_state) 분리 집계하고 결제 funnel 을 단계별 이탈·취소 지점까지 시각화(recharts), 비가역 작업에 confirm 게이트 추가.** 트랙 A 가 적재한 행동/결제 이벤트를 admin 콘솔이 **읽어 집계·시각화**(계측 생성 없음). prod 토글은 컷오버 전까지 503 차단 → 분석 평시 dev 데이터만.
+
+### 페이즈 결과
+- **Phase 1** (BE, feat · `3712bff`): GET `/api/admin/analytics/overview?days=N`(기본 30, 1–365 클램프) — auth_state별 분리 집계 pageViews(page_view 카운트)·dwell(avg/total/sample, `FILTER (WHERE dwell_ms IS NOT NULL)`)·topEvents(ROW_NUMBER auth_state별 top 15). `make_interval(days => $1)` 파라미터화, count `::int`, Promise.all. verifyAdminToken+dbMode.
+- **Phase 2** (BE, feat · `f88f622`): GET `/api/admin/analytics/funnel?days=N` — UPGRADE_FUNNEL(8단계)·CANCEL_FUNNEL(4단계) `as const` 단일 출처, 단일 GROUP BY(`event = ANY($2)`)로 전 단계 조회 후 순서 보존 매핑. stage count=고유 행위자 `COUNT(DISTINCT COALESCE(user_id::text, anon_id::text))::int`. abandonment.paymentFailed=payment_failed 카운트, upgradeFailed=0(taxonomy 가 payment_failed 공용 → 구분 불가, 주석).
+- **Phase 3** (FE, feat · `553cd6c`): shared/ui `Tabs`(controlled) + imperative 확인 게이트(`useConfirm` context + `openConfirm():Promise<boolean>`, `ConfirmDialog` fixed z-50 backdrop), `ConfirmProvider` app 루트 마운트. `entities/analytics`(types·api — X-DB-Mode 주입).
+- **Phase 4** (FE, feat · `7129a04`): `AnalyticsPage` — 로그인(authenticated)/비로그인(anonymous) Tabs + 기간(7/30/90일) + 페이지뷰·체류시간 카드(sample=0→데이터없음) + 기능사용 빈도·페이지뷰 BarChart(`analytics-overview`). useEffect [mode, days](탭은 클라 필터), 503 처리. `/analytics` 라우트 등록(NAV 기존).
+- **Phase 5** (FE, feat · `a69a3b6`): `analytics-funnel` — 업그레이드·취소 단계별 BarChart + 단계 전이 이탈수·잔존율 테이블 + 결제실패/업그레이드실패 강조 카드. funnel 전용 useEffect [mode, days], 탭 무관 1회 렌더.
+- **Phase 6** (FE, feat · `a075d72`): `useConfirm` 게이트를 비가역 작업 3곳 배선(동작 무변경, 확인만 삽입) — 프로모션 활성토글(PromotionsPage)·편집 저장(PromotionForm, editTarget 케이스만)·dev→prod 모드 전환(DbModeToggle `handleSwitchToProd`).
+
+### 범위 / 기지 사항 (후속)
+- "기능사용 빈도" = 기존 user_events event 명 빈도 집계(화면/이벤트 단위). 액션단위 신규 계측은 트랙 A 후속(마스터 큐레이트 시) — 본 트랙 범위 밖.
+- prod 분석은 컷오버 후속(현재 prod 모드 503 차단). prod user_events(Roadmap-7 P2)·토글 활성 묶음.
+- `abandonment.upgradeFailed=0` — 트랙 A 가 `payment_failed` 를 인라인 결제실패·업그레이드 mutation 실패에 공용 → 분리 불가. 분리하려면 트랙 A taxonomy 에 별도 이벤트명 추가 필요(후속).
+- `ConfirmDialog` 는 body 스크롤 락 없음 — 짧은 admin 확인 모달이라 허용(뷰어 오버레이보다 낮은 우선순위).
+- admin-web `pnpm build`(@types/node) 사전결함 잔존(Track B, 배포 제외·게이트=typecheck+lint).
+
+### 영향 파일
+- **data-craft-admin-server** (i-dev): `src/routes/adminAnalytics.routes.ts`, `src/controllers/adminAnalytics.controller.ts`, `src/services/adminAnalytics.service.ts`, `src/config/constant.ts`, `src/app.ts`
+- **data-craft-admin** (i-dev): `src/shared/ui/{Tabs,ConfirmDialog,useConfirm}.tsx`, `src/app/index.tsx`, `src/entities/analytics/{types,api,index}.ts`, `src/pages/analytics/AnalyticsPage.tsx`, `src/features/analytics-overview/*`, `src/features/analytics-funnel/*`, `src/app/router/index.tsx`, `src/pages/promotions/PromotionsPage.tsx`, `src/features/promotion-form/PromotionForm.tsx`, `src/widgets/db-toggle/DbModeToggle.tsx`
+
+### 검증
+- BE lint(eslint)·FE lint(typecheck+eslint) 게이트 EXIT 0. advisor #1·#2 BLOCK 없음(검증 중 days 파라미터화·distinct-actor·taxonomy 단일출처·optional-chaining·hooks 규칙 확인).
+- 마스터 수동 검증(머지 후): dev 모드 `/analytics` → 로그인/비로그인 탭 전환 집계 분리, 기간 변경 갱신, funnel 단계별 count·이탈 표시, 데이터 0 시 빈 상태. 비가역 작업(토글·편집·prod 전환) 시 ConfirmDialog 노출 → 확인 시에만 실행. prod 모드 503 차단.
+
 ## v001.727.0
 
 > 통합일: 2026-06-10
