@@ -24419,3 +24419,19 @@ data-craft-server:
 Roadmap-8 운영 후속 **2/2**(마지막). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
 
 > **🎯 Roadmap-8 사이클 전체 종결**: data-craft 결제 시스템 결함 정리 사이클이 **원 16건(5플랜 #271·#274·#277·#280·#283) + 운영 후속 2건(2플랜 #284·#286) = 총 7 플랜**으로 마무리. 사이클 시작 = 2026-06-09 결제 도메인 전수조사(23 신규 결함 도출) → 종결 = 본 패치(2026-06-10). 무시 확정 8건은 의도적 미수정. 잔여 운영 인지 사항: 서버 TZ가 이미 KST면 본 패치는 동작 불변(안전), #21 배포 후 과거 만료 auto_renew 고객 결제 재개(정상 회복 경로), db.ts:7 #258 잔존 lint(별개).
+
+## v001.717.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #288 (funshare-inc/data-craft)
+
+디자인 모드 영역 컨트롤바의 **세로 스크롤 핀 복구**. 영역(Area) 우측 상단에 절대배치된 컨트롤바(위젯 추가/편집·행분할·삭제)가, 드로어 열림 시 좌측 시프트(`useDrawerOverlap`)는 정상이나 **세로 스크롤 시 영역과 함께 화면 밖으로 밀려 가려지던** 문제. 이 세로 핀은 이미 #238 에서 `useScrollPinOffset` 훅으로 신설됐으나 시각 검증 없이 머지돼(`v001.238.0` "실제 스크롤 핀 동작은 수동/QA 시각 확인 영역") 동작하지 않던 것을, 근본 원인을 짚어 견고화했다.
+
+### 페이즈 결과
+- **Phase 1** (`f93f785f`, data-craft): `useScrollPinOffset` 가 스크롤 컨테이너를 `closest('.layout-content')` 로 하드코딩하던 것을 제거. 실제 빌더의 세로 스크롤러는 그 조상 `<main className="flex-1 overflow-auto">`(`BuilderContent.tsx:79`)이고, `.layout-content` 는 `overflow-y-auto` 스타일만 가질 뿐 실제로는 안 넘쳐 스크롤하지 않는 경우가 있어 ① 리스너 미발화 ② 기준점·영역 rect 동시 이동으로 `desired` 상수화 → 바가 영역 상단에 고정된 채 밀려 가려졌다. 모듈 헬퍼 `findScrollAncestor` 신설 — 부모부터 위로 순회하며 `overflowY ∈ {auto,scroll,overlay}` **이면서 `scrollHeight > clientHeight + 1`(실제 스크롤 발생)** 인 첫 조상을 반환(매 compute 재탐지, 미발견 시 viewport top=0 폴백). scroll 리스너를 `document` capture 단계(`{capture:true,passive:true}`, 제거 시 `{capture:true}` 매칭)로 부착해 어느 중첩 스크롤러든 재계산을 보장. `DEFAULT_TOP_PX`/`CONTROL_BAR_EST_PX`/`maxTop` 영역 클램프(="영역이 허용하는 범위 내")·`requestAnimationFrame` 스로틀 등 수치·수학·구조는 유지. 소비처 `AreaControls`/`SubAreaControls` 무변경 자동 수혜. +15 / -9 (1 file). lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 계획/완료 5관점 PASS.
+
+### 영향 파일
+- data-craft:`src/widgets/layout-canvas/hooks/useScrollPinOffset.ts`
+
+### 비고
+**시각 동작 검증은 마스터 스크린샷 영역** — 메인세션·서브에이전트 모두 렌더 못 봄. #238 이 동일 맹점으로 시각검증 없이 실패한 전례가 있어, 본 수정은 근본 원인(스크롤 컨테이너 오탐)을 짚었으나 정적상 2번째 "should work" 시도다. 재실패 시 다음 라운드는 화면 디버그 프로브로 런타임 1차증거 확보(메모리 `feedback_static_should_work_instrument`). 코드 WIP(`-작업`)=data-craft i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
