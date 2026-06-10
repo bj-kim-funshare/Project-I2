@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.715.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #285 (funshare-inc/data-craft)
+
+**Roadmap-7 env — admin-server `.env` 자동 구성.** 트랙 B에서 만든 admin-server를 dev로 띄울 수 있도록 env 파일을 자동 작성. data-craft 그룹 env git-tracked 정책 + 마스터 명시 시크릿 분리에 따라 비시크릿+해시는 `.env`(git-tracked), 평문 시크릿은 `.env.local`(gitignored)로 나눔.
+
+### 페이즈 결과
+- **Phase 1 (chore, BE)** (`16f3b2a`): `data-craft-server/.env`에서 PG_*(+PG_*_PROD)·SMTP_* 좌표 복사 + `ADMIN_PASSWORD_HASH`(bcrypt)·`ADMIN_JWT_SECRET`(랜덤) 생성. **`.env`(git-tracked)** = SERVER_PORT/NODE_ENV/PG_HOST·PORT·USER(+_PROD)/DB_NAME_AUTH·DATA(_PROD)/SMTP 비시크릿/ADMIN_EMAIL/ADMIN_PASSWORD_HASH/ADMIN_PROD_TOGGLE_ENABLED=false/TOKEN_EXPIRES_ADMIN. **`.env.local`(gitignored·미커밋)** = PG_PASSWORD·PG_PASSWORD_PROD·SMTP_USER·SMTP_PASSWORD·ADMIN_JWT_SECRET. `.gitignore`=`.env.local`만 무시(.env 추적). `src/index.ts`에 `.env.local` override 로드 추가. 평문/해시 값 미노출. tsc 0, 평문 시크릿 git 미포함 grep 검증.
+
+### 영향 파일
+data-craft-admin-server:
+- 신규(커밋): `.env`(git-tracked, 비시크릿+해시), 수정: `.gitignore`, `src/index.ts`
+- 신규(미커밋, gitignored): `.env.local`(평문 시크릿)
+
+### 검증
+- lint+tsc(`pnpm lint && pnpm build`) exit 0. 커밋된 `.env`에 평문 시크릿 4종(PG_PASSWORD/PG_PASSWORD_PROD/SMTP_PASSWORD/ADMIN_JWT_SECRET) 부재 grep 확인. `.env.local` gitignored·미커밋 확인.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **머지 직전 `.env.local`을 main checkout으로 복사** — 워크트리 제거 후에도 operator가 admin-server를 `pnpm dev`로 띄울 수 있도록(워크트리 .env.local은 제거 시 소실).
+
+### 비고
+- **SECURITY WARNING false-positive**: phase-executor가 경고를 발생시켰으나 검증 결과 오탐 — (a) 해시 in git=마스터 명시, (b) prod host/user 좌표=data-craft-server 그룹 관례(비밀번호 아님), (c) WIP push=스킬 Step 6 정상(i-dev push 금지와 별개). 실 자격증명(평문)은 `.env.local`로 분리되어 git 미포함.
+- 코드 WIP(`-작업`)=data-craft-admin-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+
 ## v001.714.0
 
 > 통합일: 2026-06-10
