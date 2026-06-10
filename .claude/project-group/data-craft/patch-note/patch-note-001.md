@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.732.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #299
+
+### 페이즈 결과
+- **Phase 1 (dev 서버 HTTPS 활성화)**: 루트 `vite.config.ts` plugins 에 `@vitejs/plugin-basic-ssl` 의 `basicSsl()` 을 `command === 'serve'` 조건부 스프레드로 등록(dev 한정). defineConfig 시그니처를 `({ command }) =>` 로 변경. 외부 PC 가 IP+HTTP 로 접속하면 secure context 미충족으로 `crypto.randomUUID` 가 undefined → "is not a function" 으로 터지던 문제를, dev 서버를 자가서명 인증서 HTTPS 로 띄워 해소. `server.host: true` / `allowedHosts: ['.local']` / `fs.allow` 및 production 블록(base/esbuild/build)은 무수정 → 빌드/배포 무영향. lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0.
+
+### 영향 파일
+- data-craft:vite.config.ts
+- data-craft:package.json (`@vitejs/plugin-basic-ssl ^2.3.0` devDep 추가)
+- data-craft:pnpm-lock.yaml
+
+### 적용 안내
+- `@vitejs/plugin-basic-ssl` 신규 dev 의존성 추가로 `pnpm-lock.yaml` 이 변경됨 → i-dev pull 후 **`pnpm install` 필요**(미install 시 vite 기동 깨짐).
+- 외부 PC 브라우저 최초 접속 시 자가서명 인증서 경고를 1회 통과해야 함(기능 정상, 방식의 본질적 특성).
+
 ## v001.731.0
 
 > 통합일: 2026-06-10
