@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.730.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #296 (funshare-inc/data-craft)
+
+**데이터 뷰어 디자인 모드 "열 본문 스타일 편집" — 시간(time) 타입 열의 조건 입력 UI 오버레이화 + "시간 범위" 라벨 정정.** 시간 타입 열의 조건(이전/이후/범위) 값 입력이 좁은 조건 셀 안에서 인라인 `HH:MM` 드롭다운 두 쌍으로 렌더되어 레이아웃이 깨졌고, 범위 조건 라벨이 시간 열인데도 "날짜 범위"로 표기됐다. 동일 모달의 "날짜 및 시간(dateTime)" 타입이 쓰는 오버레이 방식(`DateTimeConditionPicker`)을 mirror 하여 트리거 버튼 + 오버레이 형태로 전환하고, time 타입 한정으로 라벨을 "시간 범위"로 정정했다. work repo = data-craft(FE), 변경은 `packages/fs-data-viewer/` 한정.
+
+### 페이즈 결과
+- **Phase 1** (feat · `f011e5b3`): `DateTimeCalendarOverlay` 의 자체 위치 계산 패턴을 mirror 한 시간 전용 `TimeConditionOverlay.tsx` 신설(createPortal + fixed z-50 백드롭, `adjustOverlayPosition`, `useBackdropClickClose`, `isPositionReady` visibility 가드, `useLayoutEffect` 위치 보정, Esc/Enter/Shift+Escape 키 처리, HH:mm 텍스트 입력 + 시/분 `Select` z-[60]). `DateTimeConditionPicker` 를 mirror 한 `TimeConditionPicker.tsx`(트리거 버튼 + 오버레이, placeholder = 기존 키 `t.time.selectTime`) 신설. `ConditionSettingWidget.tsx` 의 `isTime` 분기에서 인라인 `renderTimeSelect` 를 `TimeConditionPicker` 로 교체(범위=좌/우 2개, 단일=1개, dateTime 분기와 동일 JSX 구조), 미사용 import(Select 일가·HOURS/MINUTES·padHm/parseHm/fmtHm) 정리.
+- **Phase 2** (fix · `47ef1239`): `getOperatorLabel.ts` 에 `dateBetween && columnTypeId==='time'` 전용 분기 추가(기존 `ops[id]` 일반 분기보다 먼저 평가) → `ops.timeRangeLabel` 반환. i18n 4언어(ko/en/ja/zh) + parity 타입 `types.ts` 에 `timeRangeLabel` 키 추가(시간 범위 / Time range / 時間範囲 / 时间范围). 다른 컬럼 타입은 기존 "날짜 범위" 유지.
+
+### 동작 변화 (QA 참고)
+- 시간 타입 열의 조건 값 입력이 인라인 드롭다운 → **오버레이(트리거 버튼)** 로 전환 — dateTime 타입과 동일 UX, 좁은 조건 셀에서 레이아웃 안 깨짐. 시/분 선택 또는 `HH:mm` 직접 입력 가능, 저장 값 형식은 기존 `HH:MM` 문자열 불변(하위호환).
+- "조건 추가" 목록에서 시간 타입 열의 범위 조건 라벨이 **"날짜 범위" → "시간 범위"** 로 표시(time 타입 한정). dateTime/date 타입은 무변경.
+- dev 반영: 루트 앱이 `fs_data_viewer` 를 src alias 로 소비 → 빌드 불필요, 하드 리프레시로 반영.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-style-dialog/TimeConditionOverlay.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-style-dialog/TimeConditionPicker.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-style-dialog/ConditionSettingWidget.tsx
+- packages/fs-data-viewer/src/widgets/cell-style-dialog/getOperatorLabel.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+
 ## v001.729.0
 
 > 통합일: 2026-06-10
