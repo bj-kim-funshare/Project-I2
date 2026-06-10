@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.707.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스4)
+
+온보딩 말풍선 두 결함 교정: (a) 위젯 설정 드로어가 열려 있을 때 "새 화면 추가"(addPage) 풍선이 표면화되던 문제, (b) "추가 표시 아이템" 풍선이 표시 아이템 3개를 다 켜기 전에 1개만 켜도 사라지던 문제.
+
+### 페이즈 결과
+- **Phase 9 (fix, 핫픽스4)** — 두 커밋.
+  - 드로어 가드 (`240fbae8`): `HintContext` 에 `propertyDrawerOpen`(PropertyDrawer.isOpen 동일 로직 — 위젯/섹션/영역 드로어) 추가, `addPage`(order 200)·`userForm`(order 210) showOn 에 `&& propertyDrawerOpen !== true` 가드. 끝-투어 "항상참" hint 가 드로어 열림 상태에서 표면화되던 것 차단(addPage 만 요청됐으나 동일 결함 클래스인 userForm 도 함께 가드).
+  - 풍선 유지 (`458a8cbe`): `OnboardingHint` 에 opt-in 프롭 `persistOnAnchorClick`(기본 false — 기존 콜사이트 동작 불변) 추가. true 면 앵커 클릭 시 `close()` 미주입. `widgetTitleItems` 풍선(앵커=3개 토글 블록)에 적용 → 토글 클릭 버블링으로 첫 토글에서 transient close 되던 것 방지, 3개 모두 켜질 때(showOn `titleItemsAllOn` true)까지 유지. "닫기"/"앞으로 보지 않기" 버튼은 그대로 동작.
+
+### 영향 파일
+data-craft (i-dev, 4 files):
+- `features/onboarding/model/hintRegistry.ts`
+- `features/onboarding/lib/useActiveOnboardingHint.ts`
+- `features/onboarding/ui/OnboardingHint.tsx`
+- `widgets/property-drawer/ui/property-editors/TextPropertiesEditor.tsx`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS — `persistOnAnchorClick` 은 opt-in 기본 false 라 타 콜사이트 무영향.
+- ⚠️ 실동작(드로어 열림 시 addPage 미출현, titleItems 풍선 3개까지 유지)은 마스터 수동 시각 검증 권장.
+
 ## v001.706.0
 
 > 통합일: 2026-06-10
