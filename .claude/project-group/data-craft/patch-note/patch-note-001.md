@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.702.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #279
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** (`8ec13cd`·`61c2632`, WIP 머지 `c02938f`): 데이터 뷰어 디자인 모드 그리드 뷰 열 메뉴에서 **체크박스·스위치 타입의 "고유값만 허용" 옵션을 노출 제거**. 두 타입은 사실상 2개 값(true/false)만 가질 수 있어 고유 제약이 무의미. 단일 소스 of truth 배열 `ENABLE_UNIQUE_TYPES` 에서 `boolean`(스위치)·`checkbox`(체크박스) 두 항목 제거 → `isUniqueSupported()` 가 두 타입에 false 반환 → 그리드·서브그리드·뷰 컬럼 매니저 3개 열 메뉴 전부에서 일관 미노출. 강제(enforcement) 로직은 `enableUnique` 필드를 직접 읽어 본 헬퍼와 비결합 → 영향 없음. 후속 커밋으로 `menuItems.ts` 의 `(24개 지원 타입만)` 주석을 `(22개)` 로 정합.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/features/grid/lib/helpers/column-restrictions.ts`
+- 수정: `packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts` (주석 정합)
+
+### 비고
+- 잔존 데이터에 체크박스/스위치 컬럼 `enableUnique=true` 가 있었다면 토글이 사라져 끄지 못한 채 강제 로직만 남으나, boolean/checkbox 에 유니크 설정은 행≤2 일 때만 가능 → 존재 가능성 극히 낮음. UI 한정 요구이므로 데이터 정리는 본 플랜 제외.
+- 외부 리더 cross-repo: 코드 WIP=data-craft i-dev(머지 완료), 본 patch-note=Project-I2 main. origin push 안 함.
+
 ## v001.701.0
 
 > 통합일: 2026-06-09
