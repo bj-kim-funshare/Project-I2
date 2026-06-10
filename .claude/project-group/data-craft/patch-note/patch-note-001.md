@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.720.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #289 (funshare-inc/data-craft)
+
+**결제 비밀번호 변경 — 서버 인증 게이트 + 설정 UI 재사용 + 발송 버튼 테두리 제거.** 대표(오너) 이메일 인증 방식으로 전환된 결제 비밀번호 변경 플로우를, ① 발송 버튼 테두리 제거, ② 인증 성공을 진짜 서버 이벤트로 게이트, ③ 인증 성공 후 결제 비밀번호 **설정과 동일한 키패드 UI**(2회 입력+확인)를 재사용해 새 비밀번호를 설정하도록 개편했다. 설정 제약(연속/반복 숫자 등 약한 PIN 금지)도 동일 적용된다. BE(data-craft-server) + FE(data-craft) 2개 저장소 변경.
+
+### 페이즈 결과
+- **Phase 1 (BE, data-craft-server `377c468`)**: 코드 미소비(peek) 검증 엔드포인트 신설. `verifyEmail(data, { consume })` 옵션 추가 — `consume:false` 일 때 성공 경로의 코드 삭제만 생략하고 실패/만료/차단/실패횟수 로직은 유지(브루트포스 방지 보존). 기존 호출부는 인자 무변경으로 동작 완전 보존. `verifyPaymentPasswordChangeCodeController` 신설(오너 가드 동일, `{ auth, data:{verified:true} }` 봉투 응답) + `POST /api/user/payment-password/verify-code` 라우트 등록.
+- **Phase 2 (FE, data-craft `dc96e4c`)**: `PaymentPasswordSetupStep` 에 선택적 prop `onSubmit?: (pin)=>Promise<void>` 추가(기본=현행 `setPaymentPassword`). 저장 동작만 주입 가능하게 만들어 변경 플로우가 컴포넌트 **전체**(Dialog/Portal/키패드/약한 PIN 제약)를 그대로 재사용 — UI 파리티 보장. prop 미전달 시 외형·동작 완전 동일(설정 플로우 회귀 0).
+- **Phase 3 (FE, data-craft `a825101` + 보강 `c4105bd`)**: `verifyPaymentPasswordChangeCode` API 래퍼 추가. `PaymentPasswordChangeDialog` 를 `stage: 'verify' | 'set'` 2단계로 재구성 — verify 단계는 발송 버튼 `variant="outline"→"secondary"`(**테두리 제거**) + "인증" 버튼이 서버 `/verify-code` 게이트, set 단계는 `PaymentPasswordSetupStep` 형제 다이얼로그 재사용(`onSubmit=changePaymentPassword`). 코드 만료/불일치(`CODE_EXPIRED`/`CODE_MISMATCH`/`VERIFICATION_NOT_FOUND`) 시 verify 단계로 복귀. 보강 커밋: SetupStep 을 `{open && stage==='set' && (...)}` 조건부 렌더로 바꿔 닫힘/전환 시 언마운트 → 재진입 시 stale state(이전 PIN·confirm 단계) 누수 차단. i18n `billing.emailVerification.{verify,verifying}` ko/en 추가.
+
+### 동작 흐름
+발송(테두리 없음) → 코드 입력 → **인증**(서버 미소비 검증) → 성공 시에만 설정과 동일한 키패드 UI(2회 입력+약한 PIN 제약) → 최종 `/change` 가 코드 재검증+소비 후 변경 완료.
+
+### 배포 주의
+FE(Phase 3)가 BE(Phase 1) 신규 `/verify-code` 엔드포인트를 호출 → **prod 반영 시 BE+FE 동시 배포 필요**(엔드포인트 부재 시 인증 단계 실패). 본 통합은 각 저장소 i-dev 머지까지 — 배포는 별도 후속.
+
+### 영향 파일
+**data-craft-server (BE)**
+- src/services/auth.service.ts
+- src/controllers/paymentPassword.controller.ts
+- src/types/paymentPassword.types.ts
+- src/routes/user.ts
+
+**data-craft (FE)**
+- src/features/subscription/api/paymentPassword.api.ts
+- src/features/subscription/ui/PaymentPasswordChangeDialog.tsx
+- src/features/subscription/ui/PaymentPasswordSetupStep.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
 ## v001.719.0
 
 > 통합일: 2026-06-10
