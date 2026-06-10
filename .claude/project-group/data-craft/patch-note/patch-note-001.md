@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.721.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스5
+
+**열 본문 스타일 편집 — 조건 추가 패널 스크롤 불가 수정 (핫픽스5).** 핫픽스4에서 타임라인 연산자가 11종으로 늘면서 "조건 추가" 패널이 다이얼로그 높이(500px)를 넘쳐 "기간 길이(초과)" 아래(미만·일치·비어있음·채워짐)가 잘리고 스크롤도 안 되던 결함.
+
+### 페이즈 결과 (핫픽스5, Phase 8, fix · `71cd0033`)
+`ConditionButtons.tsx`(×3): 헤더(`<p>`)는 고정, 연산자 버튼 목록을 `overflow-y-auto min-h-0 pr-1` + `data-scroll-container` inner div로 감싸고 루트에 `min-h-0` 추가.
+
+### 진단
+- **더블 원인**: ① 패널에 스크롤 영역 부재(`w-52 flex flex-col gap-2`) ② 다이얼로그 `useScrollLock` 비-passive wheel 핸들러가 `data-scroll-container` 없는 영역의 휠을 차단 → 둘 다 해결 필요. (참조 메모리 `project_data_craft_viewer_modal_scroll_lock.md` — dialog 내 추가 스크롤 영역은 `overflow-y-auto min-h-0` + `data-scroll-container` 동시 필요.)
+- 핫픽스4의 11연산자가 노출시킨 잠복 결함(이전 짧은 연산자 집합에선 미발현). **모든 컬럼 타입에 일반 적용**(timeline 한정 아님).
+
+### 영향 파일
+data-craft (i-dev, 3 files): `packages/<pkg>/src/widgets/cell-style-dialog/ConditionButtons.tsx` (<pkg> ∈ fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer)
+
+### 검증
+- lint 게이트 EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) PASS.
+- 마스터 수동 검증: 타임라인 컬럼 열 본문 스타일 편집 → 조건 추가 패널 휠 스크롤 → 11종 연산자 전부 도달 가능. fs-sub/external 은 build:packages + dev 재기동 후.
+
 ## v001.720.0
 
 > 통합일: 2026-06-10
