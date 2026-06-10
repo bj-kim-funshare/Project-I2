@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.700.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스2)
+
+온보딩 말풍선 `secondSectionSelect`(두번째 섹션 선택) 의 두 결함 교정. (a) 말풍선이 섹션 최상단에 붙던 것을 빈 영역 텍스트 위로 이동, (b) 위젯 설정 드로어에서 섹션 1로 전환했을 때 두번째 섹션 선택 말풍선이 잘못 떠 타이틀·디자인 안내를 가로막던 오발화 차단.
+
+### 페이즈 결과
+- **Phase 7 (fix, 핫픽스2)**: 두 커밋.
+  - 앵커 이동 (`0078274f`): `secondSectionSelect` 앵커를 `Section.tsx` 섹션 div(placement top)에서 `AreaWidgetContent.tsx` 의 빈 영역 placeholder(placement top)로 이동 — `emptyArea` 와 동일 패턴. 신규 컨텍스트 필드 `secondSectionFirstAreaId`(= `sections[1].areas[0].id`) 추가, Section.tsx 의 온보딩 import·훅 제거.
+  - 오발화 가드 (`7de22ab4`): `secondSectionSelect.showOn` 에 `&& c.selectedWidgetType == null` 추가. 네비게이터로 §1 위젯 전환 시 `selectSection(null)` 로 `selectedSectionId=null` → `selectedSectionIsLast=false` 라 레이아웃 hint(order 50)가 드로어 hint(75+)를 마스킹하던 문제 차단 — 위젯 선택(드로어 열림) 상태에서는 미발화.
+
+### 영향 파일
+data-craft (i-dev, 4 files):
+- `features/onboarding/model/hintRegistry.ts`
+- `features/onboarding/lib/useActiveOnboardingHint.ts`
+- `widgets/layout-canvas/ui/Section.tsx`
+- `widgets/layout-canvas/ui/AreaWidgetContent.tsx`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS — 레이아웃/드로어 두 단계 트레이스 확인(가드 + 세션 억제로 §1 전환·§2 복귀 모두 정상).
+- ⚠️ 빈 영역 placeholder 앵커의 말풍선 위치(placement top, flip 가능)는 마스터 수동 시각 검증 권장.
+
 ## v001.699.0
 
 > 통합일: 2026-06-10
