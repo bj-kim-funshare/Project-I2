@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.695.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272
+
+오늘 도입된 온보딩 말풍선(코치마크) 시스템을 확장. 순서 버그를 고치고, 2번째 섹션 구성 흐름과 위젯 설정 드로어의 텍스트→뷰어 가이드 체인을 추가. 온보딩 엔진(`hintRegistry` order + `showOn` + dismissed/closed Set)은 그대로 두고 hint 정의·앵커·컨텍스트만 확장.
+
+### 페이즈 결과
+- **Phase 1 (fix)** (`a70f7c9c`): `hintRegistry` 의 6개 기존 hint `order` 를 희소 채번(designModeSwitch=10·addSection=20·emptyArea=30·areaControlBar=70·addPage=200·userForm=210). 디자인 모드면 항상 참인 `addPage`/`userForm` 이 낮은 order 로 `emptyArea`·`areaControlBar` 를 가로막던 **버그 1·2 근본 수정** — 섹션 추가 직후 빈 영역, 빈 영역 선택 시 영역 컨트롤바가 표시되고 새 화면 추가·사용자 입력폼 안내는 투어 끝으로 이동.
+- **Phase 2 (feat)** (`13073f2a`, lint `f54ba2ad`): 신규 hint 용 컨텍스트 plumbing. `layoutStore` 에 `propertyDrawerTab`·`viewerCreateDialogOpen` UI 상태 추가, PropertyDrawer Tabs 제어화(선택 대상 변경 시 첫 탭 초기화로 기존 UX 보존), ViewerDataSection 다이얼로그 open 리프트. `HintContext` 14개 파생 필드(섹션 카운트·2번째 섹션·선택 위젯 type/textType/alignment·섹션 확장/empty-or-text·뷰어 그룹/열 카운트·드로어 탭·다이얼로그 open) 추가.
+- **Phase 3 (feat)** (`8e04cc83`): 2번째 섹션 흐름 hint 3종(`secondSectionAdd` 40·`secondSectionSelect` 50·`secondSectionExpand` 60) + `areaControlBar`(70) showOn 을 2번째(마지막) 섹션·확장 조건으로 재타겟(요청 3·4). 앵커는 FloatingSectionBanner 섹션추가 버튼·Section 2번째·SectionControls 세로확장; areaControlBar 앵커는 기존 컨텍스트 키(`selectedSectionFirstAreaId`) 기반이라 무변경.
+- **Phase 4 (feat)** (`aa274837`, 앵커 수정 `001d2d74`): 위젯 드로어 체인 A hint 5종(`widgetTextType` 80·`widgetTitleItems` 90·`widgetDesignTab` 100·`widgetLeftAlign` 110·`widgetNavigatorSwitch` 120) — 일반텍스트→화면타이틀, 표시아이템 3개, 디자인 탭, 좌측 정렬, 좌상단 네비게이터 전환(요청 5a~5e). 네비게이터 앵커는 Radix Slot 프롭 전달 문제로 `OnboardingHint > DropdownMenuTrigger` 중첩 반전 수정.
+- **Phase 5 (feat)** (`75112970`): 위젯 드로어 체인 B hint 4종(`widgetTextToViewer` 130·`viewerCreateGroupButton` 140·`viewerCreateGroupDialog` 150·`viewerCreateColumn` 160) — 텍스트→뷰어 전환(확장·empty-or-text 섹션), 데이터 그룹 생성 2단계(버튼→다이얼로그 이름입력), 열 생성(요청 5f~5h).
+
+> ⚠️ 메인 세션은 렌더를 보지 못함 — 말풍선 위치/앵커(특히 CreateDataDialog Input 앵커, FloatingSectionBanner inline-flex 래퍼)는 마스터 수동 검증 권장. 선형 진행은 confirm("앞으로 보지 않기")=영구 dismiss 전제(2번째 텍스트 위젯에서 타이틀 체인 재발 자연 억제).
+
+### 영향 파일
+data-craft (i-dev, 17 files):
+- onboarding: `features/onboarding/model/hintRegistry.ts`, `features/onboarding/lib/useActiveOnboardingHint.ts`
+- layout entities: `entities/layout/model/{layoutStore.ts, layoutTypes.ts}`
+- layout-canvas: `widgets/layout-canvas/ui/{FloatingSectionBanner.tsx, Section.tsx, SectionControls.tsx}`
+- property-drawer: `widgets/property-drawer/ui/{PropertyDrawer.tsx, WidgetNavigatorDropdown.tsx, WidgetTypeSelector.tsx}`, `ui/property-editors/TextPropertiesEditor.tsx`, `ui/style-editors/WidgetDesignGroup.tsx`, `ui/property-editors/viewer-editor/{ViewerDataSection.tsx, CreateDataDialog.tsx, ViewerGridSection.tsx}`
+- i18n: `shared/i18n/locales/{ko.ts, en.ts}`
+
+### 검증
+- 각 페이즈 lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(eslint 0 errors). Phase 2 lint hotfix 1회(no-explicit-any 4건 정밀 타입 제거), Phase 4 앵커 수정 1회.
+- advisor 계획(#1)·완료(#2) 검증 통과. 두 load-bearing 전제(빈 영역 클릭=섹션 선택, areaControlBar 컨텍스트 타겟) 직접 Read 검증.
+
 ## v001.694.0
 
 > 통합일: 2026-06-09
