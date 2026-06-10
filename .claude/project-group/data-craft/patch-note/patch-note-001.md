@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.724.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #290 (funshare-inc/data-craft) · Roadmap-7 트랙 C-2
+
+**관리자 콘솔 프로모션 CRUD — admin-server 가 dev/prod 토글 dataPool 로 서비스 promotion 을 직접 생성·편집·활성토글하고, 트리거 제거된 관리 스키마 `admin_promotion_audit` 에 자기 감사(admin_actor=토큰 email, before/after jsonb)를 기록. admin-web 에 목록·생성·편집 폼·활성토글 + 현황·통계(recharts) 페이지 추가.** C-1 에서 서비스 감사 레일을 제거하고 관리 감사 테이블(서비스 FK 0)을 신설한 토대 위에 실제 운영 UI 를 구현. prod 토글은 컷오버 전까지 차단(`ADMIN_PROD_TOGGLE_ENABLED=false`) → 평시 쓰기·감사는 dev 데이터에만 적용.
+
+### 페이즈 결과
+- **Phase 1** (BE, feat · `2096db9`): GET `/api/admin/promotions`(목록, 전체 컬럼, priority/created_at 정렬) + GET `/api/admin/promotions/status`(현황·통계 집계 — activeClientPromotions·expiringSoon·eligibilityDistribution·activeDistribution). verifyAdminToken+dbMode 보호, `dataPool(mode).query`+`?` 플레이스홀더, sendResponse 봉투. node-pg `count(*)`→string·smallint 계약 결함 `::int` 캐스팅·타입 교정 포함.
+- **Phase 2** (BE, feat · `0186b4a`): POST 생성/`:id/update`/`:id/toggle`. `withDataClient(mode, fn)` 트랜잭션 헬퍼로 promotion DML + `admin_promotion_audit` INSERT 원자화. update/toggle 은 `SELECT … FOR UPDATE`(before)→`UPDATE …, updated_at=CURRENT_TIMESTAMP RETURNING *`(after)→감사. 트리거 제거로 setPromotionAuditContext 불요, promotion 스키마 무변경.
+- **Phase 3** (FE, feat · `f109efe`): `entities/promotion`(types·api — X-DB-Mode 주입) + `PromotionsPage` 목록 테이블·현황 카드 + `/promotions` 라우트(NAV 기존), mode 변경 시 refetch.
+- **Phase 4** (FE, feat · `8fe1015`→`243d81c`→`3beeb10`): 생성·편집 폼(전 컬럼, enum native select, nullable 빈값→null, detail_features JSON 검증) + 활성토글 + sonner toast + shared/ui Select·Textarea primitive. 검증 후속 교정 2건 — datetime-local 로컬 시간대 왕복(편집 시 ~9h 시프트 제거) + 필수값(이름·노출 일시) 제출 전 검증(NOT NULL 500 방지).
+- **Phase 5** (FE, feat · `2de143f`): recharts 통계 — eligibility_type 분포 BarChart + is_active 분포 PieChart, 기존 status 상태 재사용(자동 갱신).
+
+### 범위 / 기지 사항 (후속)
+- **prod 컷오버 후속**: prod `admin_promotion_audit` 생성 + 토글 활성화(`ADMIN_PROD_TOGGLE_ENABLED=true`)는 Roadmap-6 컷오버 윈도우에 묶임. 현재 prod 모드는 dbMode 미들웨어가 503 차단.
+- **admin-web `pnpm build` 사전결함(Track B)**: `@types/node` 가 package.json devDep 누락인데 `tsconfig.node.json` `types:["node"]` 선언 → `tsc -b` 실패. dev.md 게이트=`typecheck && lint`(통과), admin-web 은 pnpm dev 전용·배포 제외라 운영 무관. devDep `@types/node` 추가로 별도 해소 권장.
+- **TZ 아키텍처 잔존**: promotion 타임스탬프는 naive `timestamp` + Track B OID 1114 KST 파서 + PG 세션 TZ 결합. 폼 왕복은 KST 운영자 기준 교정 완료. `/status` 의 `now()`/`INTERVAL` 비교도 같은 경계에 있으나 사전결함(C-2 미도입).
+- **BE 요청 본문 스키마 검증 부재**: Phase 2 쓰기 입력은 타입 강제 검증 없음 → 잘못된 입력은 400 아닌 500. 내부 콘솔 한정 허용, 후속 보강 후보.
+
+### 영향 파일
+- **data-craft-admin-server** (i-dev): `src/routes/adminPromotion.routes.ts`, `src/controllers/adminPromotion.controller.ts`, `src/services/adminPromotion.service.ts`, `src/config/database.ts`, `src/config/constant.ts`, `src/app.ts`
+- **data-craft-admin** (i-dev): `src/entities/promotion/{types,api,index}.ts`, `src/pages/promotions/PromotionsPage.tsx`, `src/features/promotion-form/PromotionForm.tsx`, `src/features/promotion-stats/PromotionStats.tsx`, `src/shared/ui/{Select,Textarea}.tsx`, `src/app/router/index.tsx`
+
+### 검증
+- BE lint(eslint) PASS, FE lint(typecheck+eslint) PASS. advisor #1·#2 모두 BLOCK 없음(검증 중 enum 'active' 확인·count 캐스팅·TZ 왕복·NOT NULL 가드 교정).
+- 마스터 수동 검증(머지 후): dev 모드 프로모션 생성 → `promotion` 행 + `admin_promotion_audit` insert 레코드(admin_actor=email) 동시 확인, 편집·토글 → update 감사 before/after 확인, `/promotions` 목록·현황·통계 렌더 + mode 토글 시 갱신, prod 선택 시 503.
+
 ## v001.723.0
 
 > 통합일: 2026-06-10
