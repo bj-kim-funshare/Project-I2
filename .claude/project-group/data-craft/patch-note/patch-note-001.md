@@ -24130,3 +24130,28 @@ data-craft-server:
 
 ### 비고
 Roadmap-8 5플랜 중 4번(동시성·멱등). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. **TZ 가정**: node-cron이 서버 시스템 로컬타임으로 `0 1 * * *`를 평가하므로 가드도 동일 기준 — 서버 TZ가 KST가 아니면 cron/가드 시각이 KST와 어긋남(컷오버 전 서버 TZ 점검 권장). 마지막 5번(안정성·스케줄러 #12·#13·#21) 남음.
+
+## v001.708.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #283 (funshare-inc/data-craft)
+
+**data-craft-server 결제 안정성·스케줄러 보강 (Roadmap-8 #5 — #12·#13·#21).** 재시도 cron이 옛 FAILED 이력으로 재가입 고객을 조기 청구(#12), 손상된 enc:v1 암호화 행 하나가 복호화 루프 전체를 500으로 만들고 웹훅 무한 재시도 유발(#13), `plan_expires_at < NOW()` + `is_auto_renew=1` 클라이언트가 양 cron에 안 잡혀 무기한 무료(#21)이던 결함 3건을 보강. 정상 단건 동작 불변.
+
+### 페이즈 결과
+- **Phase 1 (fix, #12+#21)** (`20bc348`): (#12) `findRetryableClients`의 FAILED `IN` 서브쿼리를 EXISTS + 현재 구독 episode 앵커로 교체 — `ph.created_at > COALESCE((SELECT MAX(COALESCE(paid_at, created_at)) FROM payment_history WHERE company_id=c.company_id AND status='DONE'), '1970-01-01')`. 재가입 시 새 DONE 이후의 FAILED만 재시도 대상이 되어 옛 실패로 인한 조기 청구를 방지(`paid_at` nullable → `COALESCE(paid_at, created_at)` 안전폴백). D-5/3/1·`plan_expires_at > NOW()` 보존. (#21) `findRenewableClients`의 하한 경계 라인 `(c.plan_expires_at > NOW() OR c.active_promotion_id IS NOT NULL)` 한 줄 제거 — 과거 만료 + `is_auto_renew=1` 클라이언트를 갱신 cron이 포착(상한 `<= NOW()+1day` 유지).
+- **Phase 2 (fix, #13)** (`910ee27`): `billingCrypto.ts`에 `decryptBillingFieldSafe`(내부 `decryptBillingField`를 try/catch로 감싸 실패 시 `logger.warn` + null) 신설. `billing.model.ts`의 전수스캔 루프 2곳(`findBillingByCustomerKey`의 `.find`, `deactivateBillingByKey`의 `.filter`)만 이 헬퍼로 교체 — 손상 행 1개가 전체 조회/웹훅 핸들러를 500시키고 토스 무한 재시도를 유발하던 결함 제거(손상 행 skip + warn). 타깃 단건 조회(`findActiveBillingByCompanyId` 등)는 `decryptBillingField` throw 유지(그 회사 데이터 무결성 문제는 전파 정당).
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/services/billingScheduler.service.ts`, `src/models/billing.model.ts`, `src/utils/billingCrypto.ts`
+
+### 검증
+- 두 커밋 모두 `pnpm build`(tsc) exit 0. #21은 정확히 1줄 제거(상한 보존), #12 EXISTS+COALESCE 앵커 적용 확인, #13 Safe는 전수스캔 2곳 한정·단건 조회 throw 유지 grep 확인.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- 별개 health 노트(회귀 아님): 미접촉 `src/types/db.ts:7` plan #258 잔존 `no-explicit-any` — affected_files 밖, lint-hotfix iter 미발화.
+
+### 비고
+**#21 의도된 부작용(운영 인지)**: 과거 수개월 만료된 `is_auto_renew=1` 고객이 갱신 cron에 재진입 → 첫 진입 시 결제 재시도(성공 시 회복, 또는 3회 실패 후 free 강등). 무기한 무료보다 정상 회복 경로 — 배포 후 "과거 만료 고객 결제 시도 재개"가 관측될 수 있음. 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+
+> **🏁 Roadmap-8 완료**: data-craft 결제 시스템 결함 16건(권한·접근 / 요금 계산 정합 / 프로모션 무결성 / 동시성·멱등 / 안정성·스케줄러)을 5개 plan-enterprise 플랜(#271·#274·#277·#280·#283)으로 전부 수정 완료. 전수조사에서 무시 확정한 8건(#1·#9·#10·#16·#17·#22·#23-1·#23-2)은 의도적 미수정.
