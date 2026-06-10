@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.723.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스6
+
+**날짜+시간(dateTime) 조건 입력이 조건 표 행을 벗어나 깨지던 문제 수정 (핫픽스6).** dateTime 조건은 DatePicker + HH:mm 시간 셀렉터를 함께 렌더(핫픽스4 도입)하는데, 좁은 조건 칸(~273px)·고정 행 높이(`h-12` 48px)에서 `flex-wrap` 으로 불규칙 래핑되며 행 밖으로 넘쳐 레이아웃이 깨졌다.
+
+### 페이즈 결과 (핫픽스6, Phase 9, fix · `7d6b1d37`)
+- `DialogTableRow.tsx`(×3): 행 컨테이너 `h-12 → min-h-12` — 2줄 콘텐츠 시 해당 행만 자동 성장(일반 행은 48px 유지).
+- `ConditionSettingWidget.tsx`(×3): `renderDateTimePicker` 외부 래퍼 `flex items-center justify-center gap-1 flex-wrap` → `flex flex-col items-center justify-center gap-1 w-full min-w-0 py-1`(세로 스택), DatePicker 래퍼 `w-fit` → `w-fit max-w-full` → 날짜 위 / 시간 아래로 적층되어 좁은 칸에 수용.
+- time(시간) 컬럼은 HH:mm 한 줄이라 무변경.
+
+### 범위 / 기지 사항
+- **DatePicker placeholder 오라벨(범위 외)**: dateTime 조건 임계값 DatePicker 가 `t.document.addDeadline`("기한 날짜 추가") placeholder 를 그대로 사용 — 마감일 맥락 문자열이라 의미상 부정확(핫픽스4 잔존, 마스터 스크린샷에 노출). 본 핫픽스의 "깨짐" 범위 외 — 원하시면 후속에서 generic placeholder 로 교체 가능.
+- **min-h 부작용**: 조건 입력 콘텐츠가 1줄을 넘으면 해당 행만 자동 성장. 다른 행은 48px 유지.
+- **2:3 비율**: 라벨/값 영역 비율은 추정값(마스터 미지정) — dateTime 스택이 `flex:3` 영역 안에서 일어나므로, 값 영역이 좁다고 느끼시면 비율 조정 가능.
+
+### 영향 파일
+data-craft (i-dev, 6 files): `packages/<pkg>/src/widgets/cell-style-dialog/{DialogTableRow,ConditionSettingWidget}.tsx` (<pkg> ∈ fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer)
+
+### 검증
+- lint 게이트 EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) PASS.
+- 마스터 수동 검증: 날짜+시간 컬럼 조건(이전/이후/같은날/날짜범위) 추가 → 날짜·시간 입력이 행 안에 세로로 수용, 표 벗어남 없음. fs-sub/external 은 build:packages + dev 재기동 후.
+
 ## v001.722.0
 
 > 통합일: 2026-06-10
