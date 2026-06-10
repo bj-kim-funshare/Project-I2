@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.733.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #298 (funshare-inc/data-craft) · Roadmap-8 재조사 후속
+
+**결제 정합·안정성·정리 8건 — 결제 도메인 재조사(B)에서 도출한 신규/기지 결함 중 관리자 콘솔 무관한 8건을 런타임 동작 불변으로 수정.** 전부 `data-craft-server` 단일 repo, eslint+tsc 클린.
+
+### 페이즈 결과
+- **Phase 1** (fix · `d0f320f`→`236adde`): **H4** 업그레이드 견적=실청구 대칭 — `getUpgradeQuote`가 `calculateProrationDiff`에 target 프로모 단가/협업여부를 `executeUpgradeWithDiff`와 동일 조건(동일플랜·미교체 시 스냅샷)으로 전달, 견적 endpoint(`/billing/upgrade-quote`)도 `replaceActivePromotion` 통과(컨트롤러 대칭 완성). **H5** `executeUpgradeWithDiff`에 활성유저≤좌석 가드(`countUsersByCompanyId`→`SEATS_BELOW_ACTIVE_USERS`, 첫결제 패턴). **L2** `calculateProrationDiff`가 프로모 활성 경로면 `effectiveCycleForCredit='monthly'`로 cycleDays 산출(연간 분모 오류 수정, 단가 경로 보존).
+- **Phase 2** (fix · `f0e0fdd`): **M3** 재구매 retention 이중계수 제거 — `purchasePromotion` 새 행 시드 `initialConsumed: priorConsumed→0`(#8 한도 게이트·#11 종료시점·cancel +1 보존). **L1** `hasBusinessPurchasedPromotion` COUNT에 `AND ph.status='DONE'` 추가(FAILED/CANCELED 제외).
+- **Phase 3** (fix · `d0b9d1e`): **M1** `billingCleanup` 복호화 루프를 raw `decryptBillingField`→`decryptBillingFieldSafe`+null 시 행 skip(warn·failCount) — 손상 enc:v1 행 1개가 시간당 청소 배치 전체를 abort 못하게(#13 격리 패턴).
+- **Phase 4** (fix · `37ba768`→`cc022ee`): **A2** 결제비번 set/change에 `isWeakPin` 차단(반복·연속 PIN, `PAYMENT_PASSWORD_TOO_WEAK`). **A4** #258 잔존 lint 정리 — 실위치는 `src/types/db.ts:7`(원 명령 "db.ts:7"=config/database.ts 오해석 정정)의 `DbRow [column:string]: any` → 정당성 주석+`eslint-disable-next-line`(any→unknown은 소비처 tsc 연쇄라 배제), 프로젝트 lint exit 0 회복.
+
+### 범위 / 기지 사항
+- 마스터 의도 제외: H6(업그레이드 charge txn 내 잠금)·H7(결제 후 DB실패 Toss 보상취소)·H8(02시 만료 cron RMW 레이스)·A1(이메일 인증 purpose 미저장)·관리자 콘솔 결함군 7건(C1·C2·H1·H2·H3·M2·A3) — 본 플랜 범위 밖.
+- 전 항목 런타임 정상 결제 동작 불변. A4 위치 정정은 scope creep 아님(원 명령 A4 deliverable 의 실위치 보정).
+
+### 영향 파일
+- **data-craft-server** (i-dev): `src/services/billingSubscription.service.ts`, `src/services/promotion.service.ts`, `src/models/promotion.model.ts`, `src/services/billingCleanup.service.ts`, `src/controllers/paymentPassword.controller.ts`, `src/controllers/billing.controller.ts`, `src/types/db.ts`
+
+### 검증
+- BE lint(eslint) 게이트 EXIT 0, 페이즈별 `pnpm build`(tsc) 클린. advisor #1·#2 BLOCK 없음(검증 중 H4 컨트롤러 대칭·M3 #8 보존·L2 순서·A4 실위치 확인).
+- 마스터 수동 검증: 협업프로모 좌석추가 견적=실청구 / 활성>좌석 업그레이드 거부 / 프로모 취소·재구매 retention 정합·한도 차단 유지 / FAILED만 있는 사업자 자격 정상 / 손상 행 있어도 청소 배치 지속 / weak PIN 거부.
+
 ## v001.732.0
 
 > 통합일: 2026-06-10
