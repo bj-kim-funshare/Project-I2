@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.711.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스1
+
+**스위치·체크박스 조건부 본문 스타일 미적용 잠복 결함 수정 (핫픽스1).** v001.706.0 라벨 개편 직후 마스터 수동 테스트에서, 스위치(`boolean`)·체크박스(`checkbox`) 컬럼에 조건부 본문 스타일(켜짐/꺼짐, 선택/미선택)을 설정해도 뷰어에서 실제 셀 스타일이 전혀 적용되지 않던 결함을 수정. (라벨 표시 자체는 정상이었고, 이 결함은 라벨 변경과 무관한 기존 평가기 잠복 버그.)
+
+### 근본 원인
+런타임 조건 평가기 `getTargetCellRendererByValue`(`widgets/fs_grid_renderer/utils.ts`)가 `isTrue`/`isFalse` 연산자를 셀 값과 `cellValue === 'true'` / `=== 'false'` 로 엄격 비교했으나, 실제 저장 표현이 평가 기대값과 불일치:
+- **boolean(스위치)**: `useBooleanCellHandlers` 가 `'1'` / `'0'` 로 기록(렌더러 `useBooleanCellState` 는 `'1'|'true'|'yes'|'on'` 을 truthy 로 읽음).
+- **checkbox**: `useCheckboxCellHandlers` 가 `'checked'` / `'unchecked'` 로 기록(렌더러 `useCheckboxCellState` 는 `=== 'checked'` 로 읽음).
+→ 평가기의 `'true'`/`'false'` 는 어느 쪽도 매칭 못 함 → 조건 모델 미선택 → 스타일 미적용. (평가기는 이미 `columnTypeId` 를 인자로 보유.)
+
+### 페이즈 결과
+- **핫픽스1 (Phase 4, fix)** (`dd8df9ec`): 3개 뷰어 패키지 각 `utils.ts` 에 렌더러 truthy 판정과 일치하는 모듈 헬퍼 `isBooleanCellTruthy(value, columnTypeId)` 신설 — `columnTypeId==='checkbox'` 이면 `value === 'checked'`, 그 외(boolean/스위치)는 `'1'|'true'|'yes'|'on'`(대소문자 무시). `isTrue` → `isBooleanCellTruthy(...)`, `isFalse` → `!isBooleanCellTruthy(...)` 로 교체. `isFalse` 는 렌더러가 **off 로 표시하는 모든 값**(빈 값/'0'/'unchecked'/미인식 값 포함)에 매칭되어 화면 상태와 동일하게 동작(의도적 동작 — 셀 시각 상태 = 조건 매칭 기준). 평가기의 다른 연산자·legacy 경로 무변경.
+
+### 영향 파일
+data-craft (i-dev, 3 files):
+- `packages/fs-data-viewer/src/widgets/fs_grid_renderer/utils.ts`
+- `packages/fs-sub-data-viewer/src/widgets/fs_grid_renderer/utils.ts`
+- `packages/fs-external-data-viewer/src/widgets/fs_grid_renderer/utils.ts`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` EXIT 0 (0 errors, 89 기존 warnings). fresh 워크트리 `pnpm install` + `build:packages` 선행. advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **정적 검증만 수행(메인세션 렌더 미관측)** — 마스터 수동 시각 검증(v001.706.0 시나리오가 이번에 실제 통과해야 함):
+  1. 스위치 컬럼: 켜짐=참조 / 꺼짐=경고 조건 설정 → 켜진 행 셀에 참조 스타일, 꺼진 행에 경고 스타일 시각 적용.
+  2. 체크박스 컬럼: 선택=참조 / 미선택=경고 조건 설정 → 체크된 행에 참조, 미체크 행에 경고.
+  3. fs-sub-data-viewer / fs-external-data-viewer 는 dist alias → `pnpm build:packages` + dev 서버 재기동 후 확인.
+
 ## v001.710.0
 
 > 통합일: 2026-06-10
