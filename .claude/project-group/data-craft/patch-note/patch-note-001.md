@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.704.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #278 (funshare-inc/data-craft) · 핫픽스1
+
+**페이지 트리 — 최하단 자식없는 부모를 위 부모의 마지막 자식 아래로 드롭 시 사일런트 원위치 복귀 수정 (핫픽스1).** 빌더 사이드바 페이지 트리에서 가장 아래의 자식 없는 부모 페이지를, 바로 위 펼쳐진 부모의 마지막 자식 아래로 드롭하면 드롭이 안 되고 원래 위치로 계속 복귀(서버 에러 없는 사일런트)하던 결함을 수정. 근본 원인은 해당 드롭이 `over = END_OF_LIST_DROP_ID`(드래그 소스 바로 아래 h-8 end-of-list 영역)로 해소되고, `handleDragEnd` 의 END_OF_LIST 분기가 `lastRoot` 와 비교하는데 드래그 페이지가 이미 마지막 루트라 `activePage.id !== lastRoot.id` 가 false → 아무 동작 없이 사일런트 노옵 → 원위치 복귀. (정상 `move-to-parent` reparent 경로는 over 가 자식 행에 정확히 걸릴 때만 발화하나, 최하단 드롭은 end-of-list 영역이 가로챔.)
+
+### 페이즈 결과
+- **Phase 2 / 핫픽스1 (fix)** (`168eb33`): `DesignSidebarDndArea.tsx` `handleDragEnd` 의 END_OF_LIST 분기에 else 추가 — active 가 이미 마지막 루트일 때, 마지막 가시 행(드래그 소스 제외)이 펼쳐진 부모의 자식이고 active 가 자식 없는 루트이면 `movePageToParent(active, 그 부모)` 로 편입(reparent, getDragIntent 의 루트→자식 영역 규칙과 동일). 그 외(전부 collapsed / 마지막 가시 행이 루트)에는 기존 노옵 유지 → 회귀 없음. 단일 파일, additive(+20/-0), 임포트 무변경.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx`
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` 게이트 EXIT 0 (0 errors, 89 기존 warnings). fresh 워크트리 pnpm install + build:packages 선행.
+- advisor 완료(#2) 5-perspective PASS(BLOCK 없음).
+- **정적 분석 기반 진단(메인세션 렌더 미관측)** — 마스터 수동 검증 권장: 최하단 자식없는 부모 → 위 부모의 마지막 자식 아래 드롭 → 그 부모의 마지막 자식으로 편입 확인.
+
+### 비고
+이슈 #278 핫픽스1(누적 Phase 2). 코드 WIP(`-핫픽스1`)=data-craft i-dev 머지, 본 patch-note WIP(`-핫픽스1-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. **UX 변화 주의**: 종전 최하단 루트의 end-of-list 드롭은 사일런트 노옵이었으나 이제 위 펼쳐진 부모로 편입됨(트리거 협소: 펼쳐진 자식보유 부모가 바로 위 + active 가 자식없는 루트). 선택 상자(isSelectorBox) 페이지가 이 경로에 걸리면 `movePageToParent` 가 "선택 상자는 자식 불가" 토스트를 띄움(종전 사일런트 → 정확한 피드백으로 변경, 결함 아님).
+
 ## v001.702.0
 
 > 통합일: 2026-06-10
