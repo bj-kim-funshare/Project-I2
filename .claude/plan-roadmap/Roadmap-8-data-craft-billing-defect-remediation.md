@@ -14,7 +14,7 @@
 
 🟢 /plan-enterprise data-craft data-craft-server 결제 안정성·스케줄러 보강 (3건). [완료: 이슈 #283, patch-note v001.708.0] ① #12 재시도 cron(processRetryPayments)이 최근 30일 FAILED 이력만 보고 현재 구독 회차 앵커가 없어 재가입 고객을 옛 실패 근거로 만료 5일 전 조기 청구 → 실패 이력을 현재 구독 episode 에 묶어 필터. ② #13 손상된 enc:v1 암호화 행 하나가 decryptBillingField throw 로 findBillingByCustomerKey/deactivateBillingByKey 전체를 500 으로 만들고 웹훅 무한 재시도 유발 → 복호화 루프(.find/.filter)에 행별 try/catch 격리. ③ #21 plan_expires_at < NOW() 이면서 is_auto_renew=1 인 클라이언트가 갱신 cron(만료 지남 제외)·만료 cron(자동갱신 켜짐 제외) 양쪽에 안 잡혀 무기한 무료 사용 → 두 cron 커버리지 공백 보강.
 
-🔴 /plan-enterprise data-craft data-craft 결제 차단 윈도우 503 FE 처리 (Roadmap-8 후속). data-craft-server #6b로 도입된 결제 차단 윈도우가 매일 00:50–01:10(서버 로컬타임) 결제성 API(/billing/payment·/billing/upgrade·/seats/change)에 503 BILLING_RENEWAL_IN_PROGRESS 를 반환한다. FE(data-craft)의 apiClient/에러 핸들러에서 이 503·error code(BILLING_RENEWAL_IN_PROGRESS)를 분기해 사용자 친화 메시지("자동 갱신 처리 시간대라 잠시 후 다시 시도해 주세요")와 재시도 유도로 처리한다(일반 에러 토스트로 떨어지지 않게).
+🟢 /plan-enterprise data-craft data-craft 결제 차단 윈도우 503 FE 처리 (Roadmap-8 후속). [완료: 이슈 #284, patch-note v001.714.0] data-craft-server #6b로 도입된 결제 차단 윈도우가 매일 00:50–01:10(서버 로컬타임) 결제성 API(/billing/payment·/billing/upgrade·/seats/change)에 503 BILLING_RENEWAL_IN_PROGRESS 를 반환한다. FE(data-craft)의 apiClient/에러 핸들러에서 이 503·error code(BILLING_RENEWAL_IN_PROGRESS)를 분기해 사용자 친화 메시지("자동 갱신 처리 시간대라 잠시 후 다시 시도해 주세요")와 재시도 유도로 처리한다(일반 에러 토스트로 떨어지지 않게).
 
 🔴 /plan-enterprise data-craft data-craft-server 갱신 cron·차단 윈도우 TZ 명시 (KST, Roadmap-8 후속). 현재 node-cron(갱신 0 1·만료 0 2·알림 0 9·청소 0 *·토큰 0 3)과 renewalWindowGuard가 서버 시스템 로컬타임에 의존해 서버 TZ가 KST가 아니면 의도한 KST 시각과 어긋난다. node-cron schedule에 { timezone: 'Asia/Seoul' } 옵션을 주고, renewalWindowGuard도 KST 기준(billing-date.util의 kstParts 패턴)으로 비교하도록 변경해 서버 TZ와 무관하게 결정적으로 동작하게 한다.
 
