@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.726.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #291 (funshare-inc/data-craft)
+
+**데이터 뷰어 그리드 뷰의 On/Off 스위치 셀을 체크박스 셀과 동일하게 1클릭 즉시 토글로 정합.** 마스터 요구: 체크박스는 포커싱과 동시에 값이 바뀌는데 스위치는 포커싱 이후 한 번 더 눌러야 바뀌니, 체크박스와 동일하게 1클릭으로 고쳐라.
+
+### 페이즈 결과 (Phase 1, fix · `f9e9457`)
+- **`useBooleanCellHandlers.ts`**: `handleClick` 의 `if (!isFocused) onFocus(); else handleToggle();` 분기를 체크박스 핸들러(`useCheckboxCellHandlers.ts`)와 동일 패턴으로 교체 — 포커스 미진입 시 `onFocus(false)` 후 `handleToggle()` 무조건 호출(`else` 게이트 제거). 결과: 스위치 셀이 포커스 미진입 상태에서도 클릭 한 번에 즉시 토글.
+
+### 효과 / 부수
+- 결함 원인: 체크박스는 `normal-003 PHASE-1` QA 피드백으로 1클릭 토글이 적용됐으나 boolean(On/Off) 핸들러에는 미적용된 비대칭 상태였음.
+- 의도적 비변경: boolean `handleToggle` 내부에는 체크박스와 달리 `isReadOnly` 가드가 없으나, 호출부(`handleClick`/`handleDoubleClick`/`handleContainerKeyDown`) 전부가 자체 `isReadOnly` early-return 을 가져 동작상 동일 → 가드-패턴 정합은 scope 외로 미변경.
+- 더블클릭·키보드(Enter/Space)·shift+클릭(범위 선택)·읽기전용 경로 무변경.
+
+### 영향 파일
+data-craft (i-dev, 1 file): `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridBooleanCellRenderer/useBooleanCellHandlers.ts`
+
+### 검증
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) PASS.
+- 마스터 수동 검증:
+  1. 그리드 뷰 On/Off(스위치) 컬럼 셀을 포커스 미진입 상태에서 1클릭 → 값 즉시 토글.
+  2. 체크박스 컬럼과 동작 동일성 확인.
+  3. shift+클릭(범위 선택)·읽기전용 모드·더블클릭·키보드(Enter/Space) 회귀 없음.
+  - dev 반영은 `fs_data_viewer` src alias 라 빌드 불필요(하드 리프레시). fs-sub/external 형제 뷰어는 본 변경 대상 아님.
+
 ## v001.725.0
 
 > 통합일: 2026-06-10
