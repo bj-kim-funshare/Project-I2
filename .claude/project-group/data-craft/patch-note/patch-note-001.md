@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.701.0
+
+> 통합일: 2026-06-09
+> 플랜 이슈: #275 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 5 (fix, 핫픽스1, data-craft-server)** (`1ed6cd0` 머지, 6커밋): prod ETL 실행 중 노출된 런타임 결함 6건 수정(tsc/lint 통과·실 DB 실행서만 발현). ① `pg_tables` 무효 컬럼 `tabletype` 제거 ② `pgListTables` 가 data_values 파티션 자식(p0..p7) 포함하던 것 `pg_inherits` 로 제외 ③ 적재 컬럼을 **소스∩타깃 교집합**으로(target-only `billing_anchor_day`·`is_unique_flag` 제외 → DB default) ④ 적재 트랜잭션에 **`SET LOCAL session_replication_role='replica'`**(트리거·FK 비활성 — 검증트리거 셀 거부·set_updated_at 타임스탬프 변조 방지, **무손실 핵심**) ⑤ column_type 비교가 `viewer_type`을 `data_column`(없음) 대신 `data_viewer_column_setting`(JOIN) 참조하도록 ⑥ **column_type 안전교정**: expected=2(텍스트 완화) 16건 UPDATE, 제한방향(date 1건) skip.
+
+### 영향 파일
+data-craft-server:
+- 수정: `scripts/prod-migration/{introspect,manifest,migrate-tables,migrate-bulk,finalize,index}.ts`
+
+### 실행 결과 (라이브 소스 대상 검증런, 2026-06-09)
+- **무손실 대사 게이트**: 26/27 테이블 정확 일치 — **`data_values` 3,219,191 = 3,219,191 exact** ✓, data_viewer_row_setting 121,992 등 전부 ✓. uuid 7·json 21 컬럼 spot-check OK.
+- **column_type 안전교정 적용**: 16건 → text(2)(post-verify 잔여 0), date 1건(8284) 제한방향이라 skip, rowId 186·viewer설정없음 293 보류.
+- **유일 불일치 = `refresh_token` (라이브 churn)**: 소스 카운트가 실행마다 증가(2221→2223→2226) — 라이브 세션 테이블이 적재~대사 사이 신규 로그인 생성. **마이그레이션 결함 아님**(마스터 "패스" — 휘발성·장기문제 아님). **진짜 컷오버는 다운타임 윈도우(소스 동결)에서 재실행 시 정확 일치.**
+
+### 배경 / 비고
+- 본 실행은 **prod MySQL 라이브 상태에서의 검증런** — ETL 정확성 입증 + 데이터 적재(스냅샷). 최종 컷오버는 AWS 셧다운(소스 동결) 다운타임 윈도우에서 idempotent 재실행(TRUNCATE 후 재적재).
+- ⚠️ column_type 미교정 잔여: date 1건(text 안전), rowId 186(서브그리드 모호), viewer설정없음 293 — 필요 시 별도 검토.
+- 외부 리더 cross-repo: 코드 핫픽스 WIP=data-craft-server i-dev, 본 patch-note=Project-I2 main. origin push 안 함.
+
 ## v001.700.0
 
 > 통합일: 2026-06-10
