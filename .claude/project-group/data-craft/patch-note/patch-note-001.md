@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.709.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #282 (funshare-inc/data-craft)
+
+**Roadmap-7 트랙 B — 관리자 콘솔 골격(격리 인증 + dev/prod 토글 + 셸).** 신규 2저장소(`data-craft-admin-server` BE, `data-craft-admin` FE)를 스캐폴드. 배포 제외·`pnpm dev` 전용(admin-server 8100 / admin-web 5175). 트랙 C(프로모션 CRUD)·D(대시보드)의 토대. work repo 2개 모두 i-dev 부트스트랩(main genesis → i-dev) 후 진행.
+
+### 페이즈 결과
+- **Phase 1 (feat, BE)** (`729fe4c`): admin-server 스캐폴드(Express+TS, data-craft-server 미러) — package/tsconfig/eslint + app.ts(health)/index.ts(8100)/config{database,pgAdapter,constant,envValidator}/utils/middlewares. **2풀 설계**: `authPool`(고정 dev `data_craft_dev`, lazy 싱글톤) + `dataPool('dev'|'prod')`(모드별 lazy 캐시). chalk 미사용 경량 logger.
+- **Phase 2 (feat, BE)** (`4f5e4cf` + `0d5da6c` lint): 고정계정 2단계 로그인 — adminEmailVerification 모델(authPool, run3) + email.service(SMTP) + adminAuth.service(generateCode 6자리, requestLogin=bcrypt.compare(env hash)+발송율제한, verifyCode=대조·expiry·attempt→ADMIN_JWT 토큰) + verifyAdminToken 미들웨어(HS256) + POST /api/admin/auth/login·/verify(strictLimiter). 회원가입·비번찾기 없음. `ADMIN_PASSWORD_HASH`는 일회용 노드 스크립트로 .env 작성(평문·해시 미노출, **.env 미커밋**). 2차 커밋: Express Request 증강 `no-namespace` — module augmentation(express-serve-static-core) TS2664로 미해결 → 타깃 `eslint-disable-next-line` 폴백.
+- **Phase 3 (feat, BE)** (`793211c`): dev/prod 데이터 풀 토글 — dbMode 미들웨어(X-DB-Mode 헤더, 기본 dev) + **prod 차단 가드**(`ADMIN_PROD_TOGGLE_ENABLED`=false → 503 ServiceUnavailable) + GET /api/admin/db/mode + GET /api/admin/db/promotion-count(dataPool(mode) 샘플 read, verifyAdminToken 보호). authPool 항상 dev 고정.
+- **Phase 4 (feat, FE)** (`1054540`): admin-web **standalone** 스캐폴드(Vite v7+React19+TS+Tailwind v4, 모노레포 아님) — vite(5175)/tsconfig/eslint + main/app(QueryClient+Router+Toaster)/router{index,AuthGuard,GuestGuard,RootLayout 셸(사이드바+상단바)}/entities/auth/adminAuthStore(zustand, ADMIN_JWT localStorage)/shared{config/env(VITE_ADMIN_API_BASE_URL→8100),lib/apiClient(fetch·Bearer·.data 봉투),ui{Button,Input,Card}}/pages placeholder. recharts dep 추가(차트 미사용). i18n 생략(한국어).
+- **Phase 5 (feat, FE)** (`58a9696`): 2단계 로그인 UI(이메일+비번→인증코드, useLogin, 401 구분, 코드 재전송, 회원가입 없음)→adminAuthStore 토큰 저장·셸 진입 + dev/prod 토글(dbModeStore localStorage 영속·prodToggleEnabled 게이트로 prod 선택 차단·stale 복구, DbModeToggle 위젯 마운트 시 /db/mode 조회) + **PROD 모드 전폭 빨간 배너** + DashboardPage가 X-DB-Mode 헤더로 promotion-count 호출(인증·토글 e2e 검증).
+
+### 영향 파일
+data-craft-admin-server (신규 저장소):
+- 스캐폴드 + src/{app,index,config/*,utils/*,middlewares/*,models/adminEmailVerification,services/{email,adminAuth,adminDb},controllers/{adminAuth,adminDb},routes/{adminAuth,adminDb}}
+
+data-craft-admin (신규 저장소):
+- 스캐폴드(vite/tsconfig/eslint/index.html) + src/{main,app/*,app/router/*,entities/auth/adminAuthStore,shared/{config,lib,ui},features/{auth,db-mode},widgets/db-toggle,pages/{login,dashboard}}
+
+### 검증
+- 페이즈별 게이트: admin-server `pnpm lint`+`pnpm build`(tsc) 0, admin-web `pnpm typecheck`+`pnpm lint` 0. fresh 워크트리 `pnpm install` 선행. lint-hotfix 1회(Phase2 no-namespace) code-fixer 해소.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **e2e 미실행**: `pnpm dev` 양쪽 기동 + 실 로그인/토글 검증 미수행(dev 서버 기동 미허가 [[feedback_no_unrequested_dev_servers]]) — 후속 수동 검증 권장(login {manager@funshare.co.kr, funshare123@@}→코드 이메일→verify→토큰→셸; prod 토글 시 503·빨간배너). prod path(데이터 적재 후 토글 활성)는 컷오버 후.
+
+### 비고 / 후속
+- 코드 WIP(`-작업`)=data-craft-admin·data-craft-admin-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+- **운영자 .env 구성 필요**: admin-server는 dev 실행 전 `.env`(ADMIN_EMAIL/ADMIN_PASSWORD_HASH[일회용 스크립트]/ADMIN_JWT_SECRET/PG_*/SMTP_*) 구성 필요(.env 미커밋, .env.example 참조). prod 토글 활성화(`ADMIN_PROD_TOGGLE_ENABLED=true`)는 컷오버(Roadmap-6 데이터 이관) 완료 후.
+- **트랙 C·D 전제**: `verifyAdminToken`·`dataPool(mode)`·`dbMode` 미들웨어를 트랙 C(프로모션 CRUD)·D(분석)에서 재사용 — `app.use('/api/admin/<x>', verifyAdminToken, dbMode, routes)` 패턴.
+- Phase2 eslint-disable(no-namespace) 폴백은 타깃 한정 — 향후 type-augmentation 정합 시 재검토.
+
 ## v001.707.0
 
 > 통합일: 2026-06-10
