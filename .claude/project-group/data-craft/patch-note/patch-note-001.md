@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.697.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스1)
+
+온보딩 말풍선 위젯 드로어 체인의 **순서 결함** 수정. v001.695.0 도입 후 마스터 검증에서, 화면 타이틀 설정 안내가 **확장된 아래 섹션(섹션 2)의 위젯**에서 진행되어 타이틀이 윗 섹션이 아닌 아래 섹션에 적용되는 문제 발견. 섹션 2 위젯 설정 드로어가 열리면 **먼저 윗 섹션(섹션 1)으로 전환**하도록 안내한 뒤 타이틀을 윗 섹션에 만들고, 이후 아래 섹션으로 돌아가 뷰어를 배치하도록 흐름을 교정.
+
+### 페이즈 결과
+- **Phase 6 (fix, 핫픽스1)** (`f7632128`): `hintRegistry` 에 `navigatorSwitchToFirst`(order 75) 신규 추가 — §2 확장 섹션의 텍스트 위젯을 처음 선택했을 때 좌상단 네비게이터로 윗 섹션 전환을 먼저 안내. 기존 타이틀 체인 hint(`widgetTextType`~`widgetNavigatorSwitch`, order 80~120)에 `selectedWidgetSectionExpanded !== true` 게이트 추가 → 타이틀 설정은 비확장 윗 섹션(§1)에서만 발화. `widgetNavigatorSwitch`(120) 문구는 "아래 섹션으로 복귀(뷰어 배치)"로 갱신. `WidgetNavigatorDropdown` 앵커는 `activeHintId` 기반 동적 hintId 로 두 네비게이터 hint(전환·복귀) 공유. 선형 진행은 `closed`/`dismissed` Set 의 세션 억제로 보장(§2 복귀 시 `navigatorSwitchToFirst` 재발화 안 함 → `widgetTextToViewer` 130 진입).
+
+### 영향 파일
+data-craft (i-dev, 4 files):
+- `features/onboarding/model/hintRegistry.ts`
+- `widgets/property-drawer/ui/WidgetNavigatorDropdown.tsx`
+- `shared/i18n/locales/{ko.ts, en.ts}`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS — 2-스위치 흐름(§2→§1 타이틀, §1→§2 뷰어) 트레이스 확인.
+- ⚠️ 말풍선 위치/순서 실동작은 마스터 수동 시각 검증 권장(메인 세션 렌더 미관측).
+
 ## v001.696.0
 
 > 통합일: 2026-06-09
