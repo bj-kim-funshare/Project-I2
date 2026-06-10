@@ -24280,3 +24280,25 @@ data-craft-server:
 **#21 의도된 부작용(운영 인지)**: 과거 수개월 만료된 `is_auto_renew=1` 고객이 갱신 cron에 재진입 → 첫 진입 시 결제 재시도(성공 시 회복, 또는 3회 실패 후 free 강등). 무기한 무료보다 정상 회복 경로 — 배포 후 "과거 만료 고객 결제 시도 재개"가 관측될 수 있음. 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
 
 > **🏁 Roadmap-8 완료**: data-craft 결제 시스템 결함 16건(권한·접근 / 요금 계산 정합 / 프로모션 무결성 / 동시성·멱등 / 안정성·스케줄러)을 5개 plan-enterprise 플랜(#271·#274·#277·#280·#283)으로 전부 수정 완료. 전수조사에서 무시 확정한 8건(#1·#9·#10·#16·#17·#22·#23-1·#23-2)은 의도적 미수정.
+
+## v001.714.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #284 (funshare-inc/data-craft)
+
+**data-craft FE 결제 차단 윈도우 503 처리 (Roadmap-8 운영 후속 1/2 — 6번).** data-craft-server #6b(Roadmap-8 #4)가 도입한 결제 차단 윈도우가 매일 00:50–01:10(서버 로컬타임) 결제성 API에 반환하는 `503 BILLING_RENEWAL_IN_PROGRESS`를 FE가 일반 에러로 떨구지 않고 사용자 친화 메시지로 표출하도록 처리. **work_repo = data-craft(FE) — 본 결함 정리 사이클에서 server 외 첫 FE 작업.**
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft FE)** (`3cdf2a8`): `src/features/subscription/lib/billingErrorMessages.ts`의 `BILLING_ERROR_I18N_KEYS`에 `BILLING_RENEWAL_IN_PROGRESS: 'billing.errors.billingRenewalInProgress'` 매핑 추가. `ko.ts`·`en.ts`의 `billing.errors`에 `billingRenewalInProgress` 키 additive 추가(ko: "자동 갱신 처리 시간대에는 결제 작업이 일시적으로 제한됩니다. 잠시 후 다시 시도해 주세요." / en: "Payment is temporarily unavailable during the auto-renewal window. Please try again shortly."). 기존 6개 결제 catch 사이트(UpgradeStepPayment=결제·UpgradeDialog=업그레이드·SeatManageDialog=좌석변경·PlanLimitExceededDialog·PromotionPurchaseDialog·SubscriptionActionSection)가 모두 `resolveBillingError` 경유라 **컴포넌트 코드 변경 없이** 3개 차단 엔드포인트(payment·upgrade·seats/change)의 503이 자동으로 친화 메시지로 표시된다.
+
+### 영향 파일
+data-craft (FE):
+- 수정: `src/features/subscription/lib/billingErrorMessages.ts`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+### 검증
+- FE 모노레포 게이트 `pnpm typecheck:all` exit 0 + `pnpm lint` exit 0(0 errors, 기존 warning만). fresh 워크트리 `pnpm install` + `build:packages` 선행.
+- ko/en 동일 키 parity grep 확인. additive 변경이라 기존 결제 에러 메시지 동작 불변.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+
+### 비고
+Roadmap-8 운영 후속 **1/2**(#6b 결제 윈도우 503의 FE 표시 처리). 이로써 서버 차단 정책이 사용자에게 친화 형태로 노출됨. 남은 후속 **2/2 = 7번**(cron·가드 TZ KST 명시, work_repo=data-craft-server). 코드 WIP(`-작업`)=data-craft FE i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
