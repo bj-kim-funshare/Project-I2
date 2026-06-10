@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.718.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #287 (funshare-inc/data-craft)
+
+**결제 비밀번호 변경 = 대표(오너) 이메일 인증 방식으로 전환.** 기존에는 결제 비밀번호를 변경하려면 *현재 결제 비밀번호*를 입력해야 해서, 비밀번호를 잊은 사용자는 변경 자체가 불가능한 닭-달걀 결함이 있었다. 이를 대표(오너) 이메일 인증으로 대체하고, 변경 요청과 인증 메일 발송을 모두 **오너 계정으로만** 가능하도록 BE 에서 강제했다.
+
+### 페이즈 결과
+- **Phase 1 (BE · feat · `8d4c5ec`)**: `data-craft-server` 에 신규 2개 엔드포인트 추가(기존 set/verify/exists 무수정). `POST /api/user/payment-password/send-verification` — `req.isOwner` 1차 가드 + `findUserById` DB 2차 확인으로 오너 이메일을 **서버측에서 해석**(클라이언트 입력 불신뢰)한 뒤 기존 `sendVerificationCode` 재사용해 오너 메일로 코드 발송. `POST /api/user/payment-password/change` — 동일 오너 가드 + 서버측 오너 이메일로 `verifyEmail` 코드 검증·소비 후 새 6자리 비밀번호 저장(현재 결제 비밀번호 불요). `auth.types.ts` purpose 유니온 + `auth.service.ts` 중복검사 skip 에 `'payment-password-change'` 추가.
+- **Phase 2 (FE · feat · `a5d12d3`)**: `data-craft` 변경 플로우를 PIN 확인에서 이메일 코드 입력으로 교체. `paymentPassword.api.ts` 에 `sendPaymentPasswordVerification`(본문 없음)·`changePaymentPassword` 추가. 신규 `PaymentPasswordChangeDialog` — 마스크된 오너 이메일 안내 → 코드 발송(expiresIn 카운트다운·재발송 쿨다운) → 6자리 코드 입력값만 수집(**verifyEmail 비호출** — `/change` 에서 서버가 검증) → 새 6자리 PIN → 제출 + BE 에러코드 6종 한국어 매핑. 공유 인증 훅은 회귀 위험으로 무수정·격리 복제. `CardInfoSection` 의 변경 분기를 신규 다이얼로그로 교체, 초기 설정(미존재) 경로는 기존 유지.
+
+### 영향 파일
+**data-craft-server**
+- `src/controllers/paymentPassword.controller.ts`
+- `src/types/paymentPassword.types.ts`
+- `src/types/auth.types.ts`
+- `src/services/auth.service.ts`
+- `src/routes/user.ts`
+- `src/middlewares/permission.middleware.ts`
+
+**data-craft**
+- `src/features/subscription/api/paymentPassword.api.ts`
+- `src/features/subscription/ui/PaymentPasswordChangeDialog.tsx` (신규)
+- `src/widgets/settings-dialog/ui/plan/CardInfoSection.tsx`
+
+### 범위 / 미해결 (의도)
+- `email_verification_temp` 가 `purpose` 컬럼을 저장하지 않아, 같은 오너 이메일로 발송된 login-비밀번호-변경 코드와 결제-비밀번호-변경 코드가 상호 사용 가능(기존 설계 한계). 오너 본인 메일 한정이라 위험 경미 — 본 범위 외 후속.
+- 신규 변경 다이얼로그의 새 PIN 은 `PaymentPasswordSetupStep` 의 weak-pin(연속·반복 패턴) 검사를 복제하지 않음(동일 파일 외 로직). UX 패리티 갭, 필요 시 후속.
+- BE lint(`pnpm lint`) 는 `db.ts:7` 의 `no-explicit-any` 1건 실패가 있으나 본 플랜 무관 사전 존재 결함(베이스 i-dev 동일) — 신규 위반 0건. 본 플랜 변경분은 BE tsc(exit 0) · FE `typecheck:all && lint`(exit 0) 통과.
+
 ## v001.717.0
 
 > 통합일: 2026-06-10
