@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.714.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스2
+
+**열 본문 스타일 편집 3종 개선 + 날짜 관련 타입 조건 평가 재조사 (핫픽스2).** 마스터 수동 테스트 후속 3건을 한 핫픽스로 묶어 처리. 3개 뷰어 패키지(fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer) 동일 적용.
+
+### 페이즈 결과 (핫픽스2, Phase 5, fix · `d9fe5c7a`)
+- **① 체크박스 미선택 + 반전 안씀 조건 스타일 시각화**(`FsGridCheckboxCellRenderer.tsx`): 빈 native 체크박스는 `accentColor`(체크 시에만 발현)를 무시하고 반전 안쓰면 셀 배경도 투명이라, 미선택 셀에 건 조건 색이 화면에 전혀 안 보이던 문제. `!isChecked && !isColorSwapped && textColor !== semanticColors.onSurface`(실제 비-normal 조건 색이 걸린 경우) 일 때 빈 박스에 `outline: 2px solid <색>` + `outlineOffset: -2px` + `borderRadius: 2px` 로 **테두리 색**을 적용. 판별식 근거: `cellThemeColors.normal.color === semanticColors.onSurface`(검증) 이므로 `textColor !== onSurface` = 비-normal 조건이 활성. checked/반전 경우는 무변경(기존에도 보였음).
+- **② 모달 너비 +200px**(`FsGridCellStyleDialog.tsx`): 다이얼로그 `width 900 → 1100`(높이 500 유지 — 너비만 요청).
+- **③ deadline(마감일) 조건부 스타일 미적용 수정**(`fs_grid_renderer/utils.ts`): deadline 셀은 JSON(`{"date":"YYYY-MM-DD","completed":bool}`) 또는 레거시 평문 날짜로 저장되는데, 평가기 `getTargetCellRendererByValue` 의 before/after/onDate/dateBetween 가 raw `parseDateSafe(cellValue)` 로 파싱 → `new Date('{...}')` Invalid → 조건 미매칭 (핫픽스1 체크박스와 동일 결함 클래스). `extractDeadlineDate` 로컬 헬퍼 신설(JSON `.date` 추출, 평문 폴백)하고 `columnTypeId === 'deadline'` 일 때 추출 후 파싱하도록 4케이스 교정. 타임라인·기타 연산자 무변경.
+
+### 날짜 관련 타입 재조사 결과 (마스터 "전부 재조사" 요청)
+- **date / dateTime**: 저장형식(`YYYY-MM-DD`, `YYYY-MM-DDTHH:mm`)이 `new Date()` 호환 → 평가기·렌더러 정상, 결함 없음.
+- **timeline**: 평가기(`parseTimelineValue`, `~` 분리)·렌더러(span 에 `textColor`/`backgroundColor` 적용) 모두 정상 동작 확인. **결함 없음.** 현재 테스트 행의 타임라인 셀이 전부 비어있어("기간 선택" placeholder) 값 기반 연산자(tlStartBefore/After/ContainsDate 등)가 매칭할 값이 없을 뿐(빈 셀은 isEmpty 만 매칭). ⏩ **재검증 요청: 타임라인 셀에 기간 값을 입력한 뒤 tlStartAfter / tlContainsDate 등으로 재테스트하면 적용 확인 가능. 입력값이 있는데도 미적용이면 추가 조사 진행.**
+- **time(시간)**: 구조적 한계 — 셀 저장이 `HH:mm`(`new Date('14:30')` = Invalid Date)이고 조건 임계값 입력이 `DatePicker`(YYYY-MM-DD)라 "시간이 N 이전/이후" 비교가 성립 불가. 의미 있는 시간 비교를 지원하려면 (a) 임계값을 **시간 선택기**로 교체 + (b) 평가기를 분(min) 단위 비교로 전환하는 **분리 작업(UI 추가 = 마스터 결정 사항)**이 필요 → 본 핫픽스 미포함.
+
+### 영향 파일
+data-craft (i-dev, 9 files — 3 fix × 3 pkg):
+- `packages/<pkg>/src/widgets/cell-renderers/FsGridCheckboxCellRenderer/FsGridCheckboxCellRenderer.tsx`
+- `packages/<pkg>/src/widgets/cell-style-dialog/FsGridCellStyleDialog.tsx`
+- `packages/<pkg>/src/widgets/fs_grid_renderer/utils.ts`
+- `<pkg>` ∈ { `fs-data-viewer`, `fs-sub-data-viewer`, `fs-external-data-viewer` }
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` EXIT 0 (0 errors, 89 기존 warnings). fresh 워크트리 `pnpm install` + `build:packages` 선행. advisor 완료(#2) 5-perspective PASS.
+- **정적 검증만 수행(메인세션 렌더 미관측)** — 마스터 수동 시각 검증 시나리오:
+  1. 체크박스 미선택 + 일반 외 색상(참조/안전/주의/경고) 조건 → 빈 체크박스에 색 테두리 표시.
+  2. 체크박스 미선택 + 일반(normal) 조건 → 테두리 색 변화 없음(판별식 정상 동작).
+  3. 체크박스 체크 + 조건 → 기존과 동일(accentColor).
+  4. 마감일 컬럼에 날짜 입력 상태 → 이전/이후/같은날/날짜범위 조건 스타일 적용.
+  5. 마감일 빈 상태 → isEmpty 만 매칭(기존 동작).
+  6. 열 본문 스타일 편집 모달 너비 1100px(높이 500 유지) 확인.
+  7. fs-sub/external 은 dist alias → `pnpm build:packages` + dev 서버 재기동 후 확인.
+- **별건(범위 외) 기지 엣지**: ⓐ 완료=true·날짜=빈 deadline 셀의 isEmpty 매칭, ⓑ Chromium <87 에서 outline-offset 음수값 미지원 시 native 테두리 잔존 가능성.
+
 ## v001.713.0
 
 > 통합일: 2026-06-10
