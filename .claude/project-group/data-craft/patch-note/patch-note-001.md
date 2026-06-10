@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.710.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #272 (핫픽스5)
+
+온보딩 흐름에 **윗(첫) 섹션 높이 80 조정** 안내 풍선 신규 추가. 첫 섹션 추가·선택 후, 2번째 섹션 추가 안내 전 단계에 배치.
+
+### 페이즈 결과
+- **Phase 10 (feat, 핫픽스5)** (`931b90dd`): `firstSectionHeight80` hint(order 35, `emptyArea`(30)~`secondSectionAdd`(40) 사이) 추가. showOn 5중 가드 = `isDesignMode && sectionCount===1 && anySectionSelected && firstSectionHeight !== 80 && propertyDrawerOpen !== true`(banner 가 섹션/영역 드로어 열림 시 숨겨지므로 propertyDrawerOpen 가드 필수, height 80 입력 시 자동 해소). `HintContext.firstSectionHeight`(=`sections[0].height`) 신규 파생. 앵커 = `SectionHeightInput.tsx` 의 `<input>` 직접 래핑(FloatingSectionBanner 내, 섹션 선택 시 표시), `persistOnAnchorClick` 적용으로 입력 포커스/타이핑("80") 중 transient close 방지. CornerDownLeft 아이콘은 OnboardingHint 바깥 형제로 유지(절대 위치 기준 불변). i18n ko/en 추가.
+
+### 영향 파일
+data-craft (i-dev, 5 files):
+- `features/onboarding/model/hintRegistry.ts`
+- `features/onboarding/lib/useActiveOnboardingHint.ts`
+- `widgets/layout-canvas/ui/SectionHeightInput.tsx`
+- `shared/i18n/locales/{ko.ts, en.ts}`
+
+### 검증
+- lint 게이트 `pnpm typecheck:all && pnpm lint` exit 0(0 errors). advisor 핫픽스 검증 PASS.
+- ⚠️ 풍선 위치 및 타이핑 중 깜빡임 없음은 마스터 수동 시각 검증 권장(SectionHeightInput 은 commit 시 height 반영 추정).
+
 ## v001.709.0
 
 > 통합일: 2026-06-10
