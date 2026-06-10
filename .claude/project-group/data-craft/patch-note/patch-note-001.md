@@ -24007,3 +24007,29 @@ data-craft-server:
 
 ### 비고
 Roadmap-8 5플랜 중 3번(프로모션 무결성). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. 다음 4번(동시성·멱등 #7·#6·#14)에서 #6 갱신 동시성 락 별도 처리.
+
+## v001.703.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #280 (funshare-inc/data-craft)
+
+**data-craft-server 결제 동시성·멱등 보강 (Roadmap-8 #4 — #7·#6·#14).** 첫 결제 더블클릭 이중결제(#7), 자동 갱신 cron이 동시 즉시 업그레이드의 좌석 증가를 덮어쓰는 lost-update(#6), 좌석변경 멱등키가 delta/applyAt 미포함으로 다른 요청이 결과를 공유하던(#14) 동시성·멱등 결함 3건을 보강. #6은 (a)트랜잭션 행 잠금 + (b)시간 윈도우 차단 두 메커니즘. 정상 단건 동작 불변.
+
+### 페이즈 결과
+- **Phase 1 (fix, #7+#14)** (`40f3429`): `executeFirstPayment` 본체를 비공개 `_executeFirstPaymentImpl`로 분리하고 공개 함수를 `withIdempotency(\`${companyId}:first-payment\`, ...)`로 래핑(기본값·반환형 보존) → 더블클릭/재시도 이중결제 차단. `changeSeats` 즉시경로 멱등키를 `${companyId}:seat-change:${delta}:${applyAt}:${targetBillingCycle ?? 'default'}`로 변경 → 다른 파라미터 조합 결과 공유 차단. seatChange의 기존 withIdempotency 패턴 재사용.
+- **Phase 2 (fix, #6a)** (`ef6301b`): `renewSingleClient` 갱신 트랜잭션 시작 직후(`beginTransaction` 다음) `findClientSeatsForUpdate(connection, companyId)` 1줄로 client 행 FOR UPDATE 락 → 동시 즉시 업그레이드 좌석 증가 lost-update를 직렬화 방지. charge는 트랜잭션 이전 유지(PG 호출 중 락 보유 없음). #5 좌석 계산·renewPromotionClient 무변경.
+- **Phase 3 (feat, #6b)** (`6fd6d60`): 신규 미들웨어 `src/middlewares/renewalWindowGuard.ts` — 시스템 로컬타임의 환형 최소거리(`min(diff, 1440-diff)`)가 갱신 cron 시각(01:00) ±`WINDOW_MINUTES` 이내면 503 `BILLING_RENEWAL_IN_PROGRESS` 거부(자정 경계 정상). `constant.ts`에 `BILLING_RENEWAL_WINDOW { CRON_HOUR: 1, WINDOW_MINUTES: 10 }`. `subscription.ts`의 즉시 청구·좌석변경 3개(`/billing/payment`·`/billing/upgrade`·`/seats/change`)에만 `forceIncludeAuth → authMiddleware → renewalWindowGuard → requirePaymentPassword → 컨트롤러` 체인으로 마운트. schedule-*·reactivate·change-card·read-only·webhook 미적용. cron 자체는 서버사이드라 미들웨어 미경유.
+  - **운영 영향(신규)**: 매일 서버 로컬타임 **00:50–01:10**(약 20분) 동안 위 3개 결제 API가 503 반환. **FE는 별도 후속에서 사용자 친화 메시지·재시도 안내 처리 필요(본 플랜 BE-only 스코프 밖)**.
+
+### 영향 파일
+data-craft-server:
+- 신규: `src/middlewares/renewalWindowGuard.ts`
+- 수정: `src/services/billingSubscription.service.ts`, `src/services/seatChange.service.ts`, `src/services/billingRenewal.service.ts`, `src/config/constant.ts`, `src/routes/subscription.ts`
+
+### 검증
+- 세 커밋 모두 `pnpm build`(tsc) exit 0. P2 락이 charge(트랜잭션 이전) 이후 txn 내 위치 확인(#10 안티패턴 미재도입), P3 마운트 정확히 3개 + 체인 순서 grep 확인, 나머지 엔드포인트 무변경.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- 별개 health 노트(회귀 아님): 미접촉 `src/types/db.ts:7` plan #258 잔존 `no-explicit-any` — affected_files 밖, lint-hotfix iter 미발화.
+
+### 비고
+Roadmap-8 5플랜 중 4번(동시성·멱등). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. **TZ 가정**: node-cron이 서버 시스템 로컬타임으로 `0 1 * * *`를 평가하므로 가드도 동일 기준 — 서버 TZ가 KST가 아니면 cron/가드 시각이 KST와 어긋남(컷오버 전 서버 TZ 점검 권장). 마지막 5번(안정성·스케줄러 #12·#13·#21) 남음.
