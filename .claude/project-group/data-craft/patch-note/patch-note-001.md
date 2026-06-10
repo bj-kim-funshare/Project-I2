@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.699.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #278 (funshare-inc/data-craft)
+
+**순서변경 배치 UPDATE 3곳 PG 타입추론 결함 일괄 수정.** 같은 부모 페이지 내 자식 페이지 순서변경 시 `PUT /api/builder/pages/reorder` 가 500(`column "order" is of type integer but expression is of type text`)으로 실패하던 결함을 수정. 근본 원인은 배치 `UPDATE ... SET <int_col> = CASE WHEN <key> = ? THEN ? END` 에서 PostgreSQL 이 `THEN ?` 파라미터를 타입 컨텍스트 부재로 text 로 추론해 CASE 표현식 전체가 text 가 되어 integer 열 대입에 실패하는 것. 단건 `updatePageOrder`(`SET "order" = ?`)는 열에 직접 대입돼 PG 가 integer 로 추론하므로 정상. MySQL 은 느슨한 타입 처리로 통과하던 것이 PG 포팅 후 노출됨. 동일 결함이 잠복한 위젯 순서·역할 정렬까지 버그 클래스 전체(3곳)를 일괄 수정(마스터 승인 범위). 기존 선례 `change.subGridRow.ts:54`(#223 핫픽스6) 의 `THEN ?::int` 컨벤션과 일치.
+
+### 페이즈 결과
+- **Phase 1 (fix)** (`7abeb65`): 배치 순서변경 UPDATE 3곳 CASE `THEN ?` 파라미터에 `::int` 캐스트 추가. ① `updatePageOrders`(page_list.order — 원 리포트) ② `updateWidgetOrders`(form_widget.order — 잠복) ③ `updateRoleSortOrders`(role.sort_order — 잠복). 파라미터 바인딩·제어흐름 무변경, SQL 문자열 캐스트만. form_widget IN 절 uuid 캐스트 등으로 범위 확장 없음(advisor #1 경고 반영). 각 지점에 `#223 핫픽스6` 스타일 근거 주석 1줄 추가. 세 함수 모두 live caller 확인(`reorderPagesService`/위젯 순서 변경/`reorderRoles`).
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/models/builder.model.ts`(updatePageOrders, updateWidgetOrders), `src/models/roles.model.ts`(updateRoleSortOrders)
+
+### 검증
+- 변경 파일(builder.model.ts, roles.model.ts) eslint 단독 실행 EXIT=0 — 본 페이즈 도입 lint 에러 없음. data-craft-server 는 PostgreSQL 전용(database.ts PgPool 하드코딩, MySQL 런타임 경로/엔진 토글 없음)이라 `::int` 캐스트가 MySQL 로 갈 일 없음 확인.
+- advisor 계획(#1)·완료(#2) 5-perspective 모두 PASS(BLOCK 없음).
+- **별개 health 노트(회귀 아님)**: 미접촉 `src/types/db.ts:7` plan #258 잔존 `no-explicit-any` — i-dev 베이스라인과 바이트 동일, affected_files 밖이라 lint-hotfix iter 미발화(기존 부채 그대로).
+
+### 비고
+단발 버그 수정 플랜(Roadmap 무관). 코드 WIP(`-작업`)=data-craft-server i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. FE(data-craft)는 정상(동일 계층 string id 배열만 전송) — backend-only 수정.
+
 ## v001.698.0
 
 > 통합일: 2026-06-10
