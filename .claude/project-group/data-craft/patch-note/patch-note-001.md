@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.725.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #281 (funshare-inc/data-craft) · 핫픽스7
+
+**날짜+시간(dateTime) 조건 임계값을 dateTime 셀과 동일한 오버레이 선택기로 교체 (핫픽스7).** 마스터 요구: 표 안에 날짜/시간을 따로 넣지 말고, 트리거를 누르면 날짜 및 시간 셀과 동일한 오버레이(달력 + 시간 + 텍스트 입력)가 떠서 거기서 함께 고르게.
+
+### 페이즈 결과 (핫픽스7, Phase 10, fix · `aaad4ecf`)
+- **신규 `DateTimeConditionPicker.tsx`(×3)**: 트리거 버튼(선택값 또는 "날짜/시간 선택" placeholder) + dateTime 셀의 `DateTimeCalendarOverlay` 재사용. 자체 state(날짜·시·분·열림·위치) 관리, 트리거 `getBoundingClientRect` 로 오버레이 위치 계산, `formatDateTime` 으로 `"YYYY-MM-DDTHH:mm"` emit, 초기화 시 빈값. (오버레이는 셀과 100% 동일 컴포넌트 재사용 → UI 동일.)
+- **`ConditionSettingWidget.tsx`(×3)**: isDateTime 분기의 인라인 `renderDateTimePicker`(DatePicker + 시간셀렉터) 및 `parseDateTimeParts` 헬퍼 제거 → `DateTimeConditionPicker` 로 교체(단일값·날짜범위 모두). date(DatePicker)·time(HH:mm 셀렉터) 분기 무변경.
+
+### 효과 / 부수
+- dateTime 조건이 **단일 트리거(한 줄)** 로 바뀌어 표 벗어남 원천 해소(핫픽스6 인라인 스택 대체). 잘못된 "기한 날짜 추가" placeholder 도 "날짜/시간 선택"으로 교정(핫픽스4 잔존 오라벨 해소).
+- 핫픽스6의 `min-h-12` 행 성장 허용은 본 핫픽스로 dateTime 에서 더는 트리거되지 않음(트리거 한 줄). `min-h` 자체는 유지(미래 다중행 입력 대비 안전망).
+- 오버레이/다이얼로그 모두 `z-50` + `document.body` portal — DOM 마운트 순서 의존(오버레이가 다이얼로그 이후 마운트 → 위 렌더). z-stack 가정 변경 시 재검증 필요.
+
+### 영향 파일
+data-craft (i-dev, 6 files): `packages/<pkg>/src/widgets/cell-style-dialog/DateTimeConditionPicker.tsx`(신규) + `ConditionSettingWidget.tsx` (<pkg> ∈ fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer)
+
+### 검증
+- lint 게이트 EXIT 0 (0 errors, 89 기존 warnings). advisor 완료(#2) PASS.
+- 마스터 수동 검증:
+  1. 날짜+시간 컬럼 조건(이전/이후/같은날) 추가 → 트리거 버튼 한 줄(표 벗어남 없음).
+  2. 트리거 클릭 → 달력+시간+텍스트입력 오버레이(dateTime 셀과 동일 UI).
+  3. 달력 클릭/시간 변경/텍스트 Enter → 임계값 저장 → 트리거에 "YYYY-MM-DD HH:mm" 표시.
+  4. 오버레이 "초기화" → 임계값 빈값.
+  5. 날짜범위(dateBetween) → 두 트리거 + `~`, 각각 독립 오버레이.
+  - fs-sub/external 은 build:packages + dev 재기동 후.
+
 ## v001.724.0
 
 > 통합일: 2026-06-10
