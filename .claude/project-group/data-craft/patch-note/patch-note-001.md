@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.727.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #292 (funshare-inc/data-craft)
+
+**데이터 뷰어 디자인 모드 열 설정 흐름의 커스텀 모달 4종에서 트랙패드 스크롤이 뒷배경 그리드로 누수되던 버그 일괄 수정.** 마스터 보고: 버튼 타입 열 → 열 메뉴 → 열 설정 편집 → 버튼 설정 모달에서 트랙패드로 스크롤하면 뒷배경이 가로·세로로 스크롤됨. 마스터 선택: 동일 결함(useScrollLock 누락)을 공유하는 형제 모달까지 전체 클래스 일괄 처리.
+
+### 페이즈 결과 (Phase 1, fix · `83faff12`)
+- **`ButtonSettingsDialog.tsx`** (보고된 버그): `useScrollLock(isOpen)` 추가 + `DialogBody`(스크롤 영역)에 `data-scroll-container` 마킹.
+- **`SelectOptionsSettingsWrapper.tsx`** (선택지 열): `useScrollLock(true)` 추가 (isOpen prop 없는 마운트=열림 래퍼, FormulaSettingsWrapper 선례). 내부 `ManageMode`/`MultiManageMode` 의 옵션 리스트는 이미 `data-scroll-container` 보유 → 무변경.
+- **`DualWidgetSettingsDialog.tsx`** (듀얼 위젯 열): `useScrollLock(true)` 추가 + 콘텐츠 div 에 `data-scroll-container`.
+- **`ConnectionSettingsDialog.tsx`** (연결 열, 저위험): `useScrollLock(isOpen)` 추가 (짧은 고정 높이라 내부 전용 스크롤 영역 없음 — 배경 차단이 핵심).
+
+### 효과 / 부수
+- 수정 패턴: 기존 정상 동작 모달(ImageDialog / FileDialog / VoteSettingsWrapper / FormulaSettingsWrapper)의 표준 — `useScrollLock(open)` 훅이 document 레벨 wheel/touchmove 를 가로채 `[data-scroll-container]` 내부가 아니면 `preventDefault`. Radix Dialog / createPortal / fixed-overlay 어느 방식이든 동일 동작.
+- import 는 깊이에 맞춘 `shared/hooks/useScrollLock` 계열로 통일 (ButtonSettingsDialog = 4단계, 나머지 3단계).
+- `MultiManageMode.tsx` 는 이미 마커 보유(L91-92) 확인 → 무변경 (마커 부재 시 멀티 선택 옵션 리스트 자체 스크롤이 막히는 회귀를 사전 차단).
+
+### 영향 파일
+data-craft (i-dev, 4 files):
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/ButtonSettingsDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/SelectOptionsSettingsWrapper.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/DualWidgetSettingsDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/connection/ConnectionSettingsDialog.tsx`
+
+### 검증
+- lint 게이트(`pnpm typecheck:all && pnpm lint`, 워크트리 install + build:packages 선행) EXIT 0 (0 errors, 89 기존 warnings). advisor 계획(#1)·완료(#2) 모두 PASS.
+- 마스터 수동 검증 (각 열 타입 열 설정 모달에서 트랙패드 스크롤):
+  1. 버튼 타입 열 → 버튼 설정 모달: 내부 콘텐츠만 스크롤, 뒷배경 그리드 가로·세로 고정.
+  2. 선택지(단일/다중) 열 → 선택지 관리 모달: 옵션 리스트 내부 스크롤, 배경 고정.
+  3. 듀얼 위젯 열 → 듀얼 위젯 설정 모달: 콘텐츠 내부 스크롤, 배경 고정.
+  4. 연결 열 → 연결 설정 모달: 배경 스크롤 누수 없음.
+  - dev 반영은 `fs_data_viewer` src alias 라 빌드 불필요(하드 리프레시).
+
 ## v001.726.0
 
 > 통합일: 2026-06-10
