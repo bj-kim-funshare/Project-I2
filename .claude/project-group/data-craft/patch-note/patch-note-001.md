@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.712.0
+
+> 통합일: 2026-06-10
+> 플랜 이슈: #278 (funshare-inc/data-craft) · 핫픽스2
+
+**페이지 트리 — 자식 드래그 시 "루트로 이동" 박스를 자기 부모 그룹 안으로 이동 + 자식 드래그 중 end-of-list 박스 숨김 (핫픽스2).** 자식 페이지를 드래그할 때 "루트로 이동"(PromoteDropZone) 점선 박스가 자기 부모가 아니라 다른 부모 위치에 뜨는 것처럼 보이고, 자기 부모 근처엔 텍스트 없는 빈 박스가 떠 그걸로 드롭하면 루트 승격이 안 되던 문제를 수정. 런타임 진단 패널로 원인을 확정(promoteZoneCount=1, 자기 부모에 정상 렌더, 타입 불일치 없음): ① PromoteDropZone 이 부모 행 **바로 위**에 렌더돼, 마지막 부모의 경우 윗 부모 서브트리 밑에 끼어 시각적으로 다른 부모에 붙은 것처럼 보임. ② 드래그 중 항상 표시되던 `EndOfListDropZone`(텍스트 없는 점선 박스)이 자식 드래그엔 무동작인데도 표시돼 사용자가 promote 박스로 오인 → 그 위에 드롭 시 `__end-of-list__` 노옵으로 승격 실패. advisor 로 수정 방향 검증 후 진행.
+
+### 페이즈 결과
+- **Phase 2 / 핫픽스2 (fix)** (`dcf5f77`): `DesignSidebarDndArea.tsx` 단일 파일. (F1) `EndOfListDropZone` 표시 조건에 `activeDragFlatPage?.depth === 0` 추가 → **루트 드래그 시에만** 표시(자식 드래그엔 숨김), 텍스트 없는 미끼 박스 제거. (F2) `PromoteDropZone` 렌더 위치를 부모 `SortableTreeItem` **이전→이후**로 이동 → 부모 헤더 바로 아래(부모 그룹 안)에 표시되어 자기 부모에 명확히 귀속(마지막 부모도 윗 부모 것처럼 안 보임). id·rect·드롭 핸들러 불변, 렌더 순서만 변경. `getDragIntent` 의 promote-to-root·파란 인디케이터(정상)는 무수정. 진단용 임시 프로브는 본 커밋에서 전량 제거(grep 0).
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx`
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` 게이트 EXIT 0 (0 errors, 89 기존 warnings). fresh 워크트리 install + build:packages 선행. i-dev 머지 후 워크트리에 프로브 잔존 0 확인.
+- 런타임 진단 패널(임시) 로 원인 1차 증거 확보 후 제거 — 정적 분석이 마스터 관측과 모순될 때의 화면 디버그 프로브 패턴 [[feedback_static_should_work_instrument]].
+- advisor 로 **수정 방향 사전 검증**(F1 확정·F2 위치 스왑 승인) + 완료(#2) 5-perspective PASS(BLOCK 없음).
+
+### 비고
+이슈 #278 핫픽스2(누적 Phase 2 위 추가 라운드). 코드 WIP(`-핫픽스2`)=data-craft i-dev 머지, 본 patch-note WIP(`-핫픽스2-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]]. **메인세션 렌더 미관측** — 마스터 수동 확인 권장(자식 드래그 시 "루트로 이동" 박스가 자기 부모 헤더 바로 아래에 뜨고, 그 박스 드롭으로 루트 승격되는지). **부수 효과 주의**: (1) F1 으로 자식 드래그 시 하단 빈 영역 드롭은 가장 가까운 droppable(보통 자기 부모)로 폴백 → promote-to-root 로 승격(종전엔 노옵 미끼였음). (2) F2 위치 변경은 마지막 부모뿐 아니라 **모든 부모**의 자식 드래그에 적용(일관성). i-dev 로그에는 진단 프로브 add→merge→fix 3커밋이 남으나 net 변경은 F1+F2.
+
 ## v001.711.0
 
 > 통합일: 2026-06-10
