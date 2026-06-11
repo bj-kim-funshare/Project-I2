@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.735.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #301 (funshare-inc/data-craft) · Roadmap-6 PROD-1 프롬프트5 선행
+
+**prod 일반 데이터 이관 ETL 최종 복사 선행 — finalize 대사 게이트 견고화.** Roadmap-6 프롬프트5(MySQL→psql 일반 데이터 최종 prod 복사)의 멱등 ETL(`scripts/prod-migration/`)을 컷오버 윈도우에서 재실행하기 위한 코드 선행. 2026-06-09 라이브 검증런(#275) 당시 하드코딩된 `data_values` 절대 행수 검사가, 검증런 이후 소스 변동분을 hard-fail 시킬 수 있어 이를 제거하고 무손실 기준을 매 실행 fresh 쿼리되는 `src==tgt` 매치로 일원화. 실제 prod 복사 실행은 PENDING 운영 게이트에서 별도 수행.
+
+### 페이즈 결과
+- **Phase 1** (fix · `cecc77c`): `scripts/prod-migration/finalize.ts` — 하드코딩 절대값 상수 `DATA_VALUES_EXPECTED_ROWS = 3_219_191`(검증런 스냅샷) 제거. `runFinalReconcile`의 data_values 특수 검사를 절대값 동일 검사(`tgt !== EXPECTED` → throw, src==tgt 매치보다 먼저 평가되던 브리틀 게이트)에서 floor 미달 검사(`tgt < DATA_VALUES_MIN_ROWS(3,000,000)` → throw, 빈/오접속 소스로 `src==tgt=작은수` 사일런트 통과 차단)로 교체. 무손실 보장 핵심인 `!dvResult.match`(src==tgt 불일치) throw 블록과 전 테이블 일반 mismatch 루프는 유지. 시퀀스 리셋·column_type 안전교정·UUID/JSON spot-check 로직 무변경.
+
+### 범위 / 기지 사항
+- 본 패치는 **코드 선행만** 포함 — 실제 prod 데이터 복사(`pnpm migrate:prod --phase all`, TRUNCATE+재적재, 27/27 무손실 대사) 실행 결과는 컷오버 다운타임 윈도우 내 master 게이트로 별도 수행되며 이후 patch-note 차례에 기록.
+- ETL 멱등성·접속 좌표(소스 read-only MySQL `*`/타깃 psql `*_PROD`, 둘 다 `data_craft_production`)·제외 범위(릴레이션 3 + 결제계열 7테이블, 결제는 프롬프트6 별도)는 #275에서 확정. 검증런 이후 스크립트·스키마 git 델타 0.
+- 동결 전제(앱 서버만 셧다운, DB 양쪽 가동·외부 접근 차단) — 운영 실행 전 `data_values`/`refresh_token` 5분 간격 COUNT로 동결 증명 후 진행.
+
+### 영향 파일
+- **data-craft-server** (i-dev): `scripts/prod-migration/finalize.ts`
+
+### 검증
+- `git diff` 단일 파일 scope 준수, `pnpm lint`(eslint) EXIT 0, `pnpm build`(tsc) EXIT 0. advisor #1·#2 BLOCK 없음.
+- 운영 ETL 실행 시 stdout에 `[finalize] data_values no-loss match: src==tgt=N (≥ floor) ✓` + `Reconciliation gate PASSED.` 확인 — exit≠0이면 무손실 미달로 halt.
+
 ## v001.734.0
 
 > 통합일: 2026-06-11
