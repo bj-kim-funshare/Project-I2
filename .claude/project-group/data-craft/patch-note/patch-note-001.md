@@ -25278,3 +25278,17 @@ data-craft:src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+
+## v001.749.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #311 (핫픽스 1)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스 1)**: 셀 투명도 영속·표시 — 다이얼로그가 투명도<100%일 때 `#RRGGBBAA`(CSS suffix-alpha)로 저장하고, 셀 텍스트에 `#RRGGBB N%` 형식으로 투명도를 상시 표기(스와치 배경도 실제 투명도 반영). 다이얼로그 재열기 시 저장된 투명도가 슬라이더에 복원되며, normalizeHexColor의 prefix-alpha 잠복 버그(앞 2자리 절단)를 suffix 제거로 교정 (`8c5a83e19`)
+
+### 영향 파일
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/ColorPickerDialog.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/useColorPickerCell.ts
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/types.ts
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/FsGridColorPickerCellRenderer.tsx
