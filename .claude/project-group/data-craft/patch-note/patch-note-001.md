@@ -25306,3 +25306,17 @@ data-craft:src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+
+## v001.753.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #314
+
+### 페이즈 결과
+- **Phase 1**: 플랜 관리 카드 tooltip의 기업 브랜딩 설명에서 SSO 표기 제거 — ko '로고, 컬러셋 적용 및 연동 지원' / en 'Logo, color theme customization and integration support' (ko/en parity).
+- **Phase 2**: 업그레이드 모달 프리미엄 플랜 기능 목록에서 aiExtensionSupport 항목 제거(비노출) + 유일 사용처였던 Wand2 아이콘 import 정리. i18n 키는 추후 복원 대비 존치.
+
+### 영향 파일
+- data-craft:src/shared/i18n/locales/ko.ts
+- data-craft:src/shared/i18n/locales/en.ts
+- data-craft:src/features/subscription/lib/upgradePlanFeatures.ts
