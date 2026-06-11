@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.742.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #312 (funshare-inc/data-craft) · PROD-1 QA 발견 버그
+
+**카드 등록 직후 결제 비밀번호 강제 재설정 — verify 직행 버그 수정.** prod QA 에서 카드 등록 후 비밀번호 단계가 1회 입력만 노출되고 즉시 통과하는 결함 발견(마스터 진단 케이스①). 원인: 게이트 분기 기준인 `user.payment_password` 가 컷오버 이관(user 테이블 원본 복사)으로 잔존 → exists=true → verify(1회) 직행. 마스터 규칙: ① 카드 등록 후에는 반드시 비밀번호 재설정 ② 설정은 정확히 2회 입력(기존 setup→input 3차 입력 체인도 위반). BE 는 upsert 라 재설정 허용 — FE 단독 수정.
+
+### 페이즈 결과
+- **Phase 1** (fix · `f16a2bdb5`): ① `usePaymentPasswordGate` 에 `forceSetup` 옵션(exists 조회 생략→즉시 setup) + `handleSetupComplete` 의 `setMode('input')` 3차 입력 체인 제거(즉시 `pendingCallback(password)`, deps 포함 stale-closure 방지 — handleInputSuccess 선례 답습) ② `PaymentPasswordSetupStep` 의 `onComplete` 를 `(password)=>void` 로 확장 — BE 저장 성공 직후 확정 pin 을 `confirmedPinRef` 보관, 카운트다운 종료·조기 닫기 양 경로 모두 전달(기존 무인자 호출처 4곳 TS 호환) ③ `BillingSuccessPage` 신규 구독 경로 gate 에 `forceSetup: true`(카드 등록 직후=항상 재설정).
+
+### 범위 / 기지 사항
+- card-change·promotion-purchase 경로는 기존부터 독립 setup 무조건 오픈(규칙 정합) — 무변경. `UpgradeStepPayment`(기등록 카드 즉시결제, 카드 등록 없음)는 verify 1회 유지 — 규칙 적용 범위 밖.
+- exists=false 일반 경로도 3차 입력 체인 제거 혜택(설정 2회 후 바로 결제 진행).
+- ⚠️ 관찰(범위 밖): patch-note-001.md 에 병렬 머지 부산물로 v001.736.0 중복·v001.740/741.0 오배치(파일 중간) 잔존 — 별도 정리 후보.
+- prod 반영은 별도 흐름(push→dev-merge→pre-deploy FE).
+
+### 영향 파일
+- **data-craft** (i-dev): `src/features/subscription/lib/usePaymentPasswordGate.ts`, `src/features/subscription/ui/PaymentPasswordSetupStep.tsx`, `src/pages/billing-callback/ui/BillingSuccessPage.tsx`
+
+### 검증
+- lint(typecheck:all+lint) exit 0. advisor #1·#2 PASS(빈 password 전달 경로 부재·콜백 순서·기존 호출처 호환 직접 검증).
+- 마스터 수동 검증(재배포 후): 플랜 초과 → 프리미엄 → 카드 입력 → 비밀번호 **설정(입력+확인 2회)** 화면 → 일치 시 즉시 첫 결제 실행(3차 입력 없음) → 결제 완료.
+
 ## v001.739.0
 
 > 통합일: 2026-06-11
