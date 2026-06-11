@@ -1,4 +1,6 @@
-# Roadmap 4: Pinlog 디자인 핸드오프 → 구현 (Phase 1~4 풀 진행, BE 확장 동반)
+# Roadmap 4: Pinlog 디자인 핸드오프 → 구현 (Phase 1~4 풀 진행, BE 확장 동반) 【폐기】
+
+> ❌ **폐기 (2026-06-11, 마스터 지시)** — 본 로드맵은 더 이상 실행하지 않는다. 잔여 프롬프트 전부 무효. 기록 보존용으로만 유지.
 
 > 작성일: 2026-05-15 | 대상: PinLog-Web FE + Pingus-Server BE 의 디자인팀 핸드오프 자료 18 종 화면을 Phase 1 MVP 폴리시부터 Phase 4 친구/DM/알림 realtime 까지 단일 로드맵으로 이행
 
