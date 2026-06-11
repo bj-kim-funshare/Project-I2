@@ -25334,3 +25334,16 @@ data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNaviga
 - data-craft:src/shared/i18n/locales/ko.ts
 - data-craft:src/shared/i18n/locales/en.ts
 - data-craft:src/features/subscription/lib/upgradePlanFeatures.ts
+
+## v001.755.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #315
+
+### 페이즈 결과
+- **Phase 1**: billingSubscription.service.ts 에 calculatePaidPlanResidualCredit 순수 헬퍼 신설 — 유료 플랜(basic/standard/premium) 한정 잔존크레딧 계산, free/enterprise·planExpiresAt null 은 0 반환(2999 센티넬 1차 방어), remainingDays 를 cycleDays 로 클램프(2차 방어), yearly 연단가(월×12×0.9)·per-seat(isPerUserPlan) 정합. calculateProrationDiff 무변경.
+- **Phase 2**: promotion.service.ts 의 purchasePromotion FOR UPDATE SELECT 에 billing_anchor_day 추가, 첫 결제액을 max(0, floor(프로모션 월정액×seats − 잔존크레딧)) 로 교체(#252 핫픽스2-D 의 정액 첫 달 + 실 만료일/앵커 세팅 보호 유지), getPromotionQuote 동일 차감으로 견적==실청구 보장, docstring/주석 실동작 정합화. 크레딧≥가격 시 기존 0원 경로(charge 스킵+0원 이력) 자연 동작.
+
+### 영향 파일
+- data-craft-server:src/services/billingSubscription.service.ts
+- data-craft-server:src/services/promotion.service.ts
