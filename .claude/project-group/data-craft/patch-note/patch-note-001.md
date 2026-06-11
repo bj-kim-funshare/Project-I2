@@ -25488,3 +25488,30 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/view-column-manager/ColumnValuePreview.tsx (신규)
 - packages/fs-data-viewer/src/widgets/view-column-manager/ColumnDetailPanel.tsx
 - packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx
+## v001.761.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #320
+
+### 페이즈 결과
+- **Phase 1**: RowLinkConfig 에 quickCreate 설정 모델 추가, findQuickCreateState 헬퍼 + enable/disable/배타 sweep 변경 빌더(quickCreateChangeHelpers), i18n rowLink.quickCreate* 11키 4언어 추가 (`059e5be`)
+- **Phase 2**: QuickCreateSettingsDialog 신규(기준 열 라디오 + 너비 100~500 9단계 세그먼트 + 켜진 상태 좌하단 끄기 버튼), 행 연결 그룹 관리 모달 footer 에 켜기/설정 토글 버튼 추가 (`43e3ca6`)
+- **Phase 3**: addRowAtTop 에 overrideDefaultCellValues 옵션 파라미터 하위 호환 스레딩 (`ffa72d5`)
+- **Phase 4**: QuickCreatePanel 신규 — paged requestRowLinkGroupRows 100단위 인피니티 스크롤, 클릭 시 연결 그룹 전 열 {rowId, value} 채움 행 즉시 생성, FsGridTableView 그리드 모드 flex-row 통합(그리드 전용) (`037a7f8`)
+- **Phase 5**: 엣지 보완 — 기준 열 삭제 시 quickCreate 선제거, 콜백 부재 시 에러 분기, 항목별 검증 (`2f78e9b`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/entities/row-link/types.ts
+- packages/fs-data-viewer/src/entities/row-link/helpers.ts
+- packages/fs-data-viewer/src/entities/grid-util-interface.types.ts
+- packages/fs-data-viewer/src/features/data-viewer/lib/quickCreateChangeHelpers.ts (신규)
+- packages/fs-data-viewer/src/features/grid/lib/row-management/rowAddUtils.ts
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/QuickCreateSettingsDialog.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/index.ts
+- packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx (신규)
+- packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
+- packages/fs-data-viewer/src/widgets/gridUtilMethods.ts
