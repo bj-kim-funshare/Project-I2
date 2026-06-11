@@ -25397,3 +25397,23 @@ data-craft:
 - packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+
+## v001.758.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #316 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 6 (핫픽스1)**: ① 시간 모달 ESC 무반응 수정 — useTimeCellEffects 포커스를 isOpen(visibility:hidden 시점) → isPositionReady 이후로 변경(형제 오버레이 PHASE-5b 패턴 정렬), 열자마자 ESC 닫기 동작. ② 로그 다이얼로그 세로 스크롤 수정 — flex-1+min-h-0 체인을 ImageDialog 선례의 명시적 max-h-[calc(85vh-110px)] 로 교체, 마지막 라인 아래 빈 10행(행번호 없음, aria-hidden) 여백 추가. ③ 색상 다이얼로그 푸터를 justify-between 으로 변경해 취소 버튼 왼쪽 끝에 'Backspace: 초기화 | ESC: 닫기' 안내 캡션 추가 — 신규 i18n 키 colorPicker.footerHint(4언어 + types.ts parity).
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/time-cell/useTimeCellEffects.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/time-cell/FsGridTimeCellRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/LogOverlay.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/ColorPickerDialog.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
