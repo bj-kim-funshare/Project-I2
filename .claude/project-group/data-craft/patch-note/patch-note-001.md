@@ -25417,3 +25417,29 @@ data-craft:
 - packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+
+## v001.759.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #319
+
+### 페이즈 결과
+- **Phase 1**: columnMenu 네임스페이스에 신규 번역 키 11개 추가 (섹션 라벨 4종·검색·값 미리보기·서브타이틀 등), ko/en/ja/zh 4언어 parity 유지.
+- **Phase 2**: ColumnMenuVariantB 하드코딩 섹션 라벨 3개 i18n 전환, nav 그룹에 "고급" Caps 라벨 추가 (그리드 열 메뉴·모달 공통), previewSlot prop + NavRowB subtitle + TypeBadgeB tintColor 추가.
+- **Phase 3**: ColumnValuePreview 신규 컴포넌트 (실데이터 → defaultValue → 빈 문구 우선순위, 타입별 렌더) + ColumnDetailPanel/다이얼로그 배선.
+- **Phase 4**: 모달 셸 1040×720 grid 리디자인 — 아이콘 타일 헤더+서브타이틀, grid-cols-[360px_1fr], 푸터 열 삭제(좌)·닫기(우) 이동, useScrollLock 추가, 시맨틱 토큰 전환.
+- **Phase 5**: 좌측 목록 div listbox 리디자인 — 전폭 다크 필 열 추가 버튼, 열 검색창(매치 카운트), 타입 틴트 타일 행, 선택 accent bar, 검색 중 드래그 비활성.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/ColumnMenuVariantB.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/NavRowB.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/TypeBadgeB.tsx
+- packages/fs-data-viewer/src/widgets/view-column-manager/ColumnValuePreview.tsx (신규)
+- packages/fs-data-viewer/src/widgets/view-column-manager/ColumnDetailPanel.tsx
+- packages/fs-data-viewer/src/widgets/view-column-manager/ViewColumnManagerDialog.tsx
