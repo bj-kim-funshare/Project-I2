@@ -25279,7 +25279,7 @@ data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 
-## v001.749.0
+## v001.751.0
 
 > 통합일: 2026-06-11
 > 플랜 이슈: #311 (핫픽스 1)
