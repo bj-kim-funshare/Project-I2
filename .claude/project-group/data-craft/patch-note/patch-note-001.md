@@ -24936,3 +24936,11 @@ Roadmap-8 운영 후속 **2/2**(마지막). 코드 WIP(`-작업`)=data-craft-ser
 
 ### 비고
 **시각 동작 검증은 마스터 스크린샷 영역** — 메인세션·서브에이전트 모두 렌더 못 봄. #238 이 동일 맹점으로 시각검증 없이 실패한 전례가 있어, 본 수정은 근본 원인(스크롤 컨테이너 오탐)을 짚었으나 정적상 2번째 "should work" 시도다. 재실패 시 다음 라운드는 화면 디버그 프로브로 런타임 1차증거 확보(메모리 `feedback_static_should_work_instrument`). 코드 WIP(`-작업`)=data-craft i-dev 머지, 본 patch-note WIP(`-문서`)=Project-I2 main [[project_external_leader_patchnote_in_i2]]. origin push 안 함 [[feedback_plan_enterprise_no_auto_push]].
+
+## v001.736.0
+
+> 통합일: 2026-06-11
+
+### 변경 파일
+
+- (data-craft-admin-server) (추가) pnpm-lock.yaml
