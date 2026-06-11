@@ -25190,3 +25190,16 @@ data-craft:src/shared/i18n/locales/en.ts
 data-craft:src/app/ServerUnreachableFallback.tsx
 data-craft:src/shared/i18n/locales/ko.ts
 data-craft:src/shared/i18n/locales/en.ts
+
+## v001.746.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #306 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 5 (핫픽스2)**: 점검중 화면을 디자인팀 시안대로 전면 재구현 — 3중 라디얼 그라디언트+도트 그리드 배경, 좌상단 브랜드, 128px 점검 배지(점선 링 26s+기어 14s, reduced-motion 대응), 앰버 "점검 진행 중" 필, 2줄 타이틀+시안 리드 문구, 문의 카드(help@funshare.co.kr), 파란 "다시 시도" 버튼(시안 포함으로 복원, onRetry 연결), 푸터. 자동 복구(20초 폴링+online 즉시 재시도) 불변, i18n 6키 교체(ko/en), 신규 의존성 0 (3cc62e72)
+
+### 영향 파일
+data-craft:src/app/ServerUnreachableFallback.tsx
+data-craft:src/shared/i18n/locales/ko.ts
+data-craft:src/shared/i18n/locales/en.ts
