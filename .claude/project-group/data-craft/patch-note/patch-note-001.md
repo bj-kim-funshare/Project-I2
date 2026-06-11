@@ -1,5 +1,62 @@
 # data-craft — Patch Note (001)
 
+## v001.736.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #301 (funshare-inc/data-craft) · Roadmap-6 PROD-1 프롬프트5 · 핫픽스1(운영 실행 결과)
+
+**prod 일반 데이터 이관 ETL — 최종 prod 복사 실행 완료 (27/27 무손실 대사 통과).** 컷오버 다운타임 윈도우(AWS 앱 서버 셧다운, 소스 MySQL·타깃 psql 양쪽 가동·외부 접근 차단)에서 멱등 ETL(`pnpm migrate:prod --phase all`)을 master GO 게이트 하에 실행. 소스 prod MySQL `data_craft_production`(211.211.222.105:3306, read-only) → 타깃 prod psql `data_craft_production`(5432) 로 일반 데이터(릴레이션 3 + 결제계열 7테이블 제외, 27테이블)를 TRUNCATE+재적재. 소스 MySQL 은 읽기만 — 무변경 보존.
+
+### 동결 증명
+실행 전 read-only precheck 를 5분 간격 2회 측정해 소스 동결 확정 — `data_values` 3,219,191 불변, 카나리 `refresh_token` 1,981 → 1,981 미동(검증런 #275 당시 라이브 churn 과 대조). enum 정합·FK-orphan 게이트 통과.
+
+### 대사 결과 — 27/27 정확 일치 (`[finalize] Reconciliation gate PASSED`)
+```text
+  TABLE                                SRC        TGT      MATCH
+  client                                 2          2        ✓
+  client_seat_change_requests            0          0        ✓
+  data_group                           287        287        ✓
+  data_column                         2067       2067        ✓
+  data_values                      3219191    3219191        ✓   (COPY 벌크, no-loss src==tgt)
+  data_viewer_setting                  141        141        ✓
+  data_viewer_column_setting          1774       1774        ✓
+  data_viewer_row_setting           121992     121992        ✓   (COPY 벌크)
+  email_verification_temp                1          1        ✓
+  file_group                            55         55        ✓
+  file                                  68         68        ✓
+  form_list                             24         24        ✓
+  form_widget                           46         46        ✓
+  notification                           0          0        ✓
+  page_list                            180        180        ✓
+  page_layout                         1345       1345        ✓
+  page_layout_area                     364        364        ✓
+  page_layout_widget                   194        194        ✓
+  role                                   6          6        ✓
+  page_role                             58         58        ✓
+  user                                  13         13        ✓
+  refresh_token                       1981       1981        ✓   (동결로 검증런 churn 해소)
+  role_permission                       26         26        ✓
+  settings_form                         17         17        ✓
+  settings_form_role                    18         18        ✓
+  sp_error_log                         177        177        ✓
+  user_preference                        3          3        ✓
+```
+
+### finalize 후처리
+- IDENTITY 시퀀스 18개 `setval` 리셋.
+- column_type 안전교정: text(2) 완화 16건 UPDATE, 제한방향(date) 1건 skip, rowId 186·no-setting 293 audit-skip.
+- UUID spot-check 7컬럼 / JSON spot-check 21컬럼 전부 OK.
+- `data_values no-loss match: src==tgt=3219191 (≥ floor)` — v001.735.0 에서 견고화한 floor+src==tgt 게이트 정상 동작.
+- 스크립트 exit 0, 4단계(시퀀스·column_type·spot-check·대사) 전부 PASSED.
+
+### 범위 / 기지 사항
+- **결제계열·릴레이션 테이블 제외** — 결제 이관은 Roadmap-6 프롬프트6(`billing_anchor_day` 파생·암호화 보존·대사) 별도. 현재 타깃 결제테이블은 비어 있어 본 실행의 `TRUNCATE CASCADE` 무해. ⚠️ **프롬프트6 이후 본 일반 ETL 재실행 시 CASCADE 로 결제데이터 소실** — 재실행은 결제 이관 전에만.
+- 코드 변경 없음(이번 핫픽스는 운영 실행 결과 기록만). ETL 견고화 코드는 v001.735.0.
+- 다음 로드맵 단계: 프롬프트6(결제 ETL) → 본 프롬프트5 운영 결과로 Roadmap-6 프롬프트5 🟡→🟢 갱신 가능.
+
+### 영향 파일
+- 코드 변경 없음. 운영 실행: `data-craft-server` `pnpm migrate:prod --phase all`(타깃 prod psql `data_craft_production` 데이터 적재 — 27테이블).
+
 ## v001.735.0
 
 > 통합일: 2026-06-11
