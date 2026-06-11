@@ -25203,3 +25203,17 @@ data-craft:src/shared/i18n/locales/en.ts
 data-craft:src/app/ServerUnreachableFallback.tsx
 data-craft:src/shared/i18n/locales/ko.ts
 data-craft:src/shared/i18n/locales/en.ts
+
+## v001.747.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #306 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 6 (핫픽스3)**: 점검 화면 타이틀 한 줄화(titleLine1/2 → 단일 title 키) + 주기적 깜박임 근본 해결 — 20초 자동 재시도가 initializeAuth 진입 시 상태 초기화로 화면 언마운트→스피너→재마운트되던 것을 silent 모드(진입 시 상태 불변, hitNetworkError 플래그를 finally 일괄 반영)로 전환. 실패 시 true→true React bail-out 으로 무깜박임, 성공 시 앱 직행. 재시도 3경로(폴링·online·버튼) 전부 silent 통일 (18218ea8)
+
+### 영향 파일
+data-craft:src/app/ServerUnreachableFallback.tsx
+data-craft:src/app/providers/AuthProvider.tsx
+data-craft:src/shared/i18n/locales/ko.ts
+data-craft:src/shared/i18n/locales/en.ts
