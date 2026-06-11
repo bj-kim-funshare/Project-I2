@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.739.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #307 (funshare-inc/data-craft) · PROD-1 QA 발견 버그
+
+**플랜 선택 사용량 hard-disable 제거 + 플랜 초과 시 온보딩 말풍선 전역 억제.** prod QA 에서 플랜 초과 모달의 플랜 선택이 엔터프라이즈·프로모션만 활성인 버그 발견 — `UpgradeStepSelect` 가 `minRequiredPlan`(사용량 수용 최소 플랜) 미만을 hard-disable 하는데, funshare 이관 사용량(페이지 180·그룹 287)이 프리미엄 최대 한도(50/200)를 초과해 중간 플랜 전부 차단되던 구조적 결함. BE 정책(기존 데이터 유지·신규 생성만 차단)과 모순되는 FE 과차단을 soft 경고로 전환.
+
+### 페이즈 결과
+- **Phase 1** (fix · `c5d6311`→`73d8110`→`57dfd71`): `isUpgradable` 의 minRequiredPlan 게이팅 제거 — 유료 플랜 전부 선택 가능(free·현재 플랜만 비활성). 카드별 사용량 초과 경고(amber, i18n `settings.planUsageExceedsLimitWarning`, "기존 데이터 유지·신규 생성 제한" 안내) 추가 — storage→storageLimit 명시 매핑, enterprise 제외. 호출부 2곳(PlanLimitExceededDialog·UpgradeDialog)에 usage 배선, deprecated `minRequiredPlan` prop 은 no-op 잔존(하위 호환). lint 핫픽스 1회(TS2352 캐스트→타입 안전 분기).
+- **Phase 2** (fix · `3307003`): `useActiveOnboardingHint` 의 activeHintId 게이트에 `planLimitExceeded`(=getExceededItems(status.usage).length>0) 전역 억제 — 플랜 초과 중 튜토리얼 말풍선 0. status 미로딩/비인증 시 기존 동작(undefined-safe). inter-feature import 는 notification 피처 선례 관례.
+
+### 범위 / 기지 사항
+- `getMinPlanForUsage` 의 `storage` 키↔PlanInfo `storageLimit` 불일치 잠재 결함(기존 코드, ExceededItemList "최소 필요 플랜" 표기에만 영향)은 범위 밖 관찰 — 후속 후보.
+- prod 반영은 별도 흐름: push(patch-confirmation) → dev-merge(i-dev→main) → pre-deploy 재배포.
+
+### 영향 파일
+- **data-craft** (i-dev): `src/features/subscription/ui/UpgradeStepSelect.tsx`, `src/features/subscription/ui/PlanComparisonCard.tsx`, `src/features/subscription/ui/PlanLimitExceededDialog.tsx`, `src/features/subscription/ui/UpgradeDialog.tsx`, `src/features/onboarding/lib/useActiveOnboardingHint.ts`
+
+### 검증
+- 페이즈별 lint(typecheck:all+lint) exit 0. advisor #1·#2 PASS(새 isUpgradable 식의 free/현재플랜 보존·hasUsageWarning 매핑·deprecated prop 무부작용·undefined-safe 직접 검증).
+- 마스터 수동 검증(재배포 후): ① 플랜 초과 모달 → 플랜 선택 → 베이직/스탠다드/프리미엄 선택 가능 + 경고 문구 확인 ② 플랜 초과 상태에서 튜토리얼 말풍선 미표시 ③ 정상(초과 아님) 계정에서 말풍선 기존 동작.
+
 ## v001.738.0
 
 > 통합일: 2026-06-11
