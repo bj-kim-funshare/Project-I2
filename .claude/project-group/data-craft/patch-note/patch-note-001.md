@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.734.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #300 (funshare-inc/data-craft)
+
+**dev 외부 PC 로그인 복구 — #299 HTTPS 제거 + secure-context API 폴백.** #299(v001.732.0) dev HTTPS 도입 후, dev 페이지 프로토콜을 미러링하는 API base URL(`env.ts:29` → `https://localhost:8000`)이 평문 HTTP-only 백엔드와 충돌해 `ERR_SSL_PROTOCOL_ERROR`로 로그인/SSE/analytics/storage가 로컬·외부 모두 깨지던 문제를 해소. HTTPS 자체를 걷어내고, #299의 본래 동기였던 외부 PC insecure-context의 `crypto.randomUUID` 크래시를 app-entry 폴백 shim으로 직접 해결. 모든 변경 dev 전용, prod 무영향.
+
+### 페이즈 결과
+- **Phase 1** (chore · `1547505`): #299 basicSsl revert — `vite.config.ts`에서 `@vitejs/plugin-basic-ssl` import 및 serve 조건부 플러그인 스프레드 제거, `defineConfig(({ command }) =>` → `() =>` 환원. `server.host`/`allowedHosts(['.local'])`/`fs.allow` 블록은 외부·.local 접속 지원 위해 유지. dev 서버 HTTP 복귀. devDep/lockfile 무수정(미사용 잔존, prod 영향 0).
+- **Phase 2** (fix · `306f0c9`): `src/shared/lib/secureContextShim.ts` 신규 + `src/main.tsx` 최상단 첫 import 배선. `crypto.randomUUID` 부재 시 `crypto.getRandomValues` 기반 RFC4122 v4 생성기(version `0x40`/variant `0x80` nibble), `navigator.clipboard.writeText` 부재 시 `execCommand('copy')` 임시 textarea 폴백을 **부재 시에만** 설치(try/catch + `Object.defineProperty` 방어). secure context(prod HTTPS·localhost)에서는 가드 전부 false → 네이티브 경로 비트 단위 동일, shim 무발동. 30여 호출부·복사 호출부 무수정(전역 1회 설치로 일괄 해소).
+
+### 범위 / 기지 사항
+- **prod 무영향 근거**: basicSsl은 `command === 'serve'` 게이팅이라 prod 빌드 미포함(제거해도 산출물 불변); shim은 secure context 무발동. `pnpm build` exit 0 + `dist/` basic-ssl 흔적 0 확인. env.ts·API base URL·백엔드 무수정.
+- **외부 PC 도달성**: 백엔드 CORS가 비-prod에서 `192.168.x.x`·`*.local` origin 허용(`credentials: true`), `SERVER_URL=0.0.0.0` 전체 인터페이스 바인드 — `http://192.168.x.x:5173`(또는 `*.local`) 접속 시 로그인 라운드트립 정상. **caveat**: `10.x`/`172.16-31.x` 사설망은 현 CORS 미허용 — 해당 망 사용 시 별도 BE 변경 필요(본 플랜 범위 밖).
+- secure-context 의존 전수: `crypto.subtle`·`geolocation`·`permissions` 사용 0건, service worker는 `import.meta.env.PROD` 게이트(dev 미등록) — `randomUUID`+`clipboard`가 전부.
+
+### 영향 파일
+- **data-craft** (i-dev): `vite.config.ts`, `src/shared/lib/secureContextShim.ts`(신규), `src/main.tsx`
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` 페이즈별 EXIT 0(0 errors), `pnpm build`(prod) EXIT 0. advisor #1·#2 BLOCK 없음.
+- 마스터 수동 검증 권장: ① 로컬 `http://localhost:5173` 로그인(SSL 에러 소멸) ② 외부 PC `http://192.168.x.x:5173`(또는 `*.local`) 로그인·위젯/레이아웃 추가 시 ID 생성 정상·초대URL/셀/색상 복사 동작 ③ dev 서버 재기동(`http://` 접속, 기존 `https://` 북마크는 새로고침).
+
 ## v001.733.0
 
 > 통합일: 2026-06-10
