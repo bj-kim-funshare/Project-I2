@@ -25306,3 +25306,17 @@ data-craft:src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
 data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+
+## v001.753.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #313 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 8 (핫픽스3)**: 휠 월 이동 감도 둔화 — 훅 4사본의 누적 임계 THRESHOLD 50→140, 쿨다운 COOLDOWN_MS 250→450ms 상향(상수만 변경, 애니메이션 220ms는 쿨다운 내 완료, IDLE_RESET 150ms 유지) (`4c02f0852`)
+
+### 영향 파일
+data-craft:src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
