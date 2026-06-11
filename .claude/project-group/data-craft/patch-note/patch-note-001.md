@@ -25360,3 +25360,40 @@ data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNaviga
 ### 영향 파일
 - data-craft:src/features/subscription/model/subscriptionQueries.ts
 - data-craft:src/features/subscription/ui/PlanLimitGuard.tsx
+
+## v001.757.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #316
+
+### 페이즈 결과
+- **Phase 1**: 날짜(useDateHandlers)·마감일(useDeadlineCalendarOverlay) 오버레이의 초기화 단축키 Shift+ESC → Backspace 교체(입력 요소 포커스 시 미발화 isEditable 가드), i18n selectInstruction·datePickerHint 4언어에서 "즉시 반영" 절 제거 + 'Backspace: 초기화 | ESC: 닫기' 갱신.
+- **Phase 2**: 타임라인(useTimelineOverlay)·날짜및시간(DateTimeCalendarOverlay)·시간(useTimeCellKeyboard) Backspace 초기화 교체, 날짜및시간 너비 300→350px(날짜와 통일), 공유 힌트 키를 쓰는 일괄삭제 날짜피커(useDatePickerOverlay)도 문구-동작 일치 위해 편입 교체. 타임라인 파일 스테이징 누락 1회 → 보완 커밋으로 해소.
+- **Phase 3**: 색상 선택 다이얼로그에 Backspace → 셀 값 초기화+닫기 추가(hex 입력 포커스 가드, 우클릭 초기화·ESC 닫기 보존), handleReset 을 인자 없는 resetColor 로 추출해 양 경로 공유. dateTime.shortcutHint 공유처인 TimeConditionOverlay 도 Backspace 로 편입 교체.
+- **Phase 4**: 로그 모달을 셀 앵커 300px 팝오버에서 화면 중앙 900px 대형 다이얼로그로 재설계(ImageDialog 선례 — createPortal, useScrollLock, data-scroll-container). 다크 콘솔(bg-gray-900)+모노스페이스+행 번호 거터의 전문 로그 뷰어 스타일, Enter 닫기 제거(ESC 단독), 하드코딩 푸터 문구를 i18n log.escClose 신규 키로 이전. lint 핫픽스 2회(LogRenderer 잔존 props TS2322, 미정의 eslint 룰 주석).
+- **Phase 5**: 마지막 업데이트 오버레이 Enter 닫기 제거(ESC 단독), cellRenderer.escEnterClose 4언어 'ESC: 닫기' 갱신, zh/ja log.title 기존 번역 누락('로그' → '日志'/'ログ') 정정.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/date-cell/useDateHandlers.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDeadlineCellRenderer/useDeadlineCalendarOverlay.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridTimelineCellRenderer/useTimelineOverlay.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDateTimeCellRenderer/DateTimeCalendarOverlay.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/time-cell/useTimeCellKeyboard.ts
+- packages/fs-data-viewer/src/widgets/batch-input-dialog/batch-delete/useDatePickerOverlay.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/ColorPickerDialog.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/useColorPickerCell.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/FsGridColorPickerCellRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-style-dialog/TimeConditionOverlay.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/LogOverlay.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/useLogCell.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/useLogCellHandlers.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/FsGridLogCellRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLogCellRenderer/types.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridLastUpdateCellRenderer/useLastUpdateHandlers.ts
+- packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/LogRenderer.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
