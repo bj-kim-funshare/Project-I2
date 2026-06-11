@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.738.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #308 (funshare-inc/data-craft)
+
+**data-craft-mobile 서버 통신 불가 시 점검중 화면.** 부팅 시 `refreshAccessToken()` 의 blanket catch 가 네트워크 오류를 인증 실패와 동일 처리해 토큰 삭제 후 /auth/signin 으로 보내던 것을 분리 — 네트워크 오류 시 토큰을 보존하고 /maintenance 점검 화면(다시 시도 버튼)으로 라우팅, 서버 복구 후 재시도로 정상 흐름 복귀.
+
+### 페이즈 결과
+- **Phase 1** (feat · `a84022d`): `lib/api/dio_client.dart` — `NetworkUnavailableException` 신설(connectionError/connectionTimeout/receiveTimeout + flutter web unknown·무응답, 서버 응답 오류 제외). `refreshAccessToken()` 네트워크 오류 시 토큰 보존 + throw, 인증성 실패는 기존 clearTokens+false. 401 인터셉터 try/catch 누출 방지.
+- **Phase 2** (feat · `8783549`): `MaintenanceScreen` 신규(Icons.cloud_off + 합산 문구 + commonRetry 재사용 FilledButton, `ref.invalidate(authControllerProvider)` 재시도, isLoading 비활성+스피너). ARB en/ko 에 `maintenanceMessage` 키 추가(모바일 l10n 은 2언어 — 마스터 승인 해석).
+- **Phase 3** (feat · `53bd91f`): auth_controller build() 분기(NetworkUnavailableException rethrow + DioException 네트워크 판별 throw, 토큰 보존), app_router `/maintenance` 최상위 라우트 + redirect error/data 분기(재시도 성공 시 /home·/auth/signin 복귀, 리다이렉트 루프 가드).
+
+### 범위 / 기지 사항
+- dev.md 의 data-craft-mobile `lint_command: pnpm typecheck` 는 순수 Flutter repo 에 부적합(package.json 부재) — 게이트는 마스터 명령 명시인 `flutter analyze` 로 수행. `flutter analyze` 로 교정 권고(후속, /group-policy).
+- flutter analyze 베이스라인: 미접촉 파일 9건 info deprecation 존재(본 플랜 무관·신규 0건).
+- 검증 시 flutter web 신규 화면 함정 — hot restart 아닌 dev 서버 재기동 필요.
+
+### 영향 파일
+- **data-craft-mobile** (i-dev): `lib/api/dio_client.dart`, `lib/l10n/app_en.arb`, `lib/l10n/app_ko.arb`, `lib/router/app_router.dart`, `lib/screens/maintenance/maintenance_screen.dart`(신규), `lib/state/auth_controller.dart`
+
+### 검증
+- 3페이즈 diff 전수 검수(범위·실구현 일치). flutter analyze 신규 결함 0. advisor #1·#2 PASS(advisor() 부재 → advisor-fallback 프로토콜 수행). 수동: 서버 끈 상태 기동 → 점검 화면+토큰 보존, 서버 재기동 → 다시 시도 복귀.
+
 ## v001.737.0
 
 > 통합일: 2026-06-11
