@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.745.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #309 (funshare-inc/data-craft) · 핫픽스1
+
+**버튼 설정 모달 내부 클릭 → 배경 섹션 선택 전파 버그 수정.** 리뉴얼된 버튼 설정 다이얼로그 내부를 클릭하면 뒤 빌더 섹션이 선택되는 결함. 원인: Radix Portal 은 DOM 을 body 로 옮기지만 React 합성 이벤트는 컴포넌트 트리를 따라 버블링 → 셀 렌더러의 React 조상인 Section.onClick(selectSection) 까지 전파. ButtonSettingsDialog 의 DialogContent 에 onClick stopPropagation(+주석) 2줄 추가로 차단 — 공유 Dialog primitive 무수정, 내부 클릭 핸들러·Radix outside-interaction 무영향.
+
+### 페이즈 결과
+- **Phase 5 (핫픽스1)**: DialogContent 클릭 전파 차단 (`74577a3`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/ButtonSettingsDialog.tsx
+
 ## v001.744.0
 
 > 통합일: 2026-06-11
@@ -24,6 +38,7 @@
 - **data-craft-server**: 단일 pg 엔진(#258)·PG_*_PROD 분기·ETL(scripts/prod-migration/)·aws-deploy 갱신.
 - **data-craft**: env.ts PROD 가드·플랜 선택 게이트·말풍선 억제·결제 비밀번호 게이트, gh-pages 배포.
 - **prod psql**: `data_craft_production` — 27테이블 데이터 + 결제 무이력 초기 상태 + 프로모션 정의 1행.
+
 
 ## v001.743.0
 
