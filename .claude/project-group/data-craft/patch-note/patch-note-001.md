@@ -25540,3 +25540,15 @@ data-craft:
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
+
+## v001.764.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #320 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 8 (핫픽스3)**: 빠른 생성 패널 상단·좌측·하단 테두리(rounded-tl) 추가, 항목을 전폭 행 + border-b 구분선으로 전환 (`0624a5d`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
