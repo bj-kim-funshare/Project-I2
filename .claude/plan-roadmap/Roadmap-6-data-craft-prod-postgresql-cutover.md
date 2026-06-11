@@ -20,7 +20,7 @@
 
 🟢 ~~/patch-update data-craft~~, PROD-1 컷오버 결과 patch-note 기록 — **【완료 2026-06-11, 마스터 지시로 patch-update(메이저 범프) 대신 현 patch-note-001.md 에 종합 기록 엔트리(v001.744.0)로 직접 작성 — 버전 파일 번호 불변】**
 
-🔴 /task-db-data data-craft, dev psql 새로고침 — dev 전체 삭제 후 prod psql 데이터 복사. 컷오버 안정화 후 별도 진행
+🟢 /task-db-data data-craft, dev psql 새로고침 — dev 전체 삭제 후 prod psql 데이터 복사. 컷오버 안정화 후 별도 진행 **【완료 2026-06-11 (exec=dml-20260611145813-25c4d4)】 prod 영향 0(마스터 지시 — read-only COPY 소스 1회만): dev 33테이블 capture 백업→전삭제→COPY 스트림 적재→setval→대사 33/33 prod==dev(data_values 3,219,231). dev 전용(admin 2종·user_events) 보존. 우회 2건: pg_dump 16↔17.9 버전 불일치→psql COPY 파이프 / prod·dev 물리 컬럼 순서 상이→교집합 컬럼 명시. dev 서버 재기동 필요(/dev-start). gotcha: gitignore PLAN.md 패턴이 plan.md 또 누락→add -f 복원(2회째 재발).】**
 
 ---
 
