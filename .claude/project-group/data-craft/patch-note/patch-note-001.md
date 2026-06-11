@@ -25528,3 +25528,15 @@ data-craft:
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx
+
+## v001.763.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #320 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 7 (핫픽스2)**: 빠른 생성 패널 디자인 개선 — Zap 2줄 헤더, 카드형 아이템 + hover Plus 아이콘, 클릭 중 스피너 피드백, 빈/로딩/에러 상태 중앙 정렬(Inbox 아이콘), 하단 카운트 바 (`bb3c343`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
