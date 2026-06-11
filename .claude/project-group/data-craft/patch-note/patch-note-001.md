@@ -25515,3 +25515,16 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx (신규)
 - packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
 - packages/fs-data-viewer/src/widgets/gridUtilMethods.ts
+
+## v001.762.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #320 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 6 (핫픽스1)**: 행 연결 그룹 관리 모달 footer 의 빠른 생성 켜기/설정 버튼에 Zap 아이콘 추가 (`37d137c`)
+- 비고: data-craft i-dev 의 `3a0218c33` 커밋은 본 문서 머지 절차 중 잘못된 cwd 에서 생성된 **빈 머지 커밋** (내용 변경 0) — 메시지와 달리 패치노트 머지가 아니며 기능 영향 없음.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkGroupManageDialog.tsx
