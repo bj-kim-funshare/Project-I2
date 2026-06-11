@@ -16,9 +16,9 @@
 
 🟢 ~~/plan-enterprise data-craft, **결제 전용 마이그레이션 ETL**~~ — **폐기·대체 완료 (2026-06-11 마스터 재결정)**: 실고객 결제 데이터 없음 확정(전부 테스트) → 결제 ETL 자체를 폐기하고 **"결제 무이력 최초 유저 + 프로모션 출시 직전 상태"** 로 대체. 결제계열 6테이블(billing_info·payment_history·billing_cleanup_log·client_promotion·promotion_audit_log·promotion_business_lock)은 빈 상태 유지(이관 안 함), `/task-db-data`(exec=dml-20260611103819-dc6cea)로 ① client 전 2행 free 리셋(plan_type/expires 2999-12-31/seats 1/promotion·pending·cycle NULL, billing_anchor_day 불변 NULL) ② promotion 정의 1행(id=2 '운영 기술 지원 프로모션') 복원+시퀀스 동기화. 결과: funshare = 첫 결제 플로우를 처음부터 QA 가능한 최초 유저 상태(첫구매 프로모션 자격 보유). gotcha: promotion 감사 트리거가 `app.current_admin_id` 요구 → DML 은 `session_replication_role='replica'` 로 실행(ETL #275 선례). ~~billing_anchor_day 파생·활성구독 대사~~ 는 결제 데이터가 없으므로 무의미 — 자연 소멸.
 
-🔴 /pre-deploy data-craft, FE/BE(psql 단일엔진) prod 배포 — PG_* 환경 검증 + 배포. 컷오버 다운타임 윈도우 내, 일반·결제 이관 및 대사 통과 후 기동
+🟢 /pre-deploy data-craft, FE/BE(psql 단일엔진) prod 배포 — PG_* 환경 검증 + 배포. 컷오버 다운타임 윈도우 내, 일반·결제 이관 및 대사 통과 후 기동 **【완료 2026-06-11 (마스터 확정)】 검증 클린 후 BE main(0607990)→aws-deploy push + EC2 수동 기동(prod psql 접속·로그인 확인) + FE gh-pages 배포(차단 #303 은 env.ts PROD 가드 #304 로 해소 후 합격·close). QA 발견 버그 3건 즉시 수정·재배포: #307 플랜 선택 게이트+말풍선 억제(배포됨)·#312 결제 비밀번호 강제 재설정(i-dev 머지, 재배포 대기).】**
 
-🔴 /patch-update data-craft, PROD-1 컷오버 결과 patch-note 기록 (MySQL→psql 전환·결제 마이그레이션·배포)
+🟢 ~~/patch-update data-craft~~, PROD-1 컷오버 결과 patch-note 기록 — **【완료 2026-06-11, 마스터 지시로 patch-update(메이저 범프) 대신 현 patch-note-001.md 에 종합 기록 엔트리(v001.744.0)로 직접 작성 — 버전 파일 번호 불변】**
 
 🔴 /task-db-data data-craft, dev psql 새로고침 — dev 전체 삭제 후 prod psql 데이터 복사. 컷오버 안정화 후 별도 진행
 
