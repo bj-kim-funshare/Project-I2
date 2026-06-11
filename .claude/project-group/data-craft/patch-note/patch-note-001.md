@@ -25067,3 +25067,24 @@ Roadmap-8 운영 후속 **2/2**(마지막). 코드 WIP(`-작업`)=data-craft-ser
 ### 변경 파일
 
 - (data-craft-admin-server) (추가) pnpm-lock.yaml
+
+## v001.740.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #306
+
+### 페이즈 결과
+- **Phase 1**: fs-api 네트워크 오류 1급 타입 승격 — ERROR_CODES.NETWORK_ERROR 추가, ApiException isNetworkError 플래그(하위호환), interceptor 두 분기·tokenRefresh raw fetch throw 를 status 0 으로 래핑, 네트워크 실패 시 clearTokens·onAuthFailure 미실행(토큰 보존), 공개 타입 가드 isNetworkError export (dc5a98e8)
+- **Phase 2**: AuthProvider serverUnreachable 분기 — 부팅 자동 로그인 네트워크 오류 경로 5개 전부 handleAuthFailure 미호출(토큰·dc_session_expired 보존) + serverUnreachable 전환, initializeAuth useCallback 추출(재시도 준비), finally 로 isInitializing 해제 보장(기존 early-return 무한 스피너 잠재 버그 부수 수정) (4c21f2eb)
+- **Phase 3**: ServerUnreachableFallback 점검중 화면 — navigator.onLine 오프라인 문구 분기, 20초 자동 재시도 + online 즉시 재시도 + 다시 시도 버튼(중복 방지), AuthProvider 게이트 연결(라우터 진입 전 전 경로 커버), ko/en i18n serverUnreachable 4키 (8d30503c)
+
+### 영향 파일
+data-craft:packages/fs-api/src/constants/errorCodes.ts
+data-craft:packages/fs-api/src/types/api.types.ts
+data-craft:packages/fs-api/src/core/interceptor.ts
+data-craft:packages/fs-api/src/core/tokenRefresh.ts
+data-craft:packages/fs-api/src/index.ts
+data-craft:src/app/ServerUnreachableFallback.tsx (신규)
+data-craft:src/app/providers/AuthProvider.tsx
+data-craft:src/shared/i18n/locales/ko.ts
+data-craft:src/shared/i18n/locales/en.ts
