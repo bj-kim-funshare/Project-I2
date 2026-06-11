@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.737.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #304 (funshare-inc/data-craft) · pre-deploy 차단 #303 해소
+
+**env.ts resolveUrl PROD 가드 확장 — .env.local dev URL 의 prod 빌드 주입 차단.** vite 는 production 빌드에서도 `.env.local` 을 로드하는데, #300 외부접속 작업이 `.env.local` 의 `VITE_API_BASE_URL` 을 `http://*.local:8000`(mDNS)으로 갱신하면서 기존 PROD 가드 정규식(`localhost|127.0.0.1|0.0.0.0`)의 사각이 노출 — 이대로 빌드하면 prod FE 가 운영자 로컬 머신을 API 호스트로 박는 신규 회귀(#303 block). 가드를 비-프로덕션 호스트 전반으로 확장해 코드 레벨에서 흡수.
+
+### 페이즈 결과
+- **Phase 1** (fix · `b497f28dd`): `src/shared/config/env.ts` — 인라인 정규식을 `NON_PRODUCTION_HOST_PATTERN` 명명 상수로 분리하고 `\.local(?=[:/]|$)`(mDNS, lookahead 로 `.localdomain` 오탐 차단)·RFC1918 사설 3대역(`192.168/16`·`10/8`·`172.16-31/12`) 추가. PROD 분기만 교체 — DEV 분기(window.location 기반, 빌드 시 dead-code 제거)·`TOSS_CLIENT_KEY`(마스터 결정: 테스트키 유지) 불변.
+
+### 범위 / 기지 사항
+- `.env.local` 자체는 보존(dev 편의) — 향후 다른 운영자 머신 호스트로 갱신돼도 가드가 자동 흡수.
+- 토스 클라이언트 키 = 테스트키 유지(QA 첫결제는 테스트 결제) — live 키 전환은 QA 통과 후 별도 결정.
+- 후속: `/dev-merge data-craft`(i-dev→main) → `/pre-deploy data-craft` 재호출 → 합격 시 #303 close.
+
+### 영향 파일
+- **data-craft** (i-dev): `src/shared/config/env.ts`
+
+### 검증
+- diff 단일 파일·PROD 분기+상수+독스트링만 변경. lint gate(install+build:packages+typecheck:all+lint) exit 0. advisor #1·#2 PASS(차단 입력 `http://*.local:8000` 매치 → prodUrl 폴백 직접 검증).
+
 ## v001.736.0
 
 > 통합일: 2026-06-11
