@@ -1,6 +1,7 @@
-# Roadmap 5: data-craft 뷰 시스템 완전 제거 + data 6테이블 CUD 프로시저 강제
+# Roadmap 5: data-craft 뷰 시스템 완전 제거 + data 6테이블 CUD 프로시저 강제 — 🟢 완료
 
-> 작성일: 2026-05-28 | 대상: data-craft 그룹 — PostgreSQL 마이그레이션 prerequisite + 4가지 아키텍처 정책 정합화
+> 작성일: 2026-05-28 | 완료일: 2026-06-11 | 대상: data-craft 그룹 — PostgreSQL 마이그레이션 prerequisite + 4가지 아키텍처 정책 정합화
+> **종결 상태**: 5단계 전부 🟢. 회차 4(신규 SP 2개 DB 배포)·Step 5(최종 검증)는 MySQL→PostgreSQL 컷오버 과정에서 plpgsql 함수 재작성 + dev/prod 배포로 이행 완료됐고, 2026-06-11 라이브 dev DB(`data_craft_dev`) 직접 검증으로 뷰·릴레이션 잔재 0 확인. 4가지 아키텍처 정책 전부 충족.
 
 ## 프롬프트
 
@@ -10,9 +11,9 @@
 
 🟢 /plan-enterprise data-craft : 회차 3 — 신규 SP 2개 작성 (sp_replace_file_value_data + sp_rename_kanban_column_value) + BE 콜사이트 2건 cutover (storage.model.ts:49 + change.kanbanColumnRename.ts:37) — 이슈 #203 closed, patch-note v001.528.0, Phase 3 핫픽스 흡수 (columnTypeCheck + externalColumnType failureSamples 4건)
 
-🔴 /task-db-structure data-craft : 회차 4 — 신규 SP 2개 DB 배포 (회차 3 의 본문 기준)
+🟢 /task-db-structure data-craft : 회차 4 — 신규 SP 2개 DB 배포 (회차 3 의 본문 기준) — 완료. MySQL→psql 컷오버에서 `sp_replace_file_value_data`·`sp_rename_kanban_column_value` 를 plpgsql `CREATE OR REPLACE FUNCTION` 으로 재작성해 `docs/migration/ddl/run2-routines.up.sql` 에 편입, dev/prod 양쪽 배포. BE 콜사이트 2건은 `SELECT sp_*(...)` 호출로 cutover (storage.model.ts:44 + change.kanbanColumnRename.ts:37). (2026-06-11 검증)
 
-🔴 (스킬 없음 — 메인 세션 검증) : Step 5 — 최종 grep 검증 (6 테이블 직접 CUD 0건, 비-6테이블 SP CUD 0건 외 sp_error_log 예외, 동적 뷰 0건) + 마스터 dev 시나리오 8 재실행 + 그룹/컬럼 CRUD 정상 동작 확인
+🟢 (스킬 없음 — 메인 세션 검증) : Step 5 — 최종 검증 완료 (2026-06-11). BE `src/` 6테이블 직접 CUD = 0건, 비-6테이블 SP CUD = `sp_error_log` 예외만. 라이브 dev DB(`data_craft_dev`) 직접 쿼리: 일반뷰·동적뷰(vw_pivot_group_/vw_grp_rel_/vw_col_rel_/vw_rel_)·matview = 0, 뷰 참조 함수·트리거 = 0, 폐기 릴레이션 3테이블(data_group_relation/data_column_relation/data_relation_value) 전부 제거, `relation_view_name` 컬럼 0, pg_cron 잡 0. (마스터 dev 시나리오 8 육안 재실행은 마스터 완료 지시로 종결.)
 
 ---
 
@@ -237,3 +238,15 @@ DROP PROCEDURE IF EXISTS sp_rename_kanban_column_value;
    - 8 뷰모드 (grid/grouped/row/subGrid/gantt/calendar/kanban/dashboard) 정상 렌더
 
 모두 PASS 시 4가지 목표 통합 달성. 잔존 발견 시 추가 핫픽스 또는 추가 회차.
+
+---
+
+### 완료 (2026-06-11)
+
+본 로드맵 작성(2026-05-28) 이후 data-craft dev DB 가 MySQL → PostgreSQL 로 컷오버되면서, 미완으로 남아 있던 회차 4·Step 5 가 별도 작업 없이 컷오버 흐름 안에서 충족·이행 완료됐다. 2026-06-11 코드 + 라이브 DB 정밀 조사로 확정:
+
+- **회차 4 (SP 배포)** — MySQL SP 2개를 그대로 배포하는 대신, `sp_replace_file_value_data`·`sp_rename_kanban_column_value` 를 plpgsql `CREATE OR REPLACE FUNCTION` 으로 재작성해 캐노니컬 빌드 DDL `docs/migration/ddl/run2-routines.up.sql` 에 편입하고 dev/prod 양쪽에 배포. BE 콜사이트 2건은 `SELECT sp_replace_file_value_data(...)`(storage.model.ts:44) · `SELECT sp_rename_kanban_column_value(...)`(change.kanbanColumnRename.ts:37) 로 cutover 완료.
+- **Step 5 (최종 검증)** — BE `src/` 의 6테이블 직접 CUD = 0건, 비-6테이블 SP CUD = `sp_error_log` 예외만(정책 허용). 라이브 dev DB(`data_craft_dev`) 직접 쿼리: 일반뷰·동적뷰·matview = 0, 뷰 참조 함수/트리거 = 0, 폐기 릴레이션 3테이블(`data_group_relation`/`data_column_relation`/`data_relation_value`) 전부 제거, `relation_view_name` 컬럼 0, pg_cron 스케줄 잡 0. 유일하게 잡힌 `sp_manage_data_group` 의 `relation_id` 반환 키는 항상 NULL 인 BE 와이어 호환 껍데기(주석·변수)로 기능 잔재 아님.
+- **마스터 시나리오 8 육안 재실행** — 마스터의 완료 처리 지시(2026-06-11)로 종결. 기술적 표면은 위 라이브 검증으로 커버됨.
+
+4가지 아키텍처 정책(뷰 인스턴스 제거 / 뷰 로직 제거 / read=직접 SQL / data 6테이블 CUD=프로시저 강제)이 PostgreSQL 환경에서 온전히 유지됨을 확인.
