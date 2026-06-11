@@ -25417,3 +25417,48 @@ data-craft:
 - packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+
+## v001.759.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #317
+
+### 페이즈 결과
+- **Phase 1**: 행 연결 구버전 호환 코드 전면 제거 — 설정 flat 필드 lift 삭제, 셀 값 JSON 포맷 전용화, requestRowLinkTargetRow fallback 콜백 13개 파일 완전 제거 (+16/-142)
+- **Phase 2**: 행 선택 오버레이 100개 단위 인피니티 스크롤 전환(스크롤 하단 80px 임계·끝 판정·중복 가드) + 기존 getSingleRow 재사용 requestRowLinkRowById 단건 조회 콜백 신설로 재동기화·자동 채움의 전체 로드 제거 (+267/-69)
+- **Phase 3**: 그룹 자동 채움 fetch-first 원자성(saveBatchChanges 단일 배치 커밋, 실패 시 무저장+토스트) + reference 재동기화 React 외부 직접 mutation 제거 (+77/-44, lint 핫픽스 1회)
+- **Phase 4**: 행 연결 위저드 1단계 대상 그룹 목록에서 자기 그룹 제외 (currentGroupId prop)
+- **Phase 5**: BE rowLink 설정 검증 — 필수 필드 타입·자기참조·대상 그룹 존재/동일 테넌트·대상 컬럼 귀속 검증, 위반 시 400 표준 봉투 (+81/-0)
+
+### 영향 파일
+
+**data-craft:**
+- packages/fs-data-viewer/src/entities/row-link/helpers.ts
+- packages/fs-data-viewer/src/entities/row-link/types.ts
+- packages/fs-data-viewer/src/entities/data-viewer-props.types.ts
+- packages/fs-data-viewer/src/app/types.ts
+- packages/fs-data-viewer/src/app/FsDataViewer.tsx
+- packages/fs-data-viewer/src/app/FsDataViewerRouter.tsx
+- packages/fs-data-viewer/src/features/data-viewer/context/GridContext.tsx
+- packages/fs-data-viewer/src/features/data-viewer/context/index.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/connection/ConnectionEditOverlay.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkConfigDialog.tsx
+- packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+- packages/fs-data-viewer-explorer/src/lib/callbacks/connectionCallbacks.ts
+- packages/fs-external-data-viewer-explorer/src/lib/callbacks/connectionCallbacks.ts
+- packages/fs-sub-data-viewer-explorer/src/lib/callbacks/connectionCallbacks.ts
+- src/features/viewer/lib/connectionCallbacks.ts
+- src/widgets/viewer-widget/ui/Viewer.widget.tsx
+- src/widgets/external-viewer-widget/ui/useExternalViewerCallbacks.ts
+- src/widgets/sub-viewer-widget/ui/useSubViewerCallbacks.ts
+
+**data-craft-server:**
+- src/services/dataViewerChange/change.columnSettings.ts
+- src/models/viewer.model.ts
