@@ -25347,3 +25347,16 @@ data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNaviga
 ### 영향 파일
 - data-craft-server:src/services/billingSubscription.service.ts
 - data-craft-server:src/services/promotion.service.ts
+
+## v001.756.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #318
+
+### 페이즈 결과
+- **Phase 1**: subscriptionQueries.ts 의 결제 mutation 2종(useExecutePayment·useUpgrade) onSuccess 를 async 로 전환, status 를 fire-and-forget invalidate 하던 것을 `await queryClient.refetchQueries(status)`(try/catch 로 실패 무시 — 결제는 이미 성공)로 변경해 fresh status 도착까지 mutation 을 pending 유지. useExecutePayment 에 mutationKey `['billing','execute-payment']` 부여(useUpgrade 는 기존 `['billing','upgrade']`), promotionKeys 무효화 보존.
+- **Phase 2**: PlanLimitGuard.tsx 에 `useIsMutating({ mutationKey: ['billing'] })` 가드 추가(early-return 이전 배치 — rules-of-hooks 안전), 초과 모달 렌더 조건을 `exceededItems > 0 && !isBillingMutating` 로 변경. 결제 성공~status 신선화 구간 내내 모달 억제 → 플랜 초과 상태에서 프리미엄 결제 직후 초과 모달이 1프레임 재노출되던 버그 제거. 결제 안 한 초과 사용자·무관 refetch 에는 영향 없음.
+
+### 영향 파일
+- data-craft:src/features/subscription/model/subscriptionQueries.ts
+- data-craft:src/features/subscription/ui/PlanLimitGuard.tsx
