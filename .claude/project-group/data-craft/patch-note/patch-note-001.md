@@ -25217,3 +25217,23 @@ data-craft:src/app/ServerUnreachableFallback.tsx
 data-craft:src/app/providers/AuthProvider.tsx
 data-craft:src/shared/i18n/locales/ko.ts
 data-craft:src/shared/i18n/locales/en.ts
+
+## v001.748.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #313
+
+### 페이즈 결과
+- **Phase 1**: 루트 앱 useWheelMonthNavigation 훅 신설(임계 50·쿨다운 250ms·유휴 리셋 150ms·macOS 스와이프 preventDefault) + calendar.tsx CalendarRoot 분리·useDayPicker 연결 — 루트 앱 전체 데이트피커(폼 위젯·조건 입력·기간 선택 포함) 가로 스크롤 월 이동 (lint-fix 1: immutability 룰 대응)
+- **Phase 2**: fs-data-viewer 훅 사본 + 신형 오버레이 6종(날짜·날짜및시간·마감일·타임라인·휴일설정·일괄작업) 배선
+- **Phase 3**: fs-data-viewer 구형 팝업 4종(렌더러 레지스트리 경유 상세패널·간트·서브위젯·일괄입력) + MiniCalendar + MonthPickerOverlay(연도 이동 매핑) 배선
+- **Phase 4**: fs-sub-data-viewer 훅 사본 + 신형 6종 + 구형 4종 배선, 구형 팝업 위치 계산 useLayoutEffect 정규화
+- **Phase 5**: fs-external-data-viewer 동일 적용 (lint-fix 2: DateTimeDropdown 위치 정규화 보완)
+
+### 영향 파일
+data-craft:src/shared/hooks/useWheelMonthNavigation.ts (신규)
+data-craft:src/shared/hooks/index.ts
+data-craft:src/shared/ui/shadcn/calendar.tsx
+data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-data-viewer 13파일 (신형 오버레이 6종·구형 팝업 4종·MiniCalendar·MonthPickerOverlay·barrel)
+data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-sub-data-viewer 11파일 (신형 6종·구형 4종·barrel)
+data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-external-data-viewer 11파일 (신형 6종·구형 4종·barrel)
