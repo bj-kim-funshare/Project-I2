@@ -25217,3 +25217,30 @@ data-craft:src/app/ServerUnreachableFallback.tsx
 data-craft:src/app/providers/AuthProvider.tsx
 data-craft:src/shared/i18n/locales/ko.ts
 data-craft:src/shared/i18n/locales/en.ts
+
+## v001.748.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #311
+
+### 페이즈 결과
+- **Phase 1**: 컬러피커 기반 — colorConversion.ts 에 rgbToHsv/hsvToRgb/isLightColor additive 추가, EyeDropper ambient 타입 선언, 시안 HSL 공식 기반 7×8 팔레트 상수 `colorPickerDialogPalette`, 최근색 상한 10→16, i18n 신규 키 10종 4언어 동시 추가 (`b34e7679f`)
+- **Phase 2**: 다이얼로그 리프 컴포넌트 — ColorSwatch(체커보드+선택 링+명도 대비 체크) · SpectrumPicker(SV 사각형+Hue 바, pointer-capture 드래그, hue 붕괴 방지) · HexRgbInputs(HEX draft/commit+Enter 버블 차단+스피너 제거) · PreviewRow(스포이드 EyeDropper+클립보드 복사 1.1s 피드백) 신규 작성 (`58b460123`)
+- **Phase 3**: ColorPickerDialog 재구축 — 560×664 6행 그리드(헤더/프리뷰/3탭/스크롤 바디/투명도/푸터), 팔레트·직접 지정·최근 3탭, props API 불변으로 호출부 무수정, 셀 저장 `#RRGGBB` 계약 보존 (`ffe6a6c43`)
+
+### 영향 파일
+data-craft:packages/fs-data-viewer/src/shared/types/eyedropper.d.ts
+data-craft:packages/fs-data-viewer/src/shared/ui/ColorPicker/utils/colorConversion.ts
+data-craft:packages/fs-data-viewer/src/shared/ui/ColorPicker/hooks/useRecentColors.ts
+data-craft:packages/fs-data-viewer/src/shared/config/theme/componentColors/paletteColors.ts
+data-craft:packages/fs-data-viewer/src/shared/config/i18n/types.ts
+data-craft:packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+data-craft:packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+data-craft:packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+data-craft:packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/ColorPickerDialog.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/components/ColorSwatch.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/components/SpectrumPicker.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/components/HexRgbInputs.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/components/PreviewRow.tsx
+data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/components/index.ts
