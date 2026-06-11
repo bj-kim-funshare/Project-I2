@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.743.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #309 (funshare-inc/data-craft)
+
+**버튼 설정 다이얼로그 디자인 전면 리뉴얼 (fs-data-viewer).** 데이터 뷰어 버튼 타입 열의 "버튼 설정" 다이얼로그를 디자인팀 시안대로 시각 전면 교체. 기능 100% 불변(props/onSave 계약, BUTTON_PALETTE 10 hex, useEffect [isOpen] 초기화 가드, modal=false/showOverlay=false/useScrollLock/data-scroll-container, max-h 70vh, TargetTypeSelector 조건부 렌더 전부 보존). advisor 검증 2회 모두 advisor-fallback 경유 PASS.
+
+### 페이즈 결과
+- **Phase 1**: i18n 신규 키 4종(settingsSubtitle/previewLabel/instantApplyBadge/selectedActionLabel)을 types.ts + ko/en/ja/zh 4언어 추가 (`830407d`)
+- **Phase 2**: dialog-ui.tsx 신설 — DIALOG_TOKENS·SectionLabel·SwatchRow(원형 스와치)·MiniSwatch·RedesignTextField 로컬 빌딩블록 (`a4db84d`)
+- **Phase 3**: ActionSelector 라디오 카드(tone 아이콘 타일·즉시 적용 배지)·TargetTypeSelector 체크 카드 리스타일, lint 핫픽스 2회로 비컴포넌트 export 를 action-meta.ts 분리 (`5bbdd5f`+`6bcc6de`·`b5fe81e`)
+- **Phase 4**: ButtonSettingsDialog 본체 4단 밴드(헤더/라이브 미리보기/스크롤 본문/푸터) 구조 재구축, 폭 540·radius 16 (`7826cbc`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/en.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ja.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/zh.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/ButtonSettingsDialog.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/ActionSelector.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/TargetTypeSelector.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/dialog-ui.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/action-meta.ts (신규)
+
 ## v001.742.0
 
 > 통합일: 2026-06-11
