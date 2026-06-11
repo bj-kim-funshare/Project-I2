@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.744.0
+
+> 통합일: 2026-06-11
+> Roadmap-6 PROD-1 컷오버 종합 기록 (프롬프트 8 — 마스터 지시로 patch-update 메이저 범프 대신 본 엔트리로 기록)
+
+**🚀 PROD-1: data-craft 프로덕션 MySQL → PostgreSQL 단일 컷오버 완료.** 2026-06-11 작업일(AWS 앱 서버 셧다운 다운타임 윈도우)에 이관→초기화→승격→배포 전 과정을 수행. prod 는 단일 pg 엔진 BE 가 prod psql `data_craft_production`(PG 17.9, PG_*_PROD 좌표)에 접속하는 체제로 전환됨. 레거시 prod MySQL 은 무변경 보존(롤백 안전망, ~1개월 후 폐기 예정).
+
+### 컷오버 타임라인 (전부 2026-06-11)
+1. **일반 데이터 이관 최종 복사** (#301, v001.735/736.0): 소스 동결 증명(precheck 5분 간격 2회, refresh_token 1,981 미동) 후 멱등 ETL(`pnpm migrate:prod --phase all`) — **27/27 전 테이블 src==tgt 무손실**(data_values 3,219,191·data_viewer_row_setting 121,992 COPY). 선행으로 finalize 게이트 견고화(검증런 스냅샷 절대값 제거 → src==tgt+floor).
+2. **결제 무이력·프로모션 출시직전 초기화** (task-db-data dml-…-dc6cea, 로드맵 프롬프트 6 폐기·대체): 실고객 결제 데이터 없음 확정 → 결제계열 6테이블 빈 상태 유지, client 2행 free 초기화(plan/expires/seats/promotion·pending·cycle), promotion 정의 1행(id=2 '운영 기술 지원 프로모션') 복원+시퀀스 동기화. funshare = 첫 결제 플로우를 처음부터 QA 가능한 최초 유저 상태.
+3. **i-dev→main 일괄 승격** (dev-merge PR 5건: data-craft#302·mobile#9·server#23·admin#1·admin-server#1): 리뷰 9라운드·발견 8건·핫픽스 5커밋(mobile INTERNET 권한, admin 4건, admin-server 3-iter).
+4. **prod 배포** (pre-deploy, #303 차단→#304 해소→합격): BE main(0607990)→aws-deploy push + EC2 수동 기동, FE gh-pages. 차단 사유 = .env.local 의 *.local dev URL 이 vite prod 빌드에 주입되는 신규 회귀 → env.ts `NON_PRODUCTION_HOST_PATTERN` 가드(v001.737.0)로 코드 레벨 흡수.
+5. **QA 1차 결과**: psql 로그인 정상·플랜 초과 모달 정상(free 초기화 작동 증명). 발견 버그 3건 즉시 수정 — #307 플랜 선택 hard-disable 제거+말풍선 억제(v001.739.0, 재배포됨)·#312 카드 등록 직후 결제 비밀번호 강제 재설정(v001.742.0, 재배포 대기).
+
+### 운영 잔여
+- #312 재배포(FE) → QA 결제 플로우 재검증 → 서비스 오픈(AWS 자동복구 재활성).
+- 레거시 MySQL: 첫 결제 갱신(~1개월) 정상 확인 후 폐기. ⚠️ 일반 ETL 재실행 금지(결제테이블 TRUNCATE CASCADE — 단, 현 결제계열은 비어 있어 즉시 위험은 없음).
+- 로드맵 프롬프트 9(dev psql 새로고침 — dev 전삭제 후 prod 복사)는 안정화 후 별도.
+- 토스 클라이언트 키 = 테스트키 운영 중(마스터 결정) — 실결제 전환 시 live 키 주입+FE 재빌드 필요.
+
+### 영향 (저장소·인프라)
+- **data-craft-server**: 단일 pg 엔진(#258)·PG_*_PROD 분기·ETL(scripts/prod-migration/)·aws-deploy 갱신.
+- **data-craft**: env.ts PROD 가드·플랜 선택 게이트·말풍선 억제·결제 비밀번호 게이트, gh-pages 배포.
+- **prod psql**: `data_craft_production` — 27테이블 데이터 + 결제 무이력 초기 상태 + 프로모션 정의 1행.
+
 ## v001.743.0
 
 > 통합일: 2026-06-11
