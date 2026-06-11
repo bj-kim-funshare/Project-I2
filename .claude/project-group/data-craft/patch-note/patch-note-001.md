@@ -25088,3 +25088,16 @@ data-craft:src/app/ServerUnreachableFallback.tsx (신규)
 data-craft:src/app/providers/AuthProvider.tsx
 data-craft:src/shared/i18n/locales/ko.ts
 data-craft:src/shared/i18n/locales/en.ts
+
+## v001.741.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #306 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스1)**: 점검중 화면 오류 프레이밍 제거 — WifiOff→Wrench 아이콘, navigator.onLine 오프라인 분기·"다시 시도" 버튼 제거, 문구를 "서비스 점검 중입니다"(ko/en) 무조건 점검 안내로 교체. 백그라운드 자동 복구(20초 폴링 + online 즉시 재시도)는 유지. 미사용 i18n 키(offlineDescription/retry) 제거 (ebfcb23f)
+
+### 영향 파일
+data-craft:src/app/ServerUnreachableFallback.tsx
+data-craft:src/shared/i18n/locales/ko.ts
+data-craft:src/shared/i18n/locales/en.ts
