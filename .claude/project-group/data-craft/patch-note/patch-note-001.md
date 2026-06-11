@@ -25264,3 +25264,17 @@ data-craft:src/shared/ui/shadcn/calendar.tsx
 data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-data-viewer 13파일 (신형 오버레이 6종·구형 팝업 4종·MiniCalendar·MonthPickerOverlay·barrel)
 data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-sub-data-viewer 11파일 (신형 6종·구형 4종·barrel)
 data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts (신규) 외 fs-external-data-viewer 11파일 (신형 6종·구형 4종·barrel)
+
+## v001.750.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #313 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 6 (핫픽스1)**: 휠 월 이동 시 즉시 휙 바뀌던 전환에 방향성 슬라이드 애니메이션 추가 — useWheelMonthNavigation 4사본에 Web Animations API 220ms ease-out(±14px 슬라이드+페이드, 다음 달=오른쪽 진입/이전 달=왼쪽 진입) 내장, prefers-reduced-motion·구형 브라우저 스킵, 기존 임계 50·쿨다운 250ms 무변경 (`ca7293ea3`)
+
+### 영향 파일
+data-craft:src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
