@@ -25292,3 +25292,17 @@ data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/
 data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/useColorPickerCell.ts
 data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/types.ts
 data-craft:packages/fs-data-viewer/src/widgets/cell-renderers/color-picker-cell/FsGridColorPickerCellRenderer.tsx
+
+## v001.752.0
+
+> 통합일: 2026-06-11
+> 플랜 이슈: #313 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 7 (핫픽스2)**: 휠 월 이동 시 모달 전체가 순간 사라졌다 재등장하던 결함 수정 — 애니메이션 대상을 휠 리스너 루트(모달 카드)에서 하위 달력 그리드 요소로 한정(MONTH_GRID_SELECTORS: [data-month-grid] → .rdp-month_grid → grid-cols-7 → grid-cols-4, first-match-wins, 미발견 시 생략). 키프레임·220ms·가드 무변경, 훅 4사본 md5 동일 (`7369d89d8`)
+
+### 영향 파일
+data-craft:src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-sub-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
+data-craft:packages/fs-external-data-viewer/src/shared/hooks/useWheelMonthNavigation.ts
