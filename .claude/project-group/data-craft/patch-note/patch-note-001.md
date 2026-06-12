@@ -25852,3 +25852,15 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/HeaderSettings.tsx
 - packages/fs-data-viewer/src/widgets/data-viewer-header/header-grid-style/HeaderGridStyle.tsx
 - packages/fs-data-viewer/src/widgets/data-viewer-header/header-view-mode/ViewModeMenu.tsx
+
+## v001.780.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 10 (핫픽스3)**: 행 연결 타겟 허용 타입 정정 — 고유 ID(uniqueId) 허용으로 변경, 행ID·듀얼 위젯·수식·간단한 수식·연결·행연결 6종 차단 추가 (제외 집합 = log·lastUpdate·rowId·dualWidget·formula·simpleFormula·connection·rowLink) (`4557819`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkColumnFilters.ts
