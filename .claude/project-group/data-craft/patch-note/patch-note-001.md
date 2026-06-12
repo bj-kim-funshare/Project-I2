@@ -25712,3 +25712,17 @@ data-craft-server:
 - src/services/promotion.service.ts
 
 비고: advisor 2회 PASS(advisor-fallback 경유). dev psql BEGIN…ROLLBACK 실측 검증 통과(연간 산술 동치·tail·min clamp·잔액 CTE·조건부 revoke). 4번 차감 엔진 진입점 = accrueReferralCredits 의 fullPhaseBase/actualPaid 분리 인자(현재 동일값 전달, 콜사이트 주석 참조). 잔존 관찰: 동일 추천인 동시 결제 시 카운터 경합 이론상 1개월치 과적립 가능(갱신 cron 순차라 실질 낮음 — 필요 시 FOR UPDATE 보강).
+
+## v001.773.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #322 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 6 (핫픽스2)**: ① 사용자 타입 열에서 "항상" 룰이 "채워짐"을 덮던 결함 — 매처 우선순위는 정상이었고, getComparableCellValue 'user' 케이스의 JSON.parse 가 콤마 구분 표시 문자열("이름(id), …")에서 항상 실패해 채워진 셀을 빈 값으로 오판하던 것이 원인. 콤마 분할 파싱으로 교정. ② 배경 반전 시 흰 칩 안 이름 텍스트에 흰색 textColor 가 적용돼 판독 불가던 결함 — 칩 이름의 조건부 color 제거(굵게 유지), 빈 플레이스홀더만 반전 시 textColor 적용.
+
+### 영향 파일
+data-craft (packages/fs-data-viewer):
+- src/widgets/fs_grid_renderer/utils.ts
+- src/widgets/cell-renderers/user-cell/UserCellContent.tsx
+- src/widgets/cell-renderers/user-cell/FsGridUserCellRenderer.tsx
