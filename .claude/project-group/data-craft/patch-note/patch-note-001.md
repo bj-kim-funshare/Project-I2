@@ -25552,3 +25552,17 @@ data-craft:
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
+
+## v001.765.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #320 (핫픽스4)
+
+### 페이즈 결과
+- **Phase 9 (핫픽스4)**: rowLink 셀 전체 "-" 표시 결함 근본 수정 — ① rowLinkDelegateDispatcher 이중 파싱 제거 (#317 Phase 1의 plain-string 빈값화로 전제가 깨진 재파싱이 추출값을 ''로 소거하던 잠복 회귀), RowLinkDelegateRenderer cellValue prop 계약을 "파싱 완료된 plain string"으로 확정 ② handleAnyCellSave 3경로(클리어/단순/원자성배치)에 낙관적 in-memory 갱신 복원(본 셀+형제 셀, 표준 mutation+onRefresh 패턴 — #317 Phase 3에서 대체 없이 제거됐던 것) ③ 진단용 화면 프로브(4a) 제거. 근인은 psql 진단(저장·피벗 정상 확증) + 화면 프로브 런타임 증거로 확정 (`f2a919d`, `9c5ea33`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkDelegateDispatcher.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx
