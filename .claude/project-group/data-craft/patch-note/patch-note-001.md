@@ -25818,3 +25818,16 @@ data-craft-server:
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkListPanel.tsx
+
+## v001.778.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 9 (핫픽스2)**: 특수 타입 값 패널 대응 — 팝오버 zIndex 9999→50 정렬로 문서 다이얼로그(9800)·캘린더/선택 피커(12100)가 정상 상위 노출, document 타입은 title+BlockNote 평문 추출 read-only 미리보기 추가(복사 모드 다이얼로그 편집 유지) (`2da34e3`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkLinkPopover.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
