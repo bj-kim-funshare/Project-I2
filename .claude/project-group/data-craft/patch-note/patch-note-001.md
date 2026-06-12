@@ -25726,3 +25726,18 @@ data-craft (packages/fs-data-viewer):
 - src/widgets/fs_grid_renderer/utils.ts
 - src/widgets/cell-renderers/user-cell/UserCellContent.tsx
 - src/widgets/cell-renderers/user-cell/FsGridUserCellRenderer.tsx
+
+## v001.771.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #323 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 7 (핫픽스1)**: 집계 on 상태로 생성된 열(태그 기본 on 등)이 새로고침 전까지 집계 영역 "-"로만 표시되던 결함 수정 — 열 생성 경로에 집계 fetch 트리거 부재가 원인. useTableView 에 requestAggregationForNewColumn 콜백 신설(columnModelList 비의존, columnId+typeId 로 distribution/sum 결정), FsGridColumnGenerator 에 onAggregationColumnAdded 옵션 prop 추가 후 생성 직후 호출, FsGridTableView 에서 연결. 기존 3개 트리거(초기 로드·필터 변경·셀 저장 flush)와 서브그리드 경로 무변경.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts
+- packages/fs-data-viewer/src/widgets/column-generator/types.ts
+- packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
