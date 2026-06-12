@@ -25806,3 +25806,15 @@ data-craft:
 data-craft-server:
 - src/services/dataViewerChange/change.columnSettings.ts
 - src/services/dataViewerPost.service.ts
+
+## v001.777.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 8 (핫픽스1)**: 행 연결 목록 항목 hover 툴팁 z-index 수정 — TooltipContent z-50이 RowLinkLinkPopover(zIndex 9999) 뒤로 가려지던 것을 z-[10000]으로 상회(`a0c4e38`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkListPanel.tsx
