@@ -25864,3 +25864,14 @@ data-craft:
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkColumnFilters.ts
+
+## v001.781.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #329
+
+### 페이즈 결과
+- **Phase 1**: fs-data-viewer HeaderTitle.tsx 디자인 모드(isSettingMode) 제목 input className 에 mr-3 우측 여백 추가 — 하단 구분선이 우측 헤더 액션 요소들과 맞닿던 문제 해소. 읽기 모드·subTitle 분기·형제 뷰어 패키지 무수정 (`0fb058c6e`).
+
+### 영향 파일
+- data-craft:packages/fs-data-viewer/src/widgets/data-viewer-header/HeaderTitle.tsx
