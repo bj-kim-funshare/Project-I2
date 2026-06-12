@@ -25897,3 +25897,17 @@ data-craft:
 - src/shared/i18n/locales/(ko·en)
 
 비고: advisor 2회 — #1 PASS, #2 BLOCK 1건(로케일 1줄) 해소 후 PASS(전부 advisor-fallback 경유). 게이트 typecheck:all+lint 3회 exit 0. 시각 QA(가입 폼 affordance·모달 카드 위계·경고 색감)는 메인 세션 렌더 불가로 마스터 점검 후속 — 필요 시 핫픽스.
+
+## v001.783.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스4)
+
+### 페이즈 결과
+- **Phase 11 (핫픽스4)**: 값 패널 타입별 UX 확정 스펙 — ① 표준 타입(텍스트·숫자·시간/타이머/세계시간·선택·사용자/평가·불리언·색상·고유ID) 중앙 정렬 display + 복사 모드 클릭 시 편집 전환 ② 이미지·파일·버튼 타겟 차단(제외 11종) ③ 날짜·날짜시간·마감일·타임라인 인라인 캘린더(+시간) UI + 팝오버 680×560 확장 ④ 문서 미리보기 + 복사 모드 클릭 시 다이얼로그. 한계: deadline 완료 토글 미제공, 문서 reference 다이얼로그 미지원(미리보기만), uniqueId 편집 무의미 (`c68fc56`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkLinkPopover.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkColumnFilters.ts
