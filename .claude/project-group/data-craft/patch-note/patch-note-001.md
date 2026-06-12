@@ -25831,3 +25831,24 @@ data-craft:
 data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkLinkPopover.tsx
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
+
+## v001.779.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #328
+
+### 페이즈 결과
+- **Phase 1**: HeaderIconButton 공유 프리미티브 신설(40px·rounded-[9px]·테두리형, isActive 변형, HEADER_ICON_CLASS 18px 상수) + SaveStatusBadge 솔리드 16px 원형 배지(초록 체크/스피너/빨강)로 갱신.
+- **Phase 2**: HeaderSearch 시안 적용 — 열 선택 select h-10/rounded-[10px]/semibold, 검색 input h-10/rounded-[10px]/좌측 아이콘/primary focus ring, 저장·일괄입력·인쇄 버튼 HeaderIconButton 교체.
+- **Phase 3**: 새로고침(SSE 뱃지 모서리 정렬)·대시보드 저장·설정 트리거·그리드 스타일 토글 3종을 HeaderIconButton으로 통일, 칸반/간트 열관리 버튼 h-10 테두리형 정렬, ViewModeButtonGroup radius 10px — 그리드~대시보드 5개 뷰 전부 적용.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/HeaderIconButton/HeaderIconButton.tsx (신규)
+- packages/fs-data-viewer/src/shared/ui/HeaderIconButton/index.ts (신규)
+- packages/fs-data-viewer/src/shared/ui/SaveStatusBadge/SaveStatusBadge.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/HeaderActions.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-search/HeaderSearch.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-settings/HeaderSettings.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-grid-style/HeaderGridStyle.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-view-mode/ViewModeMenu.tsx
