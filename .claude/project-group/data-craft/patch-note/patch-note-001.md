@@ -25580,3 +25580,16 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
 - packages/fs-data-viewer/src/shared/config/i18n/types.ts
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
+
+## v001.767.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #320 (핫픽스6)
+
+### 페이즈 결과
+- **Phase 11 (핫픽스6)**: 빠른 생성 항목 높이를 그리드 행 높이 설정(viewerModel.rowHeight)에 연동, 하단 카운트 문구 "N개 빠른 생성 항목"(4언어), 헤더 기준열 표기 점 구분자 제거 + 진한 회색(text-gray-700/300) 분리 표기 (`3f9d166`, `8826f3b`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
