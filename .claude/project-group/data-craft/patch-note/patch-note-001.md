@@ -25566,3 +25566,17 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkDelegateDispatcher.tsx
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx
+
+## v001.766.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #320 (핫픽스5)
+
+### 페이즈 결과
+- **Phase 10 (핫픽스5)**: 빠른 생성 패널 하단 카운트를 i18n 사용자 친화 표기("N개 항목" / "N개+ 항목 (스크롤하여 더 보기)", 4언어)로 교체, 패널 헤더를 그리드 열 헤더와 동일한 40px 고정 높이 1줄 레이아웃("⚡ 빠른 생성 · 기준열")으로 정렬 (`6546942`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
