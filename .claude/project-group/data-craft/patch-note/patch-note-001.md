@@ -25775,3 +25775,34 @@ data-craft-server:
 - src/index.ts
 
 비고: advisor 2회 PASS(advisor-fallback 경유), dev psql BEGIN…ROLLBACK 실측 통과(임박 쿠폰 선택·산술 40000/420000/540000·0원 paymentKey NULL·부분 차감 잔여·조건부 소모). 프로모션 갱신 3분기 charge 단일화는 Roadmap-8 #10 무시 사유와 정합하는 구조 개선. 후속 정리 후보(비차단): listValidCreditsWithRemaining 의 HAVING 별칭 구문(PG 확장) → CTE 형태 이식성 정리. 잔존: FE 표시 대체는 Roadmap-9 5번.
+
+## v001.768.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321
+
+### 페이즈 결과
+- **Phase 1**: RowLinkListPanel+useRowLinkListPanel 추출(100단위 페이징·클라이언트 검색), 로드 effect cancelled 가드+groupId/columnId 키 분리(결함 a), connection 분기 무변경 (`550d40d`)
+- **Phase 2**: useRowLinkCell.handleValueOnlySave({rowId,value}의 value만 단일 셀 저장) + 단건조회 null 시 toast 후 전체 중단(결함 b), i18n targetRowNotFound 4언어 (`291f0ca`)
+- **Phase 3**: RowLinkValuePanel — 복사=레지스트리 에디터(autoFocus·저장/Enter), 참조/readOnly/본질 read-only 11종+file/image=전문 뷰어+클립보드+배지, 위임 불가 raw 폴백 (`bd62d94`)
+- **Phase 4**: RowLinkLinkPopover 2패널 컨테이너(540px, 좌 목록/우 값, stay-open 재연결, 연결 해제 복원, Esc 격리, 안내 푸터) (`89721d4`)
+- **Phase 5**: FsGridRowLinkCellRenderer 분기 통합 — 연결 셀=팝오버(readOnly 조회 허용)/빈 셀=기존 오버레이, Enter 라우팅 (`5b3660b`)
+- **Phase 6**: 타입 매트릭스 스윕 — 중첩 피커 Esc 결함 수정(data-renderer-portal 마커), 나머지 항목 검증 통과. 잔존: worldTime 국가명·document 타이틀 시각 열화(경미) (`72d6892`)
+- **Phase 7 (BE)**: validateRowLinkConfig export + 컬럼 생성 INSERT 직전 rowLink 검증(결함 c), 제3 경로 우회 불가 감사 완료. 외부 API 호출자는 신규 400 검증 오류 수신 가능(의도된 엄격화) (`d6d925e`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkLinkPopover.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkListPanel.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkListPanel.ts (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/useRowLinkCell.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/FsGridRowLinkCellRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/index.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/connection/ConnectionEditOverlay.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
+
+data-craft-server:
+- src/services/dataViewerChange/change.columnSettings.ts
+- src/services/dataViewerPost.service.ts
