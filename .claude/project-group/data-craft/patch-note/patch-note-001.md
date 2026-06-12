@@ -25594,6 +25594,30 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
 
+## v001.769.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #322
+
+### 페이즈 결과
+- **Phase 1**: 전 테마 fontWeight 'normal' 전환(강조 id 1 은 레거시 파싱용 유지), FsGridCellRendererModel 에 isBold/isUnderline/showIcon 플래그 추가, normalizeCellRendererModel 신설(레거시 강조→일반+굵게 매핑), useViewerMetaLoader raw-cast 교정 — 보정 1회(fromJson 플래그 사전 확정 결함)
+- **Phase 2**: 렌더 파이프라인에 fontWeight(isBold)/textDecoration(isUnderline)/themeIconId(showIcon) 전파, CellThemeIcon 신규(테마 id→lucide, currentColor·4px 여백), Text/Number/Phone 렌더러 적용
+- **Phase 3**: 모달 1100×500→1450×850, 9열 템플릿(배경반전 우측 굵게/밑줄/아이콘, 삭제 좌측 미리보기), i18n 4언어 키 추가, StylePreviewCell 신규, StyleSettingWidget 강조 제외
+- **Phase 4**: 잔여 텍스트형 렌더러 8종(Currency/Percent/Email/Link/Formula/SimpleFormula/UniqueId/LongText) 동일 패턴 확산, addCellRenderer 기본값 명시
+
+### 영향 파일
+data-craft (packages/fs-data-viewer):
+- src/entities/{cell-theme.types.ts, cell-renderer.types.ts, cell-renderer-child.types.ts}
+- src/shared/config/theme/componentColors/gridColors.ts
+- src/shared/config/i18n/{types.ts, translations/ko.ts, translations/en.ts, translations/zh.ts, translations/ja.ts}
+- src/shared/ui/{CellThemeIcon.tsx(신규), index.ts}
+- src/app/hooks/useViewerMetaLoader.ts
+- src/features/grid/hooks/base-cell-renderer/{types.ts, useBaseCellRendererState.ts, useBaseCellRenderer.ts}
+- src/features/grid/lib/cell-management/cellStyleManager.ts
+- src/widgets/fs_grid_renderer/{FsGridRenderer.tsx, generate-widget.tsx, types.ts}
+- src/widgets/cell-style-dialog/{FsGridCellStyleDialog.tsx, DialogTable.tsx, DialogTableRow.tsx, StyleSettingWidget.tsx, StylePreviewCell.tsx(신규), types.ts, constants.ts, useDialogState.ts, useListHandlers.ts, useCellStyleDialogHandlers.ts}
+- src/widgets/cell-renderers/ 텍스트형 11종 (Text/Number/Phone/Currency/Percent/Email/Link/Formula/SimpleFormula/UniqueId/LongText)
+
 ## v001.768.0
 
 > 통합일: 2026-06-12
