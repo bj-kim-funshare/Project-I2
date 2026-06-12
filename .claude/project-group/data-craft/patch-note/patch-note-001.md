@@ -25672,3 +25672,21 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/VoteSettingsWrapper.tsx
 - packages/fs-data-viewer/src/widgets/cell-renderers/FsGridVoteCellRenderer/VoteManageMode.tsx
 - packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/InlineFieldB.tsx
+## v001.771.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #322 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 5 (핫픽스1)**: 열 본문 스타일 편집의 아이콘 체크박스를 페이지 편집측 IconPicker 오버레이 재사용으로 교체. 루트 앱 icon-picker 컴포넌트 5종+useIconSearch+page-icons 설정 18파일을 fs-data-viewer 패키지로 포팅(useI18n 교체, @radix-ui/react-popover 의존성 신규, z-[60], i18n 4언어 iconPicker 섹션). 데이터 모델 showIcon:boolean → iconName:string 전면 교체, CellThemeIcon 동적 Lucide 룩업 개편, 렌더 파이프라인+렌더러 11종 갱신. 보정 1회(onChangeIcon 시그니처 TS2322)
+
+### 영향 파일
+data-craft (packages/fs-data-viewer):
+- package.json(+@radix-ui/react-popover), pnpm-lock.yaml(루트)
+- src/shared/ui/icon-picker/** (신규 7), src/shared/config/page-icons/** (신규 18)
+- src/shared/ui/CellThemeIcon.tsx, src/shared/config/i18n/{types.ts, translations/ko·en·zh·ja.ts}
+- src/entities/{cell-renderer.types.ts, cell-renderer-child.types.ts}
+- src/widgets/fs_grid_renderer/{FsGridRenderer.tsx, generate-widget.tsx, types.ts}
+- src/features/grid/hooks/base-cell-renderer/ 3종, src/features/grid/lib/cell-management/cellStyleManager.ts
+- src/widgets/cell-style-dialog/{DialogTable.tsx, DialogTableRow.tsx, FsGridCellStyleDialog.tsx, StylePreviewCell.tsx, constants.ts, types.ts, useCellStyleDialogHandlers.ts, useListHandlers.ts}
+- src/widgets/cell-renderers/ 텍스트형 11종
