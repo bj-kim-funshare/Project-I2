@@ -25593,3 +25593,29 @@ data-craft:
 data-craft:
 - packages/fs-data-viewer/src/widgets/grid-table/components/QuickCreatePanel.tsx
 - packages/fs-data-viewer/src/shared/config/i18n/translations/ko.ts · en.ts · ja.ts · zh.ts
+
+## v001.768.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #324
+
+### 페이즈 결과
+- **Phase 1**: referral 4테이블 모델 9종 신설(원장 합산 크레딧 잔액 CTE·조건부 referral_code UPDATE) + NTS odcloud 호출을 verifyBusinessNumberStatus 서비스로 추출(기존 /validate-business-number 라우트 동작 불변) + CALL_ID.referral 6종 추가 — `18b9730`
+- **Phase 2**: signup 에 선택 인자 referralCode 통합 — 트랜잭션 전 3단계 검증(코드 존재·활성 / 자기 사업자번호 차단 / NTS 재검증: 휴폐업·장애 구분, 장애 시 가입 중단+재시도 안내), 트랜잭션 내 referral_relation 1행 + 추천인 쿠폰 3장(만료 +2년) 원자 생성, 미첨부 가입 경로 완전 불변 — `4bad338`
+- **Phase 3**: GET /api/referral/status 신설(오너 가드·buildAuthResponse 봉투) — referral_code lazy 발급(동시 경합 안전), 쿠폰 수·크레딧 잔액·지급 개월치 현황 단일 조회. permission PLAN_ENDPOINTS FREE 등록(계층 누적 → 전 플랜, 마스터 승인 범위 확장) — `3e74102`
+
+### 영향 파일
+data-craft-server:
+- src/models/referral.model.ts (신규)
+- src/services/businessVerification.service.ts (신규)
+- src/services/referral.service.ts (신규)
+- src/controllers/referral.controller.ts (신규)
+- src/routes/referral.ts (신규)
+- src/services/auth.service.ts
+- src/controllers/auth.controller.ts
+- src/routes/auth.ts
+- src/routes/index.ts
+- src/middlewares/permission.middleware.ts
+- src/config/constant.ts
+
+비고: advisor 검증 2회 모두 PASS (advisor-fallback 경유 — advisor() 세션 부재). Roadmap-9 2번. dev 런타임 미검증(서버 재기동·실가입 시나리오는 5번 FE 연동 후 일괄 QA 권장).
