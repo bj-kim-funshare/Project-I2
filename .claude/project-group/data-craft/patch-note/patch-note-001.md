@@ -25911,3 +25911,17 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkLinkPopover.tsx
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/rowLinkColumnFilters.ts
+
+## v001.784.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #326 (핫픽스1)
+
+### 페이즈 결과
+- **핫픽스1**: listValidCreditsWithRemaining 의 `HAVING "remainingKrw" > 0` 이 PostgreSQL 에서 SELECT 별칭 참조 불가(42703)로 GET /api/subscription/status 등 차감 계산 전 경로 500 — 파생 테이블 + 외부 WHERE 필터로 재작성(의미 동일: 건별 잔여>0·만료 제외·만료 임박 순). 수정 쿼리 원문 dev psql 실측 통과, advisor PASS(advisor-fallback) — `96c1250`
+
+### 영향 파일
+data-craft-server:
+- src/models/referral.model.ts
+
+비고: #326 advisor #2 의 비차단 관찰("HAVING 별칭은 PG 확장 — 후속 정리 후보")이 실제로는 런타임 결함이었음 — "PG 가 허용" 판단이 오판. 교훈: 모델이 발행하는 쿼리는 원문 그대로 psql 실측해야 함(자체 작성 등가 SQL 로는 이 클래스를 못 잡음).
