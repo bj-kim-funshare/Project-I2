@@ -25952,3 +25952,16 @@ data-craft-server:
 data-craft:
 - packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx · ContentArea.tsx · DocumentEditor.tsx · NavBar.tsx · dialogTypes.ts
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
+
+## v001.787.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스6)
+
+### 페이즈 결과
+- **Phase 13 (핫픽스6)**: 문서 값 패널 — 클릭 영역 하단에 "문서 바로가기"(ExternalLink 아이콘+violet) 고정 표기(i18n openDocument 4언어), 미리보기 내용 수직·수평 중앙 정렬(flex-1 centered + shrink-0 푸터) (`463dee1`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts · translations/ko.ts · en.ts · ja.ts · zh.ts
