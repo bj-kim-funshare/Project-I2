@@ -25690,3 +25690,25 @@ data-craft (packages/fs-data-viewer):
 - src/features/grid/hooks/base-cell-renderer/ 3종, src/features/grid/lib/cell-management/cellStyleManager.ts
 - src/widgets/cell-style-dialog/{DialogTable.tsx, DialogTableRow.tsx, FsGridCellStyleDialog.tsx, StylePreviewCell.tsx, constants.ts, types.ts, useCellStyleDialogHandlers.ts, useListHandlers.ts}
 - src/widgets/cell-renderers/ 텍스트형 11종
+
+## v001.772.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #325
+
+### 페이즈 결과
+- **Phase 1**: payment_history.source 전 경로 기록 — 모델 source 파라미터(리터럴 유니온) + 7개 콜사이트 태깅(자동갱신 4·first-payment·upgrade·promotion-purchase), 프로모션 자동 갱신='auto-renewal' 근거 주석 — `3176e9f`
+- **Phase 2**: 적립 엔진 코어 — referral 모델 5종 추가 + referralEarning.service.ts 신규: min(3−카운터, 연간3/월간1) 양측 각자, 연간 floor(base×k/12)(÷4 동치), 한도 소진 결제부터 추천인 tail 10%(partial full 라운드 미적용), 피추천 tail 없음, revoked 시 tail 만, manual-first 평생 1회, 0원 tail 생략 — `0cc94b0`
+- **Phase 3**: 훅 연결 + revoke — 세 성공 결제 경로(renewSingleClient·renewPromotionClient·_executeFirstPaymentImpl) commit 전 동일 트랜잭션 적립, processExpiredPlans 무료 전환 시 setBenefitsRevoked(독립 try/catch), FAILED/upgrade/프로모션 구매 미적립, Roadmap-8 로직 무변경 — `3c7b482`
+
+### 영향 파일
+data-craft-server:
+- src/services/referralEarning.service.ts (신규)
+- src/models/referral.model.ts
+- src/models/paymentHistory.model.ts
+- src/services/billingRenewal.service.ts
+- src/services/billingSubscription.service.ts
+- src/services/billingScheduler.service.ts
+- src/services/promotion.service.ts
+
+비고: advisor 2회 PASS(advisor-fallback 경유). dev psql BEGIN…ROLLBACK 실측 검증 통과(연간 산술 동치·tail·min clamp·잔액 CTE·조건부 revoke). 4번 차감 엔진 진입점 = accrueReferralCredits 의 fullPhaseBase/actualPaid 분리 인자(현재 동일값 전달, 콜사이트 주석 참조). 잔존 관찰: 동일 추천인 동시 결제 시 카운터 경합 이론상 1개월치 과적립 가능(갱신 cron 순차라 실질 낮음 — 필요 시 FOR UPDATE 보강).
