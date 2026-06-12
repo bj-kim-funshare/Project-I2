@@ -25741,3 +25741,16 @@ data-craft:
 - packages/fs-data-viewer/src/widgets/column-generator/types.ts
 - packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx
 - packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
+
+## v001.774.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #322 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 7 (핫픽스3)**: 사용자 타입 열에서 배경 반전 없이는 조건 스타일이 사실상 안 보이던 결함 수정 — 칩 이름에 비반전 시 테마색+밑줄 적용(반전 시 핫픽스2 가독성 수정 보존), textDecoration·iconName 사용자 렌더러 배선, 아이콘은 칩 행/플레이스홀더 좌측 1회 렌더(룰 색 상속, 반전 시 흰색).
+
+### 영향 파일
+data-craft (packages/fs-data-viewer):
+- src/widgets/cell-renderers/user-cell/FsGridUserCellRenderer.tsx
+- src/widgets/cell-renderers/user-cell/UserCellContent.tsx
