@@ -25643,3 +25643,32 @@ data-craft (packages/fs-data-viewer):
 - src/widgets/fs_grid_renderer/{FsGridRenderer.tsx, generate-widget.tsx, types.ts}
 - src/widgets/cell-style-dialog/{FsGridCellStyleDialog.tsx, DialogTable.tsx, DialogTableRow.tsx, StyleSettingWidget.tsx, StylePreviewCell.tsx(신규), types.ts, constants.ts, useDialogState.ts, useListHandlers.ts, useCellStyleDialogHandlers.ts}
 - src/widgets/cell-renderers/ 텍스트형 11종 (Text/Number/Phone/Currency/Percent/Email/Link/Formula/SimpleFormula/UniqueId/LongText)
+
+## v001.770.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #323
+
+### 페이즈 결과
+- **Phase 1**: column-restrictions.ts 제한 리스트 일괄 수정 — ENABLE_UNIQUE_TYPES 에서 user·tag·progress 제거(20→17개), DISABLE_SORTING_TYPES 에 worldTime·vote, DISABLE_CELL_STYLE_TYPES 에 worldTime·tag, DISABLE_UNIT_TYPES 에 uniqueId 추가.
+- **Phase 2**: isUniqueActive 헬퍼 신설 + raw enableUnique 강제 지점 7곳(셀 저장·서버 중복검사·배치 입력/행 생성 필터·기본값 메뉴 게이트 3곳) 교체 — 미지원 타입의 잔존 enableUnique=true 영구 무력화.
+- **Phase 3**: worldTime '열 타입 변경' 메뉴 3개 진입점(메인 그리드·비그리드 뷰·서브그리드) 게이팅 제거 — conversion-catalog(FE/BE 공유 사본)는 미변경.
+- **Phase 4**: FsGridColumnGenerator 의 enableAggregation 기본값 2곳을 `type.id === 'tag'` 조건식으로 교체 — 태그 열 추가 시 집계 기본 on.
+- **Phase 5**: 투표 마감일 선택 UI 를 네이티브 input[type=date] → 뷰어 표준 DatePicker(버튼+캘린더 오버레이)로 통일, formatDate 로컬 yyyy-MM-dd 어댑터로 타임존 시프트 방지, deadlineClear 버튼은 드롭다운 내장 reset 으로 대체.
+- **Phase 6**: 투표 선택지 빈 상태("선택지가 없습니다") min-h-[84px] 수직 중앙 정렬 + InlineFieldB 라벨 min-w-[76px] whitespace-nowrap 으로 "진행률 중요도 단계" 개행 방지.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/features/grid/lib/helpers/column-restrictions.ts
+- packages/fs-data-viewer/src/features/grid/lib/helpers/index.ts
+- packages/fs-data-viewer/src/features/grid/lib/cellSaveFunctions.ts
+- packages/fs-data-viewer/src/features/grid/hooks/base-cell-renderer/useBaseCellRendererHandlers.ts
+- packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+- packages/fs-data-viewer/src/features/batch-input/lib/batchInputHelpers.ts
+- packages/fs-data-viewer/src/features/batch-row-create/lib/batchRowHelpers.ts
+- packages/fs-data-viewer/src/features/column-settings/createViewColumnMenuItems.ts
+- packages/fs-data-viewer/src/widgets/fs_grid_sub/hooks/useSubGridColumnMenu.ts
+- packages/fs-data-viewer/src/widgets/column-generator/FsGridColumnGenerator.tsx
+- packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/VoteSettingsWrapper.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridVoteCellRenderer/VoteManageMode.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/InlineFieldB.tsx
