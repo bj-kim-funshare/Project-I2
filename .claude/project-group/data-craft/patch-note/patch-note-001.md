@@ -25875,3 +25875,25 @@ data-craft:
 
 ### 영향 파일
 - data-craft:packages/fs-data-viewer/src/widgets/data-viewer-header/HeaderTitle.tsx
+
+## v001.782.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #327
+
+### 페이즈 결과
+- **Phase 1**: src/features/referral/ 신설(useReferralStatus — GET /api/referral/status) + 가입 폼 추천 코드(비밀번호 확인 아래·NTS 인증 게이팅·dress 충족·maxLength 16) + 사업자번호 인증 후 잠금·"수정" affordance + 제출 trimmed 비공백만 포함 + useSignup REFERRAL 4종 에러 분기(폼 유지·이중 토스트 방지) — `197629e` (범위 확장: auth.types.ts·useSignup.ts 마스터 승인)
+- **Phase 2**: AccountTabContent 가입일시 아래 오너 전용 "내 추천 코드" 행(Info 버튼+우측 코드·기업 아이디) + ReferralInfoDialog(중첩 Radix — 활용법 카드·쿠폰/크레딧 현황·고지 5항목) + useReferralStatus enabled 오너 게이팅 — `0f70fc1`
+- **Phase 3**: upcomingCharge 타입 추가, PlanTabContent·PaymentHistorySection FE 자체 계산 → BE finalAmount 단일 소스 교체 + "쿠폰 적용 값" 부기(SubscriptionActionSection 주기 전환 미리보기는 가상 계산이라 FE 유지 — 명세 예외), CancelSubscriptionDialog 추천 귀속 시 양측 혜택 소멸 경고 2건+재활성화 유지 안내 — `3246a8d3c`
+- **보정**: advisor #2 BLOCK(en 로케일 couponAppliedBadge 한국어 잔존) → 'Coupon applied' 1줄 정정 후 재판정 PASS — `528f65f64`
+
+### 영향 파일
+data-craft:
+- src/features/referral/** (신규 5파일)
+- src/pages/auth/signup/(AdminInfoSection·CompanyInfoSection·useSignupForm·signupValidation·useBusinessNumberVerification), src/pages/auth/SignupPage.tsx
+- src/features/auth/lib/useSignup.ts, src/shared/types/auth.types.ts
+- src/features/subscription/(index·model/types·ui/CancelSubscriptionDialog)
+- src/widgets/settings-dialog/ui/(AccountTabContent·PlanTabContent·plan/PaymentHistorySection)
+- src/shared/i18n/locales/(ko·en)
+
+비고: advisor 2회 — #1 PASS, #2 BLOCK 1건(로케일 1줄) 해소 후 PASS(전부 advisor-fallback 경유). 게이트 typecheck:all+lint 3회 exit 0. 시각 QA(가입 폼 affordance·모달 카드 위계·경고 색감)는 메인 세션 렌더 불가로 마스터 점검 후속 — 필요 시 핫픽스.
