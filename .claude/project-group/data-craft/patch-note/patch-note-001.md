@@ -25754,3 +25754,24 @@ data-craft:
 data-craft (packages/fs-data-viewer):
 - src/widgets/cell-renderers/user-cell/FsGridUserCellRenderer.tsx
 - src/widgets/cell-renderers/user-cell/UserCellContent.tsx
+
+## v001.775.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #326
+
+### 페이즈 결과
+- **Phase 1**: 차감 모델 4종(만료 임박 쿠폰 선택·조건부 소모·짧은 만료 순 크레딧 잔여·deduction INSERT) + referralDeduction.service.ts 신규(computeDeductionPlan/applyDeduction/computeUpcomingCharge — 연간+쿠폰 원금×0.7 단일 곱·월간 ×0.8·원 단위 floor·크레딧 0원까지 부분 차감) — `fa2ccad`
+- **Phase 2**: 갱신 파이프라인 통합 — renewSingleClient·renewPromotionClient 에 차감 적용, finalCharge=0 이면 PG 생략 paymentKey=null 내부 기록(회차·anchor·만료 연장·retention++ 동일), 성공 tx 한정 apply(실패 시 쿠폰 미소모), accrue 인자 분리(fullPhaseBase=postCoupon·actualPaid=finalCharge), 정수식 정렬(×9/10·8/10·7/10)로 연간 무쿠폰 비트 동일 — `c7d65ed`
+- **Phase 3**: getSubscriptionStatus 에 upcomingCharge 단일 소스 블록(쿠폰·크레딧 반영 예정가+적용 내역, Free=null) + 일일 만료 감사 잡(04:00 KST, read-only 집계 로그 — 만료 강제는 expires_at>NOW() 술어 구조 보장) — `7063208`
+
+### 영향 파일
+data-craft-server:
+- src/services/referralDeduction.service.ts (신규)
+- src/models/referral.model.ts
+- src/services/billingRenewal.service.ts
+- src/services/billingScheduler.service.ts
+- src/services/subscription.service.ts
+- src/index.ts
+
+비고: advisor 2회 PASS(advisor-fallback 경유), dev psql BEGIN…ROLLBACK 실측 통과(임박 쿠폰 선택·산술 40000/420000/540000·0원 paymentKey NULL·부분 차감 잔여·조건부 소모). 프로모션 갱신 3분기 charge 단일화는 Roadmap-8 #10 무시 사유와 정합하는 구조 개선. 후속 정리 후보(비차단): listValidCreditsWithRemaining 의 HAVING 별칭 구문(PG 확장) → CTE 형태 이식성 정리. 잔존: FE 표시 대체는 Roadmap-9 5번.
