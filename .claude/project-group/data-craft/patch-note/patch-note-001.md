@@ -25925,3 +25925,17 @@ data-craft-server:
 - src/models/referral.model.ts
 
 비고: #326 advisor #2 의 비차단 관찰("HAVING 별칭은 PG 확장 — 후속 정리 후보")이 실제로는 런타임 결함이었음 — "PG 가 허용" 판단이 오판. 교훈: 모델이 발행하는 쿼리는 원문 그대로 psql 실측해야 함(자체 작성 등가 SQL 로는 이 클래스를 못 잡음).
+
+## v001.785.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #324 (핫픽스1)
+
+### 페이즈 결과
+- **핫픽스1**: GET /api/referral/status 응답 봉투 이중 래핑 수정 — buildAuthResponse(req, { data: status }) 의 2번째 인자가 그대로 envelope.data 가 되는 계약을 오해해 FE 가 전 필드 undefined 를 받고 해지 다이얼로그 grantedMonths.asReferee 접근 시 TypeError 위험. billing.controller 선례대로 status 직접 전달로 1줄 수정. 전체 재검증(code-inspector) 중 발견, advisor 급 봉투 계약은 메모리 §response_envelope 기존 교훈의 변형 사례 — `40dd0b5`
+
+### 영향 파일
+data-craft-server:
+- src/controllers/referral.controller.ts
+
+비고: 마스터 전체 재검증 지시로 수행한 검증 스윕(code-inspector + referral.model.ts SQL 18종 원문 psql 실측 + 양 리포 lint/build 게이트)에서 본 건 1건만 block — 그 외 전부 통과.
