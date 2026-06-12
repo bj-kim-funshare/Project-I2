@@ -25776,7 +25776,7 @@ data-craft-server:
 
 비고: advisor 2회 PASS(advisor-fallback 경유), dev psql BEGIN…ROLLBACK 실측 통과(임박 쿠폰 선택·산술 40000/420000/540000·0원 paymentKey NULL·부분 차감 잔여·조건부 소모). 프로모션 갱신 3분기 charge 단일화는 Roadmap-8 #10 무시 사유와 정합하는 구조 개선. 후속 정리 후보(비차단): listValidCreditsWithRemaining 의 HAVING 별칭 구문(PG 확장) → CTE 형태 이식성 정리. 잔존: FE 표시 대체는 Roadmap-9 5번.
 
-## v001.768.0
+## v001.776.0
 
 > 통합일: 2026-06-12
 > 플랜 이슈: #321
