@@ -25939,3 +25939,16 @@ data-craft-server:
 - src/controllers/referral.controller.ts
 
 비고: 마스터 전체 재검증 지시로 수행한 검증 스윕(code-inspector + referral.model.ts SQL 18종 원문 psql 실측 + 양 리포 lint/build 게이트)에서 본 건 1건만 block — 그 외 전부 통과.
+
+## v001.786.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #321 (핫픽스5)
+
+### 페이즈 결과
+- **Phase 12 (핫픽스5)**: DocumentEditDialog에 readOnly 모드 추가(저장 단축키 차단·BlockNote editable=false·제목 readOnly·Footer/OptionsPanel 미렌더, 기존 호출처 무영향) — 참조 모드에서도 문서 미리보기 클릭 시 열람 다이얼로그 오픈, createPortal 격리 마운트 (`0a1e6a1`)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx · ContentArea.tsx · DocumentEditor.tsx · NavBar.tsx · dialogTypes.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
