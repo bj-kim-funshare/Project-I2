@@ -52,10 +52,13 @@ targets:
 
 # data-craft — dev 환경 규정
 
-## env 정책 (4개 공용)
+## env 정책 (역할별 구분)
 
-- 단일 `.env` 정책: 4개 저장소 전부 동일한 env 사용. 개발 / 프로덕트 공용. 모든 브랜치 공유.
-- env 파일은 각 저장소에서 **git-tracked** (마스터 명시 정책).
+> 2026-06-15 정정: 기존 "전 저장소 git-tracked / 4개 공용" 선언은 FE 현실(시크릿 보유 → gitignore)과 어긋나 pre-deploy 오탐을 유발했다. 역할별로 명확화하고 §보안정책과 정합시킨다. (deploy.md `env_management` 값과 1:1 대응.)
+
+- **BE (`data-craft-server`, `data-craft-admin-server`) = git-tracked**: 비시크릿 런타임 `.env` 를 git 에 커밋. 개발/프로덕트 공용 단일 env, 환경별 차등은 `{NAME}`/`{NAME}_PROD` 페어 + `NODE_ENV` 분기 (아래 §"env 페어 패턴"). 단 `data-craft-admin-server` 는 `ADMIN_JWT_SECRET` + dev/prod 토글 + `.env.local` 분리를 추가 운영(공용 단일 env 와 별개 — db.md 참조).
+- **FE/클라이언트 (`data-craft`, `data-craft-mobile`, `data-craft-ai-preview`, `data-craft-admin`) = code-constants**: 시크릿(`VITE_TOSS_CLIENT_KEY`·`VITE_DEV_*`·`VITE_ADMIN_*`) 보유 + prod 설정이 코드/빌드에 컴파일되므로 `.env` 를 **gitignore** 하고 `.env.local`(dev 실값) + `.env.example`(커밋 키 템플릿)로 운영한다 (§보안정책 정합). prod 빌드/배포 산출물에 git-tracked `.env` 불필요 — 예: `data-craft` 는 `env.ts resolveUrl` 이 prod URL 강제, `data-craft-mobile` 은 `lib/config/web_config.dart` 코드 상수. (타겟별 상세 = deploy.md §env 관리.)
+- (FE 결제) `VITE_TOSS_CLIENT_KEY` 는 코드 가드가 없어 `.env.local` 값이 그대로 prod 번들에 박힌다. 현재 테스트키(`test_ck_…`)가 prod 정상(라이브 결제 전) — **라이브 결제 전환 시 FE 빌드 전 `.env.local` 토스키를 라이브키로 교체 필수.**
 - 본 정책 파일에는 시크릿 값을 적재하지 않음 (I2 harness 별도 저장소이므로).
 
 ## env 환경별 차등 변수 표준 — BE 페어 패턴 (BE 운영 표준 — v001.143.0 도입)
