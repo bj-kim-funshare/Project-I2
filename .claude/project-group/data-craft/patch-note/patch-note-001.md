@@ -25973,3 +25973,16 @@ data-craft:
 ### 변경 파일
 
 - (data-craft) (추가) promo-video/index.html
+
+## v001.789.0
+
+> 통합일: 2026-06-15
+> 플랜 이슈: #331
+
+### 페이즈 결과
+
+- **Phase 1**: 회원가입 이메일 인증 코드가 prod(UTC 세션)에서 발급 즉시 만료되던 결함 수정. `email_verification_temp` 의 모든 timestamp 쓰기를 세션 타임존 독립 방식으로 교정 — `expires_at` 는 `formatKstDateTime()` 로 KST wall-clock 문자열 저장, `sent_at`/`blocked_until`/만료 cleanup 의 `NOW()` 를 `(NOW() AT TIME ZONE 'Asia/Seoul')` 로 변경. 읽기 파서(+09:00 해석)와 정합되어 기업/공용 가입 공통으로 인증 코드 정상 동작. dev 회귀 0, 데이터 백필 불필요(5분 TTL 자가 치유).
+
+### 영향 파일
+
+- (data-craft-server) (수정) src/models/email-verification.model.ts
