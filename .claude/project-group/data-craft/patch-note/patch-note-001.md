@@ -26052,3 +26052,19 @@ data-craft:
 - src/shared/i18n/locales/en.ts
 
 비고: 카피/레이아웃 only — 적립 엔진(referralEarning.service.ts) 무변경(item 6 의 "한도 없음"은 카피 정정이지 모델 변경 아님 — 100%×3회는 적립 횟수, 보유 한도 아님). i18n ko/en 44키 1:1·en 한글 0, typecheck:all+lint exit 0, KST 만료일 포맷(782fba4) 생존 확인, en 값 의미 stale 없음 확인. advisor #2 PASS(Opus 4.8). 시각 정합(770px 너비·카드 높이 비대칭·버튼 스타일·배지 4)은 마스터 QA.
+
+## v001.794.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #330 (핫픽스2)
+
+### 페이즈 결과
+- **핫픽스2 (FE, 마스터)**: 계정정보 "내 추천 코드" 행 자체 제거(+미사용 useReferralStatus 훅·import 정리) → 계정 정보 타이틀 우측에 오너 전용 "보관함" 버튼 신설(클릭 시 동일 ReferralInfoDialog 오픈). 버튼 = 플랜 배지 계열 유니크 그라데이션 pill(rounded-full·from-violet-500→fuchsia-500·text-white·shadow-sm·Gift 아이콘·hover 진하게). i18n vaultButton '혜택 보관함'→'보관함'(en 'Vault') — `6d9ff6d`
+
+### 영향 파일
+data-craft:
+- src/widgets/settings-dialog/ui/AccountTabContent.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+비고: FE only, 적립/조회 모델 무변경. owner 가드(`{userInfo?.isOwner && …}`) 버튼 감쌈 확인(비오너 403 모달 방지). typecheck:all+lint exit 0(fresh 워크트리 build:packages 선행 — 최초 TS2307 은 dist 부재 환경 artifact). advisor #2 PASS(Opus 4.8, owner 가드 생존 검증 반영). 시각 정합(그라데이션 pill·타이틀 우측 배치)은 마스터 QA.
