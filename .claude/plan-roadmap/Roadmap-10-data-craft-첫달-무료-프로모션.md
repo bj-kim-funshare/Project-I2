@@ -1,0 +1,52 @@
+# Roadmap 10: data-craft 첫달 무료 프로모션 구축
+
+> 작성일: 2026-06-15 | 대상: basic급 0원 1개월 프로모션 — free(완전 구독 취소)·본 프로모션 미사용·비피추천 기업 한정 노출
+
+## 프롬프트
+
+🔴 /task-db-structure data-craft — 프로모션 시스템 DDL 보강: `promotion_eligibility_type_enum` 에 신규 값 `free_status_once` 추가 + `chk_promotion_price` 제약을 `monthly_price > 0` → `monthly_price >= 0` 으로 완화(0원 프로모션 허용). dev psql 적용 + prod 반영용 마이그레이션·롤백 파일 작성(prod 실적용은 4번 배포 시). additive·비파괴. ※ enum 값 추가는 PostgreSQL 에서 트랜잭션 제약 있음(ALTER TYPE ... ADD VALUE 는 일부 버전에서 트랜잭션 밖 실행 필요) — 마이그레이션 작성 시 엔진 동작 확인.
+
+🔴 /plan-enterprise data-craft data-craft-server — 첫달 무료 프로모션 BE 자격·구매·갱신 로직(1번 DDL 선행 필수). 신규 `free_status_once` 분기를 자격조회(`promotion.service.ts getPromotionEligibility`)와 구매 재검증(`purchasePromotion`) **양쪽**에 추가 — 4중 게이트: ① `plan_type='free'` 만 노출(유료·해지신청 후 만료 전은 미노출) ② **B안 이력 게이트** `EXISTS(client_promotion WHERE promotion_id=본건 AND (status<>'cancelled' OR retention_consumed_months>0))` 차단 — 자연만료·중도해지는 영구 차단, 결제실패 롤백(cancelled+consumed0)만 재구매 허용(근거 주석: rollbackActivation 이 행을 cancelled+consumed0 으로 남기고 reason 컬럼 부재) ③ 피추천 제외 `EXISTS(referral_relation WHERE referee_company_id=본인)` 차단 ④ business_lock 사업자번호 단위 1회(기존 `unpaid_business_once` 패턴 재사용 — 동일 사업자 신규 계정 우회 차단). 추가로 **0원 갱신 보완**: `renewPromotionClient` 의 `monthlyGross<=0 → return false`(갱신 skip)를 "0원 결제 성공" 처리로 변경(charge 생략, retention+1·0원 payment_history·만료일 연장 수행 — 0원 다개월 무한유지 함정 제거). 빌링키(카드등록) 필수 유지(0원도 빌링키 없으면 BILLING_KEY_NOT_FOUND, 기존 동작)·구매 0원 경로는 기존 `chargeAmount>0` 가드로 무수정 통과. FE 는 기존 프로모션 모달 재사용이라 **무수정**(0원 표기만 확인). **검증: 양 프로모션(운영 기술 지원=priority100/all, 첫달무료=priority101/free_status_once) 동시 활성 상태에서 free/non-free 고객 자격 순서 dev 실측**(free→101 노출, non-free→100 fall through) + pnpm build(tsc) + fresh 워크트리 pnpm install 선행 + 적격/0원 경로 로컬 psql 실행 검증. 주의: `billingRenewal`·`billingSubscription` 은 추천인 #325·#326 머지 파일 — 기존 적립·차감·멱등 로직 보존한 증분 수정.
+
+🔴 /task-db-data data-craft — 첫달 무료 프로모션 행 1건 INSERT(1·2번 선행 필수 — enum·CHECK 완화·자격 분기 머지 후): `name='첫달 무료 프로모션'`, `base_plan_type=basic`, `monthly_price=0`, `is_collaboration=0`/`min_users=NULL`, `page_limit=7`, `group_limit=20`, `storage_limit=10GB`(10737418240), `file_size_limit=50MB`(52428800), `max_retention_months=1`, `display_start_at`=즉시/`display_end_at='2026-12-31 23:59:59'`, `eligibility_type='free_status_once'`, **`priority=101`**(기존 all 프로모션 priority=100 보다 높게 — `findActivePromotions` 가 `ORDER BY priority DESC` 라 free 고객이 본 프로모션을 먼저 만나 노출; 트리거 `trg_promotion_priority_insert` 가 동일 priority+윈도우 겹침 시 EXCEPTION 이므로 100 회피 필수), `detail_features`=베이직 플랜의 모든 기능 + 페이지·그룹·스토리지 추가 제공(파일 50MB 는 베이직과 동일이라 "추가" 항목 제외). dev psql INSERT + prod 반영은 4번 배포 시(또는 prod 행 INSERT 별도 포함 여부는 task-db-data 의 dev/prod 분리 정책 따름).
+
+🔴 /pre-deploy data-craft — 첫달 무료 프로모션 prod 배포(1~3번 전부 i-dev 검증 후): 1번 prod 마이그레이션 SQL(enum 추가 + CHECK 완화)을 prod psql 에 **선적용**(DDL 선행 — additive·CHECK 완화는 구버전 코드와 공존 안전) 후 data-craft-server·data-craft 빌드 검증·배포. 프로모션 행이 dev 전용이었다면 prod 행 INSERT 도 본 단계 포함. dev=prod 미러 상태 유지 확인.
+
+---
+
+## 로드맵 설명
+
+### 목적
+
+회사 요청 "첫달 무료" 혜택을 **별도 프로모션 상품**으로 구현한다. 기존 정규 결제 경로(billingSubscription/billingRenewal — 추천인 엔진까지 얹힌 최민감 파일)를 건드리지 않고, 이미 검증된 프로모션 인프라(자격 API·노출 윈도우·race-safe 구매·business_lock) 위에 basic급 0원 1개월 프로모션을 추가한다. 노출 대상은 **free 상태(완전 구독 취소) + 본 프로모션 미사용 + 비피추천 기업**.
+
+### 동결 스펙 출처
+
+마스터 4차 왕복 검토로 동결(2026-06-15). 전문은 메모리 `project_data_craft_first_month_free_promo_spec.md`. 추천인 시스템(Roadmap-9) 5·6번 완료가 착수 전제였고 2026-06-15 prod 배포로 충족됨(`referral_relation` 의존·갱신 파이프라인 정합 확보).
+
+### 핵심 결정
+
+- **조건1(미사용 1회) = B안 이력 EXISTS 게이트**: A안(구매 시 initialConsumed=1)은 결제실패 롤백 고객을 영구 차단(빌링키 필수 결정과 충돌) + 쓰기경로 2곳 수정이 필요해 기각. B안은 읽기 전용 자격 판정 하나로 자연만료·중도해지·롤백을 모두 올바르게 분기(롤백 행이 cancelled+consumed0 으로 남고 reason 컬럼이 없다는 구조를 판정식으로 활용).
+- **조건3(free만 노출)**: `plan_type='free'` 게이트. 해지 신청 후 만료 전 고객은 plan_type 이 아직 유료라 자동 미노출 — "완전한 구독 취소" 정의와 일치.
+- **조건4(0원)**: `chk_promotion_price` 를 `>=0` 으로 완화(현행 `>0` 이 0원 INSERT 자체를 거부). 구매·갱신의 0원 경로는 기존 코드(`chargeAmount>0` 가드, 0원 payment_history 기록)에 이미 존재.
+- **빌링키 필수**: 카드 등록 후에만 0원 구매 가능(전환 유도). 코드 무수정.
+- **피추천 제외**: 피추천 기업은 이미 추천인 혜택(2·3·4회차 무료)을 받으므로 중복 차단.
+
+### priority 라우팅 (advisor 지적 — invisible-promotion 함정)
+
+기존 "운영 기술 지원 프로모션"(eligibility_type=all, priority=100, 노출 ~2026-12-31)과 본 프로모션의 노출 윈도우가 겹친다. `getPromotionEligibility` 는 우선순위 1개만 반환하고 `findActivePromotions` 가 `ORDER BY priority DESC` 다. free·미사용·비피추천 고객은 **두 프로모션 모두 자격**(all 분기는 consumed≥maxRetention 만 보는데 0≥12=false 라 항상 적격). 따라서 본 프로모션 priority 가 ≤100 이면 기존 14,900원 프로모션이 노출되고 첫달무료는 전 대상에게 영원히 안 보인다. → **priority=101**(>100)로 설정해 free 고객은 101 을 먼저 만나 노출, non-free·기사용·피추천 고객은 free_status_once 게이트 fail → `continue` → 100 all 프로모션으로 fall through(아무것도 안 보이는 게 아니라 기존 프로모션 노출 — "이 프로모션에서만 제외"와 일치). 트리거 `trg_promotion_priority_insert` 는 동일 priority+윈도우 겹침 시 EXCEPTION 이라 100 회피가 강제 사항.
+
+### 0원 갱신 무한유지 함정 보완
+
+`renewPromotionClient` 의 `monthlyGross<=0 → return false`(갱신 통째 skip)는 retention++ 가 영영 안 일어나 0원 다개월 프로모션이 무한 유지된다. 본 스펙(1개월)은 첫 갱신 전에 만료되어 도달하지 않지만, CHECK 완화 후 향후 0원 다개월 구성의 함정이므로 "0원 결제 성공"(charge 생략 + retention+1 + 0원 payment_history + 만료일 연장)으로 보완해 원천 제거. 선례: 프로모션 구매 0원 경로, #326 정규 갱신 0원 경로.
+
+### 위험
+
+- **enum 추가 트랜잭션 제약**: PostgreSQL `ALTER TYPE ... ADD VALUE` 는 일부 버전에서 트랜잭션 밖 실행 필요 — 1번 마이그레이션 작성 시 엔진 동작 확인(롤백 파일 포함).
+- **billingRenewal 증분 수정**: 추천인 #325·#326 적립·차감 훅이 머지된 파일 — 통째 재작성 금지, 0원 갱신 보완은 기존 로직 보존한 증분.
+- **prod priority 충돌**: prod 에도 동일 운영 프로모션(priority=100)이 존재하므로 prod 행 INSERT 시에도 priority=101 유지 — dev/prod 동일.
+
+### 종료 조건
+
+- 1~3번 i-dev 머지 + dev 실측(양 프로모션 자격 순서·0원 구매·만료) 통과.
+- 4번 `/pre-deploy` 합격 + prod 노출 확인(free 테스트 기업에 첫달무료 노출, non-free 에 기존 프로모션 노출).
