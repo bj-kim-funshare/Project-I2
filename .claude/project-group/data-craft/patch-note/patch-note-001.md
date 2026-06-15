@@ -26027,3 +26027,11 @@ data-craft:
 - 배포 후 prod 풀 연결에서 `SHOW timezone` = `Asia/Seoul` 확인 권장(prod-side 유일 미확인 — PgBouncer 등 startup option 무력화 여부 검증).
 - data-craft-admin-server 도 동일 파서 + prod psql 토글 풀 보유 → 동일 잠복 결함. 미배포(운영자 로컬)라 본 핫픽스 범위 밖, 후속 권장.
 - 본 건은 **코드** 수정(→ `/pre-deploy` 로 BE 배포). analytics 500(`user_events` 부재)은 **별도 DB 마이그레이션**(다른 세션 구조 정합) 소관 — 혼동 금지.
+
+## v001.792.0
+
+> 통합일: 2026-06-15
+
+### 변경 파일
+
+- (data-craft) (수정) promo-video/index.html
