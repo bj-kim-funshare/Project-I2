@@ -25986,3 +25986,25 @@ data-craft:
 ### 영향 파일
 
 - (data-craft-server) (수정) src/models/email-verification.model.ts
+
+## v001.790.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #330
+
+### 페이즈 결과
+- **Phase 1 (BE)**: ReferralStatus 에 earliestCouponExpiry(ISO|null) 추가 — referral.model.ts getEarliestActiveCouponExpiry(MIN(expires_at) WHERE 활성), service 병합. 신규 SQL 원문 dev psql 실측 통과 — `2c40642`
+- **Phase 2 (FE)**: ReferralInfoDialog.tsx 디자인팀 시안대로 전면 재구축 — 헤더(Gift+부제)·코드카드+복사버튼(클립보드+sonner)·나/친구 2카드+메커니즘 칩3·보유현황(쿠폰수·가장 빠른 만료일·크레딧 잔액)·팁·유의사항 아코디언(5항목)·푸터(닫기+추천 링크 공유=buildAppUrl(/signup?ref=code) 복사). shadcn Dialog 유지, 문구 verbatim, i18n ko/en 46키 1:1 전면 갱신 — `3881e83`
+- **Phase 2 보정**: 가장 빠른 만료일 ISO→KST YYYY-MM-DD 포맷(시안 정합, advisor #2 지적) — `782fba4`
+
+### 영향 파일
+data-craft-server:
+- src/models/referral.model.ts
+- src/services/referral.service.ts
+data-craft:
+- src/features/referral/ui/ReferralInfoDialog.tsx
+- src/features/referral/model/types.ts
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+비고: advisor #1·#2 모두 PASS(Opus 4.8 활성). "추천 링크 공유"는 링크 복사만(signup ?ref= prefill 은 마스터 승인하 기본 제외). 시각 정합(색·간격·아이콘)은 메인 세션 렌더 불가로 마스터 QA 후속. BE dev 재기동해야 earliestCouponExpiry 반영(미재기동 시 폴백 문구), 해당 필드는 prod 미배포(i-dev)라 Roadmap-9 6번 배포 시 함께 적용.
