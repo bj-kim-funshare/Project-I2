@@ -25965,3 +25965,11 @@ data-craft:
 data-craft:
 - packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
 - packages/fs-data-viewer/src/shared/config/i18n/types.ts · translations/ko.ts · en.ts · ja.ts · zh.ts
+
+## v001.788.0
+
+> 통합일: 2026-06-15
+
+### 변경 파일
+
+- (data-craft) (추가) promo-video/index.html
