@@ -26068,3 +26068,17 @@ data-craft:
 - src/shared/i18n/locales/en.ts
 
 비고: FE only, 적립/조회 모델 무변경. owner 가드(`{userInfo?.isOwner && …}`) 버튼 감쌈 확인(비오너 403 모달 방지). typecheck:all+lint exit 0(fresh 워크트리 build:packages 선행 — 최초 TS2307 은 dist 부재 환경 artifact). advisor #2 PASS(Opus 4.8, owner 가드 생존 검증 반영). 시각 정합(그라데이션 pill·타이틀 우측 배치)은 마스터 QA.
+
+## v001.795.0
+
+> 통합일: 2026-06-15
+> 플랜 이슈: #333 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-admin-server)**: `.env` 의 `ADMIN_PROD_TOGGLE_ENABLED` 를 `false`→`true` 로 단일 라인 변경(`97ac1c6`). 관리자 콘솔의 prod 데이터 토글 게이트를 개방 — `X-DB-Mode: prod` 요청이 `dbMode` 미들웨어를 통과해 프로모션/분석 엔드포인트가 prod 데이터풀에 대해 **읽기·쓰기 모두** 동작. 쓰기 경로(`createPromotion`/`updatePromotion`/`togglePromotion`)는 이미 `withDataClient(mode)` 로 mode 파라미터화돼 있어 코드 변경 불필요. 인증 풀(dev 고정, `PG_DEV`/`DB_NAME_AUTH`)·`.ts` 파일 무변경.
+
+### 영향 파일
+data-craft-admin-server:
+- .env
+
+비고: `.env` 는 dev.md "git-tracked" 정책 하 기존 추적 파일(diff index cc68584..bbbb9f6 = 사전 추적 증명) — boolean 1줄 변경, 신규 시크릿 노출 아님. Lint 게이트는 유일 변경 파일 `.env`가 typecheck/eslint 대상 밖이라 비대상 스킵. advisor #1·#2 PASS(Opus 4.8). **반영엔 admin-server dev 재기동 필요**(constant.ts 부팅 시 env 1회 read). 스코프 경계: BE 게이트 개방만 — FE 기본 모드는 여전히 dev, prod 는 UI 토글로 선택(운영 기본 prod 화는 별도 FE 후속). prod 쓰기 완화책(confirm 게이트·admin_promotion_audit·FOR UPDATE·2단계 로그인) 기존 유지.
