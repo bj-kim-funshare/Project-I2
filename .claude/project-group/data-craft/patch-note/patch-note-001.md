@@ -26008,3 +26008,22 @@ data-craft:
 - src/shared/i18n/locales/en.ts
 
 비고: advisor #1·#2 모두 PASS(Opus 4.8 활성). "추천 링크 공유"는 링크 복사만(signup ?ref= prefill 은 마스터 승인하 기본 제외). 시각 정합(색·간격·아이콘)은 메인 세션 렌더 불가로 마스터 QA 후속. BE dev 재기동해야 earliestCouponExpiry 반영(미재기동 시 폴백 문구), 해당 필드는 prod 미배포(i-dev)라 Roadmap-9 6번 배포 시 함께 적용.
+
+## v001.791.0
+
+> 통합일: 2026-06-15
+> 플랜 이슈: #331 (핫픽스1)
+
+### 페이즈 결과
+
+- **Phase 2 (핫픽스1)**: 회원가입 인증 코드 prod 즉시 만료(#331 phase 1)의 전수 조사 결과, 이것이 코드베이스 전반의 **단일 결함 클래스**임을 확인하고 근본 수정. pg 타입 파서(OID 1114, `timestamp without time zone` → +09:00 해석)와 `formatKstDateTime` 규약이 "DB 세션 = KST"를 암묵 전제하는데, dev는 KST 세션이라 정상이고 prod는 AWS 기본 UTC 세션이라 전 코드베이스의 timestamp 비교·읽기가 9시간 어긋남. `data-craft-server/src/config/database.ts` 의 pg 풀 설정에 `options: '-c timezone=Asia/Seoul'` 추가 → 모든 세션 TZ를 KST로 고정, prod를 검증된 dev 설정과 동일화. 이로써 refresh-token 만료·grace(/api/auth/refresh 의심)·billing `plan_expires_at` 윈도우·referral 쿠폰/크레딧 만료·promo 노출 윈도우·감사 timestamp 등 클래스 전체 해소. #331 phase 1(formatKstDateTime/AT TIME ZONE)은 세션 무관 방어층으로 유지(이중 시프트 없음, 실측 확인). 실측: node-pg `options`가 세션 TimeZone GUC override 확인, 과거 만료값+bare NOW() 비교가 UTC 세션 +8.92h 어긋남→KST 세션 정상 복원 확인. 싱글톤 풀(`new PgPool` 유일)이라 모든 연결 커버.
+
+### 영향 파일
+
+- (data-craft-server) (수정) src/config/database.ts
+
+### 후속 / 비고
+
+- 배포 후 prod 풀 연결에서 `SHOW timezone` = `Asia/Seoul` 확인 권장(prod-side 유일 미확인 — PgBouncer 등 startup option 무력화 여부 검증).
+- data-craft-admin-server 도 동일 파서 + prod psql 토글 풀 보유 → 동일 잠복 결함. 미배포(운영자 로컬)라 본 핫픽스 범위 밖, 후속 권장.
+- 본 건은 **코드** 수정(→ `/pre-deploy` 로 BE 배포). analytics 500(`user_events` 부재)은 **별도 DB 마이그레이션**(다른 세션 구조 정합) 소관 — 혼동 금지.
