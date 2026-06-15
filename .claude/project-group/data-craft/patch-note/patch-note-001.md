@@ -26035,3 +26035,20 @@ data-craft:
 ### 변경 파일
 
 - (data-craft) (수정) promo-video/index.html
+
+## v001.793.0
+
+> 통합일: 2026-06-12
+> 플랜 이슈: #330 (핫픽스1)
+
+### 페이즈 결과
+- **핫픽스1 (FE, 마스터 8건)**: ① 유의사항 3번(연간 쿠폰 2장 제한) 제거 → 4항목·배지 length 추종 ② 모달 너비 520→770px ③ 계정정보 행: ? 아이콘 제거 + "혜택 보관함" 버튼(모달 오픈)으로 교체 ④ 기업 아이디 제거·추천 코드만 표기 ⑤ 나 카드='할인 쿠폰 3장'+'100% 크레딧 적립(3회)'+'10% 크레딧 적립(영구)', 친구 카드='1개월 구독 시 3개월 무료'+'크레딧 적립'(가입 즉시 제거) ⑥ 칩2 설명 '평생 최대 3개월치 한도'→'적립일로부터 2년 유효'(크레딧 보유 한도 없음 정정) ⑦ 칩2 '추천인 10% 추가' 태그 제거 ⑧ 팁 '친구와 함께 구독을 이어가세요.'+새 내용 — `db8c33d`
+
+### 영향 파일
+data-craft:
+- src/features/referral/ui/ReferralInfoDialog.tsx
+- src/widgets/settings-dialog/ui/AccountTabContent.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+비고: 카피/레이아웃 only — 적립 엔진(referralEarning.service.ts) 무변경(item 6 의 "한도 없음"은 카피 정정이지 모델 변경 아님 — 100%×3회는 적립 횟수, 보유 한도 아님). i18n ko/en 44키 1:1·en 한글 0, typecheck:all+lint exit 0, KST 만료일 포맷(782fba4) 생존 확인, en 값 의미 stale 없음 확인. advisor #2 PASS(Opus 4.8). 시각 정합(770px 너비·카드 높이 비대칭·버튼 스타일·배지 4)은 마스터 QA.
