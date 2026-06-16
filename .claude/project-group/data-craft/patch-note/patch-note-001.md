@@ -26332,3 +26332,42 @@ data-craft-server:
 - src/services/billingRenewal.service.ts
 
 비고: BE only, FE 무수정(기존 프로모션 모달 재사용). 각 페이즈 pnpm build(tsc)+pnpm lint exit 0(fresh 워크트리 pnpm install 선행). 완료 검증 — dev psql verbatim 실측: 신규 EXISTS 쿼리 정상 실행, 게이트 ② 의미 진리표 4 케이스 정확(active/0·expired/0·cancelled/1=차단, cancelled/0=재구매 허용), enum 4값·`chk_promotion_price >= 0` 확인, 기존 운영 프로모션(id=2/all/priority=100/14900원) 라우팅 셋업 확인. advisor #1·#2 PASS(Opus 4.8). 전체 우선순위 라우팅 실측(free→101 노출, non-free→100 fall through)·prod 행은 Roadmap-10 #3(DML INSERT)→#4(배포) 위임. ⚠️ priority=101 필수(invisible-promotion 함정 — DML 단계 주의).
+
+## v001.808.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #339 (Roadmap-11 P1 — Sendbird 채팅 기반 구축: 서버 엔드포인트 + 모바일 SDK 코어)
+
+Sendbird 채팅 도입 로드맵(Roadmap-11)의 첫 코드 단계. 채팅 화면 UI 전(前)의 "연결 코어" — 서버 세션토큰·회사-스코프 채널중개 엔드포인트 + 모바일 인증 연동 Sendbird connect/disconnect 라이프사이클. 멀티-repo(data-craft-server + data-craft-mobile) 단일 플랜. (P0 Sendbird 대시보드 프로비저닝은 비코드 선행 — dev/prod 앱 2개·접근제어 4토글 OFF·.env SENDBIRD_* 4키.)
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)** `45aa50d`(+lint핫픽스 `a4065bb`): `config/constant.ts` 에 `resolveSendbirdConfig()`(기존 `resolvePgCoord` 패턴 — NODE_ENV→dev/`_PROD`, prod 미설정 시 `InternalServerError('SENDBIRD_{APP_ID,API_TOKEN}_PROD_NOT_CONFIGURED')`) + `SENDBIRD` export. `.env.example` 에 SENDBIRD_* 4 빈 키(실값 미포함). `services/sendbird.service.ts` 신설 — `tossPayments.service` 패턴(native fetch + AbortController 30s timeout + 에러핸들러), base=`https://api-{APP_ID}.sendbird.com`/`Api-Token` 헤더, `upsertUser`(PUT→400/404 시 POST 폴백·profile_url 미설정)·`issueSessionToken`·`revokeSessionTokens`·`createGroupChannel`. `types/sendbird.types.ts` v3 응답 타입. lint 게이트: tsc TS2366(`handleSendbirdError` never 미전파) → 호출부 `return await` 로 수정.
+- **Phase 2 (feat, data-craft-server)** `d371115`: `routes/chat.ts`+`controllers/chat.controller.ts`+`routes/index.ts`(`/chat` 마운트). `POST /api/chat/session-token`(req.userId 로 DB name 조회→`upsertUser`→`issueSessionToken`→`sendResponse` 봉투 `{appId,userId,sessionToken,expiresAt}`). `POST /api/chat/channels`(memberIds 전원 `findUsersByCompanyId` 로 companyId==req.companyId 검증·요청자 자동 포함, 2인=`isDistinct:true`+operator 미지정, 3인+=owner/admin operatorIds→`{channelUrl}`). `POST /api/chat/session-token/revoke`. companyId 양측 string 계약 확인.
+- **Phase 3 (feat, data-craft-mobile)** `92e37d8`: `pubspec.yaml` 에 `sendbird_chat_sdk ^4.10.0`(flutter pub get 해소, transitive isar 네이티브 플러그인 동반). `api/dto/chat.dart`=`ChatSessionTokenDto{appId,userId,sessionToken,expiresAt:int}` null-safe fromJson. `api/chat_api.dart`=`notification_api` 패턴 미러(`ChatApi.getSessionToken`/`revokeSessionToken`·`response.data['data']` 파싱·`chatApi` 싱글턴).
+- **Phase 4 (feat, data-craft-mobile)** `3910138`: `chat/chat_service.dart`=`ChatService`(connect: `getSessionToken`→`SendbirdChat.init`(once-guard)→`setSessionHandler`→`connect` / disconnect: `disconnect`→`clearCachedData`→`revokeSessionToken` best-effort). v4 실제 메서드명 확인 — `SessionHandler.onAccessTokenRequired`(`onSessionTokenRequired` 아님). `chat/chat_connection_provider.dart`=non-autoDispose `Provider`+`ref.listen<AsyncValue<AuthState>>(authControllerProvider, fireImmediately:true)` — authenticated→connect/unauthenticated→disconnect, 오류는 `catchError`+`debugPrint`(상위 전파·`NetworkUnavailableException` 변환 절대 없음 → `/maintenance` 오전이 차단). `main.dart` `DataCraftApp.build` 에 `ref.watch(chatConnectionProvider)` 1줄.
+
+### 영향 파일
+data-craft-server:
+- src/config/constant.ts
+- .env.example
+- src/services/sendbird.service.ts
+- src/types/sendbird.types.ts
+- src/routes/chat.ts
+- src/routes/index.ts
+- src/controllers/chat.controller.ts
+
+data-craft-mobile:
+- pubspec.yaml (+pubspec.lock, 플랫폼 plugin registrant 3종 자동생성)
+- lib/api/dto/chat.dart
+- lib/api/chat_api.dart
+- lib/chat/chat_service.dart
+- lib/chat/chat_connection_provider.dart
+- lib/main.dart
+
+### 핵심 결정 / 비고
+- **멀티테넌시**: 채널 생성은 100% 서버 중개(companyId 검증), 클라 SDK 채널생성은 P0 대시보드에서 OFF. 1:1=is_distinct 중복 방지.
+- **프로필 이미지 함정 해소**: `/storage` 가 authMiddleware 뒤(인증 게이트)라 Sendbird `profile_url` 로 넘기면 타 클라가 못 불러와 아바타 깨짐 → P1 upsert 는 nickname 만, 아바타는 채팅 UI 단계(P2+)에서 우리 인증 엔드포인트 userId resolve(웹 방식).
+- **로그아웃 보안 2종**: SDK `clearCachedData` + 서버 세션토큰 revoke.
+- 각 서버 페이즈 pnpm build(tsc)+pnpm lint exit 0(fresh 워크트리 pnpm install 선행), 각 모바일 페이즈 flutter analyze 0 error/warning(기존 info 9 제외). advisor #1·#2 PASS(Opus 4.8). 무료 Developer 플랜 한도 동시10/MAU100(대시보드 실측).
+- **미수행(런타임 실측 대기)**: dev 서버 기동 + Sendbird 실연결로 로그인→connect·로그아웃→cleanup 실측은 master 협조 필요(flutter 신규 코드 = dev 서버 재기동). origin push 미수행(표준 종료점=각 멤버 repo 로컬 i-dev 머지).
+- **후속**: 로드맵 P2(채널목록·채팅룸 UI) 이후. OS 푸시(FCM/APNs)는 로드맵 종료 후속.
