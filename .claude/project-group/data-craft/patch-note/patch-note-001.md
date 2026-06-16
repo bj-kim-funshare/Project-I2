@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.803.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #337 (funshare-inc/data-craft) · 핫픽스1
+
+**데이터 뷰어 문서 모달 핫픽스1 — 저장 단축키 표기·경고 접두·저장 동작 3건.** (1) footer 저장 힌트의 `⌘/Ctrl+S` 병기를 폐기하고 플랫폼 분기 단일 표기로 변경(맥=`Cmd+S`, 그 외=`Ctrl+S`). (2) 미저장 경고 문구 왼쪽에 빨강 `*` 기호 접두. (3) 저장(Cmd/Ctrl+S 또는 저장 버튼) 시 모달을 닫지 않고 저장만 수행 — 닫기는 ESC·취소·배경 클릭으로만.
+
+### 페이즈 결과
+- **핫픽스1** (fix, `ffc4c95`):
+  - `Footer.tsx` — `navigator.platform` 으로 macOS 감지해 `Cmd`/`Ctrl` 동적 렌더, i18n footerHint 를 `{mod}` 플레이스홀더로 4언어 교체.
+  - `Footer.tsx` — 미저장 경고 span 앞에 JSX 레벨 빨강 `* ` 접두.
+  - `DocumentEditDialog.tsx` — `savedTitleRef`/`savedOptionsRef` 내부 스냅샷 도입(`hasUnsavedChanges` 가 prop 대신 스냅샷 기준 판정), `handleSave` 직후 스냅샷·baselineRef 갱신 + 경고/무장 해제로 저장 후 dirty 즉시 해소. `handleResetDocument` 스냅샷 초기화.
+  - 소비처 3곳(`useDocumentCellHandlers.ts`·`DocumentRenderer.tsx`·`RowLinkValuePanel.tsx`)의 onSave 내 다이얼로그 강제 닫힘 호출 제거.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/Footer.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/translations/{en,ko,ja,zh}.ts
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridDocumentCellRenderer/useDocumentCellHandlers.ts
+- packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/document/DocumentRenderer.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkValuePanel.tsx
+
+> ⚠️ onSave prop 은 동기 void(실패 신호 없음) — 저장을 낙관적으로 clean 처리. 네트워크 저장 실패 시 경고 미표시(후속 실패 경로 추가 여지).
+> ℹ️ 형제 뷰어 패키지(fs-external-data-viewer, fs-sub-data-viewer) 사본은 미적용 — 본 플랜 Phase 1~4 와 동일 스코프. 필요 시 마스터 요청으로 후속.
+> 시각/동작 항목은 메인 세션이 렌더를 확인할 수 없어 마스터 스크린샷 확인 권장.
+
 ## v001.802.0
 
 > 통합일: 2026-06-16
