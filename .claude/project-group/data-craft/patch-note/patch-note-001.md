@@ -26986,3 +26986,32 @@ data-craft-mobile:
 
 ### 비고
 - 채팅룸 = 풀스크린(네비 숨김, 핫픽스5) + 좌상단 ←로 목록 복귀(핫픽스6) = 일반 채팅앱 표준 동작 완성. advisor #2 PASS. origin push 미수행.
+
+## v001.838.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #346 (Roadmap-11 P3 — 새 채팅/멤버피커 + 그룹 생성·관리)
+
+P2까지로 채팅이 동작하나 **사용자가 앱에서 직접 채팅을 만드는 진입점이 없었음**(채널은 외부 생성). P3는 ChatList "새 채팅"(+)→멤버피커→1:1/그룹 생성→룸, + 그룹 관리(초대/나가기/이름변경)를 추가. work_repos: data-craft-server(채널관리 엔드포인트) + data-craft-mobile(피커·설정 UI). `POST /api/chat/channels`(생성)는 P1 기존 재사용.
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)** `b093eb2`: `sendbird.service.ts`에 `inviteGroupChannelMembers`(POST /v3/group_channels/{url}/invite)·`leaveGroupChannel`(PUT .../leave→200 빈객체→void)·`updateGroupChannel`(PUT .../{url} name) 추가(기존 fetch+timeout+handleSendbirdError 미러). **curl 실증** 후 테스트 유저 원상복구.
+- **Phase 2 (feat, data-craft-server)** `d8c39cf`: `chat.controller.ts`에 invite(companyId 격리)·leave(req.userId 본인)·update 컨트롤러(createChannelController 미러), `chat.ts` `router.post('/channels/:channelUrl/invite')`·`router.delete('/channels/:channelUrl/leave')`·`router.put('/channels/:channelUrl')`, `permission.middleware.ts PLAN_ENDPOINTS[FREE]`에 route 메서드 일치 3엔트리(403 방지). sendResponse camelCase channelUrl.
+- **Phase 3 (feat, data-craft-mobile)** `daa66df`: `chat_api.dart` `createChannel(List<int>)→CreateChannelResponseDto{channelUrl}`·`inviteMembers`·`leaveChannel`(DELETE)·`renameChannel`(PUT)(서버 string id 기대→toString 변환). `dto/chat.dart` CreateChannelResponseDto.
+- **Phase 4 (feat, data-craft-mobile)** `163c6ac`: `member_picker_screen.dart`(`MemberPickerScreen({mode: create|invite, channelUrl?})` — userDirectoryProvider 회사 user(현재유저 제외) CheckboxListTile+UserAvatar 다중선택, create→createChannel→룸 pushReplacement / invite→inviteMembers→pop). ChatListScreen AppBar "+"(`context.push('/dm/new')`). app_router 최상위 `/dm/new`(셸밖 풀스크린). l10n.
+- **Phase 5 (feat, data-craft-mobile)** `798239f`: `channel_settings_screen.dart`(멤버목록·그룹만 이름변경+초대(피커 invite모드)·항상 나가기(확인→leaveChannel→/dm)). ChatRoomScreen AppBar ⓘ→설정. app_router 최상위 `/dm/:channelUrl/settings`·`/dm/:channelUrl/invite`. l10n.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts · src/types/sendbird.types.ts
+- src/controllers/chat.controller.ts · src/routes/chat.ts · src/middlewares/permission.middleware.ts
+
+data-craft-mobile:
+- lib/api/chat_api.dart · lib/api/dto/chat.dart
+- lib/screens/dm/member_picker_screen.dart · lib/screens/dm/channel_settings_screen.dart
+- lib/screens/dm/chat_list_screen.dart · lib/screens/dm/chat_room_screen.dart
+- lib/router/app_router.dart · lib/l10n/app_en.arb · lib/l10n/app_ko.arb
+
+### 비고
+- P2 함정 재발방지 적용: 신규 BE 엔드포인트 PLAN_ENDPOINTS 등록 + Sendbird 신규호출 curl 검증. 각 서버 페이즈 pnpm build(tsc)+pnpm lint exit 0, 모바일 flutter analyze 0 error. advisor #1(advisor)·#2 PASS. origin push 미수행.
+- **런타임 검증 선결(master)**: 멤버피커는 `/api/user`(회사 user)만 표시 — **dev 회사에 실제 user 2~3명**(로그인 가능) 필요(Sendbird-only 더미는 미표시). 후속 잠복: 그룹 설정 화면에서 invite/leave 후 멤버목록 즉시 반영(미반영 시 reload+setState 소형 핫픽스).
