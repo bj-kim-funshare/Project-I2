@@ -219,6 +219,8 @@ Yielding anywhere else — in particular after a satisfying chunk such as a succ
 
 **Nudge recovery:** if, while auto-mode is in progress, the session receives any continue/resume input (or an empty "Continue from where you left off" nudge), a no-response is forbidden. Re-derive the completed phases from `gh issue view <N>`'s completion comments plus the WIP branch `git log`, then resume the loop at the first incomplete phase.
 
+> `--codex` path: the same continuous-drive contract applies between the legal yields. The Codex bridge halts at 7-codex-a (awaiting master's `코덱스 완료/실패`) are master-interrupt-class yields (c), not phase-boundary yields.
+
 ## Step 7 — Phase execution loop
 
 Step 7 branches on the invocation flag:
