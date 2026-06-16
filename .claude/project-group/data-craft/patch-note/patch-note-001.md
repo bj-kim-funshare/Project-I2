@@ -27036,3 +27036,34 @@ data-craft-mobile:
 ### 비고
 - P2 함정 재발방지 적용: 신규 BE 엔드포인트 PLAN_ENDPOINTS 등록 + Sendbird 신규호출 curl 검증. 각 서버 페이즈 pnpm build(tsc)+pnpm lint exit 0, 모바일 flutter analyze 0 error. advisor #1(advisor)·#2 PASS. origin push 미수행.
 - **런타임 검증 선결(master)**: 멤버피커는 `/api/user`(회사 user)만 표시 — **dev 회사에 실제 user 2~3명**(로그인 가능) 필요(Sendbird-only 더미는 미표시). 후속 잠복: 그룹 설정 화면에서 invite/leave 후 멤버목록 즉시 반영(미반영 시 reload+setState 소형 핫픽스).
+
+## v001.840.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #345 (동적 브라우저 탭 — 제목 + 파비콘 컨텍스트별 분기)
+
+브라우저 탭이 화면 무관하게 항상 정적("DataCraft | Just One Intelligent System" + `/favicon.png`)이던 것을, 노션처럼 **앱 컨텍스트에 따라 제목·파비콘을 동적 전환**하도록 개편. 4개 컨텍스트(설정 모달 최우선): ①로그인 인앱=페이지명+페이지 Lucide 아이콘 ②공용 인증=정적 유지 ③기업 인증 화면=기업 아이디+기업 로고 ④설정 열림=활성 탭 라벨+기업 로고. FE 전용(data-craft), DB/서버 무수정. 우선순위는 push/pop 스택 없는 순수 파생, 모든 분기가 매 렌더 정확값을 씀(공용 인증·언마운트는 능동 복원).
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft)** `09139d47`(+보정 `eeb7129b`): `index.html` `<link rel=icon>` type `image/svg+xml`→`image/png` 정정. `src/shared/lib/favicon.ts` 신규 — `STATIC_TITLE` 상수 + `setFavicon`(캐시버스팅, **data: URI 가드**)/`setFaviconImage`(`new Image()` 프리로드, onerror→기본 폴백)/`resetFavicon`.
+- **Phase 2 (feat, data-craft)** `8ab10f08`: `src/shared/lib/iconFavicon.ts` 신규 — `iconNameToFaviconDataUri(iconName)`. `icon-renderer.tsx` 동적 lookup 미러 → `renderToStaticMarkup(<Icon size=64 color=#7c3aed/>)` → `data:image/svg+xml,...`. 미존재→null, Map memoize.
+- **Phase 3 (feat, data-craft)** `acefc8db`(+lint핫픽스 `af7cb858`): `settingsTabStore`(zustand) 신규 `{open, activeTabLabel}`(setOpen(false)→라벨 초기화). `useHeaderDialogs.setSettingsOpen` 미러링, `SettingsDialog` 언마운트 cleanup, `SettingsSidebar` effect가 활성 탭 라벨(폼 탭=`formName`) 기록. 핫픽스=effect를 `tabs` 선언 이후로 이동(TS2448).
+- **Phase 4 (feat, data-craft)** `adb079ee`: `src/app/router/TabContextHost.tsx` 신규(render-null). 4컨텍스트 우선순위 단일 effect 파생, 페이지는 `currentPageId`+`pages` 슬라이스 구독(rename 반응), 공용 인증·언마운트는 `STATIC_TITLE`+`resetFavicon` 능동 복원.
+- **Phase 5 (refactor, data-craft)** `8fdd5973`(+lint핫픽스 `38c02489`): `router/index.tsx` 전체 라우트를 단일 pathless `{element:<TabContextHostLayout/>, children:[...]}`로 래핑(전역 1회 마운트). 핫픽스=`TabContextHostLayout` 별도 파일 분리(react-refresh/only-export-components).
+- **Phase 6 (chore, data-craft)** `cc670b1a`: `i18n/locales/{ko,en}.ts`에 `tab.untitled`(제목 없음/Untitled) 추가(parity).
+- **핫픽스(advisor #2)** `a2907f857`: 컨텍스트 3 게이트 `isSubdomain` 단독 → `isSubdomain && !isAuthenticated`로 좁힘. (서브도메인은 로그인 후에도 true라 단독 게이트면 인앱 페이지가 영구 잠식됨 → 로그인 후 인앱 페이지(컨텍스트 1) 우선되도록 교정. authStore `isAuthenticated` 사용.)
+
+### 영향 파일
+data-craft:
+- index.html
+- src/shared/lib/favicon.ts(신규) · src/shared/lib/iconFavicon.ts(신규)
+- src/widgets/settings-dialog/model/settingsTabStore.ts(신규) · src/widgets/settings-dialog/model/index.ts
+- src/widgets/header/ui/useHeaderDialogs.ts · src/widgets/settings-dialog/ui/SettingsDialog.tsx · src/widgets/settings-dialog/ui/SettingsSidebar.tsx
+- src/app/router/TabContextHost.tsx(신규) · src/app/router/TabContextHostLayout.tsx(신규) · src/app/router/index.tsx
+- src/shared/i18n/locales/ko.ts · src/shared/i18n/locales/en.ts
+
+### 비고
+- 페이즈별 lint 게이트(`pnpm typecheck:all && pnpm lint`) 6/6 통과(0 errors). advisor #1 PASS, advisor #2는 컨텍스트3 게이트 BLOCK→핫픽스 후 PASS. origin push 미수행.
+- **머지 충돌 해소(라우터)**: WIP A 분기 후 i-dev에 추가된 **URL 사용자 최적화 정규 라우트**(`:companyId/:pageSlug`, `/m/:companyId/:pageSlug`)와 빌링 콜백(`/billing/success|fail`)을 소실 없이 양측 보존 — i-dev 전체 라우트 12개를 pathless 레이아웃 children으로 union 래핑, 머지 후 typecheck 8/8 통과.
+- **후속 정리 후보(비블로킹, advisor)**: ①설정 모달 오픈 직후 1프레임 `activeTabLabel=null`로 `STATIC_TITLE` 깜빡(한 틱 뒤 sidebar effect가 정정) ②`SettingsSidebar` effect deps의 `tabs`가 매 렌더 재생성→같은 라벨 반복 set(Object.is로 TabContextHost effect 재실행은 없음, `useMemo` 안정화 시 깔끔).
+- **시각 검증 권장(master, PENDING 게이트)**: 로그인 직후 서브도메인 인앱 진입 시 `isAuthenticated` true 전환 타이밍에 따라 회사 브랜딩 1~2프레임 깜빡 가능성 — 실측 확인.
