@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.804.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스5
+
+**PWA 설치 안내 모달 모바일 높이 잘림 수정.** 핫픽스4로 중앙 모달 전환 후, 좁은 폰 화면에서 모달 내용(제목+안내+3단계+버튼)이 뷰포트보다 길어 하단 설치/닫기 버튼이 화면 밖으로 잘려 누를 수 없던 문제. 두 모달의 `DialogContent`에 `max-h-[85dvh] overflow-y-auto`를 추가해 뷰포트 85%로 높이를 제한하고 내부 스크롤로 버튼이 항상 닿게 했다. 공유 `dialog.tsx`는 무수정.
+
+### 페이즈 결과
+- **핫픽스5** (fix, `43cf0ecf8`): `AndroidInstallGuideModal`·`IosInstallGuideModal`의 `DialogContent`에 `className="max-h-[85dvh] overflow-y-auto"` 추가.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/ui/AndroidInstallGuideModal.tsx
+- src/features/pwa-install/ui/IosInstallGuideModal.tsx
+
 ## v001.803.0
 
 > 통합일: 2026-06-16
