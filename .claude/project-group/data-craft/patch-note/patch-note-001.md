@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.837.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #344 (funshare-inc/data-craft)
+
+**페이지 URL을 `/{pageId}` → `/{회사아이디}/{제목슬러그}-{pageId}` 경로(path) 방식으로 개편.** 진짜 서브도메인(`회사.datacraft.ai.kr`)은 gh-pages가 와일드카드 서브도메인을 못 서빙해 호스팅·DNS·SSL 교체가 전제 — 비용이 커서 보류하고, 같은 목적("회사별 구분이 보이는 예쁜 URL")을 도메인·gh-pages·BE 무변경으로 달성하는 경로 방식을 선택. pageId가 정수라 URL 끝 `-{숫자}`만 파싱하면 식별이 끝나고(제목 슬러그는 표시 전용·조회 미사용), 제목이 바뀌어도 옛 링크가 안 깨진다.
+
+### 페이즈 결과
+- **Phase 1** (feat, `971b5ef`+`9386ab1`): `src/shared/lib/`에 순수 함수 3종 추가 — `slugify`(공백→하이픈, 한글 유지, URL 위험문자·제어문자 제거, 빈 제목 `untitled`), `buildPageUrl(pageId, title, companyId)`(companyId 있으면 `/{companyId}/{slug}-{pageId}`, 없으면 레거시 `/{pageId}` 폴백), `parsePageIdFromSlug`(끝 `-숫자` 추출). lint 핫픽스: 제어문자 정규식 `no-control-regex` 비활성화.
+- **Phase 2** (feat, `b1328b1`+`920aaa0`): `router/index.tsx`에 정규 라우트 `/:companyId/:pageSlug`·`/m/:companyId/:pageSlug` 추가 + 레거시 `/:pageId`·`/m/:pageId` 유지(옛 링크 호환). BuilderPage/MobilePageView가 `parsePageIdFromSlug`로 pageId 추출해 기존 소비처에 그대로 전달(계약 불변). 모든 리디렉트(firstPageId 자동이동·유효성 폴백·선택상자/숨김페이지 차단·canonical 정규화)를 `buildPageUrl(...) + location.search + location.hash` + 루프 가드로 교체. companyId 출처 = `useAuthStore(accountInfo.companyId)`(apex에서 null인 useTenantStore 미사용). 모바일 레거시 진입은 `#dc_token` fragment·search 보존하며 정규형 replace. lint 핫픽스: 제목 필드 `.title`→`.name` 교정.
+- **Phase 3** (refactor, `ef1ee1c`): 페이지 URL 생성 호출부 10개 파일을 `buildPageUrl`로 일원화(page-navigation 사이드바/트리, 페이지 생성·수정·삭제, 버튼 위젯 navigate/`window.open`, AuthGuard startPageId, 임베드 iframe). id만 있는 5곳은 `getPageById(id)?.name` 조회, companyId는 각 훅 최상단(rules-of-hooks 준수). 잔여 bare `/${pageId}` 0건.
+
+### 영향 파일
+data-craft:
+- src/shared/lib/slugify.ts, src/shared/lib/pageUrl.ts, src/shared/lib/index.ts
+- src/app/router/index.tsx, src/app/router/AuthGuard.tsx
+- src/pages/builder/BuilderPage.tsx, src/pages/mobile/MobilePageView.tsx
+- src/widgets/page-navigation/ui/{PageList,ViewSidebarExpanded,ViewSidebarCollapsed,useDesignSidebarState}
+- src/features/page-management/ui/{useCreatePageSubmit,useEditPageSubmit,DeletePageDialog}
+- src/widgets/button-widget/ui/{useButtonWidget,PageContentRenderer}
+
+### 비고
+- 비범위(미변경): 서브도메인 구축·와일드카드 DNS/SSL·gh-pages 호스팅 교체, 도메인 상수(tenantDetector/subdomainValidator/CORS), 제목→pageId BE 조회 API, 제목 유니크 강제, data-craft-mobile(Dart, FE 리디렉트로 흡수), BE(이미 JWT companyId 스코프). SPA 폴백(404.html/index.html) 무변경.
+- typecheck:all / lint(0 errors) PASS. advisor #1·#2 5관점 PASS. origin push 미수행(마스터 미지시).
+- known minor(후속 여지): ① 인플레이스 제목 변경 시 slug 즉시 재정규화 미동작(canonical effect deps에 name 셀렉터 부재 — 진입 시 자동 정정은 동작, 옛 URL은 pageId로 정상) → `usePageStore(s => s.getPageById(pageId)?.name)` deps 포함으로 해소 가능. ② slugify가 `+ = < > [ ] { } | "` 류는 미제거(브라우저 자동 percent-encode로 동작, 표시 깔끔함 측면 보강 여지).
+
 ## v001.836.0
 
 > 통합일: 2026-06-16
