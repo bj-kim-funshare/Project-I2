@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.113.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #62
+> 대상: 아이OS
+
+### 배경
+
+멀티-페이즈 실행 중 페이즈 경계(특히 Step 7d per-phase 이슈 코멘트 직후) 메인 세션이 턴을 종료(양보)하면 백그라운드 잡이 외부 재호출 전까지 idle 로 멈추는 결함. 2026-06-16 data-craft #338(튜토리얼 재설계) Phase 5→6 경계 실발생. 근본 원인은 연속-드라이브 보장이 Step 4→5 경계(`plan-enterprise/SKILL.md` "in the same response")에만 존재하고 Step 7 페이즈 경계에는 부재 — 합법 yield 목록 미명시 + 넛지 복구 의무 부재. 새 결함이 아니라 계약 누락.
+
+### 페이즈 결과
+
+- **Phase 1** (`d822c32`, 대칭 보정 `5495a71`): plan-enterprise/SKILL.md Step 7 헤더 위에 "Auto-mode continuous drive (Step 5~11)" 절 신설 — 단일 무중단 드라이브, 합법 yield 3종(7e halt / Step 11 PENDING / 마스터 인터럽트) 명시, 자기점검 문장, 넛지 복구 규칙, `--codex` 경로 footnote. 7d 절 끝 cross-ref 한 줄.
+- **Phase 2** (`dc9b612`): plan-enterprise-os/SKILL.md 에 동일 의미의 "Auto-mode continuous drive (Step 5~11)" 절 추가. os 의 Step 7(7a~7e 미재기술) 구조에 맞춰 표현, 합법 yield (a) anchor = failure policy 표 + per-phase cap-exhausted halt.
+
+### 영향 파일
+
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 신규 규칙/훅/에이전트/검증축 추가 없음. Step 4→5 의 "same response" 보장(이미 존재하는 단일 계약)의 적용 범위를 페이즈 경계로 동형 확장하는 계약 명문화일 뿐.
+
 ## v001.112.0
 
 > 통합일: 2026-06-01
