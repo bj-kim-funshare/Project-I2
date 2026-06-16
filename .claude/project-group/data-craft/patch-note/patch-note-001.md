@@ -26702,3 +26702,20 @@ data-craft-mobile:
 ### 비고
 - Sendbird v4 SDK 정확 API명은 phase-executor가 설치 패키지(4.10.0)에서 확인(GroupChannelCollection/MessageCollection/onTypingStatusUpdated 등). 각 페이즈 `flutter analyze` 0 error(전체 9 issues=기존 info, scope 외). l10n gen 파일은 gitignore. advisor #1=advisor-fallback(엔드포인트 과부하), advisor #2=advisor() PASS.
 - **런타임 검증 대기(master)**: dev 서버 기동 + flutter 재기동 + **dev 회사에 최소 2 user** + P1 `POST /api/chat/channels`로 dev 채널 2개 사전 생성 → 2계정 채널목록·룸·송수신·실시간·읽음·타이핑·하단 뱃지 실측. origin push 미수행(표준 종료점).
+
+## v001.824.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스1
+
+P2(#343) 런타임 실측에서 발견: 채널이 존재(서버측 user joined·unread 1 Platform API 실측)하는데도 `/dm`이 **"대화 없음"(빈 목록)** 표시. 근본원인: `chat_channels_provider.dart` `ChatChannelsNotifier._init()`이 `GroupChannelCollection.loadMore()`로 기존 채널을 불러오지만 상태 갱신을 컬렉션 핸들러(`onChannelsAdded`)에만 의존 — Sendbird v4 핸들러는 **초기 loadMore 결과가 아니라 이후 실시간 변경만** 전달하므로 `_updateState()`가 호출되지 않아 `state`가 빈 채로 유지(flutter analyze 못 잡는 SDK 계약/런타임 결함).
+
+### 페이즈 결과
+- **Phase 6(핫픽스1) (fix, data-craft-mobile)** `5d35f39`: `_init()`의 단일 fire-and-forget `loadMore()`를 `_loadInitial(collection)`로 교체 — `collection.hasMore`인 동안 `loadMore()`를 await 루프(전체 채널 로드)하고, `mounted && identical(_collection, collection)` 이중 가드 후 `_updateState()` 호출해 초기 채널 목록을 state에 반영. 핸들러 배선 보존(이후 실시간 무회귀). flutter analyze 0 error. v4 심볼 `GroupChannelCollection.hasMore`/`loadMore()` 설치패키지 확인.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_channels_provider.dart
+
+### 비고
+- 데이터·멤버 상태 정상 실측(Sendbird Platform API: user 6 joined, unread 1). advisor #2 PASS. origin push 미수행. ⚠️**후속 잠복**: `chat_messages_provider.dart`도 동일 클래스(MessageCollection `initialize()` 결과를 state에 미반영, 핸들러 의존)로 룸 히스토리 미표시 가능성 — 룸 실측 시 시드 메시지 안 보이면 동일 패턴 핫픽스(initialize 후 _updateState) 필요.
