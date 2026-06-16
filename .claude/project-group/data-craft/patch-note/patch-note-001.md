@@ -26762,3 +26762,22 @@ data-craft-mobile:
 
 ### 비고
 - 데이터·멤버 상태 정상 실측(Sendbird Platform API: user 6 joined, unread 1). advisor #2 PASS. origin push 미수행. ⚠️**후속 잠복**: `chat_messages_provider.dart`도 동일 클래스(MessageCollection `initialize()` 결과를 state에 미반영, 핸들러 의존)로 룸 히스토리 미표시 가능성 — 룸 실측 시 시드 메시지 안 보이면 동일 패턴 핫픽스(initialize 후 _updateState) 필요.
+
+## v001.827.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스2
+
+핫픽스1(v001.824.0) 후에도 `/dm`이 빈 목록. 런타임 로그로 **진짜 근본원인** 확정: 채널/메시지 provider가 **Sendbird 연결 완료 전**에 loadMore/initialize를 호출 → `RequestFailedException(800220) uri=https:/v3/users//my_group_channels`(**호스트 없음=SDK init 전 + user_id 빈값=connect 전**). 원인: `chat_channels_provider`/`chat_messages_provider`가 `authControllerProvider` auth=true 즉시 로드하는데 `chatConnectionProvider`의 `connect()`는 같은 이벤트로 비동기 시작이라 미완료 상태. (핫픽스1의 `_updateState`는 loadMore가 *성공*했을 때만 유효 — 연결 전 실패엔 무용.)
+
+### 페이즈 결과
+- **Phase 7(핫픽스2) (fix, data-craft-mobile)** `5a84fbe`: `chat_connection_provider.dart`에 `chatConnectedProvider(StateProvider<bool>)` 신설(`service.connect().then`→true, disconnect→false) = 연결완료 단일 진실원천. `chat_channels_provider.dart` 트리거를 authController→`chatConnectedProvider`로 교체(연결 후에만 `_init`/loadMore). `chat_messages_provider.dart`도 `chatConnectedProvider` 게이팅 + `_initStarted` 가드 + `initialize()` 후 `collection.messageList`로 초기 메시지 시드(handler 미발화 시 히스토리 보강 — advisor가 짚은 두 번째 잠복버그까지 동시 해소). flutter analyze 0 error. v4 심볼 `MessageCollection.messageList` 설치패키지 확인.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_connection_provider.dart
+- lib/chat/chat_channels_provider.dart
+- lib/chat/chat_messages_provider.dart
+
+### 비고
+- 교훈: **provider가 비동기 connect()와 같은 auth 이벤트로 동시 발화하면 로드가 연결을 앞지른다 — 연결완료 상태를 별도 노출해 게이팅**. flutter analyze 못 잡는 런타임 순서 결함(증거=malformed URL). advisor #2 PASS. origin push 미수행. 회복은 master 재로그인 실측(user 6 online + loadMore 에러 없음 + 채널/룸 표시).
