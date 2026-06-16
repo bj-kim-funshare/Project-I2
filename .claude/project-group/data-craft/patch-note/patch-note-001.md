@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.815.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스12
+
+**PWA 설치 안내 모달 버튼·노출 정책 정비.** ①푸터 버튼을 **닫기 / 더 이상 보지 않기** 2개로 표준화, ②닫기=24시간 스누즈·더 이상 보지 않기=영구, ③PWA(standalone)로 접속 시 미표시 견고화.
+
+### 페이즈 결과
+- **핫픽스12** (fix, `5bb648217`):
+  - 모달 푸터 = `더 이상 보지 않기`(ghost) + `닫기`(default) 2버튼. **네이티브 설치 버튼 제거**(마스터 명시 — 수동 안내는 본문 단계 유지). i18n `pwa.dontShowAgain` ko/en 추가.
+  - `닫기` → `dc_pwa_install_snoozed_until` 에 `Date.now()+24h` 저장, 24h 내 미표시. `더 이상 보지 않기` → 기존 `dc_pwa_install_dismissed=1` 영구.
+  - `PwaInstallPrompt` 억제 조건에 `isSnoozed` 추가. `detectStandalone`을 `display-mode: standalone | minimal-ui | fullscreen` + `navigator.standalone` 까지 확장 → PWA 실행 시 안정적으로 미표시.
+
+### 주의/설계 노트
+- 설치 버튼 제거는 마스터 명시 결정(버그 아님). `beforeinstallprompt` 발화 케이스에서도 네이티브 1탭 대신 수동 안내로 통일.
+- 스누즈/standalone/platform 모두 **마운트 시점 스냅샷**(기존 코드 일관). 탭을 켜둔 채 24h 경과 시 자동 재표시는 새로고침 후 적용.
+- localStorage 키: `dc_pwa_install_snoozed_until`(신규) + `dc_pwa_install_dismissed`(기존). storage 비활성 환경에선 세션 한정(try/catch 무시).
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/beforeInstallPromptCapture.ts
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/features/pwa-install/ui/PwaInstallPrompt.tsx
+- src/features/pwa-install/ui/AndroidInstallGuideModal.tsx
+- src/features/pwa-install/ui/IosInstallGuideModal.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
 ## v001.814.0
 
 > 통합일: 2026-06-16
