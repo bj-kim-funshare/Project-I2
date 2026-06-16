@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.844.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스17
+
+**콘솔 경고+에러("Module util externalized" / `util.TextEncoder is not a constructor`) 제거 — react-dom 서버 렌더러의 클라이언트 import 수정.** `src/shared/lib/iconFavicon.ts`(동적 브라우저 탭 파비콘 생성, #345 도입)가 `react-dom/server`를 import했는데, react-dom의 `./server` export가 node 조건으로 `server.node.js`(Node `util` 모듈 사용)를 끌어와 Vite가 util을 externalize → 브라우저에서 `util.TextEncoder is not a constructor` 크래시 + "Module util has been externalized" 경고가 앱 로드 시 발생했다.
+
+### 페이즈 결과
+- **핫픽스17** (fix, `868d9ca5`): import를 `react-dom/server` → **`react-dom/server.browser`**(브라우저 변종, 전역 `TextEncoder` 사용, 동일 `renderToStaticMarkup` 제공)로 1줄 변경. Node `util` 의존 제거 → 크래시·경고 동시 해소. 로직/캐시/파비콘 SVG 생성 불변.
+
+### 영향 파일
+data-craft:
+- src/shared/lib/iconFavicon.ts
+
+### 비고
+- typecheck:all / lint(0 errors) / prod build PASS, dist에 server.node 참조 없음. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 본 파일은 #345(동적 탭) 코드이나 콘솔 크래시가 #338 튜토리얼 검수 전반을 막는 블로커라 #338 핫픽스로 동반 수정.
+- 교훈: 클라이언트 코드에서 `react-dom/server`는 node 변종을 끌어올 수 있음 — 브라우저용 SSR 마크업은 `react-dom/server.browser`를 명시 import.
+
 ## v001.842.0
 
 > 통합일: 2026-06-16
