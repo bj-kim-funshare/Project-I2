@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.816.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스1
+
+**튜토리얼 재설계(v001.814.0) 직후 앱 로드 시 React "Maximum update depth exceeded" 무한 렌더 크래시 핫픽스.** 원인: `TutorialOverlay`가 `useTutorialStore((s) => ({ isRunning, anchorVersion, advance, stop }))`처럼 매 렌더 새 객체 리터럴을 반환하는 zustand 셀렉터를 사용 → zustand v5(^5.0.8)는 스냅샷을 Object.is로 비교하므로 매 렌더 "변경됨"으로 인식 → useSyncExternalStore가 무한 재렌더. `TutorialOverlay`는 `TutorialRoot`로 항상 마운트되어 튜토리얼 미실행 상태에서도 앱 전체가 부팅 즉시 크래시했다.
+
+### 페이즈 결과
+- **핫픽스1** (fix, `d6cccd67`): 객체 리터럴 셀렉터를 원자 셀렉터 4개(`useTutorialStore((s) => s.isRunning)` 등)로 분리. 코드베이스 관용(원자 셀렉터, useShallow 미사용 — useActiveOnboardingHint와 동일)과 일치. 파일 내 잔여 객체-셀렉터 0건 확인.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors). advisor() 일시 과부하로 advisor-fallback(opus-4-7) 검증 → 5관점 PASS.
+- zustand v5 객체-셀렉터 무한루프는 tsc/lint가 못 잡는 런타임 결함 — 신규 store 소비처는 원자 셀렉터 또는 useShallow 필수.
+- 병렬 잡 채번: 본 핫픽스 patch-note 작성 중 #336 핫픽스12가 v001.815.0 선점 → v001.816.0으로 조정.
+
 ## v001.815.0
 
 > 통합일: 2026-06-16
