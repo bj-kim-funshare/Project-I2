@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.820.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스13
+
+**홈 화면 실행(PWA) 시 설치 안내 모달 억제 — start_url 파라미터 신호 추가.** 기존 `detectStandalone`의 `display-mode` 감지는 **진짜 설치된 PWA(prod HTTPS)**에서는 정상 억제하나, dev(http+.local)는 설치성이 없어 "홈 화면에 추가"가 브라우저 북마크 바로가기로 만들어져 standalone 신호가 없다. 표준 robust 신호인 start_url 쿼리 파라미터를 추가해 커버리지를 넓힌다.
+
+### 페이즈 결과
+- **핫픽스13** (fix, `33a48ef4a`): `manifest.webmanifest` `start_url` `/` → `/?pwa=1`. `beforeInstallPromptCapture` 모듈 로드 시(라우터 리다이렉트 전) `?pwa=1` 감지 → `sessionStorage['dc_pwa_launched']=1`. `detectStandalone`이 이 키를 standalone 동등 신호로 읽어 모달 억제. sessionStorage(세션 한정)라 일반 브라우저 탭엔 영구 억제 안 됨.
+
+### 환경 주의
+- **prod(HTTPS)**: 설치성 충족 → 진짜 PWA 설치 → standalone + start_url 신호 모두 동작, 모달 억제(이중 커버).
+- **dev(http+.local)**: 설치성 없음 → "홈 화면에 추가"는 브라우저 북마크(현재 URL 저장). Chrome이 manifest start_url 대신 현재 페이지 URL을 저장하면 `?pwa=1`이 없어 dev에선 여전히 모달이 뜰 수 있음 — dev 한계(버그 아님). dev에서 실 PWA 동작 검증을 원하면 dev HTTPS(basicSsl) 활성화 필요(별도 작업).
+
+### 영향 파일
+data-craft:
+- public/manifest.webmanifest
+- src/features/pwa-install/lib/beforeInstallPromptCapture.ts
+- src/features/pwa-install/lib/usePwaInstall.ts
+
 ## v001.819.0
 
 > 통합일: 2026-06-16
