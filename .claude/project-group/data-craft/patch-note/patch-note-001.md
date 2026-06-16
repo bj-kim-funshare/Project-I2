@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.807.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스7
+
+**PWA 설치 안내 태블릿 전용 복원 + 폰 접속 시 "모바일 미지원" 안내 화면.** 데이터 크래프트 빌더가 폰 반응형이 아니라 폰에서 레이아웃이 깨지는 근본 제약을 반영. 깨진 화면 위에 설치 안내를 띄우거나 깨진 빌더를 그대로 보여주는 대신, 폰은 별도 안내 화면으로 막고 태블릿/PC 사용을 유도한다. (폰 반응형 대응은 별도 대형 과제로 분리.)
+
+### 페이즈 결과
+- **핫픽스7** (fix, `000b633fb`+`c3296993e`):
+  - **Part A** — `usePwaInstall.detectPlatform()`에 태블릿 폼팩터 게이트(`min(innerWidth,innerHeight) >= 600 && coarse`) 복원. 폰(단변 <600px)은 `'other'`로 PWA 설치 안내 제외. 타입명 `ios`/`android` 유지.
+  - **Part B** — 신규 `src/app/MobileNotSupportedScreen.tsx`(점검중 화면 `ServerUnreachableFallback` 스타일 차용, 재시도·기어 제거 + 정적 모니터 아이콘). `App()`에 폰 게이트(`(pointer:coarse) && ((max-width:599) || (max-height:599))`) 추가 — 폰이면 앱 대신 안내 화면 렌더. i18n `mobileNotSupported.{pill,title,description,contactLabel}` ko/en 추가.
+  - **회귀 방지 예외** — Flutter WebView가 로드하는 `/m/:pageId`와 결제 콜백 `/billing/*`는 폰에서 정상 로드돼야 하므로 게이트에서 제외(`/\/(m|billing)\//` 경로 매칭, base 프리픽스 견고).
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/app/MobileNotSupportedScreen.tsx (신규)
+- src/app/index.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
 ## v001.806.0
 
 > 통합일: 2026-06-16
