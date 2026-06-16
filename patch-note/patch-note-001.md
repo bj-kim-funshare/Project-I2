@@ -1,5 +1,28 @@
 # 아이OS — Patch Note (001)
 
+## v001.114.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #62 (HOTFIX 1)
+> 대상: 아이OS
+
+### 배경
+
+v001.113.0 의 메커니즘 진단을 data-craft #338 세션 트랜스크립트 1차 증거로 교정한다. 113 은 원인을 "Step 4→5 외 연속-드라이브 부재 + satisfying chunk 후 자연 양보"로 적었으나, 실제 트랜스크립트 포렌식 결과 모델은 "끝났다"고 착각하지 않았다 — 오히려 계속할 의도를 명시 narration("코멘트 + Phase 6 디스패치를 함께 진행합니다")한 뒤, per-phase 코멘트를 턴의 terminal `tool_use` 로 내보내고 tool_result 반환 후 재개를 안 해 turn 이 pending action 없이 종료(bg 잡 idle)된 것이 proximate cause. 결정타는 이어진 "Continue from where you left off" 넛지에 모델이 `"No response requested."`(output_tokens 0)로 응답해 31분 데드루프가 된 것. 따라서 **넛지-복구가 인과적으로 가장 단단한 주력 수정, 연속-드라이브는 보조**(113 은 비중이 반대였다).
+
+### 페이즈 결과
+
+- **Phase 3 (HOTFIX)** (`8dc8340`): 두 SKILL.md 의 연속-드라이브 절 3곳 교정 — (1) "satisfying chunk 후 양보 금지" 프레이밍을 검증된 메커니즘("의도는 있었으나 코멘트가 턴 terminal tool_use 가 되어 tool_result 후 재개 불발")으로 교체, (2) 자기점검을 "tool_result 반환 직후 pending 디스패치 존재 여부"로 날카롭게, (3) 넛지-복구를 'PRIMARY safety net — load-bearing'으로 격상하고 `"No response requested." = 31분 데드루프 원인`을 직접 기재.
+
+### 영향 파일
+
+- `.claude/skills/plan-enterprise/SKILL.md`
+- `.claude/skills/plan-enterprise-os/SKILL.md`
+
+### Treadmill Audit
+
+NOT APPLICABLE — 프레이밍 교정, 신규 규칙/훅/에이전트/검증축 추가 없음.
+
 ## v001.113.0
 
 > 통합일: 2026-06-16
