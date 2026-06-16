@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.822.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스4
+
+**튜토리얼 차단막의 어두운 dim 영역을 클릭하면 그 아래 가이드 모달이 닫히던 버그 핫픽스.** 가이드 다이얼로그가 `modal={false}`이라 Radix `DismissableLayer`가 **document의 pointerdown**으로 콘텐츠 외부 클릭을 감지해 닫는데, dim 차단막 사각형들이 `onClick`의 `stopPropagation`만 가져 **pointerdown/mousedown은 막지 못해** 이벤트가 document로 전파 → 모달이 닫혔다. 의도(결정 4: 밝은 컷아웃·풍선 외 모든 상호작용 차단)와 어긋났다.
+
+### 페이즈 결과
+- **핫픽스4** (fix, `2ca0716a`): `DiscoveryHint`·`TutorialOverlay`의 dim 사각형 4개에 공용 `blockPointer`(preventDefault + stopPropagation)를 `onPointerDown`/`onMouseDown`/`onClick`에 연결. pointerdown까지 흡수해 모달 닫힘을 방지. 밝은 컷아웃(dim div 없는 구멍)·풍선 버튼(다음/종료/확인)은 무변경. `React.PointerEvent` 타입 위해 `import React` 보강.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/DiscoveryHint.tsx
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors). advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 교훈: Radix `modal={false}` 위에 차단 오버레이를 얹을 땐 `onClick`만으론 부족 — DismissableLayer가 듣는 `pointerdown`을 흡수해야 외부클릭 닫힘을 막는다.
+- 잔여(별도 처리): 발견 풍선 A(헤더 가이드 아이콘 1회 안내)가 admin@funshare.co.kr 계정에서 미표시 — 이미 가이드 클릭으로 `hint.discoverGuide` 소비됨(결정 5, 정상). 재노출하려면 dev `user_preference`의 해당 행 리셋 필요(task-db-data 경로 — 직접 psql은 가드로 차단).
+
 ## v001.820.0
 
 > 통합일: 2026-06-16
