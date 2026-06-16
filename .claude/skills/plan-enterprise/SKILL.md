@@ -203,6 +203,22 @@ git -C "${wt_a_x}" push -u origin "${wip_a_x}"
 
 > Worktree 경로/생명주기 절차: .claude/md/worktree-lifecycle.md.
 
+## Auto-mode continuous drive (Step 5~11)
+
+Once `ExitPlanMode` is approved (Step 4), Steps 5 through 11 execute as **a single uninterrupted drive**. The main session does NOT end its turn at phase boundaries. This extends Step 4's "same response" guarantee (Step 4: "immediately proceed to Step 5 in the same response") to every phase boundary inside the Step 7 loop: immediately after posting phase N's per-phase issue comment (7d), the **same turn** must continue with phase N+1's dispatch (7a). The numbered sub-steps 7a–7e are checkpoints of one continuous pipeline, not discrete stopping points.
+
+**The only legal yields (turn-ending points) are exactly three:**
+
+- (a) a halt row of the 7e phase-failure decision tree (including phase iter-budget exhaustion and lint cap exhaustion),
+- (b) the Step 11 PENDING gate,
+- (c) a master interrupt.
+
+Yielding anywhere else — in particular after a satisfying chunk such as a successfully posted per-phase comment — is forbidden. Background-job narration guidance ("report the next action when done") does NOT authorize a turn end here; satisfy it by narrating inline and continuing in the same turn.
+
+**Self-check (apply after every 7d):** "I just posted the per-phase comment and phases remain — this turn's next action is the next phase dispatch. Do not yield."
+
+**Nudge recovery:** if, while auto-mode is in progress, the session receives any continue/resume input (or an empty "Continue from where you left off" nudge), a no-response is forbidden. Re-derive the completed phases from `gh issue view <N>`'s completion comments plus the WIP branch `git log`, then resume the loop at the first incomplete phase.
+
 ## Step 7 — Phase execution loop
 
 Step 7 branches on the invocation flag:
@@ -273,6 +289,8 @@ Phase <N> WIP: <work-repo-name>:<wip-branch>
 ```bash
 gh issue comment <N> --repo <leader-owner-repo> --body-file <file>
 ```
+
+If phases remain, continue to 7a for the next phase **in the same turn** — do not end the turn (see "Auto-mode continuous drive" section above; the only legal yields are 7e halt / Step 11 PENDING / master interrupt).
 
 ### 7e. Decision tree on phase failure or `error` response
 
