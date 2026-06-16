@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.840.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스15
+
+**안내·시나리오 모달 높이 70px 축소 + 튜토리얼 풍선이 시작 시 좌상단(0,0)에 번쩍였다 사라지는 렌더링 버그 수정.**
+
+### 페이즈 결과
+- **핫픽스15** (fix, `327b3fd6`):
+  - 모달 높이: 안내 모달(`GuideDialogShell` selection)·시나리오 모달(`ScenarioPickerModal`) `height: 420 → 350`(−70px).
+  - 풍선 0,0 번쩍임: 원인은 floating-ui가 첫 렌더에 위치를 아직 계산하지 않아 anchored 풍선이 좌상단(0,0)에 1프레임 그려졌다가 rect-sync 후 이동하던 것. `useFloating`의 `isPositioned`를 사용해 anchored 풍선 style에 `visibility: isPositioned ? 'visible' : 'hidden'`을 적용 → 위치 확정 전까지 숨김. `TutorialOverlay`의 centered(앵커 없음) 케이스는 fixed 중앙이라 항상 visible 유지, `DiscoveryHint`도 동일 적용.
+
+### 영향 파일
+data-craft (fs-data-viewer 패키지): packages/fs-data-viewer/src/widgets/guide/GuideDialogShell.tsx
+data-craft (루트앱): src/features/onboarding/ui/{ScenarioPickerModal,TutorialOverlay,DiscoveryHint}.tsx
+
+### 비고
+- build:packages / typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(isPositioned read-only라 무한루프 없음 확인).
+
 ## v001.839.0
 
 > 통합일: 2026-06-16
