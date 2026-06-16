@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.826.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스7
+
+**안내(통합 가이드) 모달이 열릴 때 외부 영역이 어두워지지 않던 것 수정 — 배경 dim 활성화.** `GuideDialogShell`이 `DialogContent`에 `showOverlay={false}`를 줘서 배경 딤(`DialogOverlay`)이 렌더되지 않았다(modal={false} 비차단 의도). 마스터 요구에 따라 dim 배경을 켰다.
+
+### 페이즈 결과
+- **핫픽스7** (fix, `2d64c809`): `GuideDialogShell`의 `DialogContent` `showOverlay={false}` → `showOverlay={true}`. selection/guide/docs 전 단계에서 `DialogOverlay`(`fixed inset-0 bg-black/50`, z `NESTED_MODAL_BACKDROP=11900`)가 렌더돼 외부가 어두워진다. `modal={false}`·너비·hideCloseButton 등 나머지 무변경. DiscoveryHint 1회 안내 스포트라이트(z 13000)는 이 오버레이 위라 무충돌.
+
+### 영향 파일
+data-craft (fs-data-viewer 패키지):
+- packages/fs-data-viewer/src/widgets/guide/GuideDialogShell.tsx
+
+### 비고
+- build:packages / typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 패키지 변경 → dev=src alias 머지+하드 리프레시, prod=build:packages 선행.
+
 ## v001.825.0
 
 > 통합일: 2026-06-16
