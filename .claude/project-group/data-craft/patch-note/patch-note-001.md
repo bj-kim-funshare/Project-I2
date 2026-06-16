@@ -27219,3 +27219,21 @@ data-craft-server:
 
 ### 비고
 - 머지 직후 좀비 채널(member_count 1·0) 3개 Sendbird 정리. advisor #2 PASS. origin push 미수행. 교훈: **채널에 user를 추가하려면 그 user가 Sendbird에 먼저 존재해야 함 — 서버 채널 중개가 멤버 upsert를 책임진다(로그인 의존 X)**. 회복=master 2인 선택 시 자기 포함 3명 채널 생성.
+
+## v001.847.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #346 핫픽스4
+
+핫픽스3로 멤버 3명 입성 확인 후 잔여 2건(master): (A)그룹 채널 설정 화면이 **블랭크**(멤버·옵션 하나도 안 뜸), (B)그룹방 이름에서 본인 이름 빠짐.
+
+### 페이즈 결과
+- **Phase 15(핫픽스4) (fix, data-craft-mobile)** `524ca70`: (A) `channel_settings_screen.dart` 이름변경 섹션 `Row(Expanded(TextField), FilledButton)`가 ListView 직계 자식으로서 FilledButton에 unbounded width 측정 요구 → `box.dart:2251` 단언 폭주 → **그룹 전용 rename 섹션이 떠서 그룹 설정 ListView 전체 블랭크**(1:1은 rename 숨겨 안 깨졌음). `Column(stretch) + TextField + Align(centerRight, FilledButton)`로 재구성해 해소. (B) `channel_display.dart` 그룹 분기를 `others`(자기 제외)→`members`(전체)로 변경해 **본인 포함**(≤3 전체 join, >3 "a, b, c 외 N-3명"). 1:1은 상대 이름 유지. flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/channel_settings_screen.dart
+- lib/chat/channel_display.dart
+
+### 비고
+- 교훈: **Row 직계의 비-flex 버튼은 unbounded 컨텍스트(ListView 자식 등)에서 측정 실패 가능 — Column+Align 또는 폭 제약으로 회피.** 그룹 전용 위젯의 레이아웃 결함은 1:1 검증만으로 안 잡힘. advisor #2 PASS. origin push 미수행.
