@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.802.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스4
+
+**PWA 설치 안내를 하단 배너 → 화면 중앙 모달 + 어두운 오버레이로 전환 (모바일·태블릿, iOS·Android 공통).** 기존 하단 `bottom-4`의 작은 `max-w-sm` 중앙 카드 배너는 사이드바 드로어/콘텐츠에 가려 잘 안 보이는 가시성 문제가 있었다. 마스터 요청으로, 터치 기기(모바일·태블릿) 접속 시 설치 안내를 공유 `Dialog`(중앙 정렬 + `bg-black/70` 전체 오버레이) 모달로 직접 띄워 배경과 확실히 구분되게 했다.
+
+### 페이즈 결과
+- **핫픽스4** (fix, `faee27360`+`a28ed6e27`):
+  - 감지(`detectPlatform`) 게이트를 iOS·Android **모두 coarse-pointer 단독**으로 통일 — iOS도 아이폰(모바일)까지 노출(이전엔 iOS는 ≥600px 태블릿만). `isTabletForm`(600px) 제거. ⚠️ 타입명 `ios-tablet`/`android-tablet`은 유지하나 이제 폰 포함(명칭만 부정확, 동작 정상).
+  - `PwaInstallPrompt`를 배너 없이 로드 즉시 GuideModal을 `open`으로 직접 렌더. 배너 2종(`AndroidInstallBanner`·`IosInstallBanner`) 삭제 + barrel 정리.
+  - `AndroidInstallGuideModal`에 `canPromptInstall`/`onInstall` 추가 — `beforeinstallprompt` 발화 시 모달 안에 네이티브 **설치** 버튼 노출.
+  - 두 모달 `DialogContent`에 `onPointerDownOutside`/`onEscapeKeyDown` 가드 — backdrop 탭·ESC로 영구 dismiss 되는 것 방지, **명시적 닫기/설치 버튼만** 닫힘 경로.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/features/pwa-install/ui/PwaInstallPrompt.tsx
+- src/features/pwa-install/ui/AndroidInstallGuideModal.tsx
+- src/features/pwa-install/ui/IosInstallGuideModal.tsx
+- src/features/pwa-install/ui/AndroidInstallBanner.tsx (삭제)
+- src/features/pwa-install/ui/IosInstallBanner.tsx (삭제)
+- src/features/pwa-install/index.ts
+
 ## v001.801.0
 
 > 통합일: 2026-06-16
