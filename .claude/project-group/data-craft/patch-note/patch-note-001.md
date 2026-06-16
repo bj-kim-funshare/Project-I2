@@ -27127,3 +27127,21 @@ data-craft-mobile:
 
 ### 비고
 - **DB 정리=해당없음**: 채팅 데이터는 Sendbird(제3자) 전용 저장, 우리 BE에 채팅 테이블 0(stateless). master "DB 정리" 요청은 Sendbird 데이터 정리(스모크 채널·더미 유저 삭제)로 처리. advisor #2 PASS. origin push 미수행. 후속 잠복: settings가 `ref.read` 스냅샷이라 invite 직후 멤버 즉시 반영엔 `ref.watch`/액션 후 reload 필요(소형).
+
+## v001.843.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #346 핫픽스2
+
+P3 실측 3건(master, 실제 2 user 환경): (2)채널설정에 멤버 안 보임, (3)초대 화면에 이미 채널에 있는 사람 또 노출, (6)그룹방 이름이 Sendbird 영문 기본명("Group Channel", curl 실증).
+
+### 페이즈 결과
+- **Phase 13(핫픽스2) (fix, data-craft-mobile)** `fae4920`: ① 설정 멤버를 `MemberListQuery(channelUrl)..limit=100` + `while(hasNext) next()` 루프로 **전체 로드**(getChannel/collection 캐시 의존 탈피) → 모든 멤버 표시·그룹/1:1 판별도 로드 수 기준. ② `MemberPickerScreen`에 `excludeIds:Set<int>` 추가, 설정 초대 시 현재 멤버 id 주입(자기+기존 멤버 제외) — 초대를 `MaterialPageRoute` 직접 push로 전달. ③ `lib/chat/channel_display.dart` `channelDisplayName` 헬퍼 신설(1:1=상대 이름, 그룹=커스텀명 또는 `'가, 나 외 N명'`, "Group Channel" sentinel 무시) → chat_list·chat_room·channel_settings 3화면 일관 적용. flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/channel_display.dart (신규)
+- lib/screens/dm/channel_settings_screen.dart · member_picker_screen.dart · chat_list_screen.dart · chat_room_screen.dart
+
+### 비고
+- advisor #2 PASS. origin push 미수행. 후속(범위 밖, 무해): (a)`/dm/:channelUrl/invite` go_router 라우트 dead-code화(초대는 MaterialPageRoute 직접 push) — chore 정리. (b)MemberPickerScreen actionLabel이 invite 모드에서도 "만들기" 표시(P4 선재) — 거슬리면 `dmPickerInviteAction "초대"` 1줄 핫픽스. (c)settings invite/leave 직후 즉시 반영은 reload 필요(소형).
