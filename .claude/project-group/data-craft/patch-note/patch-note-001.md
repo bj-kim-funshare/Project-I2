@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.828.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스8
+
+**안내(가이드) 모달 배경 dim 이 실제로는 적용되지 않던 근본 원인 수정(핫픽스7 보강).** 핫픽스7에서 `showOverlay={true}`로 바꿨으나 여전히 배경이 어두워지지 않았다. 근본 원인: `GuideDialogShell`의 Dialog가 `modal={false}`인데 **Radix `Dialog.Overlay`는 `context.modal`이 false면 항상 `null`을 반환**한다(`@radix-ui/react-dialog/dist/index.js:148` `return context.modal ? <Overlay> : null`). 따라서 `showOverlay`와 무관하게 오버레이가 렌더되지 않았다.
+
+### 페이즈 결과
+- **핫픽스8** (fix, `33399699`): `GuideDialogShell`의 `modal={false}` → `modal={true}`(`showOverlay={true}` 유지). 이제 Radix가 `DialogOverlay`(`bg-black/50`, z 11900)를 렌더해 selection/guide/docs 전 단계에서 배경이 어두워진다. 표준 모달(focus trap·scroll lock·클릭-외부-닫기) 동반. DiscoveryHint 1회 안내 스포트라이트(z 13000/13001)는 오버레이보다 위라 유지되며, hotfix4의 dim `blockPointer`로 discovery 클릭이 모달을 닫지 않음(검증 완료).
+
+### 영향 파일
+data-craft (fs-data-viewer 패키지):
+- packages/fs-data-viewer/src/widgets/guide/GuideDialogShell.tsx
+
+### 비고
+- build:packages / typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(modal=true 부작용·discovery 상호작용 정밀 점검).
+- 교훈: Radix Dialog 배경 dim 은 `modal={true}`가 전제 — `modal={false}`에선 `<DialogOverlay/>`를 렌더해도 Radix가 null 처리한다.
+
 ## v001.826.0
 
 > 통합일: 2026-06-16
