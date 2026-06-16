@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.810.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스9
+
+**모바일 미지원 안내 타이틀 단어 중간 개행 방지.** "태블릿 또는 PC에서 확인해주세요." 타이틀이 CJK 기본 줄바꿈으로 "PC에서"의 음절 사이(에/서)에서 끊기던 문제. h1 인라인 스타일에 `wordBreak: 'keep-all'` 추가 + `textWrap` `'balance'`→`'normal'`로 공백 기준 greedy 개행 적용 → "에서"까지 쓰고 공백에서 개행.
+
+### 페이즈 결과
+- **핫픽스9** (fix, `d414ce858`): `MobileNotSupportedScreen` h1 스타일 `wordBreak: keep-all` + `textWrap: normal`.
+
+### 영향 파일
+data-craft:
+- src/app/MobileNotSupportedScreen.tsx
+
 ## v001.809.0
 
 > 통합일: 2026-06-16
