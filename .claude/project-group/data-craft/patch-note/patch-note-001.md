@@ -27086,3 +27086,20 @@ data-craft:
 - **머지 충돌 해소(라우터)**: WIP A 분기 후 i-dev에 추가된 **URL 사용자 최적화 정규 라우트**(`:companyId/:pageSlug`, `/m/:companyId/:pageSlug`)와 빌링 콜백(`/billing/success|fail`)을 소실 없이 양측 보존 — i-dev 전체 라우트 12개를 pathless 레이아웃 children으로 union 래핑, 머지 후 typecheck 8/8 통과.
 - **후속 정리 후보(비블로킹, advisor)**: ①설정 모달 오픈 직후 1프레임 `activeTabLabel=null`로 `STATIC_TITLE` 깜빡(한 틱 뒤 sidebar effect가 정정) ②`SettingsSidebar` effect deps의 `tabs`가 매 렌더 재생성→같은 라벨 반복 set(Object.is로 TabContextHost effect 재실행은 없음, `useMemo` 안정화 시 깔끔).
 - **시각 검증 권장(master, PENDING 게이트)**: 로그인 직후 서브도메인 인앱 진입 시 `isAuthenticated` true 전환 타이밍에 따라 회사 브랜딩 1~2프레임 깜빡 가능성 — 실측 확인.
+
+## v001.841.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #346 핫픽스1
+
+P3 채널설정 화면 실측 결함(master): (1)멤버 목록에 **자기 자신만** 표시(상대 안 보임), (2)1:1이라 이름변경·초대 숨김. 진단: 서버는 채널 멤버 2명 확정(Platform API 실측)인데 클라 `GroupChannel.getChannel().members`가 web에서 자기 자신만 담겨 옴(미로드).
+
+### 페이즈 결과
+- **Phase 12(핫픽스1) (fix, data-craft-mobile)** `0eda0d9`+`e7af64c`: `channel_settings_screen.dart` — ① 멤버 소스를 `chatChannelsProvider`(collection 쿼리 `show_member=true`로 members 로드됨)에서 `firstWhere(channelUrl)` 우선 취득, 없으면 `GroupChannel.getChannel` 폴백 → 전체 멤버 표시. ② 멤버 이름=`userDir?.name ?? member.nickname ?? userId` 폴백(회사 비등록 Sendbird 멤버도 표시). ③ "멤버 초대"를 1:1에서도 노출(1:1+초대=그룹 확장), 이름변경은 그룹(memberCount>2) 전용 유지. flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/channel_settings_screen.dart
+
+### 비고
+- **DB 정리=해당없음**: 채팅 데이터는 Sendbird(제3자) 전용 저장, 우리 BE에 채팅 테이블 0(stateless). master "DB 정리" 요청은 Sendbird 데이터 정리(스모크 채널·더미 유저 삭제)로 처리. advisor #2 PASS. origin push 미수행. 후속 잠복: settings가 `ref.read` 스냅샷이라 invite 직후 멤버 즉시 반영엔 `ref.watch`/액션 후 reload 필요(소형).
