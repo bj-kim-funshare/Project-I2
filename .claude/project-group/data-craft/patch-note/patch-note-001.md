@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.832.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스10
+
+**시나리오 선택 모달 크기·요약 정렬 개선.** 모달 너비를 안내(가이드 선택) 모달과 동일하게 키우고, 각 시나리오 요약 설명을 행 우측 끝에 정렬.
+
+### 페이즈 결과
+- **핫픽스10** (fix, `11bac20c`): `ScenarioPickerModal`의 Content className `w-full max-w-md` 제거 + style에 `width: 720, maxWidth: 'none'` 추가(안내 모달 selection 단계와 동일 너비). 각 시나리오 카드 행의 요약 span을 `ml-2 flex-1 truncate` → `ml-auto pl-4 text-right truncate max-w-[60%]`로 변경해 요약이 행 우측 끝에 정렬되도록. 제목 `shrink-0` 유지로 `ml-auto` 우측 정렬 성립. CSS만 변경(z-index·modal=false·즉시 오버레이·아이콘·onPick 보존).
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/ScenarioPickerModal.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+
 ## v001.830.0
 
 > 통합일: 2026-06-16
