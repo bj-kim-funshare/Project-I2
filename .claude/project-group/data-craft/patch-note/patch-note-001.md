@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.817.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #341 (funshare-inc/data-craft) · 핫픽스1
+
+**그리드 뷰 하단 5px 여백 복원 + 근본 원인(#320) 진단 정정.** v001.813.0 의 푸터 잘림 수정은 푸터를 박스 안에 들어오게 했으나 뷰어 바닥에 밀착시켰다. 본 핫픽스로 뷰어 자체 하단 5px 여백을 복원한다.
+
+### 진단 정정 (v001.813.0 의 원인 서술 교체)
+v001.813.0 에 적은 "calc 매직넘버가 베이스라인부터 잠복" 은 **오진**이다. 해당 `calc(100% - FOOTER_HEIGHT - 24px)` 는 `flex-1`(flex-basis 0%)에 의해 항상 무력화돼 있어 잘림과 무관했다. **진짜 범인은 plan-enterprise #320 phase 4 (`037a7f895`, 2026-06-11, "QuickCreatePanel 신규 + 그리드 레이아웃 통합")** 이다. #320 이전엔 루트 flex-col 의 flex-1 자식이 `overflow-hidden` 을 직접 가져 CSS 자동 최소크기(auto min-size)가 0 → 항상 줄어들어 푸터 자리를 남겼다(1년간 무관측). #320 이 그 자식을 `flex flex-row` 래퍼로 감싸며 `overflow-hidden` 을 안쪽 자식으로 내려, 루트의 flex-1 자식이 `min-height:auto`(콘텐츠 기준)로 회귀 → 그리드 콘텐츠가 높은 페이지에서 줄어들기를 거부 → 푸터를 박스 밖으로 밀어내 상위 `widget-viewer` overflow-hidden 이 절단. "페이지마다 다름"의 정체는 집계행이 아니라 그 페이지의 그리드 콘텐츠 높이 vs 박스 높이였다. v001.813.0 의 `min-h-0` 추가가 바로 #320 이 잃은 shrinkability 를 복원하는 정공법 수정이라 코드 수정 자체는 유효하다.
+
+### 페이즈 결과
+- **핫픽스1** (fix, `babd214c`): `FsGridTableView` 그리드 뷰 루트 컨테이너(`h-full flex flex-col relative`)에 `pb-[5px]` 추가. box-sizing border-box 하에서 콘텐츠 박스가 5px 줄고 flex-1 그리드가 이를 흡수, 푸터(`flex-shrink-0`)가 박스 바닥에서 5px 위에 위치. 그리드/집계 모드 공유 루트라 양 모드에 viewer-level 로 적용.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors, 96 기존 warning). advisor() 과부하로 advisor-fallback(opus, read-only) 사용 → PASS. dev=src alias 머지+하드 리프레시, prod=build:packages. origin push 미수행(표준 종료점).
+- **버전 충돌 주의**: 병렬 잡(#340 핫픽스1)이 v001.813.0 을 중복 채번해 파일 하단(line ~26541)에 append 함. 본 #341 의 v001.813.0 은 상단에 정상 존재. 충돌 정리는 별도 처리 권장(병렬 잡 채번 경합 패턴).
+
 ## v001.816.0
 
 > 통합일: 2026-06-16
