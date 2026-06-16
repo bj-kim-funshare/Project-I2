@@ -26781,3 +26781,20 @@ data-craft-mobile:
 
 ### 비고
 - 교훈: **provider가 비동기 connect()와 같은 auth 이벤트로 동시 발화하면 로드가 연결을 앞지른다 — 연결완료 상태를 별도 노출해 게이팅**. flutter analyze 못 잡는 런타임 순서 결함(증거=malformed URL). advisor #2 PASS. origin push 미수행. 회복은 master 재로그인 실측(user 6 online + loadMore 에러 없음 + 채널/룸 표시).
+
+## v001.828.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스3
+
+핫픽스2로 채널목록·룸·송수신·히스토리·아바타·reactive 뱃지 전부 동작 확인(master 스크린샷). 잔여 결함: **룸 진입(markAsRead)만으로는 하단 채팅 안읽음 뱃지가 0이 안 되고, 메시지를 전송해야 사라짐**. 원인: `chat_channels_provider`가 상태 갱신을 `GroupChannelCollection` 핸들러(add/update/delete)에만 의존하는데, 자기 자신의 markAsRead(읽음상태 변경)는 컬렉션 핸들러로 발화되지 않음 → `_updateState` 미호출 → 합산 뱃지 유지. 전송 시 lastMessage 변경으로 `onChannelsUpdated`가 발화돼 그제야 갱신.
+
+### 페이즈 결과
+- **Phase 8(핫픽스3) (fix, data-craft-mobile)** `f0039f0`: `chat_channels_provider.dart`에 `_ReadStatusHandler(GroupChannelHandler)` 추가 — `SendbirdChat.addChannelHandler('chat_channels_read_status')`로 `_init` 등록·`_reset` 해제, `onUserMarkedRead(GroupChannel, List<String>)` + `onChannelChanged(BaseChannel)` 콜백에서 `_updateState()` 호출. 룸 진입 markAsRead 직후 채널 unread가 0으로 재산출되어 하단 뱃지 즉시 사라짐. 기존 GroupChannelCollection+_Handler는 그대로(additive). flutter analyze 0 error. v4 콜백 `onUserMarkedRead`(4.4.0+)·`onChannelChanged` 설치패키지 확인.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_channels_provider.dart
+
+### 비고
+- master 실측 확인: 송수신(우측 말풍선)·히스토리(좌측 말풍선)·아바타·reactive 뱃지 정상. 본 핫픽스로 읽음→뱃지 즉시 갱신 보강. advisor #2 PASS. origin push 미수행. 후속(범위 밖): 룸 내 개별 메시지 read receipt(상대가 읽음) 즉시 표시는 2번째 계정 필요로 별도 검증.
