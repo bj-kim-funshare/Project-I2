@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.813.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #341 (funshare-inc/data-craft)
+
+**그리드 뷰 하단 푸터(행수·뷰어 정보·행 추가 버튼·행 삭제 아이콘)가 일부 페이지에서 화면 하단에 밀착된 채 잘려 보이던 문제 수정.** 원인: `FsGridTableView` 그리드 컨테이너가 높이를 `calc(100% - FOOTER_HEIGHT - 24px)` 매직넘버로 잡으면서, 위쪽 `TableInfoBar`(~28px)와 푸터 내부 `AggregationRow`(집계열 있을 시 36px·없으면 0px)의 높이를 빼지 않아 flow 총높이가 루트를 초과 → 상위 `overflow-hidden`이 푸터 하단을 절단. 집계열 유무에 따라 초과량이 ~4px(거의 보임)~40px(잘림)로 갈려 "페이지마다 다르게" 나타났다. 단일 도입 작업은 없으며 `c08f9f6d8` 베이스라인의 매직넘버가 잠복하다 집계기능 성숙 + #320(레이아웃 재부모화)으로 노출.
+
+### 페이즈 결과
+- **Phase 1** (fix, `81e2cf32`): `FsGridTableView`의 그리드 컨테이너 inline `height: calc(...)` 제거 + `min-h-0` 추가(`flex flex-row min-w-0 flex-1 min-h-0`), 내부 그리드 래퍼에도 `min-h-0` 추가. 매직넘버 높이계산을 순수 flexbox로 전환해 `TableInfoBar`·`AggregationRow`·버전정보 유무와 무관하게 푸터(`flex-shrink-0`)가 항상 가용 높이 박스 하단에 고정되도록 함. 미사용이 된 `FOOTER_HEIGHT` import 제거. viewer/sub-viewer/external-viewer 공유 렌더러라 세 컨텍스트 동시 적용.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
+
+### 비고
+- 로드베어링 수정은 외부 컨테이너 변경(루트 flex-col의 자식 → flex-1 min-h-0로 정확히 푸터 높이만큼 양보). 내부 래퍼 min-h-0는 flex-row 교차축 방어용(무해).
+- 가상화 안전: GridBody는 `@tanstack/react-virtual`의 `getScrollElement`로 스크롤 컨테이너 실측 높이를 런타임 측정 → 제거된 inline calc에 미의존(저위험).
+- 동일 결함 클래스인 `FsSubGrid.tsx:1560`(서브그리드 푸터)은 본 플랜 범위 밖 — 별도 후속.
+- typecheck:all && lint exit 0(0 errors, 96 기존 warning). advisor #1·#2 PASS. dev 반영=src alias 머지+하드 리프레시, prod=build:packages 필요. 런타임 시각 확인은 master 게이트. origin push 미수행(표준 종료점).
+
 ## v001.812.0
 
 > 통합일: 2026-06-16
