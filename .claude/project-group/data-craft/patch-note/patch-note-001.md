@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.846.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스18
+
+**튜토리얼/발견 풍선이 시작 시 화면 좌상단(0,0)에 순간 번쩍이던 버그 근본 수정**(핫픽스15 isPositioned 게이트로 못 잡던 잔여).
+
+### 페이즈 결과
+- **핫픽스18** (fix, `e77210a5`): 원인은 floating-ui reference로 **가상 ref**(기본 `getBoundingClientRect: () => new DOMRect()` = 0,0,0,0)를 쓴 것 — floating-ui가 (0,0)에서도 위치계산을 완료로 보고 `isPositioned=true`를 즉시 세워, 실제 rect가 rAF로 들어오기 전 풍선이 (0,0)에 visible. 수정: reference를 **실제 앵커 DOM 요소**로 — `TutorialOverlay` `setReference(anchorEl ?? null)`, `DiscoveryHint` `setReference(targetEl ?? null)`. floating-ui가 마운트 즉시 실제 rect를 측정해 `isPositioned`가 실제 좌표 확정 후 true가 되므로 (0,0) 번쩍임이 근본 차단. 컷아웃 딤·`isPositioned` visibility 게이트·centered 분기·버튼 보존.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+- src/features/onboarding/ui/DiscoveryHint.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 잔여(비차단): virtualRef와 그 rect 갱신 블록은 이제 dead code — 후속 정리 권장.
+
 ## v001.844.0
 
 > 통합일: 2026-06-16
