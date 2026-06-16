@@ -26082,3 +26082,21 @@ data-craft-admin-server:
 - .env
 
 비고: `.env` 는 dev.md "git-tracked" 정책 하 기존 추적 파일(diff index cc68584..bbbb9f6 = 사전 추적 증명) — boolean 1줄 변경, 신규 시크릿 노출 아님. Lint 게이트는 유일 변경 파일 `.env`가 typecheck/eslint 대상 밖이라 비대상 스킵. advisor #1·#2 PASS(Opus 4.8). **반영엔 admin-server dev 재기동 필요**(constant.ts 부팅 시 env 1회 read). 스코프 경계: BE 게이트 개방만 — FE 기본 모드는 여전히 dev, prod 는 UI 토글로 선택(운영 기본 prod 화는 별도 FE 후속). prod 쓰기 완화책(confirm 게이트·admin_promotion_audit·FOR UPDATE·2단계 로그인) 기존 유지.
+
+## v001.796.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #334 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft)**: 계정 정보 헤더 컨테이너 className 을 `justify-between`→`gap-2` 로 변경(`130ab0e`). 기존 #330 핫픽스2 에서 신설된 오너 전용 "보관함" 버튼이 `justify-between` 으로 헤더 우측 끝에 밀려 있던 것을, "계정 정보" 타이틀 텍스트 **바로 우측**에 소량 여백(0.5rem)으로 붙도록 이동. `{userInfo?.isOwner && …}` 오너 게이팅·버튼 스타일(그라데이션 pill)은 무변경 보존.
+- **Phase 2 (feat, data-craft)**: 추천 코드 안내(ReferralInfoDialog) 추천인 카드에서 "10% 크레딧 적립(영구)" 항목(`creditPermanent`) 제거 + ko.ts·en.ts 키 삭제(잔여 참조 0). 피추천인 카드의 "1개월 구독 시 3개월 무료"(`freeMonths`) 문구를 `font-semibold text-emerald-600 dark:text-emerald-400` 초록 bold 강조로 변경(`1f9c8bf`). `discountCoupons`(파랑)·`credit`(100% 3회)·`creditedInstantly` 무변경.
+
+### 영향 파일
+data-craft:
+- src/widgets/settings-dialog/ui/AccountTabContent.tsx
+- src/features/referral/ui/ReferralInfoDialog.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+비고: FE only, 적립/조회 모델 무변경. 보관함 오너 게이팅은 FE 에 이미 존재(L76 버튼/L261 다이얼로그) — Phase 1 은 위치 이동만, 게이팅 보존(비-오너 노출 시엔 `isOwner` 데이터 결함으로 FE 범위 밖). 색상: 코드상 `discountCoupons` 는 실제 파랑이나 마스터 "초록색" 지시 + 피추천인 카드 emerald 맥락에 따라 `freeMonths` 만 emerald 적용(discountCoupons 무변경). typecheck:all+lint exit 0(fresh 워크트리 install+build:packages 선행, 0 errors/96 warnings 베이스라인 유지). advisor #1·#2 PASS(Opus 4.8). 시각 정합은 마스터 QA.
