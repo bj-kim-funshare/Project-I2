@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.842.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스16
+
+**튜토리얼 시나리오 스토리를 "깨끗한 빈 페이지 확보 후 빌드"로 논리적 재구성 — 모든 시작 케이스 대응.** 빌드 단계 앵커(addSection·섹션 선택·위젯 단계 등)는 "빈 페이지에서 차례로 만들어가는" 과도기 UI 상태에만 존재해, 이미 구축된 페이지(디자인 모드 포함)에서 시작하면 앵커가 없어 풍선이 안 맞았다.
+
+### 페이즈 결과
+- **핫픽스16** (refactor, `50b1f527`): 3 시나리오(페이지/섹션/입력폼) 선행부를 **[enterDesignMode → createFirstPage → freshPage]** 3단계로 통일.
+  - `enterDesignMode`(completeWhen `isDesignMode`, 앵커 `designModeSwitch`): 뷰 모드면 전환 안내, 디자인 모드면 자동 스킵.
+  - `createFirstPage`(completeWhen `hasPage`, 앵커 `emptyAddPage`=0페이지 빈상태 버튼): 페이지 0개면 생성 안내, 있으면 스킵.
+  - `freshPage`(completeWhen `hasSections===false`, 앵커 `addPage`=디자인 사이드바 상주 버튼): **현재 페이지에 섹션이 있으면 새 빈 페이지를 생성**해 깨끗한 캔버스 확보, 빈 페이지면 스킵.
+  - → 3단계 후 항상 "디자인 모드 + 섹션 0인 빈 페이지"가 보장돼 빌드 앵커가 순서대로 등장. 시작 케이스(뷰/디자인 × 0페이지/구축된 페이지/빈 페이지) 전부 구조적 대응(핫픽스14 completeWhen 자동스킵 엔진 활용).
+  - 신규 i18n `onboarding.freshPage.body`(ko/en parity).
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/model/scenarioRegistry.ts
+- src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(시작 케이스 A~C+엣지 분석).
+- 빌드 중반 단계(위젯 세부)의 completeWhen 정밀도는 여전히 dev 실측 튜닝 여지 — 본 핫픽스의 핵심은 시작 상태 무관 깨끗한 캔버스 보장.
+
 ## v001.840.0
 
 > 통합일: 2026-06-16
