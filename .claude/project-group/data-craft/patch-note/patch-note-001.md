@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.809.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스8
+
+**모바일 미지원 안내 화면 타이틀 문구 변경.** 마스터 요청으로 부정형 표현을 행동 유도형으로 교체.
+
+### 페이즈 결과
+- **핫픽스8** (fix, `7f845471f`): `mobileNotSupported.title` ko `'모바일에서는 이용할 수 없어요'` → `'태블릿 또는 PC에서 확인해주세요.'`, en `'Not available on mobile'` → `'Please use a tablet or PC'`.
+
+### 영향 파일
+data-craft:
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
 ## v001.807.0
 
 > 통합일: 2026-06-16
