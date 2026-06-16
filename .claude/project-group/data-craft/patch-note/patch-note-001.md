@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.806.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스6
+
+**PWA 설치 안내 모달 모바일 중앙정렬 견고화 + platform 타입명 정확화.** 데이터 크래프트 페이지가 폰 뷰포트를 가로로 초과하는 환경에서, 공유 Radix `Dialog`의 translate 기반 중앙정렬이 어긋나 모달이 화면 밖으로 잘리던 문제. 어두운 오버레이(`fixed inset-0`)는 정상 동작했으므로, 그 안에서 flex 로 중앙정렬하는 커스텀 셸(`PwaModalShell`)로 교체했다. 또한 게이트 완화 후에도 남아 있던 부정확한 타입명을 바로잡았다.
+
+### 페이즈 결과
+- **핫픽스6** (fix, `d1e6de3f8`+`d130e46be`):
+  - 신규 `PwaModalShell` — `createPortal(document.body)` + `fixed inset-0 z-[100] flex items-center justify-center bg-black/70` + 카드 `max-h-[85dvh] w-full max-w-sm overflow-y-auto`. 페이지 오버플로우·ancestor transform 무관하게 뷰포트 중앙 정렬. 사이드바 드로어 위(z-[100]).
+  - `AndroidInstallGuideModal`·`IosInstallGuideModal`을 공유 Dialog → `PwaModalShell` 사용으로 교체(props 동일 유지).
+  - 배경 스크롤 잠금 `useScrollLock(true)` 추가(프로젝트 표준 커스텀-portal 모달 패턴).
+  - `Platform` 타입 `android-tablet`/`ios-tablet` → `android`/`ios` 정확화(폰 포함하므로 -tablet 명칭이 오해 유발). 참조처 전부 갱신, 트리 전역 잔존 0 확인.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/ui/PwaModalShell.tsx (신규)
+- src/features/pwa-install/ui/AndroidInstallGuideModal.tsx
+- src/features/pwa-install/ui/IosInstallGuideModal.tsx
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/features/pwa-install/ui/PwaInstallPrompt.tsx
+
 ## v001.805.0
 
 > 통합일: 2026-06-16
