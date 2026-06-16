@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.830.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스9
+
+**가이드 선택 모달에서 "튜토리얼" 클릭 시 시나리오 선택 모달이 열리기 직전 한 번 깜박이던 버그 수정.** `handleGuideSelectTutorial`이 가이드(modal=true, dim z 11900)를 즉시 닫고 별도 시나리오 picker(`ScenarioPickerModal`)를 여는데, picker가 공유 `Dialog`의 **z-50 오버레이 + fade-in 애니메이션**이라 가이드 dim이 사라진 뒤 picker dim이 천천히 떠 한 프레임 동안 배경이 밝아지는 깜박임 + scroll-lock 토글이 발생했다.
+
+### 페이즈 결과
+- **핫픽스9** (fix, `79992bdf`): `ScenarioPickerModal`을 공유 `Dialog/DialogContent` 대신 **Radix `DialogPrimitive` 직접 사용 + `modal={false}` + 자체 즉시(애니메이션 없음) 오버레이**로 재작성. 오버레이 `bg-black/50` z 13500, Content z 13501(가이드 12000·discovery 13001 위). 가이드 dim 소멸 직후 picker dim이 즉시 고-z로 떠 dim 연속성 확보 → 깜박임 제거, scroll-lock 토글 회피. props·제목·아이콘·요약 카드(hotfix6) 보존, `DialogPrimitive.Title`로 a11y 유지.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/ScenarioPickerModal.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 교훈: 두 모달(고-z 가이드 ↔ 저-z·fade-in picker) 핸드오프는 un-dim 갭을 만든다 — 후속 모달을 즉시(무애니메이션)·동급 이상 z 오버레이로 띄워 dim 연속성을 유지해야 한다.
+
 ## v001.828.0
 
 > 통합일: 2026-06-16
