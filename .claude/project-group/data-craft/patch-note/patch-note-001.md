@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.805.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #337 (funshare-inc/data-craft) · 핫픽스2
+
+**데이터 뷰어 문서 모달 핫픽스2 — 모달 자체 "저장중" 표시 추가.** 저장 시 뒷배경 헤더의 "저장중" 표기가 잘 안 보인다는 피드백에 따라, 문서 편집 모달 footer 에 동일한 실제 저장 상태로 구동되는 자체 "저장중" 배지를 추가했다.
+
+### 페이즈 결과
+- **핫픽스2** (feat, `c780cc1`):
+  - `DocumentEditDialog.tsx` — `useSaveContextOptional()` 로 `saveState === 'waiting'` 를 `isSaving` 으로 파생해 Footer 에 전달(헤더 "저장중"과 동일 SaveContext 소스, optional 변형이라 컨텍스트 미제공 시 graceful).
+  - `Footer.tsx` — `isSaving` 시 버튼 그룹 좌측에 `Spinner` + `t.save.saving`("저장 중..") 배지를 `text-primary` 로 표시, 저장 버튼은 저장 중 disabled 로 중복 클릭 차단.
+  - `dialogTypes.ts` — `FooterProps.isSaving` 추가. (신규 i18n 키·소비처·저장경로 변경 없음 — 기존 상태 연동 표시만.)
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/Footer.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/dialogTypes.ts
+
+> ℹ️ 저장 상태는 그리드 전역(SaveContext) 기준 — 모달 저장 외 그리드 저장 활동에도 배지가 뜰 수 있음(실제 저장 반영이므로 의도된 동작). 형제 뷰어 패키지 미적용(동일 스코프).
+> 시각/동작 항목은 메인 세션이 렌더를 확인할 수 없어 마스터 스크린샷 확인 권장.
+
 ## v001.804.0
 
 > 통합일: 2026-06-16
