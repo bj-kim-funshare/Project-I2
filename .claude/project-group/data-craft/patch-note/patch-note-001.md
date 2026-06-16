@@ -26400,3 +26400,20 @@ data-craft-mobile:
 - 각 서버 페이즈 pnpm build(tsc)+pnpm lint exit 0(fresh 워크트리 pnpm install 선행), 각 모바일 페이즈 flutter analyze 0 error/warning(기존 info 9 제외). advisor #1·#2 PASS(Opus 4.8). 무료 Developer 플랜 한도 동시10/MAU100(대시보드 실측).
 - **미수행(런타임 실측 대기)**: dev 서버 기동 + Sendbird 실연결로 로그인→connect·로그아웃→cleanup 실측은 master 협조 필요(flutter 신규 코드 = dev 서버 재기동). origin push 미수행(표준 종료점=각 멤버 repo 로컬 i-dev 머지).
 - **후속**: 로드맵 P2(채널목록·채팅룸 UI) 이후. OS 푸시(FCM/APNs)는 로드맵 종료 후속.
+
+## v001.811.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #340 (Sendbird P1(#339) 런타임 결함 핫픽스)
+
+P1(#339) 완료 후 런타임 실측(flutter web + dev 서버)에서 발견된 결함 수정. 모바일 로그인 시 `chatConnectionProvider` connect 발화 → `POST /api/chat/session-token`이 **403 `PLAN_NOT_ALLOWED`** 반환(에러 격리 설계는 정상 작동 — 앱 무크래시·`/maintenance` 미전이). 근본 원인: `permission.middleware.ts`의 플랜별 엔드포인트 allowlist `PLAN_ENDPOINTS`에 신규 `/api/chat/*`가 미등록 → `isEndpointAllowedForPlan` false → 라우트 핸들러 도달 전 차단. **tsc/lint/build가 못 보는 런타임 데이터구조 게이트**(P1 검증 누락 클래스 — 신규 BE 엔드포인트는 allowlist 등록 필수).
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-server)** `5197ff2`: `src/middlewares/permission.middleware.ts`의 `PLAN_ENDPOINTS[PLAN_TYPE.FREE]` 배열(알림 블록 인접)에 `POST:/api/chat/session-token`·`POST:/api/chat/channels`·`POST:/api/chat/session-token/revoke` 3개 등록(+`// 채팅 (Sendbird)` 헤더). FREE tier는 `PLAN_HIERARCHY` 누적으로 전 플랜 공통 허용 → 채팅은 모든 플랜 접근 가능. 다른 코드·mobile 무수정. pnpm build(tsc)+pnpm lint exit 0. routes/chat.ts 마운트 경로 ↔ allowlist 키 1:1 실측.
+
+### 영향 파일
+data-craft-server:
+- src/middlewares/permission.middleware.ts
+
+### 비고
+- 런타임 회복(403→200)은 dev 서버 재시작 후 반영(PLAN_ENDPOINTS는 모듈 로드 상수). dev 서버가 nodemon(`--watch src`)이면 자동 재반영. advisor #1·#2 PASS(Opus 4.8). origin push 미수행(표준 종료점). 교훈: 신규 BE 엔드포인트 추가 시 permission.middleware.ts PLAN_ENDPOINTS 등록을 검증 항목에 포함.
