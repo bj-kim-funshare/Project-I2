@@ -164,11 +164,11 @@ Once `ExitPlanMode` is approved (Step 4), Steps 5 through 11 execute as **a sing
 - (b) the Step 11 PENDING gate,
 - (c) a master interrupt.
 
-Yielding anywhere else — in particular after a satisfying chunk such as a successfully posted per-phase comment — is forbidden. Background-job narration guidance ("report the next action when done") does NOT authorize a turn end here; satisfy it by narrating inline and continuing in the same turn.
+**Failure mode this prevents (verified — data-craft #338, 2026-06-16).** The stall is NOT the model "thinking it is done." In #338 the model explicitly narrated intent to continue ("코멘트 + 다음 디스패치를 함께 진행합니다") yet emitted only the per-phase-comment tool call as the turn's terminal `tool_use`; after that comment's tool result returned it re-engaged with nothing, so the turn completed with no pending action and the background job went idle. Therefore: when phases remain, the next phase's `phase-executor` dispatch MUST be the next action after the comment's tool result — never let a per-phase comment be a turn's terminal tool call while phases remain. Background-job narration guidance ("report the next action when done") does NOT authorize ending the turn here; narrate inline and dispatch in the same drive.
 
-**Self-check (apply after every per-phase comment):** "I just posted the per-phase comment and phases remain — this turn's next action is the next phase dispatch. Do not yield."
+**Self-check (apply the moment a per-phase comment's tool result returns):** "The comment posted and phases remain — is my very next action a phase dispatch? If I am about to emit only narration with no pending tool call, that is the #338 stall. Dispatch now; do not let this turn terminate."
 
-**Nudge recovery:** if, while auto-mode is in progress, the session receives any continue/resume input (or an empty "Continue from where you left off" nudge), a no-response is forbidden. Re-derive the completed phases from `gh issue view <N>`'s completion comments plus the WIP branch `git log`, then resume the loop at the first incomplete phase.
+**Nudge recovery (PRIMARY safety net — load-bearing).** The continuous-drive rule above is reinforcement; this is the rule that actually breaks the dead loop, because the harness already injects a recovery nudge. If, while auto-mode is in progress, the session receives any continue/resume input (including an empty "Continue from where you left off" nudge), answering `"No response requested."` or producing nothing is FORBIDDEN — that exact response is what kept #338 dead for 31 minutes. Instead: re-derive the completed phases from `gh issue view <N>`'s completion comments plus the WIP branch `git log`, then resume the loop at the first incomplete phase.
 
 > `--codex` path: the same continuous-drive contract applies between the legal yields. The Codex bridge halts at 7-codex-a (awaiting master's `코덱스 완료/실패`) are master-interrupt-class yields (c), not phase-boundary yields.
 
