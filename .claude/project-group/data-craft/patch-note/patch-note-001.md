@@ -26141,7 +26141,7 @@ data-craft:
 
 비고: FE only, i18n 값 변경. typecheck:all+lint exit 0(0 errors/96 warnings 베이스라인 유지). advisor #2 = advisor() 일시 과부하로 advisor-fallback 서브에이전트(Opus 4.7, read-only) PASS 대체. 미반영 시 하드 리프레시(react-i18next Fast Refresh 한계).
 
-## v001.798.0
+## v001.799.0
 
 > 통합일: 2026-06-16
 > 플랜 이슈: #335 (funshare-inc/data-craft)
