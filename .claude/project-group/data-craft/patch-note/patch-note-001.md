@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.818.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스2
+
+**튜토리얼 발견 풍선·시나리오 차단막 오버레이가 가이드 모달 뒤에 가려지던 z-index 버그 핫픽스.** 가이드 다이얼로그(`GuideDialogShell`)의 `DialogContent`는 뷰어 패키지 z-index 사다리의 `NESTED_MODAL_CONTENT=12000`(overlay 11900, dropdown 12100)을 사용하는데, `DiscoveryHint`/`TutorialOverlay`의 dim 차단막·풍선은 9000/9001이라 모달이 풍선 위로 덮였다. 발견 풍선 B(가이드 최초 오픈 시 튜토리얼 스포트라이트) 및 시나리오 진행 중 뷰어 다이얼로그(컬럼 생성 등) 위 스포트라이트가 모달에 가려 보이지 않던 원인.
+
+### 페이즈 결과
+- **핫픽스2** (fix, `bc4604d3`): `DiscoveryHint`·`TutorialOverlay` 두 오버레이의 dim(9000→13000)·풍선(9001→13001) z-index를 뷰어 모달 천장(12100) 위로 상향. 컷아웃(타깃 노출·클릭 통과) 로직·JSX 무변경, z 숫자만 교체.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/DiscoveryHint.tsx
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors). advisor() 일시 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 잔여 미해결(별도 진단): 발견 풍선 A(헤더 가이드 아이콘 안내)가 신선 로드 시 미표시 — z 무관(원인 후보: 발견 풍선 A는 디자인 모드 전용 `DesignModeToolbar`에만 마운트 + 가이드 버튼 1회 클릭 시 `hint.discoverGuide` 영구 소멸. 뷰 모드 신선 로드 또는 기 dismiss 상태면 미표시가 정상). 마스터 모드/최초여부 확인 후 별도 핫픽스 판단.
+
 ## v001.817.0
 
 > 통합일: 2026-06-16
