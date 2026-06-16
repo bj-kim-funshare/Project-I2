@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.798.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft)
+
+**안드로이드 태블릿에서 PWA 설치 안내가 항상 노출되도록 수동 폴백 추가 + manifest 아이콘 설치성 강화.** 태블릿 Chrome 접속 시 설치 안내가 전혀 뜨지 않던 문제. 원인: 안드로이드 경로(`PwaInstallPrompt`)가 Chrome `beforeinstallprompt` 이벤트(`canPromptInstall`) 발화 시에만 배너를 렌더하고 아니면 `return null` 했는데, iOS 와 달리 수동 폴백이 없어 이벤트 미발화(아이콘 미충족·90일 억제·standalone 등) 시 아무것도 보이지 않았다.
+
+### 페이즈 결과
+- **Phase 1** (fix, `cd834649d`): 안드로이드 분기의 `if (!canPromptInstall) return null` 제거 — 이벤트가 있으면 1탭 설치 버튼, 없으면 "방법 보기" 버튼으로 Chrome 메뉴 수동 안내 모달(`AndroidInstallGuideModal` 신규)을 여는 폴백 경로 추가. `usePwaInstall` 의 `platform`/`isStandalone` 감지를 모듈 로드 1회 상수에서 훅 마운트(`useState` 초기화) 시점 계산으로 이동. ko/en 로케일에 `pwa.android.guide.*` 6키 parity 추가.
+- **Phase 2** (chore, `fcf01a0a6`): `sips` 로 308 favicon 에서 192×192·512×512 PNG 아이콘 생성, `manifest.webmanifest` `icons[]` 에 192(any)·512(any)·512(maskable) 추가 — Chrome 설치성 기준 충족으로 네이티브 1탭 설치 신뢰성 향상.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/features/pwa-install/ui/PwaInstallPrompt.tsx
+- src/features/pwa-install/ui/AndroidInstallBanner.tsx
+- src/features/pwa-install/ui/AndroidInstallGuideModal.tsx (신규)
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+- public/manifest.webmanifest
+- public/icon-192.png (신규)
+- public/icon-512.png (신규)
+
 ## v001.745.0
 
 > 통합일: 2026-06-11
