@@ -26851,3 +26851,20 @@ data-craft-mobile:
 
 ### 비고
 - P2 채팅 UI 런타임 핵심(목록·룸·송수신·히스토리·아바타·reactive 뱃지·읽음→뱃지)이 4 핫픽스로 전구간 동작. advisor #2 PASS. origin push 미수행. (코드 위생 후속: ChatRoomScreen의 initState postFrame markAsRead는 provider가 책임지므로 향후 제거 가능 — P3 검토.)
+
+## v001.831.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스5
+
+UX 보정(master 지적): 일반 채팅앱처럼 **채팅룸은 풀스크린(하단 네비 숨김)** 이어야 하는데, 룸 라우트가 `StatefulShellRoute`(하단 네비 셸) 자식이라 룸에서도 네비가 보였음.
+
+### 페이즈 결과
+- **Phase 10(핫픽스5) (fix, data-craft-mobile)** `ab34159`: `app_router.dart`에서 `:channelUrl` 자식 라우트를 `/dm` `StatefulShellBranch`에서 제거하고, `StatefulShellRoute` 밖 **최상위 GoRoute `/dm/:channelUrl`→ChatRoomScreen**으로 이동(`/auth`·`/maintenance`와 동일 셸-밖 패턴). 룸은 네비 없는 풀스크린, 목록(`/dm`)은 셸 안(네비 O). ChatListScreen `context.go('/dm/$channelUrl')` 네비·뒤로가기(→/dm 목록)는 유지(ChatRoomScreen 무수정). redirect 콜백은 `/auth`·`/maintenance`만 검사라 영향 없음. flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/router/app_router.dart
+
+### 비고
+- P2(#343)는 본작업 5페이즈 + 핫픽스 5건(allowlist→profile_url은 #339/#340 라인이며 본 #343 핫픽스는 빈목록·연결레이스·읽음뱃지·진입읽음·풀스크린)으로 채팅 UI 전구간 + UX 마무리. advisor #2 PASS. origin push 미수행. 후속: 룸 path를 짧은 internal id로(선택), ChatRoomScreen initState markAsRead 제거(코드위생).
