@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.836.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스13
+
+**튜토리얼 풍선이 타깃 없을 때 화면 좌상단(0,0)에 동떨어져 뜨고 "다음" 버튼이 안 먹는 것처럼 보이던 버그 수정.** 시나리오를 타깃이 없는 컨텍스트(예: 이미 콘텐츠가 있는 페이지에서 "섹션 꾸미기" 시작 → `addSection` 빈상태 버튼 부재)에서 시작하면 현재 단계 anchor 요소가 DOM에 없어(`anchorEl=null`) 풍선이 floating-ui 기본 DOMRect(0,0)에 위치했다. "다음"(advance)은 실제로 단계를 넘기지만 다음 단계 anchor도 없어 풍선이 계속 0,0에 머물러 "안 눌리는 것처럼" 보였다(종료=stop은 언마운트되어 정상).
+
+### 페이즈 결과
+- **핫픽스13** (fix, `094bc0c7`): `TutorialOverlay`에 `centered = !anchorEl` 분기 추가. anchor가 없으면 풍선을 `position:fixed; left/top:50%; translate(-50%,-50%)`로 **화면 정중앙에 고정 렌더**(전체 dim 유지, `FloatingArrow`는 `{!centered && ...}`로 숨김). anchor가 있으면 기존 floating-ui 타깃 부착+컷아웃 동작 유지. 잘못된 컨텍스트에서도 풍선이 보이고 "다음/종료"가 정상 동작.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 후속 고려(별도): 시나리오를 올바른 시작 컨텍스트(빈 페이지·디자인 모드)로 유도하면 단계 anchor가 정상 점등됨 — 본 핫픽스는 잘못된 컨텍스트의 graceful 폴백.
+
 ## v001.835.0
 
 > 통합일: 2026-06-16
