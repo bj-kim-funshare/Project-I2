@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.814.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft)
+
+**온보딩 말풍선(튜토리얼) 시스템을 "자동 발화"에서 "사용자 트리깅 + 스토리형 시나리오 + 어두운 차단막(스포트라이트) 실제 조작형"으로 전면 재설계.** 기존 `hintRegistry.ts` 22개 풍선이 `showOn(ctx)` 상태조건으로 한 번에 1개씩 자동으로 뜨던 방식을 폐기하고, 헤더 통합 가이드의 신규 "튜토리얼" 탭에서 사용자가 직접 시작하는 3개 시나리오(페이지 만들기 / 섹션 꾸미기 / 사용자 입력폼 만들기)로 재구성. 각 단계는 타깃 요소만 클릭 가능한 차단막 컷아웃으로 안내하고, 사용자가 실제 동작을 수행하면 상태감지로 다음 단계로 전진. 신규 오너(뷰 모드·페이지 0개) 콜드스타트는 "디자인 모드 이동 → 새 화면 추가"부터 0부터 안내. FE(웹) 전용, BE 스키마·모바일 무변경(기존 `user_preference` `hint.*` 키-값 영속 재사용).
+
+### 페이즈 결과
+- **Phase 1** (refactor, `163d26f3`): 순수 additive — `scenarioRegistry.ts`(3 시나리오, 각 단계 `activeWhen`은 기존 `showOn` 람다 1:1 복제) + `tutorialStore.ts`(start/advance/stop) 신규. 기존 파일 무변경.
+- **Phase 2** (feat, `c4418391`): `TutorialOverlay.tsx` 신규 — FloatingPortal 4-rect dim 컷아웃 + floating-ui 풍선(FloatingArrow), Escape→stop, 외부 클릭 흡수, "다음/종료" 버튼(닫기·앞으로보지않기 제거). tutorialStore에 앵커 레지스트리 추가.
+- **Phase 3** (refactor, `ba11400d`): `OnboardingHint`를 display:contents 등록기로 재작성(말풍선 UI 제거). `useActiveOnboardingHint`의 activeHintId 자동선택 경로 제거(ctx 조립만 유지), `useOnboardingHint.ts` 삭제. `useTutorialController`(activeWhen true→false 전환 시 advance) 신규. 18개 단순 앵커 사이트는 prop 유지로 무변경.
+- **Phase 4** (feat, `40e9f28e`): 가이드 선택화면(fs-data-viewer)에 "서비스 문서 우측" 3번째 튜토리얼 버튼 + onSelectTutorial prop 체인(→AppHeader). i18n 4언어(ko/en/ja/zh) parity.
+- **Phase 5** (feat, `50c6f376`): ScenarioPickerModal(3 카드) + TutorialRoot(컨트롤러+오버레이+피커) AppHeader 마운트. EmptyPageState CTA에 콜드스타트 앵커(emptyGoDesign/emptyAddPage) 부착.
+- **Phase 6** (feat, `70bce84b`): DiscoveryHint(1회성 발견 풍선+차단막) 신규 — 헤더 가이드 아이콘 안내(클릭 시 영구 소멸) + 가이드 최초 오픈 시 튜토리얼 스포트라이트. `hint.discoverGuide`/`hint.discoverTutorial` 사용자 단위 영속. 디자인 권한자(`usePermission('design_mode')`) 게이팅.
+- **Phase 7** (feat, `50853857`): userForm 시나리오 7단계 완결 arc(saveLayout·switchToViewMode append). i18n 신규 키 6종(scenario.*.title, discover.*.body, picker.title) ko·en 추가.
+
+### 영향 파일
+data-craft (루트앱):
+- src/features/onboarding/{model/scenarioRegistry.ts,model/tutorialStore.ts,lib/useActiveOnboardingHint.ts,lib/useTutorialController.ts,ui/OnboardingHint.tsx,ui/TutorialOverlay.tsx,ui/DiscoveryHint.tsx,ui/ScenarioPickerModal.tsx,ui/TutorialRoot.tsx,index.ts}, (삭제) lib/useOnboardingHint.ts
+- src/widgets/header/ui/{AppHeader,DesignModeToolbar,useHeaderDialogs}.tsx
+- src/widgets/layout-canvas/ui/{AreaControls,EmptyPageState}.tsx, src/widgets/property-drawer/ui/WidgetNavigatorDropdown.tsx
+- src/shared/i18n/locales/{ko,en}.ts
+
+data-craft (fs-data-viewer 패키지):
+- packages/fs-data-viewer/src/widgets/guide/{GuideSelectionContent,GuideDialogShell}.tsx
+- packages/fs-data-viewer/src/shared/config/i18n/{types.ts,translations/{ko,en,ja,zh}.ts}
+
+### 비고
+- **정적 게이트 전 페이즈 통과**: typecheck:all(turbo typecheck && tsc app) + lint(0 errors, 96 기존 warning) + 패키지 변경 페이즈는 build:packages·prod build까지 통과. advisor #1·#2 PASS.
+- **런타임 수동검증 필요(자동 단정 안 함)**: ① 차단막 컷아웃이 Radix Dialog(CreatePageDialog/CreateDataDialog) 위에서 타깃 클릭 통과하는지(z 9000/9001), ② 발견 풍선 A/B 표시 타이밍(loaded 게이트·rAF 포털 탐색), ③ 콜드스타트 시나리오1 0부터 완주.
+- **알려진 런타임 한계(후속 튜닝)**: `useTutorialController`는 단계의 `activeWhen` 값이 true→false로 바뀌는 전환에서 전진한다. 시나리오를 **첫 단계의 activeWhen이 이미 false인 상태에서 시작**하면 0단계에서 다음으로 자동 전진하지 않을 수 있음 — 정상 동작이며 런타임 튜닝 후속 대상(고장 아님).
+- 옛 `hint.*` dismissed 키는 무해 잔존(읽는 코드 제거됨), 마이그레이션 불필요.
+- dev 반영=fs_data_viewer src alias 머지+하드 리프레시, prod=build:packages 선행. origin push 미수행(표준 종료점).
+
 ## v001.813.0
 
 > 통합일: 2026-06-16
