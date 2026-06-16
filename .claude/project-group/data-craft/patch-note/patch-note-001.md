@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.801.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #337 (funshare-inc/data-craft)
+
+**데이터 뷰어 "문서" 셀 편집 모달의 4개 UX 개선.** 세부사항 패널 재오픈 아이콘 방향 교정, 본문 클릭 시 파란 포커스 테두리 제거, 저장 단축키 Shift+Enter → Cmd/Ctrl+S 변경, ESC로 닫을 때 미저장 변경이 있으면 즉시 닫지 않고 빨강 경고 문구를 띄운 뒤 한 번 더 눌러야 저장 없이 닫히는 가드 추가.
+
+### 페이즈 결과
+- **Phase 1** (fix, `27538b7`): 세부사항(OptionsPanel) 접힘 상태 재오픈 버튼 아이콘을 `ChevronDown`(-rotate-90, → `>`)에서 `ChevronLeft`(→ `<`)로 교정.
+- **Phase 2** (fix, `f1bfa25`): 전역 `*:focus-visible`(#3b82f6) 규칙이 BlockNote 본문에도 적용되던 문제를 `DocumentEditor.css`의 `.bn-editor`/`.ProseMirror` 포커스 한정 `outline:none` override로 억제(전역 접근성 규칙은 유지).
+- **Phase 3** (fix, `d9094b7`): 저장 단축키를 Shift+Enter → Cmd/Ctrl+S로 변경. 전역 keydown 핸들러 조건 + 브라우저 기본 저장 차단(preventDefault), BlockNote 확장 키맵 `'Mod-s'`, footer 힌트 i18n 4언어 갱신.
+- **Phase 4** (feat, `3744b81`): 에디터-직렬화 baseline 기준 `hasUnsavedChanges`(제목·옵션·본문 3축) 도입, 2단계 ESC 닫기(1회차=경고+미닫힘, 2회차=저장 없이 닫기), Footer에 "ESC로 닫기" 우측 빨강 경고 문구(`documentEdit.unsavedWarning` 4언어 + types.ts). 취소 버튼/배경 클릭은 즉시 닫기 유지.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditDialog.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.css
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/Footer.tsx
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/dialogTypes.ts
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/useDocumentKeyboardHandlers.ts
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/{en,ko,ja,zh}.ts
+
+> 시각 항목(Phase 1·2·4)은 메인 세션이 렌더를 확인할 수 없어 마스터 스크린샷 확인 권장.
+
 ## v001.800.0
 
 > 통합일: 2026-06-16
