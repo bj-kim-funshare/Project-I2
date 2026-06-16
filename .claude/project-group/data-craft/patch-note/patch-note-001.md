@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.835.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스12
+
+**튜토리얼/발견 풍선 본문의 `<b>` 등 HTML 태그가 화면에 글자 그대로 노출되던 버그 수정.** 온보딩 본문 i18n 다수가 강조용 `<b>...</b>` 마크업을 담는데(섹션 시나리오 전반·designModeSwitch 등 ~19개 ko/en), 풍선이 `{t(textKey)}` 평문으로 렌더해 `<b>섹션</b>`가 글자로 보였다.
+
+### 페이즈 결과
+- **핫픽스12** (fix, `da3b22ed`): 모든 힌트 본문의 유일한 렌더 지점인 `TutorialOverlay`·`DiscoveryHint` 두 컴포넌트의 본문 `<p>`를 `dangerouslySetInnerHTML={{ __html: t(...) }}`로 전환(신뢰된 정적 i18n, 사용자 입력 아님 — 선례 `RoleFormSummaryAside`). `aria-label`은 `.replace(/<[^>]+>/g,'')`로 태그 제거한 평문 유지(스크린리더 안전). i18n 문자열·풍선 구조·버튼·z-index 불변.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+- src/features/onboarding/ui/DiscoveryHint.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 전수조사: 태그 포함 본문은 전부 이 2개 렌더 지점을 경유 → 렌더 교정으로 일괄 해결.
+
 ## v001.834.0
 
 > 통합일: 2026-06-16
