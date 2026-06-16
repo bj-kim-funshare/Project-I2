@@ -26436,3 +26436,20 @@ data-craft-server:
 
 ### 비고
 - 런타임 회복(403→200)은 dev 서버 재시작 후 반영(PLAN_ENDPOINTS는 모듈 로드 상수). dev 서버가 nodemon(`--watch src`)이면 자동 재반영. advisor #1·#2 PASS(Opus 4.8). origin push 미수행(표준 종료점). 교훈: 신규 BE 엔드포인트 추가 시 permission.middleware.ts PLAN_ENDPOINTS 등록을 검증 항목에 포함.
+
+## v001.813.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #340 핫픽스1
+
+#340 allowlist 핫픽스(v001.811.0) 적용 후 런타임 재실측에서 **403 해소 확인(요청이 챗 컨트롤러 도달) + 새 결함 500 발견**. `POST /api/chat/session-token`이 `CHAT-C-001 내부 서버 오류(500)` 반환. 직접 Sendbird Platform API 테스트로 근본원인 격리: `POST /v3/users`(사용자 생성)는 **`profile_url` 필수 필드**(미포함 시 `400 code 400105 "profile_url must be required"`)인데 `upsertUser` create 분기가 `{user_id, nickname}`만 전송 → user 미생성 → 이어지는 `issueSessionToken`이 "User not found"(400) → 컨트롤러 500. (tsc/lint/build 못 보는 런타임 계약 — Sendbird 실호출로만 검출.)
+
+### 페이즈 결과
+- **Phase 2(핫픽스1) (fix, data-craft-server)** `561b53f`: `src/services/sendbird.service.ts`의 `upsertUser` create POST 바디를 `{user_id, nickname}` → `{user_id, nickname, profile_url: ''}` 로 1줄 수정. 빈 `profile_url`은 P1 결정(프로필이미지 nickname-only·아바타 클라 resolve)과 정합. PUT update·토큰 함수·기타 무수정. pnpm build(tsc)+pnpm lint exit 0.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts
+
+### 비고
+- **End-to-end 실측 검증**: Sendbird API로 서버 로직 재현 — create(profile_url:'')→200, issueSessionToken→200(실제 JWT 발급) 확인. nodemon 자동 재반영으로 live. 최종 런타임 회복(500→200)은 master 모바일 재로그인으로 확정. advisor #2 PASS. origin push 미수행. 교훈: Sendbird Platform API 신규 호출은 필수 필드를 실호출로 검증(create=profile_url 필수).
