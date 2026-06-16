@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.834.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스11
+
+**시나리오 선택 모달 높이를 안내 모달과 동일하게 통일 + 각 시나리오 카드 컬러 액센트 적용(단조로움 개선).** 핫픽스10에서 너비(720)만 맞추고 높이는 안 맞아 picker(짧은 3행)와 안내 모달(720×정사각 카드, 큰 박스)의 높이가 달랐다.
+
+### 페이즈 결과
+- **핫픽스11** (fix, `0e3cc57a`·정리 `af799a7a`):
+  - 높이 통일: 안내 모달 selection 단계와 picker 둘 다 `width: 720, height: 420`. `GuideDialogShell` selection style에 height 420 + DialogContent를 항상 `flex flex-col`(미사용 `isFullLayout` 제거), `GuideSelectionContent` 카드 컨테이너에 `flex-1 items-center`(정사각 카드 세로 중앙). `ScenarioPickerModal` Content height 420 + `flex flex-col`, 목록·각 버튼 `flex-1`로 3행 균등 채움(큼직한 카드).
+  - 컬러 액센트: picker에 시나리오별 `ACCENT` 맵 — pageCustom(파랑)·sectionCustom(에메랄드)·userForm(바이올렛). 좌측 `border-l-4` 컬러 + 아이콘 칩(`bg-{c}-500/10` + `text-{c}-500`). 전체 클래스 문자열로 Tailwind JIT 포함, `/10` 틴트로 다크모드 안전.
+
+### 영향 파일
+data-craft (루트앱): src/features/onboarding/ui/ScenarioPickerModal.tsx
+data-craft (fs-data-viewer 패키지): packages/fs-data-viewer/src/widgets/guide/{GuideDialogShell,GuideSelectionContent}.tsx
+
+### 비고
+- 게이트 전부 PASS: build:packages / typecheck:all / lint(0 errors) / prod build. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(Tailwind JIT·border-l 순서·guide/docs 무영향 확인).
+- 신규 의존성 없음. 패키지 변경 → dev=src alias 하드 리프레시, prod=build:packages 선행.
+
 ## v001.832.0
 
 > 통합일: 2026-06-16
