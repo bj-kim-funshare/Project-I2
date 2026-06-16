@@ -26885,3 +26885,21 @@ data-craft-mobile:
 
 ### 비고
 - P2(#343)는 본작업 5페이즈 + 핫픽스 5건(allowlist→profile_url은 #339/#340 라인이며 본 #343 핫픽스는 빈목록·연결레이스·읽음뱃지·진입읽음·풀스크린)으로 채팅 UI 전구간 + UX 마무리. advisor #2 PASS. origin push 미수행. 후속: 룸 path를 짧은 internal id로(선택), ChatRoomScreen initState markAsRead 제거(코드위생).
+
+## v001.833.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스6
+
+핫픽스5(룸 셸-밖 풀스크린) 후 **룸 뒤로가기가 동작 안 함**(master 실측). 원인: 룸을 최상위 라우트로 옮겼으나 ChatListScreen이 `context.go()`로 진입해 백스택이 안 쌓임 → BackButton(Navigator.maybePop)이 팝할 대상 없음.
+
+### 페이즈 결과
+- **Phase 11(핫픽스6) (fix, data-craft-mobile)** `9383225`: ① `chat_list_screen.dart` 룸 진입을 `context.go`→**`context.push`**(백스택 생성 — 풀스크린 룸이 셸 위에 쌓이고 pop 시 목록 복귀). ② `chat_room_screen.dart` 뒤로가기를 `const BackButton()`→`IconButton(onPressed: canPop ? pop : go('/dm'))`로 견고화(딥링크·새로고침 진입에서도 목록 복귀). flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/chat_list_screen.dart
+- lib/screens/dm/chat_room_screen.dart
+
+### 비고
+- 채팅룸 = 풀스크린(네비 숨김, 핫픽스5) + 좌상단 ←로 목록 복귀(핫픽스6) = 일반 채팅앱 표준 동작 완성. advisor #2 PASS. origin push 미수행.
