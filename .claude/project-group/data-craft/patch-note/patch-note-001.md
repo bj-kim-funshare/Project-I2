@@ -26816,3 +26816,20 @@ data-craft-mobile:
 
 ### 비고
 - master 실측 확인: 송수신(우측 말풍선)·히스토리(좌측 말풍선)·아바타·reactive 뱃지 정상. 본 핫픽스로 읽음→뱃지 즉시 갱신 보강. advisor #2 PASS. origin push 미수행. 후속(범위 밖): 룸 내 개별 메시지 read receipt(상대가 읽음) 즉시 표시는 2번째 계정 필요로 별도 검증.
+
+## v001.829.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 핫픽스4
+
+핫픽스3(읽음→뱃지 갱신) 후에도 **룸 진입만으로는 뱃지가 안 사라지고, 입력창 클릭(포커스) 시에만 사라짐**(master 실측). 원인: `ChatRoomScreen`이 `initState` postFrame에서 `_markAsRead()`를 호출하는데 그 시점엔 `chat_messages_provider`의 채널이 **준비 전**(getChannel+MessageCollection.initialize 비동기·연결 게이팅)이라 no-op. 입력창 포커스(line 109 `if(focused) _markAsRead()`)는 수 초 뒤라 채널 준비 후 호출돼 정상 동작 → "클릭하면 사라짐"의 정체. (hotfix3의 `onUserMarkedRead`→뱃지 갱신은 정상 — 포커스 클리어가 그 증거.)
+
+### 페이즈 결과
+- **Phase 9(핫픽스4) (fix, data-craft-mobile)** `8f6cfc3`: `chat_messages_provider.dart` `_init()`에서 `MessageCollection.initialize()` 완료·메시지 시드 직후 `mounted && _channel != null` 가드 후 `_channel!.markAsRead()` 호출 추가. 채널 준비 시점에 read가 보장돼 **룸 진입만으로 안읽음 0**(hotfix3 핸들러가 뱃지 즉시 갱신). 기존 markAsRead 호출지점(initState postFrame·수신·포커스)은 멱등이라 유지. flutter analyze 0 error.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_messages_provider.dart
+
+### 비고
+- P2 채팅 UI 런타임 핵심(목록·룸·송수신·히스토리·아바타·reactive 뱃지·읽음→뱃지)이 4 핫픽스로 전구간 동작. advisor #2 PASS. origin push 미수행. (코드 위생 후속: ChatRoomScreen의 initState postFrame markAsRead는 provider가 책임지므로 향후 제거 가능 — P3 검토.)
