@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.812.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스11
+
+**PWA 설치 안내가 삼성 태블릿(데스크톱 UA)에서 미표시되던 문제 수정.** 갤럭시 탭 S8 실기기 진단 결과, Chrome이 데스크톱 사이트 UA(`X11; Linux x86_64`, "Android" 문자열 없음)를 보내 `detectPlatform`의 `/Android/` UA 매칭이 실패 → `platform='other'` → 모달 억제. (coarse=true·단변 783px로 태블릿 폼팩터 자체는 통과했음.)
+
+### 페이즈 결과
+- **핫픽스11** (fix, `c225c7a3c`): `detectPlatform`에서 `/Android/` UA 의존 제거. 터치 태블릿 판정(`pointer:coarse && 단변≥600`)을 먼저 한 뒤, iOS면 `'ios'`, **아니면 `'android'`로 간주**(iPad는 `MacIntel+maxTouchPoints`로 이미 iOS 분기 처리). 핫픽스10 임시 디버그 오버레이도 제거.
+
+### 알려진 경계/주의
+- **데스크톱 UA 태블릿에서 네이티브 1탭 설치는 보장 안 됨**: Chrome이 spoofed-UA 탭을 installable로 안 보면 `beforeinstallprompt` 미발화 → `canPromptInstall=false` → 모달은 **수동 안내(Chrome 메뉴)** 모드로 표시(설계상 정상). 수동 설치는 동작.
+- **Windows/Linux/ChromeOS 터치 태블릿**(coarse + ≥600)도 이제 `'android'`로 분류되어 Chrome 설치 안내 모달이 뜬다. 데스크톱 Chrome도 ⋮ 메뉴 → 앱 설치를 지원하므로 기능상 정합(문구의 "홈 화면에 추가"가 다소 모바일 톤일 뿐). 의도된 트레이드오프, 버그 아님.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/usePwaInstall.ts
+- src/features/pwa-install/ui/PwaInstallPrompt.tsx
+
 ## v001.810.0
 
 > 통합일: 2026-06-16
