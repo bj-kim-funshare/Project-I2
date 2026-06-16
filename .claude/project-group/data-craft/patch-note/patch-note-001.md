@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.825.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스6
+
+**튜토리얼 시나리오 선택 모달 UI 개편 + 지원(가이드 선택) 모달 너비·카드 비율 개선.**
+
+### 페이즈 결과
+- **핫픽스6** (feat, `7327ddb3`):
+  - 시나리오 선택 모달(`ScenarioPickerModal`): 제목을 "튜토리얼 시나리오 선택"으로 변경, 각 시나리오 행을 [아이콘(좌, lucide `FilePlus2`/`LayoutPanelTop`/`ClipboardList`, fallback `GraduationCap`)] + [제목] + [요약 설명 1줄(우, truncate)] 레이아웃으로 개편. `scenarioRegistry`에 `descKey` 필드 추가, i18n `onboarding.scenario.{id}.desc` 3종 ko/en parity 추가, `onboarding.picker.title` 값 교체.
+  - 지원 모달(`GuideDialogShell`/`GuideSelectionContent`): selection 단계 너비 440→720(maxWidth none), 3개 카드(기능 가이드/서비스 문서/튜토리얼)에 `aspect-square justify-center` 적용해 정사각형에 가까운 비율로.
+
+### 영향 파일
+data-craft (루트앱):
+- src/features/onboarding/ui/ScenarioPickerModal.tsx
+- src/features/onboarding/model/scenarioRegistry.ts
+- src/shared/i18n/locales/{ko,en}.ts
+
+data-craft (fs-data-viewer 패키지):
+- packages/fs-data-viewer/src/widgets/guide/{GuideDialogShell,GuideSelectionContent}.tsx
+
+### 비고
+- 게이트 전부 PASS: build:packages / typecheck:all / lint(0 errors) / prod build. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 신규 의존성 없음(lucide-react 기존). 패키지 변경 → dev=src alias 머지+하드 리프레시, prod=build:packages 선행.
+
 ## v001.823.0
 
 > 통합일: 2026-06-16
