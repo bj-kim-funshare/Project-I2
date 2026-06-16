@@ -26100,3 +26100,20 @@ data-craft:
 - src/shared/i18n/locales/en.ts
 
 비고: FE only, 적립/조회 모델 무변경. 보관함 오너 게이팅은 FE 에 이미 존재(L76 버튼/L261 다이얼로그) — Phase 1 은 위치 이동만, 게이팅 보존(비-오너 노출 시엔 `isOwner` 데이터 결함으로 FE 범위 밖). 색상: 코드상 `discountCoupons` 는 실제 파랑이나 마스터 "초록색" 지시 + 피추천인 카드 emerald 맥락에 따라 `freeMonths` 만 emerald 적용(discountCoupons 무변경). typecheck:all+lint exit 0(fresh 워크트리 install+build:packages 선행, 0 errors/96 warnings 베이스라인 유지). advisor #1·#2 PASS(Opus 4.8). 시각 정합은 마스터 QA.
+
+## v001.797.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #334 (funshare-inc/data-craft) · 핫픽스1
+
+**추천 코드 안내 추천인 카드 'credit' 문구 수정.** 마스터 핫픽스 — 추천인 혜택의 `credit` 문구를 ko.ts '100% 크레딧 적립(3회)' → '100% 크레딧 3개월 적립', en.ts '100% credit (3x)' → '100% credit for 3 months' 로 변경(i18n 값 1줄씩). 다른 키(`discountCoupons`·`freeMonths`·`creditedInstantly`)·JSX 무변경.
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1, fix, data-craft)**: ko.ts·en.ts 의 `settings.referralInfo.credit` 값 수정 (`f3a7b77`)
+
+### 영향 파일
+data-craft:
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+비고: FE only, i18n 값 변경. typecheck:all+lint exit 0(0 errors/96 warnings 베이스라인 유지). advisor #2 = advisor() 일시 과부하로 advisor-fallback 서브에이전트(Opus 4.7, read-only) PASS 대체. 미반영 시 하드 리프레시(react-i18next Fast Refresh 한계).
