@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.800.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #336 (funshare-inc/data-craft) · 핫픽스1
+
+**[테스트 노출 — 잠정] 안드로이드 모바일(폰)에서도 PWA 설치 안내 배너 노출.** 기존엔 태블릿 폼팩터(짧은 변 ≥600px + coarse pointer)일 때만 배너가 떴는데, 안드로이드 모바일에서도 뜨는지 확인하기 위해 안드로이드 분기에 한해 600px 게이트를 제거하고 coarse-pointer 단독 조건으로 완화했다. iOS 분기는 기존 태블릿 게이트(≥600px) 유지 — 따라서 **아이폰에는 적용되지 않는다**. 본 변경은 잠정 테스트 노출이며 핫픽스 한 번으로 원복 가능.
+
+### 페이즈 결과
+- **핫픽스1** (fix, `519f0bdc4`): `usePwaInstall.ts` `detectPlatform()` 에서 `isCoarsePointer` 변수를 추출, 안드로이드 분기를 `isTabletForm`(600px+coarse) → `isCoarsePointer`(coarse 단독)로 완화. iOS 분기는 무변경.
+
+### 영향 파일
+data-craft:
+- src/features/pwa-install/lib/usePwaInstall.ts
+
 ## v001.798.0
 
 > 통합일: 2026-06-16
