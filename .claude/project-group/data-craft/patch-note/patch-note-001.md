@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.823.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스5
+
+**신규 로그인(뷰 모드)에서 헤더 발견 풍선 A(가이드 아이콘 1회 안내)가 뜨지 않던 버그 핫픽스.** 발견 풍선 A의 배선(`DiscoveryHint` + `guideButtonRef` + `showDiscoverGuide`)이 `DesignModeToolbar`(디자인 모드)에만 추가됐는데, 통합 가이드("?") 버튼은 `ViewModeToolbar`(뷰 모드)에도 존재하고 **신규 로그인 기본값이 뷰 모드**라, 뷰 모드에선 가이드 버튼은 보여도 발견 풍선 A가 마운트되지 않아 안내가 표시되지 않았다(Phase 6 누락).
+
+### 페이즈 결과
+- **핫픽스5** (fix, `78f3d4c9`): `ViewModeToolbar`에 `DesignModeToolbar`와 동일한 발견 풍선 A 배선을 미러링 — `guideButtonEl`(useState)+`guideButtonRef`(useCallback), `useOnboardingStore` dismissed 구독, `showDiscoverGuide = canDesign && !dismissed.has('hint.discoverGuide')`, 가이드 버튼에 ref 부착, 버튼 직후 `<DiscoveryHint onDismiss={onGuideOpen} />`. 디자인/뷰 모드는 동시에 하나만 마운트되어 중복 없음.
+
+### 영향 파일
+data-craft:
+- src/widgets/header/ui/ViewModeToolbar.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors). advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(훅 규칙·중복 마운트 점검 포함).
+- 부수 조치(코드 무관, dev 데이터): admin@funshare.co.kr 계정에 이미 소비돼 있던 `hint.discoverGuide=dismissed`(user_id=6, company=funshare) 행을 로컬 dev `data_craft_dev`에서 삭제(마스터 1회 허용 엔터프라이즈 핫픽스, prod 미접속) — 재테스트 위해 발견 풍선 A 재노출 가능 상태로 복구.
+- 결정 5 동작 불변: 가이드 버튼 클릭 시 영구 소멸은 유지(뷰·디자인 양쪽 동일).
+
 ## v001.822.0
 
 > 통합일: 2026-06-16
