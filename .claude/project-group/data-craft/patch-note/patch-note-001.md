@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.819.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스3
+
+**튜토리얼 차단막 컷아웃(밝은 스포트라이트 구멍)이 타깃을 정확히 감싸지 못하고 어긋나던 정렬 버그 핫픽스.** 컷아웃 rect 측정(`update()`)이 `[open, targetEl]` 변경 + window resize/scroll 에서만 1회 실행되어, 타깃이 들어있는 Radix Dialog 의 **열림 애니메이션(scale 95→100% + fade + translate)** 진행 중에 측정된 좌표가 최종 위치와 어긋났고, 애니메이션 종료 후 재측정이 없어 컷아웃이 stale 위치에 고정됐다(발견 풍선 B 튜토리얼 카드 스포트라이트에서 관측).
+
+### 페이즈 결과
+- **핫픽스3** (fix, `b19f32ed`): `DiscoveryHint`·`TutorialOverlay` 두 오버레이의 컷아웃 측정에 `requestAnimationFrame` 지속 추적 루프 추가 — 매 프레임 타깃 rect 를 재측정해 다이얼로그 애니메이션/레이아웃 변동을 따라가 정착 시 정확히 정렬. `prevRectRef`(useRef)로 직전 rect(top/left/width/height) 동일 시 `setState` 를 건너뛰어 정착 후 리렌더를 멈춰 무한 루프(핫픽스1 회귀) 방지. cleanup 에서 `cancelAnimationFrame`. resize/scroll 리스너 유지.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/DiscoveryHint.tsx
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all && lint exit 0(0 errors). advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(무한 리렌더 회귀 가드 정밀 점검 포함).
+- 교훈: createPortal/Radix Dialog 열림 애니메이션 중 1회 getBoundingClientRect 측정은 stale — 애니메이션 대상 위 오버레이는 rAF 지속추적 + 정착 가드가 정석.
+
 ## v001.818.0
 
 > 통합일: 2026-06-16
