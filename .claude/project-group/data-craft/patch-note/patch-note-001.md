@@ -26140,3 +26140,24 @@ data-craft:
 - src/shared/i18n/locales/en.ts
 
 비고: FE only, i18n 값 변경. typecheck:all+lint exit 0(0 errors/96 warnings 베이스라인 유지). advisor #2 = advisor() 일시 과부하로 advisor-fallback 서브에이전트(Opus 4.7, read-only) PASS 대체. 미반영 시 하드 리프레시(react-i18next Fast Refresh 한계).
+
+## v001.798.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #335 (funshare-inc/data-craft)
+
+**첫달 무료 프로모션 BE 자격·구매·갱신 로직 (Roadmap-10 #2).** basic급 0원 1개월 프로모션을 위한 신규 `free_status_once` eligibility 분기를 기존 프로모션 인프라 위에 증분 추가. 정규 결제 경로(billingSubscription)·추천인 엔진(#325/#326 머지 파일)은 무수정 보존. DDL(#1, enum + chk_promotion_price >=0 완화)은 선행 완료(i-dev `8c3e65f`), 본 작업은 코드만 선반영하는 dormant 상태 — 실제 작동은 DML 행 INSERT(Roadmap-10 #3) 후.
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)**: `PromotionEligibilityType` union 에 `'free_status_once'` 추가 + promotion.model.ts 에 `hasNonRollbackPromotionHistory(companyId, promotionId, connection)` 헬퍼 추가(`acdc4cf`). B안 이력 게이트 — `EXISTS(client_promotion WHERE company_id=? AND promotion_id=? AND (status<>'cancelled' OR retention_consumed_months>0))`. 근거: `rollbackActivation` 이 행을 `cancelled`+`consumed=0` 으로 남기고 `reason` 컬럼이 없어, cancelled+0 = 결제실패 롤백(재구매 허용)·그 외 = 영구 차단. 기존 `connection.execute`+`?` 패턴 준수.
+- **Phase 2 (feat, data-craft-server)**: `getPromotionEligibility` 루프에 `free_status_once` 4중 게이트 분기 추가(`unpaid_business_once` 뒤) + `purchasePromotion` step 3 에 동일 4중 게이트 재검증 + `acquireBusinessLock` 호출(`9b42d03`). 게이트 ① `planType!=='free'` ② `hasNonRollbackPromotionHistory` ③ `findReferralRelationByReferee`(피추천 제외) ④ `hasBusinessPurchasedPromotion`(사업자번호 1회). 자격조회는 락 미호출, 구매만 락 획득. 실패 시 기존 `PromotionError`(`not-qualified`/`business-already-purchased`) 재사용. `chargeAmount>0`·빌링키 가드 무수정.
+- **Phase 3 (fix, data-craft-server)**: `renewPromotionClient` 의 `monthlyGross<=0 → return false` 조기반환 3곳(협업 snapshot·협업 legacy seatsConn·비협업) 제거(`f0e16f8`). 0원이 Phase C(retention++·0원 payment_history·만료 연장)로 fall-through — charge 생략은 기존 `if(amount>0)` 가드가 처리. legacy 경로는 rollback 대신 기존 `commit` 으로 진행. 추천인 적립·차감·멱등 로직 무수정. 본 1개월 스펙은 retention 게이트(1>=1)에서 먼저 만료되어 미도달 — 향후 0원 다개월 대비 방어적 변경.
+
+### 영향 파일
+data-craft-server:
+- src/types/promotion.types.ts
+- src/models/promotion.model.ts
+- src/services/promotion.service.ts
+- src/services/billingRenewal.service.ts
+
+비고: BE only, FE 무수정(기존 프로모션 모달 재사용). 각 페이즈 pnpm build(tsc)+pnpm lint exit 0(fresh 워크트리 pnpm install 선행). 완료 검증 — dev psql verbatim 실측: 신규 EXISTS 쿼리 정상 실행, 게이트 ② 의미 진리표 4 케이스 정확(active/0·expired/0·cancelled/1=차단, cancelled/0=재구매 허용), enum 4값·`chk_promotion_price >= 0` 확인, 기존 운영 프로모션(id=2/all/priority=100/14900원) 라우팅 셋업 확인. advisor #1·#2 PASS(Opus 4.8). 전체 우선순위 라우팅 실측(free→101 노출, non-free→100 fall through)·prod 행은 Roadmap-10 #3(DML INSERT)→#4(배포) 위임. ⚠️ priority=101 필수(invisible-promotion 함정 — DML 단계 주의).
