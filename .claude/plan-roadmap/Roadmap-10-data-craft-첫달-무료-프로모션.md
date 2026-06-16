@@ -10,17 +10,15 @@
 
 🟢 /task-db-data data-craft — 첫달 무료 프로모션 행 1건 INSERT(1·2번 선행 필수 — enum·CHECK 완화·자격 분기 머지 후): `name='첫달 무료 프로모션'`, `base_plan_type=basic`, `monthly_price=0`, `is_collaboration=0`/`min_users=NULL`, `page_limit=7`, `group_limit=20`, `storage_limit=10GB`(10737418240), `file_size_limit=50MB`(52428800), `max_retention_months=1`, `display_start_at`=즉시/`display_end_at='2026-12-31 23:59:59'`, `eligibility_type='free_status_once'`, **`priority=101`**(기존 all 프로모션 priority=100 보다 높게 — `findActivePromotions` 가 `ORDER BY priority DESC` 라 free 고객이 본 프로모션을 먼저 만나 노출; 트리거 `trg_promotion_priority_insert` 가 동일 priority+윈도우 겹침 시 EXCEPTION 이므로 100 회피 필수), `detail_features`=베이직 플랜의 모든 기능 + 페이지·그룹·스토리지 추가 제공(파일 50MB 는 베이직과 동일이라 "추가" 항목 제외). dev psql INSERT + prod 반영은 4번 배포 시(또는 prod 행 INSERT 별도 포함 여부는 task-db-data 의 dev/prod 분리 정책 따름). **[완료 2026-06-16 (task-db-data, exec=dml-20260616012908-659b48): dev psql `data_craft_dev` INSERT 0 1 → id=3 행(basic/0원/priority=101/free_status_once, page7·group20·storage10GB·file50MB·retention1·노출 2026-06-16~12-31). i-dev 머지 `a5e2112`(capture/forward/rollback/plan.md audit). advisor PASS. 검증: 우선순위 정렬 `101→100` 정확, free client `aica` → 게이트①②③ 통과 → **101 노출**(#2 dormant BE 분기 실데이터 활성화 확인), `funshare`=id=2 사용 중 선차단. non-free client 가 dev 부재라 "→100 fall through" 는 논리 입증(BE 분기 #2 verbatim 검증 완료). **prod 행은 #4 배포 위임**(staging/prod 게이트 건너뜀). push 미수행.]**
 
-🔴 [최종 통합 배포 — 모든 dev 작업·테스트 완료 후 맨 마지막에 1회 일괄 수행] /pre-deploy data-craft — **본 단계는 첫달 무료 프로모션 단독 배포가 아니라, 누적된 모든 미배포 변경(이 프로모션 #335 BE + 그 외 병렬 작업)을 포함한 FE·BE·DB prod 일괄 배포다.** 마스터 결정(2026-06-16): 개발 환경에서 전 기능 테스트를 끝낸 뒤, 마지막 단계에서 FE·BE·DB 를 prod 에 **동시** 반영한다 — 이 프로모션 건만 따로 prod 에 내보내지 않는다.
+> **[최종 통합 배포 — 모든 dev 작업·테스트 완료 후 맨 마지막에 1회]** 마스터 결정(2026-06-16): 이 프로모션만 따로 내보내지 않고, 누적 미배포분(이 프로모션 #335 BE + 그 외 병렬 작업)을 prod 에 일괄 반영한다. **순서 = prod DB 먼저(db-task 스킬) → FE·BE 동시 배포(pre-deploy).** `/pre-deploy` 는 DB 작업 능력이 없으므로 DDL/DML 은 반드시 db-task 스킬이 수행한다(하니스 §3 — DB 작업은 db-task 소유, 수동 psql 우회 금지). 착수 전제: #1~#3 + 그 외 모든 예정 작업이 dev/i-dev 완료·검증 후 main 정렬.
 
-  착수 전제: Roadmap-10 #1~#3 + 그 외 모든 예정 작업이 dev/i-dev 에서 완료·검증되고 main 에 정렬된 상태.
+🔴 [최종 ④] /task-db-structure data-craft — **prod DDL**(첫달 무료 프로모션 #1 의 prod 적용): `free_status_once` enum 추가 + `chk_promotion_price > 0 → >= 0` 완화. 출처 마이그레이션 `data-craft-server/docs/migration/ddl-changes/20260616120000_promotion-zero-price-free-status-once/up.sql`(dev 적용 완료분과 동일). `분리` 정책상 dev 는 이미 적용됐으니 **dev 게이트 건너뛰기 → prod 게이트만 진행**. additive·CHECK 완화는 구버전 prod BE 와 공존 안전(선적용 OK). enum 추가는 비가역(무해 잔존). ⑤ DML 보다 **반드시 먼저**(0원 행 INSERT 전제).
 
-  배포 구성(한 윈도우에 함께):
-  - **DB**: 1번 prod 마이그레이션 SQL(`free_status_once` enum 추가 + `chk_promotion_price >= 0` 완화)을 prod psql 에 **선적용**(DDL 선행 — additive·CHECK 완화는 구버전 코드와 공존 안전) → 프로모션 행 prod INSERT(**priority=101 유지** — prod 에도 운영 프로모션 priority=100 존재 가정, prod psql 실측 재확인). dev 전용이던 행을 prod 에 반영.
-  - **BE**(`data-craft-server`): ⚠️ **선행 코드 갭** — prod psql 좌표 `PG_*_PROD` 분기(`constant.ts`)가 미구현이면 prod BE 가 dev psql 로 오접속(db.md §전환 상태). 배포 전 PG 좌표 `_PROD` 분기 코드 + EC2 `.env` `_PROD` 주입 선행 필수. 이후 `pnpm build` → `main:aws-deploy` push → EC2 SSH `git pull && pnpm build && pm2 restart`(서버 직접 pull 필요, GitHub Actions 잔재 미동작).
-  - **FE**(`data-craft` 외 필요 타깃): `pnpm build` → gh-pages 퍼블리시.
-  - 배포 우선순위: 서버(BE) 먼저 → FE(deploy.md). origin push 권한은 본 단계 인자에 명시.
+🔴 [최종 ⑤] /task-db-data data-craft — **prod DML**(첫달 무료 프로모션 #3 의 prod 적용): 프로모션 행 1건 INSERT(dev `forward.sql` 과 동일, **priority=101 유지**). `분리` 정책상 dev 건너뛰기 → prod 게이트만. **prod psql 실측 선행**: 기존 운영 프로모션 priority=100 / priority=101·윈도우 겹침 행 부재 확인(트리거 `trg_promotion_priority_insert` EXCEPTION 회피). ④ DDL 적용 후에만 가능.
 
-  종료: prod 노출 확인(free 테스트 기업에 첫달무료 노출, non-free 에 기존 프로모션 노출) + dev=prod 미러 상태 확인.
+🔴 [최종 ⑥] /pre-deploy data-craft — **FE·BE 앱 배포 동시**(④⑤ prod DB 완료 후): 멀티타깃 선택 `data-craft-server`(BE) + `data-craft`(FE) → 빌드 검증 → 배포. deploy.md 우선순위상 BE 먼저 → FE. ⚠️ **BE 선행 코드 갭**: prod psql 좌표 `PG_*_PROD` 분기(`constant.ts`)가 미구현이면 prod BE 가 dev psql 오접속(db.md §전환 상태) → `_PROD` 분기 코드 + EC2 `.env` `_PROD` 주입을 본 단계 **이전에** 별도 plan-enterprise 로 해소. BE = `pnpm build` → `main:aws-deploy` push → EC2 SSH `git pull && pnpm build && pm2 restart`(서버 직접 pull). FE = `pnpm build` → gh-pages. origin push 권한은 인자에 명시.
+
+  종료: prod 노출 확인(free→첫달무료, non-free→기존 프로모션) + dev=prod 미러 확인.
 
 ---
 
@@ -59,4 +57,4 @@
 ### 종료 조건
 
 - 1~3번 i-dev 머지 + dev 실측(양 프로모션 자격 순서·0원 구매·만료) 통과. **(2026-06-16 완료 — #1·#2·#3 🟢)**
-- 4번은 **최종 통합 배포**로 재구성(2026-06-16 마스터 결정): 이 프로모션만 단독 배포하지 않고, 모든 dev 작업·테스트 완료 후 누적 미배포분(FE·BE·DB)을 prod 에 일괄 반영. 합격 기준 = prod 노출 확인(free→첫달무료, non-free→기존 프로모션) + dev=prod 미러 확인. 그때까지 prod 무변경(이 프로모션은 dev 잠복 상태로 대기 — 구 prod BE 는 `free_status_once` 분기 부재로 무회귀).
+- **최종 통합 배포 = ④⑤⑥ 3스킬 순차**(2026-06-16 마스터 결정, 4번 단일 pre-deploy 에서 분해): prod DB 먼저 → FE·BE 동시. ④ `/task-db-structure`(prod DDL) → ⑤ `/task-db-data`(prod 행 INSERT) → ⑥ `/pre-deploy`(BE+FE 앱 배포). `/pre-deploy` 는 DB 능력이 없어 DDL/DML 은 db-task 스킬이 소유(하니스 §3, 수동 psql 우회 금지). 이 프로모션만 단독 배포하지 않고 누적 미배포분과 한 윈도우에 일괄. 합격 = prod 노출 확인(free→첫달무료, non-free→기존 프로모션) + dev=prod 미러 확인. 그때까지 prod 무변경(프로모션은 dev 잠복 대기 — 구 prod BE 는 `free_status_once` 분기 부재로 무회귀).
