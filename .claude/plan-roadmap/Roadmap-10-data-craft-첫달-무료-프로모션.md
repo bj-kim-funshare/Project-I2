@@ -2,6 +2,9 @@
 
 > 작성일: 2026-06-15 | 대상: basic급 0원 1개월 프로모션 — free(완전 구독 취소)·본 프로모션 미사용·비피추천 기업 한정 노출
 
+> ## ✅ 종료 (2026-06-16, 마스터 결정)
+> 프로모션 구축 완료 — **dev·prod DB(enum·CHECK·행) + BE 자격·구매·갱신 로직 전부 적용·검증**(①~⑤ 🟢). 마지막 ⑥ 앱 배포는 본 프로모션 단독으로 내보내지 않고 **차기 범용 배포(모든 작업 종료 후 main HEAD 일괄)로 이관** — 본 로드맵은 종료 처리. 현재 prod 행은 잠복(구 prod BE 가 `free_status_once` 분기 부재로 건너뜀, 무회귀), 범용 배포로 BE 가 올라가는 순간 활성화. 잔여 후속: db.md prod DB명(`postgres`→`data_craft_production`)·"선행 코드 갭" 오기 정정(별도 /group-policy).
+
 ## 프롬프트
 
 🟢 /task-db-structure data-craft — 프로모션 시스템 DDL 보강: `promotion_eligibility_type_enum` 에 신규 값 `free_status_once` 추가 + `chk_promotion_price` 제약을 `monthly_price > 0` → `monthly_price >= 0` 으로 완화(0원 프로모션 허용). dev psql 적용 + prod 반영용 마이그레이션·롤백 파일 작성(prod 실적용은 4번 배포 시). additive·비파괴. ※ enum 값 추가는 PostgreSQL 에서 트랜잭션 제약 있음(ALTER TYPE ... ADD VALUE 는 일부 버전에서 트랜잭션 밖 실행 필요) — 마이그레이션 작성 시 엔진 동작 확인. **[완료 2026-06-16: `docs/migration/ddl-changes/20260616120000_promotion-zero-price-free-status-once/`(up/down/plan.md) 작성, advisor PASS, dev psql `data_craft_dev` 적용·검증 통과(enum 4값·`chk_promotion_price >= 0`), i-dev 머지 8c3e65f. prod 는 4번 배포 윈도우 수동 psql 적용 대기. down.sql CHECK 원복은 3번 0원 행 INSERT 이전에만 유효. PG16 은 트랜잭션 내 ADD VALUE 가능 — 우려한 트랜잭션 밖 실행 불요.]**
@@ -16,9 +19,7 @@
 
 🟢 [최종 ⑤] /task-db-data data-craft — **prod DML**(첫달 무료 프로모션 #3 의 prod 적용): 프로모션 행 1건 INSERT(dev `forward.sql` 과 동일, **priority=101 유지**). `분리` 정책상 dev 건너뛰기 → prod 게이트만. **prod psql 실측 선행**: 기존 운영 프로모션 priority=100 / priority=101·윈도우 겹침 행 부재 확인(트리거 `trg_promotion_priority_insert` EXCEPTION 회피). ④ DDL 적용 후에만 가능. **[완료 2026-06-16 (task-db-data, exec=dml-20260616024052-5dc3da): prod `data_craft_production` INSERT 0 1 → id=3(basic/0원/free_status_once/priority=101/retention1/노출~2026-12-31). 검증: 우선순위 101→100 정렬, prod client 모집단 free 3+premium 1(⑥ 배포 후 라우팅 작동). i-dev 머지 `8f91452`, advisor PASS. prod DB 완성 — 남은 건 ⑥ 앱 배포뿐. 현재 구 prod BE 가 분기 부재로 본 행 건너뜀(잠복, 무회귀).]**
 
-🔴 [최종 ⑥] /pre-deploy data-craft — **FE·BE 앱 배포 동시**(④⑤ prod DB 완료 후): 멀티타깃 선택 `data-craft-server`(BE) + `data-craft`(FE) → 빌드 검증 → 배포. deploy.md 우선순위상 BE 먼저 → FE. ⚠️ **BE 선행 코드 갭**: prod psql 좌표 `PG_*_PROD` 분기(`constant.ts`)가 미구현이면 prod BE 가 dev psql 오접속(db.md §전환 상태) → `_PROD` 분기 코드 + EC2 `.env` `_PROD` 주입을 본 단계 **이전에** 별도 plan-enterprise 로 해소. BE = `pnpm build` → `main:aws-deploy` push → EC2 SSH `git pull && pnpm build && pm2 restart`(서버 직접 pull). FE = `pnpm build` → gh-pages. origin push 권한은 인자에 명시.
-
-  종료: prod 노출 확인(free→첫달무료, non-free→기존 프로모션) + dev=prod 미러 확인.
+🟢 [최종 ⑥ — 범용 배포로 이관] /pre-deploy data-craft — **FE·BE 앱 배포**. **마스터 결정(2026-06-16): 본 프로모션 단독 배포를 하지 않고, 모든 작업 종료 후 차기 범용 배포(main HEAD 일괄)에서 함께 나간다 → 본 로드맵 트래킹에서는 이관·종료 처리.** 범용 배포가 main HEAD 의 #2 BE(`free_status_once` 분기)를 EC2 에 반영하는 순간 prod free 기업에 첫달무료 노출 시작(BE = `pnpm build` → `main:aws-deploy` push → EC2 SSH `git pull && pnpm build && pm2 restart`; FE = `pnpm build` → gh-pages, deploy.md 우선순위 BE 먼저). ✅ **PG_*_PROD 분기 코드 구현 완료 확인(2026-06-16 실측)** — `constant.ts resolvePgCoord` 가 prod 좌표 분기(미설정 시 throw), 배포 전 BE 코드 선행작업 불필요(과거 "선행 코드 갭" 경고는 사문). DB 재작업 금지(④⑤ 이미 prod 적용). 노출 확인(free→첫달무료, non-free→기존 프로모션)은 범용 배포 후 QA.
 
 ---
 
