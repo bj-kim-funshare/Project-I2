@@ -26633,3 +26633,33 @@ data-craft-server:
 
 ### 비고
 - **End-to-end 실측 검증**: Sendbird API로 서버 로직 재현 — create(profile_url:'')→200, issueSessionToken→200(실제 JWT 발급) 확인. nodemon 자동 재반영으로 live. 최종 런타임 회복(500→200)은 master 모바일 재로그인으로 확정. advisor #2 PASS. origin push 미수행. 교훈: Sendbird Platform API 신규 호출은 필수 필드를 실호출로 검증(create=profile_url 필수).
+
+## v001.821.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #343 (Roadmap-11 P2 — 채널목록 + 채팅룸 화면)
+
+P1(#339)+핫픽스(#340)로 검증된 Sendbird 연결 코어 위에 **채팅 UI**를 구축. `/dm` "Chat" 탭의 placeholder를 실제 채널목록으로 교체, 채팅룸(텍스트 메시지 송수신·히스토리·읽음·타이핑) 신설, 하단 탭 안읽음 뱃지를 Sendbird 실값으로 연동. mobile-only(data-craft-mobile), 서버 무수정(P1 엔드포인트·Sendbird 소켓 재사용), 텍스트 메시지 전용(미디어는 로드맵 P4).
+
+### 페이즈 결과
+- **Phase 1 (feat)** `2ad07c6`: `lib/chat/chat_channels_provider.dart`(GroupChannelCollection+Handler 채널목록·`GroupChannelListQuery` latestLastMessage 정렬 + `chatUnreadCountProvider` 채널 unread 합산 reactive), `lib/chat/user_directory_provider.dart`(`getUserList`→`Map<int,UserListItemDto>` 캐시), `lib/chat/widgets/user_avatar.dart`(`dioClient` bytes fetch 인증 이미지→`Image.memory`, 이니셜 폴백 — 기존 `Image.network`는 Dio 인증헤더 미첨부라 auth-gated `/storage` 부적합).
+- **Phase 2 (feat)** `d3fff72`: `lib/chat/chat_messages_provider.dart`(autoDispose family channelUrl — MessageCollection+Handler 히스토리(initialize/loadPrevious)·실시간 송수신·`sendUserMessage`·`markAsRead`·`startTyping/endTyping`·GroupChannelHandler `onTypingStatusUpdated`→`getTypingUsers()`→typingMembers, onDispose 정리).
+- **Phase 3 (feat)** `7c3be71`: `lib/screens/dm/chat_room_screen.dart`(메시지 리스트·발신/수신 말풍선·UserAvatar+nickname·loadPrevious·markAsRead·타이핑 인디케이터·composer→sendUserMessage) + `app_router.dart` `/dm` child `:channelUrl`→ChatRoomScreen + l10n `dmRoom*` 키(en/ko).
+- **Phase 4 (feat)** `ab0b03e`: `lib/screens/dm/chat_list_screen.dart`(InboxScreen 패턴 — 채널별 UserAvatar·표시명(1:1=상대 nickname/그룹=members join)·마지막메시지·시각·안읽음 뱃지, 탭→`/dm/:channelUrl`, loading/empty/error+RefreshIndicator) + `app_router.dart` `/dm` builder DmPlaceholder→ChatListScreen 교체 + l10n `dmList*` 키. (dm_placeholder.dart 미삭제 보존.)
+- **Phase 5 (feat)** `4ebd01b`: `lib/screens/main_shell/widgets/bottom_nav_bar.dart` AppBottomNavBar StatelessWidget→ConsumerWidget, `/dm` 탭 하드코딩 `badge:2`→`ref.watch(chatUnreadCountProvider)`(0이면 미표시). inbox `7`은 범위 밖 유지.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_channels_provider.dart
+- lib/chat/user_directory_provider.dart
+- lib/chat/widgets/user_avatar.dart
+- lib/chat/chat_messages_provider.dart
+- lib/screens/dm/chat_room_screen.dart
+- lib/screens/dm/chat_list_screen.dart
+- lib/router/app_router.dart
+- lib/l10n/app_en.arb · lib/l10n/app_ko.arb
+- lib/screens/main_shell/widgets/bottom_nav_bar.dart
+
+### 비고
+- Sendbird v4 SDK 정확 API명은 phase-executor가 설치 패키지(4.10.0)에서 확인(GroupChannelCollection/MessageCollection/onTypingStatusUpdated 등). 각 페이즈 `flutter analyze` 0 error(전체 9 issues=기존 info, scope 외). l10n gen 파일은 gitignore. advisor #1=advisor-fallback(엔드포인트 과부하), advisor #2=advisor() PASS.
+- **런타임 검증 대기(master)**: dev 서버 기동 + flutter 재기동 + **dev 회사에 최소 2 user** + P1 `POST /api/chat/channels`로 dev 채널 2개 사전 생성 → 2계정 채널목록·룸·송수신·실시간·읽음·타이핑·하단 뱃지 실측. origin push 미수행(표준 종료점).
