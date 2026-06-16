@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.839.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스14
+
+**튜토리얼 시나리오 엔진을 시작-컨텍스트 인지형으로 전면 재설계.** 기존 엔진은 고정 인덱스로만 진행해 시작 상태(뷰/디자인 모드, 페이지·섹션 유무) 분기가 전혀 없었다 — 예: "섹션 꾸미기"를 뷰 모드에서 시작하면 디자인 전환 안내 없이 addSection 앵커 부재로 멈췄다.
+
+### 페이즈 결과
+- **핫픽스14** (refactor, `a4e4f712`): 단계 모델을 `activeWhen`(현재 활성) → **`completeWhen(ctx)`**(목표 달성 여부)로 전환. 엔진은 `computeActiveStep`으로 **skipFloor부터 첫 미완료 단계**를 active로 계산 → **이미 충족된 선행 단계를 자동 스킵**. 모든 시나리오 앞에 **enterDesignMode(`completeWhen: isDesignMode`)·createPage(`completeWhen: hasPage`)** 선행 단계 추가(뷰 모드 시작 → 디자인 전환부터, 디자인 모드면 스킵; 페이지 없으면 생성 안내, 있으면 스킵). `useTutorialController`가 ctx 변화마다 active를 store에 기록(`setActive` 동일값 가드로 무한루프 방지 — 핫픽스1 교훈), 전부 완료 시 stop. "다음" 버튼은 advance→**skip**(현재 단계 건너뜀). `HintContext`에 `hasPage=!!currentPageId` 추가.
+- 3 시나리오(페이지/섹션/입력폼) 모두 선행 prefix + 단계별 completeWhen으로 재정의.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/model/{scenarioRegistry,tutorialStore,hintRegistry}.ts
+- src/features/onboarding/lib/{useActiveOnboardingHint,useTutorialController}.ts
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(무한 리렌더 가드·엔진 논리 정밀 검증 — 원자 셀렉터·setActive 가드로 루프 없음 단정).
+- 후속(런타임 튜닝): 일부 단계 completeWhen(예 areaControlBar=위젯 선택, widget 텍스트 단계)은 상태 전이가 모호해 dev 실측 후 미세조정 여지. 본 핫픽스의 핵심은 시작-컨텍스트 자동 분기 메커니즘.
+
 ## v001.837.0
 
 > 통합일: 2026-06-16
