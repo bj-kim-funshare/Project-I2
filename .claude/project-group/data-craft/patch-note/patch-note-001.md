@@ -27183,3 +27183,20 @@ data-craft:
 - **런타임 검증(typecheck로 불충분 — 본 결함이 그 사각)**: ①`react-dom-server-legacy.browser.development.js` util 의존 grep = 0(소스 확증) ②격리 워크트리 vite(5180)에서 변환된 `iconFavicon.ts`가 `react-dom_server__browser.js` 로드·`.node` 매칭 0 ③root 페이지 HTTP 200 + `id="root"` ④vite pre-bundled `react-dom_server__browser.js` dep 200. 크래시가 import-time 결함이라 모듈 정상 로드 = 크래시 불가. 검증 후 5180 서버 정리(마스터 공유 환경 무접촉).
 - 마스터 환경: import-time 크래시였으므로 HMR 자동복구 불가 → dev 서버에서 **하드 리프레시(Cmd+Shift+R) 1회** 필요. origin push 미수행.
 - 교훈: FE 코드의 `react-dom/server` import = Vite 브라우저 번들 util.TextEncoder 크래시(typecheck/lint/build 통과) — 브라우저 렌더 필요 시 `react-dom/server.browser` 사용.
+
+## v001.845.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #346 핫픽스3
+
+P3 채널 생성/초대의 **진짜 근본 결함**(master: 2명 선택했는데 1명만): 선택한 멤버가 채널에 안 들어감. 원인=**Sendbird `POST /v3/group_channels`는 미존재 user_id를 조용히 드롭**하는데, 우리 앱은 user가 로그인(chat connect)할 때만 Sendbird에 upsert → 아직 로그인 안 한 회사 멤버는 Sendbird에 없어서 채널 생성/초대 시 누락(서버 진실: 채널 member_count 1, members=[생성자]만). 그동안의 멤버-표시 핫픽스(#341~343)는 표시 로직만 고쳤고 데이터에 멤버가 1명뿐이라 "나만" 보였던 것.
+
+### 페이즈 결과
+- **Phase 14(핫픽스3) (fix, data-craft-server)** `b338209`: `chat.controller.ts` `createChannelController`·`inviteChannelMembersController`에서 `createGroupChannel`/`inviteGroupChannelMembers` 호출 **직전에 멤버 전원을 `Promise.all(upsertUser(id, name))`로 Sendbird 선등록**(name=findUsersByCompanyId 실명, profile_url 빈값, idempotent). 미로그인 멤버도 Sendbird 신원이 생겨 채널에 정상 추가됨. companyId 격리 검증은 앞단 유지. pnpm build(tsc)+pnpm lint exit 0.
+
+### 영향 파일
+data-craft-server:
+- src/controllers/chat.controller.ts
+
+### 비고
+- 머지 직후 좀비 채널(member_count 1·0) 3개 Sendbird 정리. advisor #2 PASS. origin push 미수행. 교훈: **채널에 user를 추가하려면 그 user가 Sendbird에 먼저 존재해야 함 — 서버 채널 중개가 멤버 upsert를 책임진다(로그인 의존 X)**. 회복=master 2인 선택 시 자기 포함 3명 채널 생성.
