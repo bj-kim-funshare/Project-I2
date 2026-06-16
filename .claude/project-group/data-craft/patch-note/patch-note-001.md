@@ -27145,3 +27145,22 @@ data-craft-mobile:
 
 ### 비고
 - advisor #2 PASS. origin push 미수행. 후속(범위 밖, 무해): (a)`/dm/:channelUrl/invite` go_router 라우트 dead-code화(초대는 MaterialPageRoute 직접 push) — chore 정리. (b)MemberPickerScreen actionLabel이 invite 모드에서도 "만들기" 표시(P4 선재) — 거슬리면 `dmPickerInviteAction "초대"` 1줄 핫픽스. (c)settings invite/leave 직후 즉시 반영은 reload 필요(소형).
+
+## v001.844.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #345 (동적 브라우저 탭 — 핫픽스1)
+
+v001.840.0(동적 브라우저 탭) 머지 후 **앱 전체 블랭크 화면** 발생. 콘솔: `Uncaught TypeError: util.TextEncoder is not a constructor` (`react-dom-server.node.development.js`). 근본 원인 = Phase 2 `iconFavicon.ts`가 `react-dom/server`를 import → Vite 브라우저 번들에서 Node용 `server.node` 빌드로 해석 → 브라우저에 없는 Node `util.TextEncoder` 호출로 크래시. 이 모듈을 `TabContextHost`(라우터 루트 마운트)가 import-time에 로드하므로 앱 전체가 안 뜸. **typecheck/lint/build가 못 잡는 브라우저-vs-Node 런타임 결함 클래스**.
+
+### 페이즈 결과
+- **핫픽스1 (fix, data-craft)** `b896d5dc`: `src/shared/lib/iconFavicon.ts` import 소스 `react-dom/server` → `react-dom/server.browser` 단일 변경(렌더 로직·시그니처·memoize 무수정). server.browser는 `react-dom-server-legacy.browser` 빌드로 브라우저 네이티브 global TextEncoder 사용(Node util 의존 0).
+
+### 영향 파일
+data-craft:
+- src/shared/lib/iconFavicon.ts
+
+### 비고
+- **런타임 검증(typecheck로 불충분 — 본 결함이 그 사각)**: ①`react-dom-server-legacy.browser.development.js` util 의존 grep = 0(소스 확증) ②격리 워크트리 vite(5180)에서 변환된 `iconFavicon.ts`가 `react-dom_server__browser.js` 로드·`.node` 매칭 0 ③root 페이지 HTTP 200 + `id="root"` ④vite pre-bundled `react-dom_server__browser.js` dep 200. 크래시가 import-time 결함이라 모듈 정상 로드 = 크래시 불가. 검증 후 5180 서버 정리(마스터 공유 환경 무접촉).
+- 마스터 환경: import-time 크래시였으므로 HMR 자동복구 불가 → dev 서버에서 **하드 리프레시(Cmd+Shift+R) 1회** 필요. origin push 미수행.
+- 교훈: FE 코드의 `react-dom/server` import = Vite 브라우저 번들 util.TextEncoder 크래시(typecheck/lint/build 통과) — 브라우저 렌더 필요 시 `react-dom/server.browser` 사용.
