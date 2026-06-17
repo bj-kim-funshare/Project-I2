@@ -27364,3 +27364,22 @@ data-craft:
 - 의도적 동작 변경(시안 전체 반영, master 승인): 사용자 그리드 즉시커밋→저장형, 국가 검색 live→Enter, 그리드 단일선택 토스트 신규.
 - **시각/런타임 검증은 마스터 확인 대상**: ~3,000라인 UI 변경이며 dev 렌더 확인 없음(typecheck/lint는 렌더 못 봄). 그리드 3타입 앵커·너비·실시간 tick·검색 Enter·multi 저장/3-state·크게보기 모달·더보기 띠·다크모드 토큰·4언어 라벨 확인 권장. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
 - 잠복 항목(향후 다른 타입 확장 시): `searchable=false`이면 '크게 보기' 버튼이 search row와 함께 숨겨짐 — 현 6 소비처는 전부 searchable이라 영향 없음.
+
+## v001.853.0
+
+> 통합일: 2026-06-16
+> 단독 기능: 동적 탭 파비콘 색 테마 연동 (#345 후속)
+
+동적 탭(v001.840.0) 파비콘 아이콘이 항상 보라색(#7c3aed) 고정이던 것을 **사용자 테마에 연동**. 환경 테마(USER_THEMES 21종)면 그 테마의 실제 색(`--primary`), 화이트/다크/시스템이면 `#0ea5e9`(sky).
+
+### 페이즈 결과
+- **기능 (feat, data-craft)** `9e220195`: `themeStore.ts`에 `getThemeFaviconColor(theme)` 추가 — `USER_THEMES.includes(theme)`면 숨김 span 프로브에 `color:var(--primary)`를 적용해 `getComputedStyle().color`로 브라우저가 OKLCH→rgb 해석한 실제 색을 읽고(파비콘 안전, 직접 oklch 파싱 없음), 아니면 `#0ea5e9` 반환. `iconFavicon.ts` `iconNameToFaviconDataUri(iconName, color='#7c3aed')` color 파라미터화 + 캐시키 `iconName|color`(테마 전환 시 스테일 색 방지). `TabContextHost`가 `theme` 구독 + `getThemeFaviconColor(theme)` 전달 + effect deps에 `theme` 추가(전환 즉시 재렌더).
+
+### 영향 파일
+data-craft:
+- src/entities/theme/model/themeStore.ts · src/entities/theme/index.ts
+- src/shared/lib/iconFavicon.ts · src/app/router/TabContextHost.tsx
+
+### 비고
+- typecheck:all && lint exit 0. 색 출처=실제 `--primary`(UI 주색과 일치). 프로브 getComputedStyle은 보통 rgb 반환(파비콘 안전); 일부 브라우저가 oklch 반환해도 모던 Chrome SVG 렌더 가능.
+- 시각 검증(마스터): 환경 테마 전환 시 탭 아이콘 색이 테마색으로 바뀌는지, 화이트/다크는 sky(#0ea5e9)인지. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
