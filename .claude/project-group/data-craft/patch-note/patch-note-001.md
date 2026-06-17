@@ -27577,3 +27577,26 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0. 색 출처=실제 `--primary`(UI 주색과 일치). 프로브 getComputedStyle은 보통 rgb 반환(파비콘 안전); 일부 브라우저가 oklch 반환해도 모던 Chrome SVG 렌더 가능.
 - 시각 검증(마스터): 환경 테마 전환 시 탭 아이콘 색이 테마색으로 바뀌는지, 화이트/다크는 sky(#0ea5e9)인지. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
+
+## v001.863.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #353
+
+선택 상자형(singleSelect/multiSelect) 열의 "열 본문 스타일 편집" 조건에서 값 선택 드롭다운이 비어 조건을 지정할 수 없던 문제 수정. 조건 다이얼로그가 `columnModel.optionList` 원본만 옵션 소스로 써서, `optionList`가 빈 선택 상자형 열(외부 sync·레거시 등)에서는 placeholder("—")만 표시됐다. 셀 렌더러가 쓰는 정식 옵션 소스(빈 optionList 시 customDataList/row 폴백)에 호출부를 배선해 해결. 3개 뷰어 사본 일관 적용.
+
+### 페이즈 결과
+- **Phase 1 (fix, fs-data-viewer)** `1cf5dcf8`: menuItems.ts `openCellStyleDialog` 3번째 인자를 `columnModel.optionList`에서 `deriveSelectOptions(columnModel, currentViewerModel, { splitByComma: multiSelect })` 결과로 교체(렌더러와 동일 헬퍼). 반환 `{label;color?}`를 `color ?? ''` 매핑해 `FsGridOptionInfo[]` 타입 충족.
+- **Phase 2 (fix, fs-sub-data-viewer)** `3c78b92f`: menuItems.ts 호출부를 `optionList?.length ? optionList : (customDataList ?? []).map(label => ({label, color:''}))` 인라인 폴백으로 교체 — 해당 패키지 rendererMap 폴백과 일치(헬퍼 없음).
+- **Phase 3 (fix, fs-external-data-viewer)** `f8d48bd7`: Phase 2와 동일한 인라인 폴백 적용.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+- packages/fs-sub-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+- packages/fs-external-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+
+### 비고
+- typecheck:all && lint exit 0 (3 페이즈 전부).
+- 미해결(후속 후보): 동일 다이얼로그의 `user` 열 타입 값 드롭다운도 `menuItems`가 `userList` 미전달로 비어 있음 — 배선(`useTableViewInit → useGridColumnMenu`) 추가가 필요해 본 플랜 제외.
+- 검증(마스터): 스크린샷의 선택 상자형 열 + `optionList` 빈/`customDataList` 보유 열에서 조건 값 드롭다운에 선택지 노출 확인. dev=fs_data_viewer src alias(머지만으로 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 dist alias라 build:packages 후 재기동. origin push 미수행.
