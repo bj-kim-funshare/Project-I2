@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.856.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 (funshare-inc/data-craft)
+
+**그룹 채팅 관리 심화 — 방장(운영자) 권한 + 채팅방 삭제.** Sendbird operator를 서버에서 강제하고 모바일 설정 화면에 노출했다. 이름변경은 방장만, 초대는 누구나 유지, 방장은 멤버 강퇴·방장 위임·채팅방 삭제 가능.
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)** `62170ea`: `sendbird.service.ts`에 `listGroupChannelOperators`(GET `/v3/group_channels/{url}/operators`, `next` 토큰 페이징), `deleteGroupChannel`(DELETE `/v3/group_channels/{url}`), `addGroupChannelOperators`(POST `.../operators` body `{operator_ids}`) 신설. 강퇴는 기존 `leaveGroupChannel(url,[targetId])` 재사용. REST 계약은 메인 세션 curl 실측(전부 200). `sendbird.types.ts`에 `SendbirdOperatorsResponse` 추가.
+- **Phase 2 (feat, data-craft-server)** `c197209`: `chat.controller.ts`에 `assertRequesterIsOperator` 가드 헬퍼(operator 미포함 시 `ForbiddenError`→403) + `deleteChannelController`(CHAT-C-006)·`kickMemberController`(CHAT-C-007)·`promoteOperatorController`(CHAT-C-008). `updateChannelController`에 operator 가드 삽입(이름변경=방장 전용). `inviteChannelMembersController`는 무가드 유지(초대=누구나). `routes/chat.ts` 3 라우트(`DELETE /channels/:channelUrl`, `DELETE .../members/:userId`, `POST .../operators` — 세그먼트 수로 기존 `/leave`와 구분). `permission.middleware.ts` FREE allowlist 3엔트리 추가.
+- **Phase 3 (feat, data-craft-mobile)** `9aced41`: `chat_api.dart`에 `deleteChannel`·`kickMember(int userId)`·`promoteOperator(int userId)` — 기존 leave/rename 패턴 미러, 전부 `Future<void>`.
+- **Phase 4 (feat, data-craft-mobile)** `ff4d7fc`: `channel_settings_screen.dart` 권한 분기 UI. `_loadedMembers`를 `List<Member>`로(MemberListQuery가 `show_member_is_muted=true`로 호출돼 `_UserConverter`가 `Member.fromJson` 생성 → `cast<Member>()` 런타임 안전, SDK 소스 실측 확인), `_isCurrentUserOperator`(role==`Role.operator`). 멤버 타일 방장 뱃지, per-member PopupMenu(operator且비본인: 강퇴 + 비operator 대상에 방장지정), rename 섹션·"채팅방 삭제"(error색·confirm→`/dm`)=operator 전용, invite=무조건. 비operator/1:1=나가기만. l10n app_en/ko.arb 키 추가.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts
+- src/types/sendbird.types.ts
+- src/controllers/chat.controller.ts
+- src/routes/chat.ts
+- src/middlewares/permission.middleware.ts
+
+data-craft-mobile:
+- lib/api/chat_api.dart
+- lib/screens/dm/channel_settings_screen.dart
+- lib/l10n/app_en.arb
+- lib/l10n/app_ko.arb
+
+### 비고
+- operator 판별 신뢰원본=서버(모든 mutating 호출마다 `listGroupChannelOperators` 재검증), 클라 `Member.role`은 UI 게이팅용 표시 — 클라 표시가 틀려도 서버가 403으로 차단.
+- 검증: 서버 `pnpm build`(tsc)+`pnpm lint` exit 0, 모바일 `flutter analyze` 0(본 페이즈 파일). REST 계약 curl 실측. advisor #1·#2 PASS.
+- 비차단 후속 후보: ① operator의 operator 강퇴 허용(정책 미제약) ② promote/kick에 companyId 격리 미적용(operator 검증으로 실효 안전) ③ 마지막 operator 퇴장 시 operator-less 채널(범위 외). origin push 미수행.
+
 ## v001.855.0
 
 > 통합일: 2026-06-17
