@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.870.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스7
+
+방장 동작을 **"지정(추가)"에서 "위임(transfer)"으로** 정정(master) — 한 채널에 **방장은 항상 1명만** 존재해야 함. 기존 `addGroupChannelOperators`는 operator를 추가해 여러 명이 될 수 있었음.
+
+### 페이즈 결과
+- **Phase 11(핫픽스7 server) (fix, data-craft-server)** `c64a4b1`: `sendbird.service.ts`에 `transferGroupChannelOperator(channelUrl, newOperatorId)` 신설 — `PUT /v3/group_channels/{url}` body `{operator_ids:[newOperatorId]}`로 **operator 셋 전체를 대상 1명으로 교체**(기존 방장 자동 강등, curl 실측 `['6']→['901']`). `promoteOperatorController`가 `addGroupChannelOperators`→`transferGroupChannelOperator` 호출로 교체(가드=현 방장만 위임 가능 유지), 응답 `{transferred:true}`. 미사용 import 제거. build+lint 0.
+- **Phase 11(핫픽스7 mobile) (fix, data-craft-mobile)** `8033a4c`: l10n `dmSettingsPromote` "방장으로 지정"→**"방장 위임"**, confirm "이 멤버에게 방장을 위임할까요? 내 방장 권한은 해제됩니다.", error "방장 위임에 실패했습니다." (en 동일 의도). flutter analyze 0.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts
+- src/controllers/chat.controller.ts
+data-craft-mobile:
+- lib/l10n/app_ko.arb
+- lib/l10n/app_en.arb
+
+### 비고
+- 위임 후 위임자는 일반 멤버로 강등 → 설정 새로고침 시 방장 전용 UI(rename·삭제·멤버 액션) 사라지고 대상에 방장 뱃지 이동. origin push 미수행.
+
 ## v001.869.0
 
 > 통합일: 2026-06-17
