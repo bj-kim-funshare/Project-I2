@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.861.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스2
+
+채팅 설정 화면의 다이얼로그가 전부 기본 Material `AlertDialog`(시스템 디자인)라 이질적 → master 지시("애초에 시스템 디자인 쓰지 마")로 재사용 서비스 디자인 다이얼로그 컴포넌트를 만들어 일괄 교체.
+
+### 페이즈 결과
+- **Phase 6(핫픽스2) (fix, data-craft-mobile)** `d7a8189`+`dc41ea2`: 신규 `lib/chat/widgets/service_dialog.dart` — 앱의 유일한 서비스 디자인 다이얼로그 선례(`withdraw_dialog.dart`)를 미러한 재사용 헬퍼 2종: `showServiceConfirmDialog`(커스텀 `Dialog` rounded16·insetPadding·padding24·colorScheme 토큰, `destructive` 플래그 시 `FilledButton` error 배경) + `showServiceNoticeDialog`(단일 확인). `channel_settings_screen.dart`의 raw `AlertDialog` 4개(방장 나가기 안내·나가기 확인·강퇴 확인·삭제 확인)를 전부 새 헬퍼로 교체(raw AlertDialog 잔존 0), `_promote`에도 확인 다이얼로그 추가 + 전용 문구 키 `dmSettingsPromoteConfirm`("이 멤버를 방장으로 지정할까요?") 신설로 제목·본문 중복 해소. 기존 post-confirm 로직(API·_loadChannel·navigation·SnackBar·mounted) 전부 보존. flutter analyze 변경 파일 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/widgets/service_dialog.dart (신규)
+- lib/screens/dm/channel_settings_screen.dart
+- lib/l10n/app_en.arb
+- lib/l10n/app_ko.arb
+
+### 비고
+- `service_dialog.dart`는 채팅 외 화면에서도 import만으로 재사용 가능 — 앱 전반 raw AlertDialog 마이그레이션은 별도 후속 가능(본 플랜 범위=채팅). origin push 미수행.
+
 ## v001.860.0
 
 > 통합일: 2026-06-17
