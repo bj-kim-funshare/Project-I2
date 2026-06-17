@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.924.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #362
+
+데이터 크래프트 헤더 **안내(통합 가이드)** 모달에서 진입하는 **기능 가이드**와 **서비스 문서** 두 모달을 디자인팀 시안에 맞춰 UI·방식까지 전수 개편(튜토리얼 제외). 라이브 렌더 패키지 `fs-data-viewer` 단독 작업.
+
+### 페이즈 결과
+- **Phase 1 (스키마+i18n)**: `GuideStep.pin?{x,y}`·`GuideSection.imageUrl?`·`DocItem.relatedDocsIds?`·`DocsHub` 타입 optional 추가, `t.guide.viewer/docs` 신규 UI 키 ko/en/zh/ja 4언어 동기화.
+- **Phase 2 (렌더러 확장)**: 문서 마크다운에 코드펜스(언어라벨+복사 버튼·항상-다크 코드블록)·콜아웃(`> [!INFO/TIP/WARNING]`)·조건 박스(`:::cond`)·h2 앵커 + `extractToc()`(별도 `markdownToc` 모듈) 추가, 기존 테이블 하드코딩 색 → 시맨틱 토큰(다크모드).
+- **Phase 3 (기능 가이드 3-pane)**: 좌 섹션 목록(SVG 원형 진행 링)·중앙 주석 캔버스(스크린샷+번호 핀 오버레이/클릭 점프, 미보유 시 스텝카드 폴백)·우 스텝 레일(+팁 박스)·푸터 진행바/이전·다음(마지막=완료)/←→ 키. 가이드 다이얼로그 폭 확대.
+- **Phase 4 (문서 셸+사이드바)**: hub/reader 뷰 상태머신(`initialDocId` 시 reader 직진 보존), 시작/뷰/설정/지원 그룹 사이드바(아이콘+문서수), 브레드크럼/뒤로가기. 문서 다이얼로그 폭 확대.
+- **Phase 5 (문서 허브)**: 히어로 검색·빠른시작 카드·인기 문서 목록 + 언어별 `_hub.json` 큐레이션(실재 doc id 참조) + contentLoader 로드.
+- **Phase 6 (문서 리더)**: 선택 카테고리 전체를 단일 스크롤 아티클로 렌더(모든 item 도달 가능)·우측 TOC 스크롤스파이(IntersectionObserver)·피드백 toast·관련 문서 카드. 콘텐츠 쇼케이스로 ko/en `overview-modes` 에 코드펜스+콜아웃+relatedDocsIds 보강(신규 렌더러 day-1 노출).
+- **Phase 7 (정리)**: 미사용 레거시 다이얼로그 3종(`DocsViewerDialog`/`GuideSelectionDialog`/`GuideViewerDialog`) 제거 + export 정리.
+
+### 영향 파일
+data-craft (packages/fs-data-viewer/src):
+- `widgets/guide/GuideViewerContent.tsx`, `DocsViewerContent.tsx`, `GuideDialogShell.tsx`
+- `widgets/guide/components/`: `GuideSectionList.tsx`·`GuideCanvas.tsx`·`GuideStepRail.tsx`·`DocsHub.tsx`·`DocsReader.tsx`·`DocsToc.tsx`·`markdownToc.ts` (신규), `ContentRenderer.tsx`·`DocsSidebar.tsx` (수정), `DocsViewerDialog.tsx`·`GuideSelectionDialog.tsx`·`GuideViewerDialog.tsx` (삭제)
+- `widgets/guide/index.ts`
+- `features/guide/hooks/useGuideNavigation.ts` (goToStep 추가), `features/guide/lib/contentLoader.ts` (_hub 로드)
+- `shared/config/guide/types.ts`, `shared/config/i18n/{types.ts, translations/ko·en·zh·ja.ts}`
+- `shared/config/guide/content/{ko,en,zh,ja}/docs/_hub.json` (신규), `content/{ko,en}/docs/overview.json` (쇼케이스)
+
+### 비고
+- **시각 검증 미완(블라인드)**: 메인 세션은 렌더를 못 보므로 구조+시맨틱 토큰 충실도까지만 보장. 색·간격·레이아웃 미세조정은 마스터 스크린샷 기반 핫픽스 라운드 전제(PENDING 게이트).
+- **문서 리더 UX 변경**: 기존 단일-item 뷰 → 카테고리 전체를 한 아티클로 렌더(우측 TOC 로 item 이동). 모든 item 도달 가능 + 시안의 TOC 단일 스크롤과 일치하나, 종전 1개 item 만 보던 화면이 여러 item 연속 표시로 바뀜. 단일-item 선호 시 핫픽스로 조정 가능.
+- **zh/ja 허브 큐레이션 차이**: zh/ja 콘텐츠에 overview/forms-ref/permissions 부재 → 빠른시작이 viewer/grid/kanban/faq 로 구성(ko/en 과 상이). 데드 링크 회피 결과이며 결함 아님.
+- 스크린샷 부재로 가이드 캔버스는 당분간 폴백 레이아웃(실 스크린샷은 후속 콘텐츠 공급 시 imageUrl/pin 으로 반영).
+- 페이즈별 lint 게이트(`pnpm typecheck:all && pnpm lint`) 전부 exit 0(105 warnings=베이스라인). origin push 미수행.
+
 ## v001.923.0
 
 > 통합일: 2026-06-17
