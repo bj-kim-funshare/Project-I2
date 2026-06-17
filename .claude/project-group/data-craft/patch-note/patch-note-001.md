@@ -28759,3 +28759,22 @@ data-craft:
 - add-time bump은 silent(saveChange+onRefresh만, UI 안내 없음) — 마스터가 변화를 인지 못 했을 수 있음. 본 floor로 설정에서의 하향 누수 차단.
 - typecheck:all && lint exit 0(lint hotfix 1회 — SettingsPanel 과잉 변경 revert).
 - 검증(마스터): 듀얼 컬럼 존재 시 설정 패널 행 높이에 80 입력+Enter → 100 자동 스냅; 듀얼 컬럼 없으면 50~500 자유; 추가 시 자동 100 bump 여전히 동작; 서브그리드 floor 회귀 없음. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
+
+## v001.918.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스6)
+
+### 페이즈 결과
+- **Phase 9 / 핫픽스6 (fix, 3개 뷰어 패키지)**: 듀얼 위젯 셀 **값 편집 UI를 중앙 모달 → 셀 하단 앵커 탭 오버레이로 전면 개편**. (1) `DualWidgetEditDialog`를 `fixed inset-0 flex items-center justify-center`(중앙 모달)에서 셀 `getBoundingClientRect()` 기준 `{top: rect.bottom+4, left: rect.left}` 앵커 오버레이로 재작성 — DateOverlay 패턴(`createPortal(document.body)` + `adjustOverlayPosition` 뷰포트 클램프 + `useLayoutEffect` 측정 + `visibility:hidden` 게이팅 + `useScrollLock`). (2) 상단 **탭 구조** — `config.widgets`에 존재하는 sub-widget(상단/하단 좌측/하단 우측)마다 탭 1개. (3) 각 탭은 기존 `SubWidgetEditor`(=`getRendererForType`로 그리드 native 에디터)를 그대로 렌더 → 타입별 값 수정 UX가 일반 그리드 셀과 동일. (4) Save/Cancel 푸터 제거, **닫힘(백드롭/Esc) 시 commit** — 변경 시 `onSave`, 미변경 시 `onCancel`(history noise 회피). 머지 `6f33a62c`, 구현 `d9358b2f` + 2번째 렌더 사이트 보완 `202d5fb9`.
+
+### 영향 파일
+data-craft (3개 뷰어 패키지 동일):
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/{DualWidgetEditDialog.tsx, FsGridDualWidgetCellRenderer.tsx, types.ts}
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/shared/ui/cell-renderers/renderers/DualWidgetRenderer.tsx (레지스트리 2번째 렌더 사이트도 동일 앵커)
+
+### 비고
+- 듀얼 셀 렌더링 경로가 둘(widgets layer `FsGridDualWidgetCellRenderer` + registry `DualWidgetRenderer`, 후자가 `getRendererForType` 통한 live 경로). `position`을 required prop으로 만들자 typecheck가 2번째 사이트 누락을 surfaced → 둘 다 앵커 적용(scope expansion).
+- 기존 save 경로(`stringifyDualWidgetCellValue` + saveGridModelWithAutoUpdate + recordHistory)·lazy import cyclic 회피·`editingValues` 버퍼링은 무수정 — 트리거만 Save 버튼→닫힘으로 이동.
+- 신규 i18n 키 0. typecheck:all && lint exit 0(typecheck hotfix 1회 — 2번째 렌더 사이트 position 누락).
+- 검증(마스터): 듀얼 셀 클릭/더블클릭/Enter → 오버레이가 셀 바로 아래 표시(중앙 모달 아님), 상단 탭이 sub-widget 수만큼, 탭별 에디터가 타입에 맞게(text/date/select/number) 일반 셀과 동일, 백드롭/Esc 닫힘 시 commit, 화면 하단 셀에서도 잘림 없음, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
