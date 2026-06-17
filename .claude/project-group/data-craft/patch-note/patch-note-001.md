@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.905.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #361 핫픽스1
+
+공지(어드민) 4건 개선(master): ①입력 힌트 세로 중앙 정렬 ②공지=단일 편집형(기존 수정 후 재공지) ③헤더 아래 접이식 배너(카카오톡식) ④본문 공지 강조 디자인.
+
+### 페이즈 결과
+- **Phase 5(핫픽스1 server) (fix, data-craft-server)** `9190ca0`: `SendbirdUpdateGroupChannelParams`에 `data?` 추가, `sendAdminMessageController`가 operator 가드 후 **`updateGroupChannel({data: message})`(채널 data에 현재 공지 단일 영속) + `sendAdminMessage`(ADMM 본문 발송)** 둘 다 수행. `PUT channel {data}` 영속은 메인 세션 curl 실측. build+lint 0.
+- **Phase 5(핫픽스1 mobile) (fix, data-craft-mobile)** `07b1a5c`: `chat_room_screen.dart` — ①공지 입력 TextField `textAlignVertical.center`+`alignLabelWithHint`+minLines3 ②📢 다이얼로그를 `channel.data`로 **pre-fill**(기존 공지 편집), 제목 "공지 편집"·버튼 "재공지" ③AppBar 아래 **`_NoticeBanner`**(channel.data 비어있지 않을 때, 기본 접힘, 셰브론 토글 — 카카오톡식) ④본문 `AdminMessage`를 `primaryContainer`+campaign 아이콘+"공지" 라벨 강조 카드로. 전부 watch(channel) 기반 라이브. flutter analyze 0.
+
+### 영향 파일
+data-craft-server:
+- src/types/sendbird.types.ts, src/controllers/chat.controller.ts
+data-craft-mobile:
+- lib/screens/dm/chat_room_screen.dart, lib/l10n/app_ko.arb, lib/l10n/app_en.arb
+
+### 비고
+- 공지 단일성=`channel.data`(1개 현재 공지) 저장→배너·편집 pre-fill 소스. 재공지마다 ADMM 본문 메시지 추가(공지 이력). origin push 미수행.
+
 ## v001.903.0
 
 > 통합일: 2026-06-17
