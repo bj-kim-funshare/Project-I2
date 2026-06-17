@@ -27273,3 +27273,22 @@ data-craft-mobile:
 
 ### 비고
 - 교훈: **Row 직계의 비-flex 버튼은 unbounded 컨텍스트(ListView 자식 등)에서 측정 실패 가능 — Column+Align 또는 폭 제약으로 회피.** 그룹 전용 위젯의 레이아웃 결함은 1:1 검증만으로 안 잡힘. advisor #2 PASS. origin push 미수행.
+
+## v001.849.0
+
+> 통합일: 2026-06-16
+> 단독 수정(회귀): #344 phase 2 정규화 effect 회귀
+
+**페이지 클릭 시 URL이 바뀌었다 즉시 되돌아오며 이동 실패**(여러 번 눌러야 이동) 버그. 근본 원인 = #344 phase 2(`b1328b11b`)가 도입한 `BuilderPage`의 URL 정규화/폴백 effect 5종이 `buildPageUrl(...)`(디코딩된 날것 경로, `slugify`가 한글 유지 → `/acme/안녕-42`)을 `location.pathname`(브라우저 퍼센트 인코딩 → `/acme/%EC%95%88...-42`)과 문자열 비교. 한글/공백 페이지명은 영원히 불일치 → `navigate(replace)` 무한 루프로 URL 정착 불가. 한글 페이지명이 대부분이라 사실상 모든 페이지 이동이 깨짐.
+
+### 페이즈 결과
+- **수정 (fix, data-craft)** `29714147`: `src/shared/lib/pageUrl.ts`에 `decodePathname()`(안전 디코드, 실패 시 원본) 추가. `BuilderPage.tsx`의 5개 비교 effect(firstPageId·invalid-pageId 폴백·selectorBox 차단·hidden 차단·canonical 정규화)에서 `current = location.pathname + ...` → `current = decodePathname(location.pathname) + ...`로 변경. 배럴 re-export 추가.
+
+### 영향 파일
+data-craft:
+- src/shared/lib/pageUrl.ts · src/shared/lib/index.ts · src/pages/builder/BuilderPage.tsx
+
+### 비고
+- **실측 검증**: node 시뮬로 한글 페이지 `target===decode(pathname)`=true(루프 멈춤), 옛 slug `target===decode(wrong)`=false(rename 시 1회 정규화 유지). typecheck:all && lint exit 0. 루프는 멈추되 정규화 기능 보존.
+- 교훈(메모리화): `buildPageUrl`은 디코딩 경로, `location.pathname`은 인코딩 → 비교 전 디코딩 필수. RRv7. typecheck/lint 못 잡는 런타임 결함.
+- #345(동적 탭)과 무관(방관자). origin push 미수행.
