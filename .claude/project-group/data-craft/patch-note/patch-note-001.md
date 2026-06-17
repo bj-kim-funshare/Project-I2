@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.916.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스36
+
+**섹션 시나리오 순서 교정 — 드로어 헤더 네비게이터 왕복 흐름 복원(타이틀=1섹션 / 뷰어=2섹션).** 핫픽스35로 뷰어 단계를 복원했으나 같은 위젯에 타이틀+뷰어를 얹는 잘못된 순서였다. 마스터 지적: 최초 단일 튜토리얼은 "2섹션 위젯 추가 → 드로어 헤더 네비게이터로 1섹션 전환해 화면 타이틀 작업 → 다시 2섹션 복귀 → 뷰어 배치" 흐름. 누락됐던 네비게이터 2단계를 복원.
+
+### 페이즈 결과
+- **핫픽스36 (fix, data-craft)** `f81c44bbf`: `src/features/onboarding/model/scenarioRegistry.ts` `sectionCustom` 에 네비게이터 2단계 삽입.
+  - `navigatorSwitchToFirst`(areaControlBar 뒤): 드로어 헤더 네비게이터(`WidgetNavigatorDropdown`)로 **1섹션 전환**. completeWhen `selectedWidgetSectionExpanded === false`.
+  - `widgetNavigatorSwitch`(widgetLeftAlign 뒤): **2섹션 복귀**. completeWhen `selectedWidgetSectionExpanded === true`.
+  - 섹션 판별 = `selectedWidgetSectionExpanded`(섹션2=확장 true / 섹션1=false). 앵커는 `WidgetNavigatorDropdown` 이 `useCurrentTutorialStepId()` 로 두 단계에 동적 등록. i18n 키(navigatorSwitchToFirst/widgetNavigatorSwitch.body) 기존 존재 → 추가 불요.
+  - 최종 순서: …areaControlBar → **navigatorSwitchToFirst** → widgetTextType→TitleItems→DesignTab→LeftAlign(1섹션 타이틀) → **widgetNavigatorSwitch** → widgetTextToViewer→그룹→컬럼(2섹션 뷰어) → saveLayout. (비-prereq 18단계)
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts
+
+### 비고
+- Explore 코드 감사로 흐름 검증(selectedWidgetSectionExpanded 섹션 판별 불변식, 네비게이터 드롭다운 앵커 동적 등록, completeWhen 설계). 신규 ctx/앵커/i18n 불필요.
+- FE 전용 → 하드 리프레시 반영. 검증: 섹션 커스텀에서 2섹션 위젯 추가 후 드로어 좌상단 네비게이터로 윗 섹션 전환→화면 타이틀 구성→아래 섹션 복귀→뷰어 전환·그룹·컬럼까지 순서대로 안내되는지.
+
 ## v001.914.0
 
 > 통합일: 2026-06-17
