@@ -27795,3 +27795,15 @@ data-craft (패키지별 동일 4파일):
 ### 비고
 - typecheck:all && lint exit 0 (12파일 교차 타입 배선 end-to-end 검증; react-hooks/exhaustive-deps는 warning 버킷이라 dep 누락은 별도 수동 확인으로 검증).
 - 검증(마스터): user 타입 열 → 열 본문 스타일 편집 → 조건 행 '값 =' 드롭다운에 사용자 목록 노출 확인. dev=fs_data_viewer src alias(머지만으로 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 dist alias라 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.873.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #355
+
+### 페이즈 결과
+- **Phase 1** (`edb78569`): 데이터 뷰어 "뷰어 설명란"(`HeaderDescription`)에서 저장하지 않고 Setting 모드를 벗어날 때(View/Write 전환) 미저장 편집 내용을 모두 폐기하고 비편집(읽기) 모드로 표시하도록 수정. `mode` 를 감시하는 `useEffect` 를 추가해, 비-Setting 모드 + `isEditing` 인 경우 기존 취소 핸들러와 동일하게 `cancelEditing()`(드래프트 원복=폐기) + `setIsEditing(false)`(비편집 전환) + `setIsAddingTag(false)`(태그추가 플래그 해제) 를 일괄 실행. 읽기 모드가 로컬 상태에서 읽던 태그 누출까지 cancelEditing 으로 제거. 안정 식별자(`cancelEditing`/`setIsAddingTag`)만 dep 에 사용해 exhaustive-deps 경고 회피, effect 는 hooks 호출 이후·early-return 앞에 배치해 rules-of-hooks 준수.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-description/HeaderDescription.tsx
