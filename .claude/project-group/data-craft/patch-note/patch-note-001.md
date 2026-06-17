@@ -1,5 +1,64 @@
 # data-craft — Patch Note (001)
 
+## v001.899.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스31
+
+**튜토리얼 시나리오 단조 진행 보장 — 역점프 회귀 차단.** 핫픽스28(다음/skip 버튼 제거)로 `skipFloor` 가 사용자 액션으로 전진하지 않고 0 에 고정되면서, 비단조 `completeWhen`(예: `freshPage = pageCreateDialogOpen || hasSections===false`)을 가진 단계가 진행 중 다시 incomplete 가 되면 `computeActiveStep` 이 앞 단계로 되돌아가는 역점프 위험이 생겼다(섹션/입력폼 시나리오에서 addSection 후 hasSections=true → freshPage 재활성 → "빈 화면 추가"로 회귀). advisor-fallback 가 비차단 관찰로 식별.
+
+### 페이즈 결과
+- **핫픽스31 (fix, data-craft)** `4fadcec0f`: 단조 floor 전진.
+  - `src/features/onboarding/model/tutorialStore.ts`: `advanceFloor(index)` 액션 추가 — `index > skipFloor` 일 때만 `skipFloor` 전진(감소 없음).
+  - `src/features/onboarding/lib/useTutorialController.ts`: active 확정 직후 `advanceFloor(active.index)` 호출 — 도달한 단계 아래는 재활성 차단. 전방 자동스킵은 유지.
+  - 무한루프 없음(index>floor 아니면 빈 set → 상태 불변). `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/tutorialStore.ts, src/features/onboarding/lib/useTutorialController.ts
+
+### 비고
+- advisor-fallback PASS. 핫픽스28~31 은 한 묶음(코치마크 다음버튼 제거 → 카운터 보정 → 단조 진행)으로 함께 검증해야 일관됨.
+
+## v001.898.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스30
+
+**튜토리얼 진행 카운터(n/m)가 "이미 페이지가 있는 계정"에서 1→3 으로 점프하던 문제 보정(표시-전용).** 시나리오 앞 4단계(페이지생성 prereq)는 콜드스타트용이라, 페이지 보유 계정은 `createFirstPage`(hasPage)가 즉시 자동완료로 스킵되어 활성 index 가 점프 → 카운터가 1→3 으로 보였다. activation 로직은 그대로 두고, 표시 카운터만 시작 시점에 고정 캡처한 "이미 완료된 prereq" 수만큼 보정한다.
+
+### 페이즈 결과
+- **핫픽스30 (fix, data-craft)** `0bc8daeb3`: 표시-전용 카운터 보정.
+  - `scenarioRegistry.ts`: `TutorialStep.prereq?` 필드 추가 + 공유 prefix 4단계(`enterDesignMode·createFirstPage·freshPage·createPageSubmit`)에 `prereq: true` 마킹.
+  - `tutorialStore.ts`: `prereqExcludedIndices`/`startCaptured`/`captureStart` 추가. 시작/정지 시 리셋, 1회만 캡처.
+  - `useTutorialController.ts`: 시작 직후 1회, "prereq && completeWhen(시작ctx)" 인 단계 인덱스를 캡처.
+  - `TutorialOverlay.tsx`: `displayTotal = total − 제외수`, `displayStep = (현재+1) − (현재보다 앞의 제외 수)`(clamp). 텍스트 카운터 2곳(상단 pill·하단 span)만 교체, dots/진행바는 raw 유지.
+  - 코어 단계(addSection·saveLayout 등)는 시작 시 우연히 완료여도 제외 안 함 → 콜드스타트/기존페이지/빈페이지 모든 케이스에서 점프 없음(advisor-fallback 3케이스 트레이스 검증).
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts, src/features/onboarding/model/tutorialStore.ts, src/features/onboarding/lib/useTutorialController.ts, src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- advisor-fallback PASS. FE 전용 → 하드 리프레시 반영. 검증: 이미 페이지가 있는 계정으로 섹션 시나리오 시작 시 1→2→3→4 로 순차 증가(점프 없음).
+
+## v001.897.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스29
+
+**튜토리얼/발견 풍선의 스포트라이트 컷아웃(밝게 잡는 영역)을 직각에서 둥근 모서리로 변경.** 모든 풍선(TutorialOverlay·DiscoveryHint)에 적용.
+
+### 페이즈 결과
+- **핫픽스29 (fix, data-craft)** `7cfd62567`: 4-rect dim → box-shadow 스포트라이트 교체.
+  - `src/features/onboarding/ui/{TutorialOverlay,DiscoveryHint}.tsx`: 컷아웃 위치에 `borderRadius: 12` + `boxShadow: 0 0 0 9999px rgba(0,0,0,0.5)`(pointerEvents none) 단일 div 로 둥근 딤. 기존 4-rect 는 `transparent` + pointerEvents all 로 포인터 차단 전용 유지(이중 딤 없음). 컷아웃 없을 때(centered) 폴백 전체 딤 유지.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx, src/features/onboarding/ui/DiscoveryHint.tsx
+
+### 비고
+- advisor-fallback PASS. FE 전용 → 하드 리프레시 반영. 검증: 가이드 아이콘 등 스포트라이트 밝은 영역 모서리가 둥글게 표시되는지 확인.
+
 ## v001.894.0
 
 > 통합일: 2026-06-17
