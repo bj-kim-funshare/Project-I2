@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.887.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스28
+
+**모든 시나리오 튜토리얼 코치마크(말풍선)에서 "다음" 버튼 제거 → 파란색 진행 카운트 `n/m` 로 교체.** 진행은 사용자가 실제 타깃을 조작하면 상태감지로 자동 전환되므로 다음 버튼이 불필요하며(누르면 시나리오 단계가 어긋남), 시안에서 재추가됐던 다음 버튼을 다시 제거하고 그 자리에 진행 현황(현재 단계/총 단계)을 파란 글씨로 표기한다.
+
+### 페이즈 결과
+- **핫픽스28 (fix, data-craft)** `2ff266ae8`: `src/features/onboarding/ui/TutorialOverlay.tsx` coach-foot.
+  - `{/* 다음 */}` 버튼 블록 전체(svg 화살표 포함) 제거 → `<span style={{ fontSize:13, fontWeight:800, color:'#3B82F6', whiteSpace:'nowrap' }}>{currentStep + 1}/{totalSteps}</span>` 로 교체.
+  - 다음 버튼의 유일 사용처였던 `const skip = useTutorialStore((s) => s.skip);` 제거(미사용 정리).
+  - "건너뛰기" 버튼·dots/진행바·상단 pill 카운트는 그대로 유지.
+  - `pnpm lint` 0 / `typecheck:all` 0 신규. 순감 −29줄.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- FE 전용 → 하드 리프레시 반영. 검증: 시나리오 진행 중 코치마크 하단에 다음 버튼이 사라지고 파란 `현재/총` 카운트가 표기되며, 타깃 조작 시에만 단계가 전환되는지 확인.
+- 설계 일관성: 원래 결정(액션 기반 dismiss·다음 버튼 제거, [[project_data_craft_onboarding_hint_system]])으로 회귀. v001.868.0(시안 적용) 에서 시안대로 복원했던 다음 버튼을 마스터 지시로 재제거.
+
 ## v001.885.0
 
 > 통합일: 2026-06-17
