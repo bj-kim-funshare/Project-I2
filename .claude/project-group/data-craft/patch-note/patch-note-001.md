@@ -27237,6 +27237,25 @@ data-craft-server:
 ### 비고
 - 머지 직후 좀비 채널(member_count 1·0) 3개 Sendbird 정리. advisor #2 PASS. origin push 미수행. 교훈: **채널에 user를 추가하려면 그 user가 Sendbird에 먼저 존재해야 함 — 서버 채널 중개가 멤버 upsert를 책임진다(로그인 의존 X)**. 회복=master 2인 선택 시 자기 포함 3명 채널 생성.
 
+## v001.848.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #346 핫픽스5
+
+핫픽스4로 그룹방 표시 이름(헤더)은 멤버 나열로 떴으나, **Sendbird에 저장된 채널 이름(`channel.name`)은 여전히 영어 기본값 "Group Channel"** — 설정 화면 "채널 이름" 필드에 그대로 노출(master: 최초 생성 시 기본 채널 이름 자체가 "사용자 이름 나열(3명까지)+외 N명"이어야 한다). 표시 로직(클라)이 아니라 **생성 시점 서버가 `channel.name`을 세팅**하는 게 본질.
+
+### 페이즈 결과
+- **Phase 16(핫픽스5) (fix, data-craft-server)** `15dcda8`: ① `sendbird.types.ts` `SendbirdCreateGroupChannelParams`에 `name?: string` 추가. ② `sendbird.service.ts` `createGroupChannel`이 `name`이 비어있지 않을 때만 Sendbird `POST /v3/group_channels` 바디에 `name` 포함(빈값/미지정 시 종전대로 무명 생성). ③ `chat.controller.ts` `createChannelController`가 **그룹(`!isDistinct`, 멤버>2)** 생성 시 `allMemberIds`(본인 포함)를 `nameMap` 실명으로 매핑해 기본 이름 산출 — 3명 이하면 `', '` 연결, 초과면 `"a, b, c 외 N명"` — 후 `createGroupChannel`에 전달. 1:1(`isDistinct`)은 이름 미지정(Sendbird 1:1 표시는 상대 이름). pnpm build(tsc)+pnpm lint exit 0.
+
+### 영향 파일
+data-craft-server:
+- src/types/sendbird.types.ts
+- src/services/sendbird.service.ts
+- src/controllers/chat.controller.ts
+
+### 비고
+- 적용 시점: **신규 생성 채널만** 기본 이름이 박힘 — 기존 채널은 Sendbird에 "Group Channel"로 저장돼 있어 변하지 않음(검증은 새 그룹 채널 생성으로). 클라 `channelDisplayName`은 `channel.name`이 비었거나 "Group Channel"일 때만 멤버 나열 폴백을 쓰므로, 이제 신규 채널은 헤더·설정 "채널 이름" 양쪽이 동일한 실제 저장 이름으로 일치. advisor #2 PASS. origin push 미수행.
+
 ## v001.847.0
 
 > 통합일: 2026-06-16
