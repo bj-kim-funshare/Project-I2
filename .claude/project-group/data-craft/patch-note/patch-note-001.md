@@ -27877,3 +27877,23 @@ data-craft (패키지별 동일 4파일):
 ### 영향 파일
 data-craft:
 - packages/fs-data-viewer/src/widgets/data-viewer-header/header-description/HeaderDescription.tsx
+
+## v001.877.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #353 (핫픽스2)
+
+마스터 지시 변경: "열 본문 스타일 편집" 조건의 값 입력을 **선택지 드롭다운이 아니라 텍스트 입력 방식으로 통일**. 이에 따라 선택 상자형(singleSelect/multiSelect)·사용자(user) 열의 조건 값 입력을 드롭다운에서 텍스트 입력으로 전환.
+
+### 페이즈 결과
+- **핫픽스2 (fix, 3개 뷰어 패키지)**: 각 패키지 `ConditionSettingWidget.tsx`에서 `singleSelect/multiSelect` 분기(renderOptionSelect)와 `user` 분기(renderUserSelect)를 제거 → 해당 열 타입이 컴포넌트 최종 텍스트 입력 폴백(`값 =` prefix + renderTextInput)으로 흐름. 더 이상 쓰이지 않는 선언(renderOptionSelect/renderUserSelect/safeOptions/safeUsers/isSingleSelect/isMultiSelect/isUser/selectClassName + props optionList/userList)은 정리. 시간 열 picker(renderTimeSelect/Radix Select)는 보존.
+  - fs-data-viewer `3ca38dd6`, fs-sub-data-viewer `2c4d742e`, fs-external-data-viewer `b326c86a` (각 -70줄).
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-style-dialog/ConditionSettingWidget.tsx
+
+### 비고
+- v001.863.0(선택 상자형 옵션 폴백)·v001.871.0(user userList 배선)에서 채운 menuItems→dialog 옵션/사용자 공급 플러밍은 본 변경으로 위젯에서 미사용(dead flow)이나, 드롭다운 복귀 가능성 대비 및 reverting 리스크 회피를 위해 유지.
+- typecheck:all && lint exit 0.
+- 검증(마스터): 선택 상자형·사용자 열 → 열 본문 스타일 편집 → 일치 등 조건의 값이 텍스트 입력으로 표시되는지 확인. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
