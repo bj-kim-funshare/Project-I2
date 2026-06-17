@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.885.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스2
+
+미디어 후속 4건(master): ①풀스크린 이미지 다운로드 버튼 없음 ②일반 파일 클릭 시 빈 탭(다운로드 안 됨) ③파일 용량 0.0KB ④동영상 미리보기·재생 시 `TOKEN_NOT_FOUND`. 근본 = **웹 HTML 미디어 요소·`launchUrl`은 Authorization 헤더를 못 실어** 인증 프록시(핫픽스1)에 막힘.
+
+### 페이즈 결과
+- **Phase 5(핫픽스2 server) (fix, data-craft-server)** `ac74d93`: 파일 프록시 `GET /api/chat/file`을 global `authMiddleware` 마운트 **이전에 public 등록**(`/api/sse` 패턴) — SSRF 가드(*.sendbird.com)+Sendbird URL 비추측 해시로 보호. `?download=1&name=` 시 `Content-Disposition: attachment`(filename sanitize). chat.ts 라우트·FREE allowlist에서 제거. build+lint 0. **실측: public 무인증 GET→200 image/png 1.6MB, download→Content-Disposition, evil.com→400.**
+- **Phase 5(핫픽스2 mobile) (fix, data-craft-mobile)** `de65015`: `chatFileProxyUrl(url,{download,name})` 헬퍼 신설. 영상(`VideoPlayerController.networkUrl`)·오디오(`just_audio.setUrl`)의 Bearer 헤더 로직 **제거**하고 public 프록시 URL 직접 사용(웹 헤더 한계 해소→#4). `ChatFileImage`를 `Image.network(proxy)`로 단순화. 풀스크린에 다운로드 버튼(#1), 일반 파일 탭=`download=1` 프록시 다운로드(#2), 파일 size는 `>0`일 때만 표시(발신자 옵티미스틱 0 숨김→서버 반영 후 표시, #3). flutter analyze 0.
+
+### 영향 파일
+data-craft-server:
+- src/app.ts, src/routes/chat.ts, src/controllers/chat.controller.ts, src/middlewares/permission.middleware.ts
+data-craft-mobile:
+- lib/chat/widgets/chat_file_image.dart, lib/chat/widgets/video_message_view.dart, lib/chat/widgets/audio_message_player.dart, lib/screens/dm/chat_room_screen.dart
+
+### 비고
+- 보안: 프록시 public화는 Sendbird 공개-파일-URL 모델과 동등(비추측 해시+SSRF 가드). 웹 미디어/다운로드가 헤더를 못 실어 불가피.
+- 잔여(비차단): 비디오 미리보기 썸네일은 회색 플레이스홀더(Sendbird 자동 썸네일 미생성, plain URL 부재). origin push 미수행.
+
 ## v001.884.0
 
 > 통합일: 2026-06-17
