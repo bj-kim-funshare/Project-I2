@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.911.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스34
+
+**튜토리얼 스포트라이트가 타깃 클릭 시 열리는 드롭다운(Radix Select/Dropdown/Popover)을 대응 못 하던 문제 일괄 해결.** 텍스트 타입 등 셀렉트를 열면 펼쳐진 옵션 패널이 컷아웃 밖이라 dim(z13000)·차단 rect 아래로 깔려 옵션 클릭이 막혔다(마스터 "9/13 위젯 유형 선택"에서 발견). 공유 Select/Dropdown/Popover 가 모두 Radix popper(`[data-radix-popper-content-wrapper]`, z-50) 기반이라, 튜토리얼 실행 중 popper 를 튜토리얼 레이어 위로 격상하는 단일 규칙으로 모든 드롭다운을 일괄 처리.
+
+### 페이즈 결과
+- **핫픽스34 (fix, data-craft)** `76ab84bfa`:
+  - `src/features/onboarding/ui/TutorialOverlay.tsx`: `isRunning` 동안 `document.body` 에 `tutorial-spotlight-active` 클래스 부여(시나리오 종료 시 제거) — useEffect, early return 위.
+  - `src/app/styles/index.css`: `body.tutorial-spotlight-active [data-radix-popper-content-wrapper] { z-index: 13002 !important; }` — 튜토리얼 dim(13000)·풍선(13001) 위로 Radix popper 격상. 클래스 스코프라 평상시 드롭다운 무영향.
+  - 커버 단계: widgetTextType(텍스트 타입), widgetTextToViewer(위젯 유형) 등 Radix 셀렉트/드롭다운 전부. 커스텀 드롭다운 없음 확인.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx, src/app/styles/index.css
+
+### 비고
+- 범위: **드롭다운(Radix popper) 한정**. Radix Dialog(생성 다이얼로그)는 별개 메커니즘이라 이번 범위 밖 — createPageSubmit 은 컷아웃-온-제출버튼으로 동작 중. viewerCreateGroupDialog(이름 입력+생성) 등 다이얼로그 폼 단계는 추후 필요 시 별도 처리.
+- FE 전용 → 하드 리프레시 반영. 검증: 시나리오 진행 중 텍스트 타입/위젯 유형 셀렉트를 열어 옵션(화면타이틀/뷰어 등)이 밝게 표시·클릭되는지.
+
 ## v001.909.0
 
 > 통합일: 2026-06-17
