@@ -27990,3 +27990,24 @@ data-craft:
 - v001.863.0(선택 상자형 옵션 폴백)·v001.871.0(user userList 배선)에서 채운 menuItems→dialog 옵션/사용자 공급 플러밍은 본 변경으로 위젯에서 미사용(dead flow)이나, 드롭다운 복귀 가능성 대비 및 reverting 리스크 회피를 위해 유지.
 - typecheck:all && lint exit 0.
 - 검증(마스터): 선택 상자형·사용자 열 → 열 본문 스타일 편집 → 일치 등 조건의 값이 텍스트 입력으로 표시되는지 확인. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.882.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #353 (핫픽스3)
+
+마스터 검증: 사용자(user) 열에 "포함 이동" 조건을 넣었으나 그리드뷰에서 `이동화(6)` 셀에 스타일이 반영되지 않음. 조건 값을 텍스트 입력으로 통일(v001.877.0)한 뒤, 마스터는 표시명의 **부분문자열**을 기대하는데 스타일 평가는 정확 멤버십이라 매칭 실패.
+
+### 페이즈 결과
+- **핫픽스3 (fix, 3개 뷰어 패키지)**: 그리드 스타일 평가기 `getTargetCellRendererByValue`의 `contains`(포함)·`notContains`(미포함) 케이스에서, 배열형 comparable(user/multiSelect/tag 열)의 판정을 정확 멤버십 `arr.includes(first)` → **부분문자열** `arr.some((s) => s.includes(first))` 로 변경. user 셀 저장값은 `buildCellValue`가 `이름(ID)` 표시 형식으로 쓰므로(예 `이동화(6)`) 부분문자열 `이동` 이 매칭됨 — userList 스레딩 불필요.
+  - fs-data-viewer `b3ba0e61`, fs-sub-data-viewer `d956827f`, fs-external-data-viewer `b0588231` (각 +2/-2).
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/fs_grid_renderer/utils.ts
+
+### 비고 (의미 변경 범위 — 중요)
+- 본 수정은 **user 열뿐 아니라 multiSelect·tag 열의 포함/미포함 평가에도 동일 적용**됨. 즉 기존 정확 멤버십에서 **부분문자열**로 의미가 바뀐다 — 예: multiSelect 셀 `["진행중","완료"]` 가 종전 `포함 "진행중"`(정확)만 매칭하던 것이 이제 `포함 "진"` 에도 매칭. 기존에 정확 멤버십 전제로 설정된 스타일은 더 많은 셀에 적용될 수 있음(미포함은 반대로 더 적게). "포함=부분문자열" 의 직관적 의미에 맞춤.
+- `일치`(equal)·`불일치`(notEqual)는 정확 멤버십 유지 — user/select 열에서 일치는 저장 표시 문자열(예 `이동화(6)`) 전체와 정확히 일치해야 함.
+- typecheck:all && lint exit 0.
+- 검증(마스터): 사용자·multiSelect·tag 열 → 포함 조건에 부분문자열 입력 → 그리드뷰 셀 스타일 반영 확인. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
