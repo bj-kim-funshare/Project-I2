@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.902.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스32
+
+**발견 풍선 확인 버튼 클릭 불가 수정 + 풍선-타겟 2px 간격.** 두 결함을 같은 2개 파일(TutorialOverlay·DiscoveryHint)에서 수정.
+
+### 페이즈 결과
+- **핫픽스32 (fix, data-craft)** `7c1a28202`:
+  - **버튼 클릭 불가**: 가이드 모달(Radix `modal={true}`) 위에 뜨는 발견 풍선(discoverTutorial)이 Radix 가 `body` 에 건 `pointer-events: none` 을 상속해 "확인" 버튼이 안 눌리던 문제. 풍선(floating) 컨테이너 style 에 `pointerEvents: 'auto'` 명시(상속 none 오버라이드) — DiscoveryHint 1곳 + TutorialOverlay centered/non-centered 2분기. (dim rect 는 기존부터 `pointerEvents:'all'` 이라 정상이었던 비대칭이 원인. HF29 무관 잠복 결함.)
+  - **풍선-타겟 간격**: 스포트라이트 컷아웃이 타겟보다 `CUTOUT_PADDING(6)` 크고 화살표(~7) 끝이 밝은 영역에 겹쳐 붙어 보이던 것 → 두 파일 floating `offset(12)` → `offset(15)`(=6+7+2)로 화살표 끝이 밝은 영역에서 약 2px 떨어지게.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/DiscoveryHint.tsx, src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- FE 전용 → 하드 리프레시 반영. 검증: ①가이드 모달의 "튜토리얼이에요" 발견 풍선 확인 버튼이 눌리는지 ②풍선과 밝은 타겟 영역 사이 약 2px 간격. 간격이 시안과 다르면 offset 미세조정 가능.
+
 ## v001.899.0
 
 > 통합일: 2026-06-17
