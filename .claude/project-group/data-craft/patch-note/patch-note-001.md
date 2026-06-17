@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.884.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스1
+
+채팅 이미지(및 미디어)가 **깨짐** — Sendbird 파일 URL이 브라우저에 **HTTP 401 "Not authorized."(HTML)** 반환(`Image.network`가 HTML을 디코딩 시도 → `ImageCodecException`). 진단: 이 앱의 Sendbird 파일은 **서버 Api-Token으로만 접근 가능**(클라 세션토큰도 401, curl 실측: Api-Token→302→S3 signed→200 PNG). 서버 프록시로 해결.
+
+### 페이즈 결과
+- **Phase 4(핫픽스1 server) (fix, data-craft-server)** `0158303`: 신규 `GET /api/chat/file?url=<sendbird file url>` 프록시 — `fetchSendbirdFile`이 Api-Token 헤더로 fetch+redirect 따라가 바이트 반환, **SSRF 가드**(`^https://[a-z0-9.-]+\.sendbird\.com/`만 허용), content-type·Cache-Control 헤더로 raw 스트리밍. JWT 인증 필수, FREE allowlist 등록. build+lint 0.
+- **Phase 4(핫픽스1 mobile) (fix, data-craft-mobile)** `38b459f`: `ChatFileImage` 신규(`dioClient`로 `/api/chat/file` 프록시 bytes fetch→`Image.memory`, Bearer 자동첨부 — user_avatar 인증이미지 패턴). 이미지 인라인·풀스크린을 `Image.network(secureUrl)`→`ChatFileImage(fileUrl: message.url)`로 교체. 영상/오디오 플레이어도 프록시 절대URL+`Authorization: Bearer` 헤더 경유. flutter analyze 0.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts, src/controllers/chat.controller.ts, src/routes/chat.ts, src/middlewares/permission.middleware.ts
+data-craft-mobile:
+- lib/chat/widgets/chat_file_image.dart (신규)
+- lib/screens/dm/chat_room_screen.dart
+- lib/chat/widgets/video_message_view.dart, lib/chat/widgets/audio_message_player.dart
+
+### 비고
+- `fetchSendbirdFile` 경로 curl 실측(Api-Token→200 PNG 1.6MB). 프록시는 JWT 필수(미인증 TOKEN_NOT_FOUND) → 인증 브라우저에서만. 잔여(비차단): ①비디오 썸네일은 plain URL 부재로 회색 플레이스홀더(thumbnails 미생성이라 무관) ②일반 파일 launchUrl 열기는 인증헤더 미첨부라 여전히 401 — 후속(프록시 다운로드). origin push 미수행.
+
 ## v001.883.0
 
 > 통합일: 2026-06-17
