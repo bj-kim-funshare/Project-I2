@@ -1,5 +1,76 @@
 # data-craft — Patch Note (001)
 
+## v001.881.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스27
+
+**도움말(안내) 모달의 "고객센터 문의" 버튼을 실제 이메일 문의 기능으로 추가.** 플랜 관리의 엔터프라이즈 문의(`EnterpriseContactDialog` → BE nodemailer)와 동일 방식으로, 일반 고객센터 문의 다이얼로그(제목+내용)를 띄워 BE 가 `CONTACT_EMAIL`(help@funshare.co.kr)로 메일을 발송한다. FE(data-craft) + BE(data-craft-server) 2-repo 작업.
+
+### 페이즈 결과
+- **핫픽스27 BE (feat, data-craft-server)** `e916f58`: Enterprise 문의 1:1 미러링.
+  - `src/services/contact.service.ts`: `sendGeneralInquiry({inquirerEmail, subject, message})` — nodemailer transporter 재사용, 수신 `CONTACT_EMAIL`, replyTo=문의자, 제목 `[DataCraft] 고객센터 문의 - <email>`.
+  - `src/controllers/contact.controller.ts`: `generalInquiryController` — 이메일은 `req.user.email` 에서 추출, subject/message 필수 검증, `buildAuthResponse` 봉투 반환.
+  - `src/routes/subscription.ts`: `POST /contact/general` (`forceIncludeAuth` + `authMiddleware`, enterprise 와 동일 체인) → 최종 엔드포인트 `POST /api/subscription/contact/general`.
+  - `pnpm lint` 0 + `pnpm build`(tsc) 0.
+- **핫픽스27 FE (feat, data-craft)** `02d4d8e5b`: 다이얼로그 + cross-package 배선.
+  - `src/features/subscription/ui/GeneralContactDialog.tsx`(신규): EnterpriseContactDialog 셸 재사용, 제목(Input)+내용(Textarea, w-full/min-h) 폼, 검증→`sendGeneralInquiry`→토스트.
+  - `src/features/subscription/api/billingApi.ts`: `sendGeneralInquiry({subject, message})` → `POST /subscription/contact/general`.
+  - 뷰어 패키지 prop 배선: `GuideSelectionContent`/`GuideDialogShell` 에 `onContactSupport` 추가, "고객센터 문의" `<a>` onClick 연결.
+  - 루트: `useHeaderDialogs`(`contactSupportOpen` 상태) + `AppHeader`(GuideDialogShell 에 핸들러 전달 + GeneralContactDialog 마운트).
+  - i18n: 루트 ko/en `support.*` 11키(parity).
+  - `pnpm lint` 0 / `typecheck:all` 0 신규 / `build:packages`+`build` 성공(cross-package gap 0).
+
+### 영향 파일
+data-craft-server: src/services/contact.service.ts, src/controllers/contact.controller.ts, src/routes/subscription.ts
+data-craft: src/features/subscription/ui/GeneralContactDialog.tsx, src/features/subscription/api/billingApi.ts, src/features/subscription/index.ts, packages/fs-data-viewer/src/widgets/guide/{GuideSelectionContent,GuideDialogShell}.tsx, src/widgets/header/ui/{AppHeader,useHeaderDialogs}.tsx, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- **⚠️ BE 배포 필요**: data-craft-server 변경은 prod EC2 에서 직접 `git pull`+빌드+pm2 재시작해야 반영([[project_data_craft_be_deploy_needs_server_pull]]). FE(gh-pages)는 push=퍼블리시. 즉 FE 만 배포되면 다이얼로그는 떠도 전송 시 404 → BE 배포 동반 필수. 양 i-dev origin push 미수행(마스터 명시 시).
+- advisor-fallback PASS(advisor 세션 throttle). 비차단 관찰: 메일 HTML escape 미적용은 enterprise 와 동일 수준(회귀 아님) — subject 사용자 입력 인젝션은 차후 별도 보안 핫픽스 가치.
+- 검증(마스터, 하드 리프레시 + BE 배포 후): 도움말 모달 → "고객센터 문의" 클릭 → 다이얼로그 → 제목/내용 입력 → 전송 → help@funshare.co.kr 수신 확인.
+
+## v001.880.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스26
+
+**튜토리얼 코치마크 진행 표시기가 단계 수가 많을 때(예: 15단계) dots 가 빽빽하게 깨지던 문제 수정.** 7단계를 초과하면 개별 dots 대신 **[완료 구간 바 · 현재 단계 알약 · 남은 구간 바]** 3분할 둥근 바로 뭉쳐 표기(현재 단계가 아닌 부분을 긴 둥근 사각형으로 합침).
+
+### 페이즈 결과
+- **핫픽스26 (fix, data-craft)** `24f1233b1`: `src/features/onboarding/ui/TutorialOverlay.tsx` dots 블록 교체.
+  - `totalSteps <= 7`: 기존 개별 dots 유지(회귀 0).
+  - `totalSteps > 7`: 완료 구간(연한 파랑 `#BFDBFE`, flex=완료 단계 수) · 현재(진한 파랑 `#3B82F6`, 22px 알약) · 남음(회색 `#E7E9EF`, flex=남은 단계 수). flex 비율로 진행률 시각화.
+  - 경계: currentStep=0 시 완료 바 미렌더, 마지막 단계 시 남음 바 미렌더.
+  - `pnpm lint` 0 / `typecheck:all` 0 신규.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- advisor-fallback PASS. FE 전용 → 하드 리프레시 반영. 검증: 단계 8개 이상 시나리오(예: 페이지 커스텀 15단계)에서 코치마크 하단 진행바가 3분할 바로 깔끔히 표기되는지 확인.
+
+## v001.879.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스25
+
+**안내(도움말) 모달의 검색창이 `readOnly` 로 박혀 입력이 안 되던 문제 수정.** 시안에서 정적 장식으로 들어온 검색 input 을 실시간 필터 검색으로 기능화 — 입력값으로 "바로 시작" 타일(기능 가이드/서비스 문서/튜토리얼)을 제목·설명 기준 실시간 필터링.
+
+### 페이즈 결과
+- **핫픽스25 (fix, data-craft)** `68ba2f18a`: `packages/fs-data-viewer/src/widgets/guide/GuideSelectionContent.tsx`.
+  - `readOnly` 제거 + `value`/`onChange`(useState `query`) 배선.
+  - 3개 타일을 데이터 배열(useMemo)로 추출 → `query.trim().toLowerCase()` 로 제목/설명 매칭 필터.
+  - 결과 0건 시 "바로 시작" 캡션 숨김 + "검색 결과가 없습니다" 안내.
+  - 튜토리얼 타일의 `data-tutorial-discovery-target`(발견 풍선 앵커) 등 기존 속성 보존.
+  - `pnpm lint` 0 / `typecheck:all` 0 신규.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/GuideSelectionContent.tsx
+
+### 비고
+- advisor-fallback PASS. FE 전용(뷰어=dev src alias) → 하드 리프레시 반영. 검증: 도움말 모달 검색창에 타이핑 시 타일이 필터되는지 확인.
+
 ## v001.878.0
 
 > 통합일: 2026-06-17
