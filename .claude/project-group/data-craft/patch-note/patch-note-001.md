@@ -28937,3 +28937,23 @@ data-craft:
 - 투표는 득표 수만 표시(선택지별 투표자 상세는 미표시 — 디자인 패스 감축).
 - 각 핫픽스 게이트(typecheck:all && lint) exit 0. JS 변경(CSS 변경분은 dist 재빌드 반영). origin push 미수행.
 - 검증(마스터): 시각 반복 확인 완료(인라인/모달 푸터, 더보기 띠 바닥 숨김, 저장/체크박스/선택안함/국기 색, 정렬, 헤더·수식 드롭다운).
+
+## v001.925.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스7)
+
+### 페이즈 결과
+- **Phase 10 / 핫픽스7 (fix, 3개 뷰어 패키지 + root app)**: 듀얼 위젯 행 높이 2건. **(A) 저장/조회 결함**: 추가 시 행 높이 100 bump이 즉시 시각 반영은 되나 새로고침하면 원복 — 원인은 `FsGridColumnGenerator` add-time bump의 `saveChange(rowHeight=100)`가 **1초 debounce 버퍼에만 들어가고 강제 flush가 없어** 새로고침 전 서버 미반영(서버가 옛 값 반환). `saveChange`에 `{ immediate: true }` 추가(즉시 flush, `handleSaveStateToggle` 선례 옵션) + `setViewerModel((prev)=>({...prev, rowHeight:100}))` 추가(React state 식별자 정합). 검증: `SETTING_MODE_ALLOWED_CHANGES.viewerSettings.put`에 `gridSetting` 포함 → mode drop 아님 확인. 3개 뷰어 패키지 적용. **(B) 위젯 설정 드로어 floor**: root app `ViewerGridSection`의 뷰어 행 높이 EnterInput이 듀얼 위젯 존재 시에도 100 미만 허용 → `hasDualWidget`(viewerRef columnModelList some) 계산해 `min={hasDualWidget?100:50}` + `handleRowHeightCommit` clamp(`v<100→100`). `DUAL_WIDGET_MIN_ROW_HEIGHT`를 fs-data-viewer index에서 re-export(단일 소스)해 root app이 bare import. 머지 `2fcb6941`, 구현 `4ee0af59`.
+
+### 영향 파일
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/column-generator/FsGridColumnGenerator.tsx (Part A)
+- packages/fs-data-viewer/src/index.ts (DUAL_WIDGET_MIN_ROW_HEIGHT export)
+- src/widgets/property-drawer/ui/property-editors/viewer-editor/ViewerGridSection.tsx (Part B, root app)
+
+### 비고
+- add-time grid setting 변경은 `{ immediate: true }`가 정합 패턴(새로고침 영속) — column-add가 이미 postChanges로 즉시 저장한 컨텍스트에서 rowHeight만 debounce였던 누락 보수.
+- Part B는 root-app 위젯 프로퍼티 드로어(단일)이므로 패키지별 사본 아님. fs_data_viewer bare import = dev src alias 즉시, prod는 build:packages 후.
+- typecheck:all && lint exit 0(루트 tsc 포함, lint hotfix 0회).
+- 패치노트 v001.924는 병렬 잡(#362)이 선점(머지 충돌) → 본 엔트리 v001.925.0으로 재번호.
+- 검증(마스터): 듀얼 열 추가 → 행 100px 즉시 + **새로고침 후에도 100 유지**; 위젯 설정 드로어 행 높이 80 입력 → 100 초기화; 듀얼 열 없으면 50~500 자유; 다른 타입 열 추가 회귀 없음. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
