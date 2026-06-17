@@ -1,0 +1,14 @@
+# db-drift-check.sh ignore list (data-craft).
+#
+# Object names (table names / routine names) that are INTENTIONALLY
+# environment-specific and must NOT count as deploy-drift. One name per line;
+# blank lines and lines starting with '#' are ignored. Matching is on the
+# fingerprint's object-name field (COL/CON table_name, FN proname).
+#
+# Keep this in sync with db.md's per-object env-scope declarations. Adding an
+# entry here means "this divergence between dev and prod is by design, not an
+# un-deployed migration."
+
+# Admin fixed-account 2-step login email verification — dev psql ONLY,
+# excluded from prod builds by design (db.md §관리자 콘솔 DB 상호작용).
+admin_email_verification
