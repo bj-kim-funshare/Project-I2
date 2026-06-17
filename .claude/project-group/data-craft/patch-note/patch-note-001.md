@@ -28498,3 +28498,30 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0(신규 컴포넌트 포함).
 - 검증(마스터, 시각 확인 필수): 코드 타입 셀 더블클릭 → 모달 본문 왼쪽 라인 번호 표기, 입력 시 키워드·문자열·숫자 색 강조, 캐럿이 강조 텍스트와 정렬, 줄 추가/스크롤 시 라인 번호 동기화 확인. dev=fs_data_viewer src alias(하드 리프레시); sibling 뷰어는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.906.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스3)
+
+### 페이즈 결과
+- **Phase 6 / 핫픽스3 (fix, 3개 뷰어 패키지 + 1 오버레이)**: 듀얼 위젯 구성 모달의 **열 타입 선택**을 드롭다운 방식(이전 hotfix들의 portal 드롭다운)에서 **그리드뷰 "열 추가" 모달과 동일한 탭 구조**로 전환. 각 카드 `WidgetSelector`의 트리거 클릭 시 `createPortal(document.body)`+`zIndex:10000` 중첩 모달이 열리며, 그리드가 쓰는 동일 컴포넌트 `ColumnGeneratorOverlay`(카테고리 탭 + 검색 + 타입 버튼 그리드)를 재사용. 듀얼 미지원 타입은 제외 — `getAllowedWidgetTypes()`(`isDualWidgetAllowedType` + rowId/dualWidget 제외)를 1-소스로 allowedSet 파생, 빈 카테고리 탭은 사전 필터. 드롭다운 잔재(isExpanded·menuPosition/adjustedPosition state·위치보정 useLayoutEffect 2개·click-outside/scroll/resize useEffect[hotfix1 가드 포함]·getGroupedWidgetTypes·adjustOverlayPosition import 등) 전면 제거(+200/-477). 머지 `37d68cb4`, 구현 `ca2c112b` + 닫기버튼 보완 `d9766f1b`.
+
+### 패키지별 필터 API 비대칭 처리 (중요)
+3개 뷰어의 `ColumnGeneratorOverlay`가 서로 다른 필터 API를 가짐(fork-drift):
+- **fs-data-viewer**: `excludeTypeIds?: string[]` (제외 목록) — exclude 배열 전달.
+- **fs-external-data-viewer**: `allowedTypeIds?: Set<string>` (허용 집합) — allowedSet 전달.
+- **fs-sub-data-viewer**: 필터 prop 부재 → `allowedTypeIds?: Set<string>` prop 신규 추가(fs-external 구현 미러)하여 통일 후 전달.
+
+또한 fs-sub/fs-external 오버레이는 자체 헤더(X 닫기)가 없어 타입 피커 모달 wrapper에 X 닫기 버튼 + selectType 라벨 헤더 추가(`flex-1 min-h-0` 래퍼로 `h-full` 오버레이 높이 확보). fs-data-viewer 오버레이는 자체 헤더 보유라 미적용.
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/DualWidgetConfigDialog.tsx
+- packages/fs-sub-data-viewer/src/widgets/column-generator/ColumnGeneratorOverlay.tsx (allowedTypeIds prop 추가)
+
+### 비고
+- 그리드의 실제 열 추가 컴포넌트 `ColumnGeneratorOverlay`를 그대로 재사용해 "동일 UX" 충족(생성 부수효과는 `FsGridColumnGenerator`의 `onAddColumn` 핸들러에 있고, 본 재사용은 `onAddColumn={(type)=>handleTypeSelect(type.id)}`로 타입 선택만 수신 — 실제 열 생성 트리거 안 함).
+- 신규 i18n 키 0건(오버레이가 `t.common.*`/`t.search.*` 자체 사용).
+- typecheck:all && lint exit 0(lint hotfix 0회 — 데드코드 정리 사전 반영).
+- 검증(마스터): 트리거 클릭 → 탭 모달 열림(카테고리 탭·검색·타입 그리드), 미지원 타입(longText/code/file/image/vote/connection/document 등) 미표시, 타입 선택 시 모달 닫힘+트리거 라벨 갱신+optionList/unit 초기화, 백드롭/X 닫기, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동.
