@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.888.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스3
+
+동영상이 **미리보기 안 뜨고 탭 시 오류**(서버 `FILE_URL_REQUIRED`, `url=` 빈 값). 근본: ①`withFileBytes`로 보낸 메시지는 업로드 완료 전까지 `url=''`(SDK `url: fileInfo.fileUrl ?? ''`) ②messages provider의 `_onMessagesUpdated`가 messageId만 매칭해 **pending(id 0, url '')→succeeded(실 id, 실 url) 전환을 못 반영** → 비디오(대용량) url이 계속 빈 채로 남아 빈 URL로 프록시 호출.
+
+### 페이즈 결과
+- **Phase 6(핫픽스3) (fix, data-craft-mobile)** `acc8521`: ① `chat_messages_provider`의 `_onMessagesAdded`/`_onMessagesUpdated`를 messageId 머지→**SDK 권위 목록 `_collection.messageList` 전체 재시드**로 교체(pending→succeeded url 반영). ② `_FileMessageBubble`에 `message.url.isEmpty` 가드(업로드 중) — 모든 파일 타입에서 빈 URL 프록시 호출 차단, 스피너 표시. ③ 비디오 회색 박스를 `_VideoThumb`(VideoPlayerController로 **첫 프레임 인라인 미리보기**, 정지, 초기화 스피너·에러 폴백·dispose)로 교체. 탭은 그대로 풀스크린 재생. flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/chat_messages_provider.dart
+- lib/screens/dm/chat_room_screen.dart
+
+### 비고
+- url='' 가드로 업로드 중 탭/로드 차단 → 완료(서버 메시지 재시드) 후 자동 동작. origin push 미수행.
+
 ## v001.887.0
 
 > 통합일: 2026-06-17
