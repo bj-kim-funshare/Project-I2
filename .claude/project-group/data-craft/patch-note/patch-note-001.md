@@ -27311,3 +27311,37 @@ data-craft:
 - lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (0 errors, 98 기존 warnings).
 - 알려진 미해결(범위 밖): 긴 페이지 트리에서 좌/우 패널 grid 행 높이 비대칭은 별개 문제(우측 미리보기 내부 스크롤화는 후속 검토). 가로 대응은 범위 밖.
 - 시각 검증(세로 창에서 모달 축소·콘텐츠 많을 때 중앙만 스크롤)은 마스터 확인 대상. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
+
+## v001.851.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #347
+
+데이터 뷰어의 **사용자 / 세계 시간 / 국가** 3개 컬럼 타입 뷰모드 드롭다운을 디자인팀 통일 시안(단일 선택 / 다중 선택)에 맞춰 개편. 그리드 셀 오버레이(메인)와 다이얼로그·칸반 카드용 간이 렌더러 **두 레이어 모두**(2 레이어 × 3 타입 = 6 사이트)를 단일 공유 컴포넌트 `ViewModeDropdownPanel`(+ `ViewModeExpandModal`)로 통일. 시안 전체 반영(검색 Enter 필터 + 검색/리턴 아이콘, "크게 보기" 확대 모달, 스크롤 끝 "더보기" 띠, 다중선택 하단 저장/초기화 + 전체선택 3-state 토글) + 다크모드/환경 테마 대응(시안 라이트 hex → `--fs-view-*` 테마 토큰 매핑). 하드 요구 3종 충족: (R1) 세계시간 행 실시간 tick 유지, (R2) 너비 = `max(컬럼 너비, 250px)`, (R3) 셀 좌측 하단 앵커 → 우측 확장.
+
+### 페이즈 결과
+- **Phase 1 (chore/i18n)** `b43ce0198`: `cellRenderer.viewModeDropdown` 키군(expand/more/selectedCount/none/singleExpandHint/noMatch) 추가 + ko/en/zh/ja 4언어 parity. `selectedCount`은 기존 `{count}` 보간 컨벤션.
+- **Phase 2 (feat/theme)** `4dd8d80a7`: 시안 라이트 팔레트 → 테마 토큰 매핑. ink/line/bg/blue는 기존 shadcn 토큰 재사용, 디자인 고유값 15종을 신규 `--fs-view-*` CSS 변수로 `styles.css` light+`.dark` 양쪽 정의(다크값 직접 author). `componentColors.viewMode` 노출.
+- **Phase 3 (feat)** `0443568ee`: 공유 `ViewModeDropdownPanel`(722줄) + `LiveClock` leaf + `types.ts`. createPortal, 검색 query/appliedQuery 이중상태(Enter 확정), scrollbar-hide 뷰포트, 더보기 띠(ResizeObserver 재계산 + hover rAF 자동스크롤), multi 푸터(카운트/초기화/저장/3-state 전체선택), R2 너비 clamp + R3 앵커.
+- **Phase 4 (feat)** `a29ea67c5`: `ViewModeExpandModal`(크게 보기) + `useViewModeDraft` 상태 공유 훅. 2열↔1열(truncation 감지) 그리드, 1-based 인덱스 뱃지, 패널/모달 draft 참조 공유(저장 시 desync 방지).
+- **Phase 5 (refactor)** `d2617d7e7`: 그리드 세계시간 오버레이 → 공유 패널(single). 행 trailing=`<LiveClock>`으로 실시간 유지(R1), `useWorldTimeCell`의 grid-timer 기계 불변. 셀 full rect anchor 캡처, 선택 토스트.
+- **Phase 6 (refactor)** `fa9360dfc`: 그리드 사용자 오버레이 → 공유 패널(multi). **즉시 커밋 → 저장 버튼 커밋**으로 변경, `buildCellValue`+`recordHistory`+`saveGridModelWithAutoUpdate` 영속 경로 보존, 검색 추가, 아바타 leading 재사용.
+- **Phase 7 (refactor)** `9ac966aec`: 그리드 국가 오버레이 → 공유 패널(single+검색). **중앙 모달 → 셀 좌하단 앵커 전환**, **검색 live-filter → Enter-only**, searchText=ko+en+ja+zh 다국어 매칭, 미선택 항목 + 선택 토스트.
+- **Phase 8 (refactor)** `3493f3689`: 간이 렌더러 3종(세계시간/국가/사용자, dialog·kanban) → 공유 패널. 버튼 트리거 유지 + `onChange` 커밋, `widthMode='content'` + 250px floor. 사용자 저장형 multi + 검색, `bg-blue-100`→`bg-muted` 토큰화.
+- **Phase 9 (chore)** `fd4a88b52`: i18n 누수·raw hex·고아 스윕. 확대 모달 '닫기' 하드코딩 → `t.common.close`(4언어 복원), 배지 border raw hex 폴백 → 토큰.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts · translations/{ko,en,zh,ja}.ts
+- packages/fs-data-viewer/src/styles.css · shared/config/theme/componentColors/{uiColors.ts,index.ts}
+- packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/{types.ts,LiveClock.tsx,ViewModeDropdownPanel.tsx,ViewModeExpandModal.tsx,useViewModeDraft.ts,index.ts} (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/world-time-cell/{WorldTimeOverlay.tsx,useWorldTimeCell.ts,FsGridWorldTimeCellRenderer.tsx}
+- packages/fs-data-viewer/src/widgets/cell-renderers/user-cell/{UserOverlay.tsx,useUserCellHandlers.ts,FsGridUserCellRenderer.tsx}
+- packages/fs-data-viewer/src/widgets/cell-renderers/FsGridNationCellRenderer/{NationOverlay.tsx,useNationCellState.ts,FsGridNationCellRenderer.tsx,types.ts}
+- packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/{WorldTimeRenderer.tsx,NationRenderer.tsx,UserRenderer.tsx,useUserRenderer.ts}
+
+### 비고
+- 게이트(`pnpm typecheck:all && pnpm lint`) 9 페이즈 전부 exit 0 (0 errors, 기존 100 warnings). lint 핫픽스 2회(Phase 3 미사용 `widthMode`→`_widthMode`, Phase 4 측정 effect setState disable 마커 — 기존 `WorldTimeOverlay` 선례).
+- 의도적 동작 변경(시안 전체 반영, master 승인): 사용자 그리드 즉시커밋→저장형, 국가 검색 live→Enter, 그리드 단일선택 토스트 신규.
+- **시각/런타임 검증은 마스터 확인 대상**: ~3,000라인 UI 변경이며 dev 렌더 확인 없음(typecheck/lint는 렌더 못 봄). 그리드 3타입 앵커·너비·실시간 tick·검색 Enter·multi 저장/3-state·크게보기 모달·더보기 띠·다크모드 토큰·4언어 라벨 확인 권장. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
+- 잠복 항목(향후 다른 타입 확장 시): `searchable=false`이면 '크게 보기' 버튼이 search row와 함께 숨겨짐 — 현 6 소비처는 전부 searchable이라 영향 없음.
