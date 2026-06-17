@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.912.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #359 핫픽스1
+
+v001.908.0(캘린더 UI 통일) 후속 마스터 시각 보정 5건. 3개 뷰어 패키지 동일 적용.
+
+### 페이즈 결과
+- **Phase 7 핫픽스1 (refactor, data-craft)** `2e64e52`·`cb7242e`:
+  - 초기화 버튼 `(Backspace)` 라벨을 우측 끝(absolute right-3)에서 "초기화" 문구 바로 우측 5px 간격(absolute left-full ml-[5px])으로 이동, `text-[10px] text-gray-300`으로 축소·연하게(전폭 버튼 4종×3).
+  - 각 오버레이 최상단 연월/제목 헤더 하단 여백 `mb-4`→`mb-5`(15개 오버레이).
+  - 타임라인 달력 일자 버튼 `w-9`→`w-full` — 컬럼보다 좁아 좌측 치우치던 일자를 요일 헤더와 세로 정렬(타임라인 그리드 3종).
+  - 마감일 초기화 버튼(반폭 flex-1)의 `(Backspace)`가 버튼 밖으로 깨지던 문제 → `inline-flex gap-[5px]` 중앙 정렬 구조로 교체(버튼 내부 수용).
+  - 마감일 "작업 완료" 버튼 미완료 상태를 회색(비활성처럼)에서 아웃라인 녹색(`border border-green-500 text-green-600 bg-white`)으로 — 클릭 가능 명시.
+
+### 영향 파일
+data-craft (18 파일): `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/` 하위
+- 오버레이 5종(헤더 여백) + 전폭 4종(Backspace 라벨) + 타임라인 그리드(정렬) + 마감일 오버레이(Backspace·작업완료 버튼)
+
+### 비고
+- typecheck:all 8/8 · lint 0 errors(105 warnings 기존).
+- 시각 확인 권장(advisor 지적): ①`(Backspace)` `text-gray-300`이 `bg-gray-100` 위에서 너무 흐릴 수 있음 — 안 보이면 색 한 단계 진하게 핫픽스. ②타임라인 일자 셀이 정렬 보정으로 직사각(~43×36)이 되어 다른 타입(정사각 ~40×40)과 셀 형태 차이 — 형태까지 통일하려면 별도 핫픽스. ③마감일 작업완료 버튼은 미완료(테두리 有)↔완료(테두리 無) 토글 시 2px 박스 점프 가능 — 거슬리면 완료 분기에 `border border-transparent` 추가.
+- origin push 미수행.
+
 ## v001.911.0
 
 > 통합일: 2026-06-17
