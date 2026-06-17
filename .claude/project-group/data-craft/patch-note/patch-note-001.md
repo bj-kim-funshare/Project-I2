@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.907.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #361 핫픽스2
+
+공지를 올린 **운영자 본인에게 안읽음 +1**이 뜨던 버그. 원인: 공지(ADMM)가 서버 Platform API로 발송돼 운영자 클라가 "내가 안 보낸 메시지"로 받아 unread 증가(다른 멤버는 정상적으로 unread 떠야 함).
+
+### 페이즈 결과
+- **Phase 6(핫픽스2 server) (fix, data-craft-server)** `6b1feea`: `sendbird.service.ts`에 `markChannelReadForUser(channelUrl, userId)`(`PUT .../messages/mark_as_read` body `{user_id}`) 추가. `sendAdminMessageController`가 `sendAdminMessage` 직후 `markChannelReadForUser(channelUrl, requesterId)` 호출 → **공지 발송 운영자만 read 처리, 다른 멤버 unread 유지**(실측: 운영자 0·멤버 1). build+lint 0.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts, src/controllers/chat.controller.ts
+
+### 비고
+- 서버 발송 admin 메시지는 발송자 컨텍스트가 없어 발송자에게도 unread 잡힘 → mark_as_read로 발송 운영자만 정리. origin push 미수행.
+
 ## v001.905.0
 
 > 통합일: 2026-06-17
