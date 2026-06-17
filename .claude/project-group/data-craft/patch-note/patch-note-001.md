@@ -29021,3 +29021,24 @@ data-craft:
 - 배지 라이프사이클: 저장 클릭 시 `flushAllDeferred`가 deferred 큐 영속화 + dirty 해제 → 배지 사라짐.
 - typecheck:all && lint exit 0(루트 tsc 포함, lint hotfix 0회).
 - 검증(마스터): (1) 듀얼 열 추가(rowHeight<100) → 행 100px 즉시 + **저장 버튼 오렌지 배지 즉시 표시**, (2) 저장 클릭 → 배지 사라짐 + 새로고침 후 100 유지, (3) 이미 ≥100이면 변경 없어 배지 미표시(정상), (4) 디자인 모드 다른 viewer 설정 변경도 배지 표시(일반화). dev=fs_data_viewer src alias(머지+하드 리프레시); root app은 build:packages 후 재기동.
+
+## v001.929.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스9)
+
+### 페이즈 결과
+- **Phase 12 / 핫픽스9 (fix, 3개 뷰어 패키지)**: 듀얼 셀 값 편집 탭 오버레이 안에서 **singleSelect/multiSelect가 2중 드롭다운(탭 위에 또 다른 portaled `ViewModeDropdownPanel`)으로 열리던 문제**를 인라인 처리로 해소. 신규 `InlineOptionPicker`(portal 없는 인라인 옵션 리스트, 색 dot + 선택 하이라이트, `max-h-[200px]` 스크롤)를 만들고, `SubWidgetEditor`에서 `singleSelect`/`multiSelect`는 `getRendererForType`(portaled 네이티브 에디터) 대신 이 인라인 피커로 분기. multiSelect는 기존 저장 형식과 동일하게 `, `(콤마-공백) join 토글. 나머지 타입(text/number/date 등)은 기존 native editor 경로 유지. 머지 `bd65928f`, 구현 `27f52171`.
+
+### 영향 파일
+data-craft (3개 뷰어 패키지 동일):
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/InlineOptionPicker.tsx (신규)
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/SubWidgetEditor.tsx
+
+### 비고 (스코프 3-tier — 마스터 선택용)
+- **이번 처리(인라인)**: singleSelect, multiSelect (옵션 리스트 드롭다운 = "간단한 드롭다운").
+- **동일 패턴 적용 가능 잔여(별도 후속 — 마스터 push 시)**: user, nation, worldTime, vote (역시 portaled `ViewModeDropdownPanel`이나 아바타/국기/검색·투표 등 데이터 소스 상이).
+- **overlay 유지 권장**: date/dateTime/deadline/time(캘린더)·colorPicker(팔레트) — 인라인 시 탭 압도.
+- `InlineOptionPicker`는 단일 컴포넌트만 export(react-refresh 위반 회피, hotfix2 학습). native 셀 렌더러/`rendererMap` 무수정(그리드 셀 동작 영향 0).
+- typecheck:all && lint exit 0(lint hotfix 0회).
+- 검증(마스터): 듀얼 셀 편집 → singleSelect/multiSelect 탭에서 옵션이 탭 내부 인라인 표시(2중 팝업 없음)·선택 반영, 다른 타입 탭 기존 동작, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
