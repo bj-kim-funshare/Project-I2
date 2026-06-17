@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.852.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스20
+
+**튜토리얼/발견 풍선이 타깃(예: 사이드바 '새 화면 추가' 버튼) 옆이 아니라 좌상단에 클리핑되어 뜨던 위치 버그 수정.** `useFloating`에 **`whileElementsMounted: autoUpdate`가 빠져 있어** floating-ui가 reference/floating 요소 마운트 타이밍에 위치를 동기화하지 못했다(코드 주석은 autoUpdate를 의도했으나 실제 미배선).
+
+### 페이즈 결과
+- **핫픽스20** (fix, `3f81b8a0`): `TutorialOverlay`·`DiscoveryHint` 두 파일의 `@floating-ui/react` import에 `autoUpdate` 추가 + `useFloating` 옵션에 `whileElementsMounted: autoUpdate` 배선. setReference(실제 앵커, 핫픽스18)와 결합해 reference/floating 마운트 동안 위치를 자동 재계산·동기화 → 정확 배치 + scroll/resize 추종. isPositioned visibility 게이트·컷아웃 rAF·centered·종료버튼 보존.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+- src/features/onboarding/ui/DiscoveryHint.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+- 교훈: floating-ui 풍선은 `setReference(실제요소)` + `whileElementsMounted: autoUpdate`가 정석 — 둘 중 하나라도 빠지면 마운트 타이밍에 위치 어긋남.
+
 ## v001.848.0
 
 > 통합일: 2026-06-16
