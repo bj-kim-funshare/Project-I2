@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.913.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #363 (funshare-inc/data-craft)
+
+**모바일 페이지 조회 무한 네비게이션 루프 수정.** 한글 이름 페이지를 모바일(`/m/...`)로 열면 `Maximum update depth exceeded`(MobilePageView.tsx) + navigation throttling으로 크래시.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** `4e16d87`: `src/pages/mobile/MobilePageView.tsx` URL 정규화 effect가 `target`(buildPageUrl=디코딩 한글 slug) vs `current`(raw `location.pathname`=퍼센트 인코딩)를 비교 → 한글일 때 영원히 불일치 → `navigate(replace)` 매 렌더 발화. `current`를 **`decodePathname(location.pathname)`** 으로 교정(데스크톱 `BuilderPage.tsx:175` 검증 패턴 verbatim, import에 `decodePathname` 추가). #344(`page_url_encoding_loop`)가 BuilderPage만 고치고 모바일 뷰를 누락한 회귀 — 메인 세션 grep으로 `src/pages` 전체에서 raw pathname 비교는 MobilePageView 단독 확인. build:packages 선행 후 typecheck:all 8/8·ESLint 0.
+
+### 영향 파일
+data-craft:
+- src/pages/mobile/MobilePageView.tsx
+
+### 비고
+- 영문 slug는 인코딩 동일이라 증상 안 남(가림) — 한글 페이지명에서만 루프. 기능 회귀 없음(비교만 교정). advisor #1·#2 PASS.
+- 후속 후보(범위 외): 라우트 정규화 effect의 raw `location.pathname` 비교를 lint rule/헬퍼로 강제(동일 회귀 2회 — #344·#363). origin push 미수행.
+
 ## v001.912.0
 
 > 통합일: 2026-06-17
