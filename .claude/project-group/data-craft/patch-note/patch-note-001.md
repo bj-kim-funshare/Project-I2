@@ -28376,3 +28376,24 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0. className 내 max-h 단일 토큰(678→730) 변경, 기능/로직 무영향.
 - 검증(마스터): 그리드뷰 디자인 모드에서 열 메뉴를 열어 (a) 항목 적을 때 콘텐츠 높이대로 짧게, (b) 항목 많을 때 730px까지 펼쳐진 뒤 내부 본문만 스크롤, (c) 화면 하단 근처 열에서 잘림 없이 위치 보정되는지 확인. dev=fs_data_viewer src alias(머지+하드 리프레시, Fast Refresh 미적용 시 하드 리프레시). origin push 미수행.
+
+## v001.901.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 5 / 핫픽스2 (fix, 3개 뷰어 패키지)**: 듀얼 위젯 구성 모달에서 "열 설정 편집"이 필요한 타입(singleSelect/multiSelect, number/currency/percent)의 설정을 **카드 하단 인라인 입력**에서 **카드 헤더 휴지통 옆 파란 설정 아이콘 → 모달**로 전환. 인라인 옵션(콤마 구분)·단위 입력 블록 2개 제거. 헤더에 파란 `Settings2` 아이콘 버튼 추가(`text-blue-500 hover:text-blue-600 hover:bg-blue-50`), `hasSettings(typeId)` 게이팅(설정 있는 타입에만 노출). 클릭 시 `createPortal(document.body)`+`zIndex:10000` 중첩 모달이 열리며, **그리드뷰의 듀얼 위젯 열 설정 다이얼로그가 쓰는 동일 컴포넌트 `SubWidgetSettings`**(드래그 정렬·색상·추가/삭제 가능한 `OptionEditor` + 단위 입력)를 재사용해 그리드와 동일 UX 제공. 라이브 편집 + 단일 닫기 버튼(부모 "열 추가"가 최종 commit). 중첩 모달은 부모 `overflow-hidden` 회피 위해 portal, 자체 dim 백드롭(`bg-black/50`) + `e.currentTarget` 백드롭 클릭 격리. `41657643`(머지), 구현 `5d42250` + lint `86c0258`(react-refresh 위반 해소 — `settingsHelpers.ts` 분리). 3개 뷰어 패키지 parity 동일.
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/DualWidgetConfigDialog.tsx
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/DualWidgetSettingsDialog.tsx
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/settingsHelpers.ts (신규)
+
+### 비고
+- `ColumnSettingsDialogHost`(실제 그리드 열 설정 호스트)는 `columnField`+`saveChange` 등 기존 그리드 컬럼 의존이라 열 생성 시점엔 사용 불가 → 그리드의 듀얼 위젯 설정이 실제로 쓰는 하위 컴포넌트 `SubWidgetSettings`를 재사용(동일 UX 충족).
+- 파란색은 테마변수(`text-primary`)가 아닌 명시적 `text-blue-500/600`(다크모드에서도 파랑 보장, 마스터 명시).
+- react-refresh `only-export-components` 위반(컴포넌트 파일에서 비-컴포넌트 함수 export 금지) 회피 위해 `hasSettings`/`needsOptionSettings`/`needsUnitSettings`를 `settingsHelpers.ts`로 분리.
+- typecheck:all && lint exit 0(lint hotfix 1회 후). origin push 미수행.
+- 검증(마스터): 듀얼 위젯 열 추가 → (1) select/number 타입 카드에 휴지통 옆 파란 설정 아이콘, text/date 등엔 휴지통만, (2) 아이콘 클릭 시 모달이 부모 모달 위로 잘림 없이 표시, (3) 옵션 추가/드래그 정렬/삭제·단위 입력이 그리드 열 설정과 동일 동작, (4) 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동.
