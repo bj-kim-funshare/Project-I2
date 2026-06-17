@@ -28459,3 +28459,22 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0. className 내 max-h 단일 토큰(730→750) 변경, 기능/로직 무영향.
 - 검증(마스터): 그리드뷰 디자인 모드 열 메뉴가 항목 많을 때 750px까지 펼쳐진 뒤 내부 본문만 스크롤되는지 확인. dev=fs_data_viewer src alias(머지+하드 리프레시). origin push 미수행.
+
+## v001.904.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #358 (핫픽스2)
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2 — 코드 셀 모달 코드 편집기화)**: 코드 타입 셀 편집 모달 본문을 실제 코드 편집기로 전환. ① 왼쪽 라인 번호 거터(세로 스크롤 동기화), ② 입력 텍스트 내용에 따른 구문 강조(키워드·문자열·숫자·함수 등). 기존 in-house `highlightCode` 토크나이저(그리드 셀 렌더러가 이미 사용)를 재사용해 편집 화면과 그리드 색상을 일치시켰고, 외부 의존성은 추가하지 않음. 구현은 투명 textarea(캐럿/입력) 위·아래로 하이라이트 `<pre>`(aria-hidden)와 라인 거터를 겹친 오버레이 방식이며 TEXT_METRICS 공유로 캐럿 정렬을 보장. 신규 컴포넌트 `code-cell/CodeEditorArea.tsx`를 3개 뷰어 패키지에 동일 생성.
+
+비고: 본 강조는 텍스트 내용 기반(content-conditional)이며, 셀별 언어 지정(per-cell language) 기능은 컬럼 설정 스키마 필드가 필요해 본 핫픽스 범위 밖(필요 시 별도 플랜).
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/code-cell/CodeEditorArea.tsx (신규)
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/code-cell/CodeEditDialog.tsx
+
+### 비고
+- typecheck:all && lint exit 0(신규 컴포넌트 포함).
+- 검증(마스터, 시각 확인 필수): 코드 타입 셀 더블클릭 → 모달 본문 왼쪽 라인 번호 표기, 입력 시 키워드·문자열·숫자 색 강조, 캐럿이 강조 텍스트와 정렬, 줄 추가/스크롤 시 라인 번호 동기화 확인. dev=fs_data_viewer src alias(하드 리프레시); sibling 뷰어는 build:packages 후 dev 재기동. origin push 미수행.
