@@ -41,7 +41,7 @@ data-craft: src/features/onboarding/model/scenarioRegistry.ts, src/features/onbo
 ### 비고
 - advisor-fallback PASS. FE 전용 → 하드 리프레시 반영. 검증: 이미 페이지가 있는 계정으로 섹션 시나리오 시작 시 1→2→3→4 로 순차 증가(점프 없음).
 
-## v001.897.0
+## v001.900.0
 
 > 통합일: 2026-06-17
 > 플랜 이슈: #338 핫픽스29
