@@ -28983,3 +28983,21 @@ data-craft:
 - typecheck:all && lint exit 0(루트 tsc 포함, lint hotfix 0회).
 - 패치노트 v001.924는 병렬 잡(#362)이 선점(머지 충돌) → 본 엔트리 v001.925.0으로 재번호.
 - 검증(마스터): 듀얼 열 추가 → 행 100px 즉시 + **새로고침 후에도 100 유지**; 위젯 설정 드로어 행 높이 80 입력 → 100 초기화; 듀얼 열 없으면 50~500 자유; 다른 타입 열 추가 회귀 없음. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
+
+## v001.927.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스8)
+
+### 페이즈 결과
+- **Phase 11 / 핫픽스8 (fix, root app 단일)**: 듀얼 위젯 추가 시 행 높이 100 자동조정이 일어나도 **저장 버튼 배지(미저장 표시)가 안 뜨던** 근본 결함 수정(마스터 정확 진단). root cause = **디자인 모드의 deferred viewer 설정 경로 누락**: root app `requestSaveDataViewerChanges`(`src/features/viewer/lib/saveCallbacks.ts`)가 디자인 모드에서 grid 설정 변경(rowHeight 등)을 `addDeferredChanges()`로 보류 큐에 넣고 success 반환하지만 **`markAsChanged()` 미호출** → `useLayoutStore.hasUnsavedChanges` false 유지 → `DesignModeToolbar` 저장 버튼 오렌지 펄스 배지 미표시 → 사용자가 저장 못 함 → 새로고침 시 deferred 큐 유실. fix: `if (hasSettings)` 블록 내 `addDeferredChanges` 직후 `useLayoutStore.getState().markAsChanged()` 1줄 추가(`@/entities/layout` static import). 데이터 변경(`remainingChanges`) 분기는 즉시 저장이라 제외. 머지 `47422206`, 구현 `b5ef208a`.
+
+### 영향 파일
+- src/widgets... 아님 → src/features/viewer/lib/saveCallbacks.ts (root app 단일, +2줄)
+
+### 비고
+- **design-mode-wide 결함**: 듀얼 위젯뿐 아니라 디자인 모드의 모든 viewer grid/subGrid 설정 변경(showIdColumn/useDescription/rowHeight 등)에서 동일 누락 → 일반화 해소(의도된 회귀 0).
+- 이전 hotfix5(설정 패널 floor)·hotfix7(immediate flush + setViewerModel + 드로어 floor)는 보조 보강이며 본 hotfix8이 마스터 reported 결함의 **직접 fix**. immediate flush는 즉시 defer→즉시 badge 시너지로 유지.
+- 배지 라이프사이클: 저장 클릭 시 `flushAllDeferred`가 deferred 큐 영속화 + dirty 해제 → 배지 사라짐.
+- typecheck:all && lint exit 0(루트 tsc 포함, lint hotfix 0회).
+- 검증(마스터): (1) 듀얼 열 추가(rowHeight<100) → 행 100px 즉시 + **저장 버튼 오렌지 배지 즉시 표시**, (2) 저장 클릭 → 배지 사라짐 + 새로고침 후 100 유지, (3) 이미 ≥100이면 변경 없어 배지 미표시(정상), (4) 디자인 모드 다른 viewer 설정 변경도 배지 표시(일반화). dev=fs_data_viewer src alias(머지+하드 리프레시); root app은 build:packages 후 재기동.
