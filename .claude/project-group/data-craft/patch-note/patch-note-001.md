@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.875.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #352 핫픽스1
+
+"열 숨기기"(v001.869.0) 후속 핫픽스 — 열을 숨긴 뒤 **새로고침하면 다시 나타나던** 영속 결함 수정. 저장은 정상이었고(DB `data_viewer_column_setting.is_hidden=1` 영속 확인), 결함은 **로드 경로**였다: FE 가 컬럼 모델을 읽는 메인 엔드포인트 `getViewerMeta`(`viewer.meta.ts`)가 응답 `setting` 객체에 `frozen` 은 넣으면서 `isHidden` 을 누락 → FE `serverToColumnModel` 이 `undefined→false` 로 받아 항상 표시. (v001.869.0 에서 패치한 `viewer.query.ts`/`viewer.service.ts` 는 메인 로드와 다른 엔드포인트였음.)
+
+### 페이즈 결과
+- **핫픽스1 (fix, data-craft-server)** `c9b8269`+`24a6464`: `frozen` 이 흐르는 **모든** 컬럼 setting 경로에 `isHidden` 을 병행(BE 전수 sweep 으로 누락 사이트 색출).
+  - `viewer.meta.ts` 3개 setting 구성 사이트(메인 `Boolean(setting.isHidden)`, 외부데이터 폴백 `false`, 서브그리드 `Boolean(setting.isHidden)`) — **새로고침 재등장의 직접 원인 해소**.
+  - `dataViewerPost.service.ts` `getFullColumnModel`(SELECT `vcs.is_hidden` + 반환 `Boolean(row.isHidden)`)·기본값 빌더(`false`) — 컬럼 편집 후 응답에서 숨김 누락 잠복결함 예방. `ColumnSettingResponse` 타입에 `isHidden: boolean` 추가.
+  - `viewer.bulkSave.column.ts` propertyMap 에 `isHidden: 'is_hidden'` — bulk save 경로 `INVALID_COLUMN_PROPERTY` 예방.
+  - `pnpm build`(tsc)+lint 0. BE 전용 — 추가 DDL 불요(컬럼 이미 존재).
+
+### 영향 파일
+data-craft-server:
+- src/services/viewer/viewer.meta.ts
+- src/services/dataViewerPost.service.ts
+- src/services/viewer/viewer.bulkSave.column.ts
+- src/types/dataViewer.types.ts
+
+### 비고
+- 교훈: 신규 컬럼 setting 속성은 단일 read 엔드포인트가 아니라 `frozen` 이 흐르는 **전 경로**(meta·query·service·post·bulkSave)에 병행해야 한다. v001.869.0 이 meta(주 로드)를 놓쳐 "저장되는데 새로고침하면 사라진 게 풀림" 증상 발생.
+- BE 코드 전용 핫픽스 — dev nodemon 자동 반영. 검증(마스터): 이전에 숨긴 열(예 column_id=6879, DB is_hidden=1)을 **하드 리프레시** 후에도 뷰 모드에서 계속 숨겨져 있는지 확인. origin push 미수행.
+
 ## v001.874.0
 
 > 통합일: 2026-06-17
