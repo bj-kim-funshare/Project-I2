@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.893.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스5
+
+이미지 풀스크린엔 다운로드 버튼이 있으나 **동영상 풀스크린엔 없음**(master) → 추가.
+
+### 페이즈 결과
+- **Phase 8(핫픽스5) (fix, data-craft-mobile)** `957a2f6`: `VideoMessageView`에 선택적 `fileName` 추가 + AppBar `actions`에 다운로드 `IconButton`(`Icons.download_rounded`) → `launchUrl(chatFileProxyUrl(url, download:true, name: fileName))`(이미지 풀스크린과 동일 패턴). chat_room의 비디오 탭이 `VideoMessageView(url, fileName: message.name)` 전달. flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/widgets/video_message_view.dart
+- lib/screens/dm/chat_room_screen.dart
+
+### 비고
+- origin push 미수행.
+
 ## v001.891.0
 
 > 통합일: 2026-06-17
