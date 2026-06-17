@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.908.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #359
+
+데이터 뷰어 날짜/시간 계열 5개 타입 열(타임라인·날짜·날짜및시간·시간·마감일) 캘린더 피커의 시각 디자인을 통일. 3개 뷰어 패키지(fs-data-viewer·fs-sub-data-viewer·fs-external-data-viewer) 전부에 동일 적용. 마스터 6개 요구: ①지정일 파란 배경+흰 글씨 ②토요일 파랑 ③단축키 줄 제거+초기화 버튼 재디자인(중앙 "초기화"+우측 연회색 (Backspace), 활성 스타일) ④포맷 입력칸 본문 하단 이동+형식 안내 제거 ⑤헤더 X 제거+년월 중앙 ⑥오늘 표기 연한 파랑 배경·회색 테두리·둥근 사각형 통일.
+
+### 페이즈 결과
+- **Phase 1 (refactor, data-craft)** `e4e8dc9`: fs-data-viewer 4개 그리드 — 지정일 `bg-blue-500 text-white rounded`, 오늘 `bg-blue-100 border-gray-300 rounded`, 토요일 파랑·일요일 빨강, timeline theme 토큰을 명시색으로 교체.
+- **Phase 2 (refactor, data-craft)** `e1cf955`: fs-data-viewer 5개 오버레이 — 헤더 X 제거(년월 중앙), 단축키 안내 줄 제거, 포맷 입력칸 본문 하단 이동+형식 안내 제거, 초기화 버튼 활성 스타일+우측 연회색 (Backspace).
+- **Phase 3 (refactor, data-craft)** `8b5a8cb`: fs-sub-data-viewer 4개 그리드 — 스펙 A 동일 적용(드리프트 흡수).
+- **Phase 4 (refactor, data-craft)** `23ede1d`: fs-sub-data-viewer 5개 오버레이 — 스펙 B 동일 적용.
+- **Phase 5 (refactor, data-craft)** `975b520`: fs-external-data-viewer 4개 그리드 — 스펙 A 동일 적용.
+- **Phase 6 (refactor, data-craft)** `9d338ae`: fs-external-data-viewer 5개 오버레이 — 스펙 B 동일 적용.
+
+### 영향 파일
+data-craft (3개 뷰어 패키지 × 9파일 = 27): `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/` 하위
+- 그리드(4): `date-cell/CalendarGrid.tsx`, `FsGridDateTimeCellRenderer/CalendarGrid.tsx`, `FsGridTimelineCellRenderer/TimelineCalendarGrid.tsx`, `FsGridDeadlineCellRenderer/DeadlineCalendarGrid.tsx`
+- 오버레이(5): `date-cell/DateOverlay.tsx`, `FsGridDateTimeCellRenderer/DateTimeCalendarOverlay.tsx`, `time-cell/TimeOverlay.tsx`, `FsGridTimelineCellRenderer/TimelineCalendarOverlay.tsx`, `FsGridDeadlineCellRenderer/DeadlineCalendarOverlay.tsx`
+
+### 비고
+- i18n 키 정의 미변경(컴포넌트 사용처만 수정), 신규 직접 의존 0. typecheck:all 8/8 · lint 0 errors(107 warnings 기존 무관).
+- dev 반영: fs-data-viewer=src alias 즉시(하드 리프레시), fs-sub/fs-external=dist alias → `pnpm build:packages` 후 dev 재기동.
+- 범위 외: 다크 테마 정합·코드 dedup·별도 캘린더 뷰(widgets/calendar). 초기화 버튼 대비·deadline 반폭 (Backspace) 표시는 시각 확인 후 핫픽스 여지. origin push 미수행.
+
 ## v001.907.0
 
 > 통합일: 2026-06-17
