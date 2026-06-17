@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.865.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스23
+
+**[디자인 시안 적용 2/3] 시나리오 선택 모달을 디자인팀 `.scenecard` 시안으로 전면 재디자인.**
+
+### 페이즈 결과
+- **핫픽스23** (feat, `b085b190`): `ScenarioPickerModal`을 512px `.scenecard` 구조로 재작성 — scene-head(back 버튼 + eyebrow "튜토리얼" + h1 "어떤 것부터 만들어 볼까요?" + 부제 + X) / scene-list(3 시나리오 sopt: tile 아이콘 blue·green·violet + 제목 + 추천 badge(페이지 만들기) + 설명 + meta chip(단계 수·소요 시간) + chevron, 추천 항목 rec 그라데이션·hover violet 바) / scene-foot(힌트 + "다음에 할게요"). `scenarioRegistry` TutorialScenario에 `stepLabel`/`timeLabel`/`recommended` 추가(페이지 4단계·약2분·추천, 섹션 5단계·약3분, 입력폼 6단계·약4분). ko/en i18n picker 신규 카피 6키 parity. **즉시 고-z 오버레이(z13500/13501)·modal=false·onPick·onClose 보존**(깜박임 방지 산물 유지).
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/ScenarioPickerModal.tsx, src/features/onboarding/model/scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- build:packages / typecheck:all / lint(0 errors) PASS. advisor-fallback PASS(구조·콜백·즉시오버레이 보존·회귀 없음). 시각 충실도 dev 확인 권장. 시안 적용 3/3(코치마크) 진행 예정.
+
 ## v001.864.0
 
 > 통합일: 2026-06-17
