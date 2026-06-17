@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.922.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스38
+
+**튜토리얼 z-순서 재배치 — 다이얼로그 단계에서 안내 풍선이 뒤로 가려 안내가 안 되던 문제 수정(HF37 부작용).** 핫픽스37 이 생성 다이얼로그를 풍선(z13001) 위로 올리면서, 화면 생성(createPageSubmit) 등 다이얼로그 단계에서 풍선이 다이얼로그 뒤로 숨었다.
+
+### 페이즈 결과
+- **핫픽스38 (fix, data-craft)** `07a49dd62`: z-index 4계층 재정렬.
+  - 목표 순서: `dim/차단(13000) < 다이얼로그(overlay 13001 / content 13002) < 풍선(13003) < 드롭다운 popper(13004)`.
+  - `src/features/onboarding/ui/TutorialOverlay.tsx`: 풍선 컨테이너 zIndex 13001 → 13003(centered/non-centered 2분기).
+  - `src/features/onboarding/ui/DiscoveryHint.tsx`: 풍선 zIndex 13001 → 13003.
+  - `src/app/styles/index.css`(tutorial-spotlight-active 스코프): popper 13002→13004, dialog-overlay 13002→13001, dialog-content 13003→13002.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx, src/features/onboarding/ui/DiscoveryHint.tsx, src/app/styles/index.css
+
+### 비고
+- 결과: 다이얼로그 상호작용 가능(차단 위) + 안내 풍선 표시(다이얼로그 위) + 드롭다운 옵션 클릭 가능(풍선 위, HF34 유지) 3박자 동시 성립. floating-ui offset 으로 풍선은 타깃에서 떨어져 배치돼 생성/입력 컨트롤을 직접 가리지 않음.
+- FE 전용 → 하드 리프레시 반영. 검증: 화면 시나리오 createPageSubmit 단계에서 새 화면 생성 다이얼로그 위로 안내 풍선이 보이고, 이름 입력·생성 버튼도 정상 동작하는지.
+
 ## v001.920.0
 
 > 통합일: 2026-06-17
