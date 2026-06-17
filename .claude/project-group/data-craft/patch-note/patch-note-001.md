@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.860.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #351
+
+웹 디자인 모드 회사 로고(로컬/URL) 기능의 두 결함 수정(master): (1) 로컬·URL 어느 쪽도 적용 전 미리보기가 없던 문제, (2) 외부 URL로 넣은 로고가 헤더에서 "로고 없음"으로 표시되던 문제(설정 다이얼로그를 열면 브라우저 탭 파비콘에는 정상 표시되던 비대칭). 헤더 로고가 인증 서버 이미지 프록시(`fileApi.loadImage`, 내부 스토리지 URI만 해석)를 거쳐 외부 URL을 못 불러오던 것이 근본 원인.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** `8dacdb75`(+ `60c31e6`): `CompanyLogo`·`PageEditPreview`에서 `fileApi.loadImage`+blob URL 비동기 로드(서버 프록시)를 제거하고, 인증화면 `TenantBlock`과 동일하게 `toAbsoluteUrl(accountInfo.logoUrl)`를 `<img src>`에 직접 바인딩 + `onError` fallback으로 전환. `toAbsoluteUrl`이 내부 상대경로/외부 URL을 모두 처리하므로 외부 URL 로고가 헤더·페이지편집 미리보기에서 정상 표시(버그 #2). lint 핫픽스: `useEffect` 내 `setImageLoadError(false)`가 `react-hooks/set-state-in-effect`에 걸려 render-time `prevLogoUrl` 가드 리셋 패턴으로 교체.
+- **Phase 2 (feat, data-craft)** `f7b177f5`: `LogoUploadDialog`에 통합 미리보기 영역 추가 — DialogHeader 하단 단일 박스에 **로컬 선택 > URL 입력 > 현재 저장 로고** 우선순위로 표시(`toAbsoluteUrl` 재사용), 깨진 URL은 `onError`로 "유효하지 않은 이미지 URL입니다." 텍스트, 없으면 빈-상태 placeholder. URL 변경 시 오류 리셋도 render-time 가드 패턴. `localPreview`를 자기 dep으로 누크하던 의심스러운 cleanup `useEffect` 제거(로컬 미리보기 미표시의 유력 원인). 로컬·URL 양쪽 미리보기 제공(버그 #1). 신규 i18n 키 `logoPreviewLabel`·`invalidImageUrl`·`noLogoPreview`를 `ko.ts`·`en.ts`에 additive 추가.
+
+### 영향 파일
+data-craft:
+- src/features/logo-upload/ui/CompanyLogo.tsx
+- src/features/logo-upload/ui/LogoUploadDialog.tsx
+- src/features/page-management/ui/PageEditPreview.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
+### 비고
+- 정답 패턴은 비인증 인증화면(`TenantBlock`)이 이미 직접 `<img src={toAbsoluteUrl()}>`로 로고를 표시 = 스토리지 공개 서빙 증명. 양 페이즈 `pnpm typecheck:all && pnpm lint` exit 0.
+- 시각 검증(마스터): ① 외부 URL 입력 → 미리보기 즉시 표시 → 적용 → 헤더 표시, ② 로컬 업로드 미리보기·적용, ③ 잘못된 URL → 오류 텍스트, ④ 기존 업로드(내부 스토리지) 로고가 헤더에 여전히 보이는지 회귀 확인(안 보이면 해당 환경 `BASE_STORAGE_URL` 미설정 신호). dev=src alias라 머지만으로 반영. origin push 미수행.
+- 범위 밖 인접 결함(flag만): `TabContextHost.setFaviconImage`는 업로드(내부 스토리지) 로고 raw 상대경로를 `img.src`에 그대로 넘겨 파비콘이 404 폴백될 수 있음(원 버그 #2의 거울상). 마스터가 지적 시 별도 후속.
+
 ## v001.859.0
 
 > 통합일: 2026-06-17
