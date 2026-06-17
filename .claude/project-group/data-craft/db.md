@@ -48,6 +48,14 @@ connection_style: PG_* 환경변수
 - FE 측 (data-craft / data-craft-mobile / data-craft-ai-preview) 은 직접 DB 접속하지 않고 `data-craft-server` REST API 경유.
 - 환경별 차등 시크릿 운영은 dev.md §"env 환경별 차등 변수 표준 — BE 페어 패턴" 참조.
 
+## pre-deploy DB 드리프트 게이트 psql 인가 (2026-06-17 신규 — 마스터 명시)
+
+`dev_prod_separation: 분리` 환경에서 dev 에만 적용된 미배포 스키마 변경을 안고 코드 배포가 나가는 것을 막기 위해, `pre-deploy` 가 배포 빌드 **이전**에 dev psql 과 prod psql 의 라이브 스키마를 대조한다(판정·결과 처리 상세는 deploy.md §"배포 전 DB 드리프트 게이트").
+
+- **psql 사용 인가 범위 확장**: 본 게이트를 위해 `pre-deploy` 컨텍스트는 dev/prod psql 에 대한 **읽기전용 스키마 introspection** 목적의 psql 호출을 인가받는다. 기존 `Bash(psql *)` 인가는 CLAUDE.md 주석상 `task-db-structure`/`task-db-data` 한정이었으나, pre-deploy 의 드리프트 게이트(`.claude/scripts/db-drift-check.sh`)는 SELECT-only 스키마 카탈로그 조회(`information_schema`, `pg_catalog`, `pg_get_functiondef`)만 수행하며 DDL/DML 을 실행하지 않는다. 안전장치: ① 읽기전용 쿼리만, ② prod 미접속 시 block(배포 차단)으로 안전 측 실패, ③ 좌표는 `data-craft-server/.env` 의 `PG_*`/`PG_*_PROD`·`DB_NAME`/`DB_NAME_PROD` 에서 로드(정책 파일 비적재). 본 인가는 Workstream C 에서 `.claude/settings.json` + CLAUDE.md 주석에 반영된다.
+- **접속 좌표**: dev = `PG_HOST`/`PG_USER`/`PG_PASSWORD` + `DB_NAME`(`data_craft_dev`), prod = `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` + `DB_NAME_PROD`(`data_craft_production`). 양 환경 `PG_PORT`=5432. (2026-06-17 실측: dev 127.0.0.1:5432·prod 사설망 호스트:5432 양쪽 이 머신에서 TCP 도달 확인.)
+- **지문 정규화**: 거짓양성 억제를 위해 시퀀스 현재값, 파티션 자동생성 child(예: `data_values` HASH(group_id) 8 서브파티션), 통계/스토리지 메타는 지문에서 제외하고 DDL 구조(테이블·컬럼·타입·제약·루틴 정의) 표면만 비교. 첫 실측에서 dev==prod(현재 동기 가정)여야 정상.
+
 ## 관리자 콘솔 DB 상호작용 (Roadmap-7 신규 — 마스터 명시)
 
 - **DB 인스턴스는 dev 1 / prod 1 유지** — 관리자용 별도 DB 인스턴스 신설 없음. 관리자 전용 테이블만 기존 data-craft DB 에 추가한다.

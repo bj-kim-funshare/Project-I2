@@ -14,6 +14,13 @@ projects:
     build_command: pnpm build
     deploy_command: git checkout main && npx gh-pages -d apps/web/dist
     env_management: code-constants
+  - name: data-craft-mobile-apk
+    role: FE
+    tool: flutter
+    target: https://github.com/bj-kim-funshare/data-craft-mobile/tree/apk-deploy
+    build_command: flutter build apk --release
+    deploy_command: bash /Users/starbox/Documents/GitHub/Project-I2/.claude/scripts/apk-deploy.sh /Users/starbox/Documents/GitHub/data-craft-mobile
+    env_management: code-constants
   - name: data-craft-ai-preview
     role: FE
     tool: gh-pages
@@ -55,8 +62,9 @@ projects:
 ## 배포 전략 요약
 
 - **`data-craft-admin` / `data-craft-admin-server` (관리자 콘솔, Roadmap-7 신규) — 배포 제외**(`deploy_excluded: true`, `deploy_command` 미부여, `tool: none`). 운영자 로컬에서 `pnpm dev` 로만 기동하는 콘솔이라 `pre-deploy` / `deploy_command` 대상이 아니다. `pre-deploy` 호출 시 본 2종은 배포 타깃에서 제외. (마스터 명시 — Roadmap-7)
-- `data-craft` (리더), `data-craft-ai-preview` (프리뷰), `data-craft-mobile` (모바일) — GitHub Pages 배포.
-- `data-craft-mobile` 은 **플러터 셸 안착 전까지 한시적 gh-pages 배포** (마스터 명시). 안착 후 Flutter WebView Shell 번들 형태로 재정의 예정 — 재정의 시 본 문서 갱신.
+- `data-craft` (리더), `data-craft-ai-preview` (프리뷰), `data-craft-mobile` (모바일 웹 번들) — GitHub Pages 배포.
+- `data-craft-mobile` (gh-pages 타겟) 은 `apps/web` Vite 웹 번들을 gh-pages 에 배포한다. **단 네이티브 Flutter APK 의 webview 는 이 gh-pages 가 아니라 메인 `data-craft` 웹(`https://datacraft.ai.kr`, 커스텀 도메인 루트 배포)을 로드한다** (코드 `$webBaseUrl/m/<pageId>` 루트 상대 경로 + `MobilePageView.tsx` 가 메인 data-craft 웹 거주, 2026-06-17 실측). 즉 APK 동작의 webview 콘텐츠 최신성은 `data-craft` FE 타겟 배포에 의존하며, mobile gh-pages 타겟과는 독립이다. (apps/web gh-pages 의 실제 사용처는 별도 — 한시적 잔재일 수 있으나 본 갱신 범위에서 제거하지 않음.)
+- **`data-craft-mobile-apk` (네이티브 Flutter APK, 2026-06-17 신규)** — 실제 설치용 Android APK 산출·배포 타겟. `flutter build apk --release` 로 빌드(release 게이트가 prod URL 코드 상수 자동 강제 — `lib/config/env.dart`: API→CloudFront, WEB→datacraft.ai.kr). `deploy_command` 는 산출 APK(`build/app/outputs/flutter-apk/app-release.apk`, ~73MB)를 **orphan `apk-deploy` 배포 브랜치**에 커밋·push 한다(시블링 worktree, `app-release.apk` + 버전 `MANIFEST` 만 — main 히스토리 미상속 orphan 으로 바이너리 비대화 완화). 실행 스크립트 `.claude/scripts/apk-deploy.sh` 는 Workstream C(pre-deploy 확장)가 제공한다. 서명: `android/key.properties` 부재로 release 는 debug 서명 — 사이드로딩 설치 가능, Play Store 등록은 본 타겟 범위 밖. ⚠️ **APK 비대 보존 비용**: 매 배포 ~73MB 누적 → 장기적으로 retention 정책(최근 N개 유지 orphan 재작성) 또는 GitHub Releases 전환을 C/후속에서 검토.
 - 모바일 빌드 산출물 = `apps/web/dist/` (확정 — 루트 `pnpm build` 시 apps/web 에 dist 생성).
 - 모바일 GitHub owner 는 개인 계정 `bj-kim-funshare` (나머지 3개는 조직 `funshare-inc`).
 - 모바일 base 처리 (v001.449.0 검증 확정): `apps/web/vite.config.ts` 가 `base: mode === 'production' ? '/data-craft-mobile/' : '/'` 로 조건부 base 적용 중. 프로덕션 빌드 시 `dist/index.html` 에 `/data-craft-mobile/...` 경로로 출력되어 gh-pages project pages 호환. 루트 `vite.config.ts` 의 `base: '/'` 는 `pnpm dev` (포트 5174) 용으로 별개 — 빌드 산출물에 영향 없음.
@@ -66,6 +74,18 @@ projects:
 
 - **서버 (`data-craft-server`) 가 항상 우선**. FE 의존 변경(API 스키마 변경 등) 이 있을 시 server 먼저 배포 후 FE 배포.
 - FE 3종 (data-craft / mobile / ai-preview) 간 우선순위는 미정 — 변경 영역에 따라 master 판단.
+
+## 배포 전 DB 드리프트 게이트 (2026-06-17 신규 — 마스터 명시)
+
+dev/prod DB 가 분리(`dev_prod_separation: 분리`, db.md)된 상태에서 dev 에만 적용된 미배포 스키마 변경(마이그레이션)이 있는 채로 코드 배포가 나가면 prod 런타임이 코드와 불일치한다. 이를 막기 위해 `pre-deploy` 는 빌드/배포 **이전**에 DB 드리프트 검증을 수행한다.
+
+- **판정 방식 = 라이브 스키마 지문 대조** (마스터 결정 — data-craft 에 마이그레이션 원장 테이블이 없어 파일 기반 비교 불가). dev psql(`127.0.0.1:5432`, `data_craft_dev`) 과 prod psql(사설망 호스트, `data_craft_production`) 의 정규화 스키마 지문(tables + columns + data_type + 주요 제약 + routines)을 결정적 순서로 추출·대조한다. 시퀀스 현재값·파티션 자동생성 child·통계 등 런타임 변동 객체는 제외하고 DDL 구조 표면만 비교한다.
+- **실행 조건**: pre-deploy 선택 타겟에 **data-craft 그룹 타겟이 하나라도 포함되면 무조건 실행**(FE-only 선택 포함 — FE 도 dev 스키마를 가정한 BE API 를 호출하므로). 게이트는 그룹 레벨 1회.
+- **결과 처리 (3-상태)**:
+  - **clean** (dev == prod): 통과, 기존 검증/빌드/배포 진행.
+  - **drift** (dev 가 prod 보다 앞섬): **배포 절차 중단 + 안내** — dev 우위 객체 목록 + `task-db-structure` 로 prod 적용 후 재시도 안내.
+  - **unreachable** (prod psql 미접속·자격 실패): **배포 절차 중단 + 안내**(마스터 요구 직역 — "검증하고 배포 중단", 검증 불가도 중단). warn 아님, block. 도달성 확보 후 재시도 또는 마스터 명시 우회.
+- **구현**: `pre-deploy` 가 `.claude/scripts/db-drift-check.sh`(dev/prod psql 좌표는 `data-craft-server/.env` 의 `PG_*`/`PG_*_PROD` + `DB_NAME`/`DB_NAME_PROD` 에서 로드)를 호출. 스크립트·스킬 통합은 Workstream C(pre-deploy 확장)가 제공. pre-deploy 의 psql 읽기전용 사용 인가 근거는 db.md §"pre-deploy DB 드리프트 게이트 psql 인가" 참조.
 
 ## env 관리
 
