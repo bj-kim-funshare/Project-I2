@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.903.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #361 (funshare-inc/data-craft)
+
+**채팅 모더레이션: 채널 프리즈(잠금) + 어드민(공지) 메시지.** 무료 플랜은 대시보드 모더레이션 UI가 잠겨 있어 data-craft-server가 Sendbird Platform API로 freeze/unfreeze·admin 메시지를 수행, 모바일은 operator(방장)에게만 트리거 노출. (Roadmap-11 마지막 단계.)
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-server)** `77eda13`: `sendbird.service.ts`에 `freezeGroupChannel(url, freeze:bool)`(PUT `.../freeze` body `{freeze}`)·`sendAdminMessage(url, message)`(POST `.../messages` body `{message_type:'ADMM', message}`) 추가. **⚠️admin type=`ADMM`**(메인 세션 curl 실측 — `ADMIN`은 Sendbird가 거부). admin은 user_id 불요.
+- **Phase 2 (feat, data-craft-server)** `a49ca79`: `chat.controller.ts` `freezeChannelController`(CHAT-C-010)·`unfreezeChannelController`(011)·`sendAdminMessageController`(012, message 검증) 전부 `assertRequesterIsOperator` 가드. `routes/chat.ts` 3라우트(PUT freeze/unfreeze, POST admin-message — 세그먼트로 `PUT :channelUrl` rename과 구분). `permission.middleware.ts` FREE allowlist 3엔트리.
+- **Phase 3 (feat, data-craft-mobile)** `4d8419e`: `chat_api.dart` `freezeChannel`/`unfreezeChannel`/`sendAdminMessage`. `channel_settings_screen.dart` operator 섹션(`_isGroup && _isCurrentUserOperator`)에 **프리즈 토글**(SwitchListTile, value=`_channel.isFrozen`, on/off→freeze/unfreeze+`_loadChannel`).
+- **Phase 4 (feat, data-craft-mobile)** `fb86540`: `chat_room_screen.dart` — ①itemBuilder **AdminMessage 중앙 시스템 렌더**(이전 silent drop 갭 해소) ②AppBar **operator 전용 📢 공지 버튼**(`myRole==Role.operator`)→서비스 디자인 입력 다이얼로그→`sendAdminMessage` ③**프리즈 배너**(`_FrozenBanner`, isFrozen 시) ④**`_Composer` 프리즈 차단**(`blocked = isFrozen && !amOperator`→TextField readOnly·전송/첨부 비활성·hint 교체). 전부 `ref.watch(chatChannelsProvider)` 기반 → 프리즈 토글·방장 위임 즉시 반영.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts
+- src/controllers/chat.controller.ts, src/routes/chat.ts, src/middlewares/permission.middleware.ts
+data-craft-mobile:
+- lib/api/chat_api.dart
+- lib/screens/dm/channel_settings_screen.dart
+- lib/screens/dm/chat_room_screen.dart
+- lib/l10n/app_ko.arb, lib/l10n/app_en.arb
+
+### 비고
+- operator 가드 신뢰원본=서버(freeze/admin 호출마다 재검증). 프리즈 중 비-operator 발송은 Sendbird 서버도 거부+클라 컴포저 차단(이중). 검증=Chrome 웹 2계정. advisor #1·#2 PASS.
+- 비차단 후속 후보: ①공지 다이얼로그 maxLength 가드 ②프리즈는 그룹 전용 UI(서버는 1:1도 허용하나 의미 적음). origin push 미수행.
+
 ## v001.902.0
 
 > 통합일: 2026-06-17
