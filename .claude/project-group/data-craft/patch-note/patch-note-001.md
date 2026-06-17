@@ -28591,3 +28591,23 @@ data-craft:
 - 신규 i18n 키 0건(오버레이가 `t.common.*`/`t.search.*` 자체 사용).
 - typecheck:all && lint exit 0(lint hotfix 0회 — 데드코드 정리 사전 반영).
 - 검증(마스터): 트리거 클릭 → 탭 모달 열림(카테고리 탭·검색·타입 그리드), 미지원 타입(longText/code/file/image/vote/connection/document 등) 미표시, 타입 선택 시 모달 닫힘+트리거 라벨 갱신+optionList/unit 초기화, 백드롭/X 닫기, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동.
+
+## v001.910.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스4)
+
+### 페이즈 결과
+- **Phase 7 / 핫픽스4 (fix, fs-data-viewer 전용)**: 그리드 "열 설정 편집"으로 여는 듀얼 위젯 열 설정 모달(`DualWidgetSettingsDialog`)의 두 결함 수정. **BUG1(섹션 내부 클리핑)**: `DualWidgetSettingsWrapper`가 다이얼로그를 portal 없이 직접 렌더 → `fixed` 루트가 섹션(transform/overflow-hidden 조상)을 containing block으로 잡아 잘림. `createPortal(document.body)` 래핑(`FormulaSettingsWrapper` 패턴 일치)으로 해소 + 다이얼로그 외곽 div에 `bg-black/50` 딤 토큰 추가(기존 `handleBackdropClick` 보존). **BUG2(뷰모드 전환 시 미닫힘)**: 컬럼 설정은 디자인(Setting) 모드 전용인데 뷰모드 전환 후에도 열린 채 유지 → `FsGridTableView`에 `useEffect`(`!E.isSettingMode(tv.mode) && columnField!==null → close()`) + 마운트 렌더 게이트(`E.isSettingMode(tv.mode) &&`) 추가. 머지 `59d7c026`, 구현 `4fd2864d`.
+
+### 영향 파일
+data-craft (fs-data-viewer 전용 — column-settings-dialog 호스트가 이 패키지에만 존재):
+- packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/DualWidgetSettingsWrapper.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/DualWidgetSettingsDialog.tsx
+- packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx
+
+### 비고
+- 본 hotfix는 fs-data-viewer 전용 — `ColumnSettingsDialogHost`/`DualWidgetSettingsWrapper`/`useColumnSettingsDialog`가 sub/external 패키지엔 부재(grep 0 refs). "열 설정 편집" 플로우 자체가 메인 뷰어에만 존재.
+- BUG2 게이트는 호스트 마운트 전체에 적용 → 듀얼뿐 아니라 모든 컬럼 타입(select/vote/formula/button/connection) 설정 다이얼로그가 뷰모드 전환 시 닫힘(동일 결함 클래스의 일관 처리).
+- typecheck:all && lint exit 0(lint hotfix 0회).
+- 검증(마스터): "열 설정 편집" → 모달이 화면 중앙·뒷배경 딤·섹션 클립 없이 풀 오버레이, 디자인→뷰모드 전환 시 즉시 닫힘, 디자인 모드 복귀 후 재오픈 가능, 백드롭 클릭 닫기 보존. dev=fs_data_viewer src alias(머지+하드 리프레시).
