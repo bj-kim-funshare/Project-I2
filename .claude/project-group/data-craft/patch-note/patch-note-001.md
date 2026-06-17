@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.926.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #359 핫픽스2
+
+디자인팀 시안 기반 날짜/시간 계열 5개 타입 피커(기간·날짜·날짜및시간·시간·마감일) **전면 리디자인**. 기존 기능 100% 보존(월 이동·날짜/시간/기간 선택·직접 입력·초기화·작업완료), 레이아웃·컴포넌트만 신규 설계. 3개 뷰어 패키지 동일 적용. 훅/핸들러/상태 무변경(UI 레이어만 교체).
+
+### 페이즈 결과
+- **Phase 8 핫픽스2 (refactor, data-craft)** `a89da26`·`27d7428`·`d003dc9`·`facaf07`·`4c8402c`·`930d819` (패키지×그리드/오버레이 6커밋):
+  - 카드: `rounded-[18px]` + 소프트 섀도, 헤더 `[<] 연월 [>]` 중앙(X 없음).
+  - 그리드: **오늘=파란 inset 링**(채움 아님), **지정일=파란 채움+흰글씨**, 토 파랑·일 빨강(out-month 연한 색), 셀 `relative h-10` 래퍼+34px 버튼(정렬 안정). 기간은 **range band**(`#DCE8FE`, 시작/종료 반쪽·중간 전체).
+  - 시간: Radix Select 드롭다운 → **상하 chevron 큰 스테퍼**(시/분, 숫자 직접입력 가능). 날짜및시간: TimeSelector → **가로 미니 스테퍼**(`< 00 시 > : < 00 분 >`). `onHourChange/onMinuteChange` 그대로 재사용.
+  - 입력칸: filled 시 brand-bg 강조, 엔터 적용 아이콘. **초기화 버튼은 ⌫(Delete) 키 아이콘**(`(Backspace)` 텍스트 폐기). 날짜/날짜및시간/시간은 입력칸+초기화 한 행.
+  - 기간: 단일 combined 입력 → **시작일/종료일 2입력**(로컬 state, `applyRange`→`onSaveTimeline(start~end)`, 단일 입력은 `date~date` 수용). 화살표 →.
+  - 마감일: **작업 완료(녹색 CircleCheck)** + 초기화, 입력칸 단독.
+
+### 영향 파일
+data-craft (27 파일): `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/` 의 4 그리드 + 5 오버레이 ×3.
+
+### 비고
+- 디자인 토큰은 Tailwind arbitrary hex(시안 토큰 brand `#3B6FF6` 등) 인라인. 다크 테마 정합은 범위 외(시안=라이트).
+- typecheck:all 8/8 · lint 0 errors(warnings 기존). 훅/핸들러/포털/키다운(Backspace=초기화·ESC=닫기)/wheel 월이동 전부 보존.
+- **시각 검증은 머지 후 마스터 확인 필요**(메인 세션 렌더 불가). fs-data-viewer=하드 리프레시 즉시, fs-sub/fs-external=`pnpm build:packages` 후 dev 재기동.
+- 핫픽스1(v001.912.0)에서 도입한 `(Backspace)` 텍스트·`mb-5` 헤더 여백·`w-full` 타임라인 정렬은 본 전면 리디자인에 흡수/대체됨.
+- origin push 미수행.
+
 ## v001.924.0
 
 > 통합일: 2026-06-17
