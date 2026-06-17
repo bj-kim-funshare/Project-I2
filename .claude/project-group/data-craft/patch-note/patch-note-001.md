@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.894.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스6
+
+이미지·파일 다운로드가 **새 탭 인라인 표시/`ERR_INVALID_RESPONSE`**로 실패(동영상만 정상). 원인: `Content-Disposition: attachment; filename="<원문>"`에 **한글 파일명(비-ASCII)**이 raw로 들어가 HTTP 헤더 오염(헤더는 ASCII 전용) → zip은 ERR_INVALID_RESPONSE, 이미지는 disposition 무시되어 인라인. 동영상은 ASCII 파일명이라 우연히 정상.
+
+### 페이즈 결과
+- **Phase 9(핫픽스6 server) (fix, data-craft-server)** `89f6b9b`: `getChatFileController`의 download 분기를 **RFC 5987 이중 인코딩**으로 — `filename="<ASCII fallback: 비ASCII·헤더위험문자 → _>"; filename*=UTF-8''<percent-encoded UTF-8>`. 유효 ASCII 헤더 + 신형 브라우저는 `filename*`로 한글명 보존. **실측: 한글 zip 요청 → 유효 Content-Disposition·HTTP 200(ERR 없음).** build+lint 0.
+
+### 영향 파일
+data-craft-server:
+- src/controllers/chat.controller.ts
+
+### 비고
+- 이제 이미지·파일·동영상 모두 다운로드 시 인라인 표시 없이 한글 파일명으로 저장. origin push 미수행.
+
 ## v001.893.0
 
 > 통합일: 2026-06-17
