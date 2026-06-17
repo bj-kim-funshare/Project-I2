@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.867.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스6
+
+방장 지정(promote)이 **400 Bad Request로 실패**("방장 지정에 실패했습니다" 토스트) → number↔string 계약 위반 수정.
+
+### 페이즈 결과
+- **Phase 10(핫픽스6) (fix, data-craft-server)** `76651c2`: 모바일 `chat_api.promoteOperator`가 `userId`를 **int(JSON number)** 로 전송하는데 서버 `promoteOperatorController`가 `typeof userId === 'string'`만 허용해 `USER_ID_REQUIRED` 400 발생. 검증을 `string | number` 모두 허용으로 완화하고 `String(userId).trim()`으로 정규화 후 Sendbird operator 추가에 전달. kick(경로 파라미터 string)·기타 컨트롤러 무변경. pnpm build(tsc)+pnpm lint exit 0. (dev 서버 nodemon 자동 반영.)
+
+### 영향 파일
+data-craft-server:
+- src/controllers/chat.controller.ts
+
+### 비고
+- number↔string 계약 위반 클래스(메모리 다수 선례)의 재발 — body로 받는 식별자는 서버에서 `String()` coerce가 견고. origin push 미수행.
+
 ## v001.866.0
 
 > 통합일: 2026-06-17
