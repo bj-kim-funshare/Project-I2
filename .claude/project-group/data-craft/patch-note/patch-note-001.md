@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.932.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #362 핫픽스1
+
+**헤더 안내 모달 핫픽스 — 기능 가이드 본문(중앙 캔버스)을 실제 서비스 화면 HTML 목업 + 번호 핀으로 재구성하고, 서비스 문서에 첫 화면(허브) 복귀 경로를 추가.** 가이드 캔버스가 우측 스텝 카드를 복붙한 수준(FallbackCard)이라는 마스터 지적과, 서비스 문서에서 첫 화면으로 돌아갈 방법이 없다(개요/브레드크럼만으로는 발견 불가)는 지적을 반영.
+
+### 페이즈 결과
+- **핫픽스1 8a (feat, data-craft)** `525e33b86`: 가이드 캔버스의 `FallbackCard`(스텝 카드 복붙)를 제거하고, 데이터크래프트 서비스 화면을 HTML로 그린 `GuideMockScreen`(상단바·도구 아이콘·사용자 칩 + 가짜 데이터 테이블)으로 교체. 번호 핀 오버레이를 이미지/목업 양 경로 공용으로 배치. getting-started ko/en 에 4핀 작성(day-1 예시), 핀 미작성 섹션은 정직한 안내 문구(`canvasPinPending`) 노출 — 가짜 자동 분산 없음. zh/ja 핀은 의도적 후속 보류.
+- **핫픽스1 8b (fix, data-craft)** `d991c1f2b`: 서비스 문서 사이드바 최상단에 "문서 홈" 버튼(항상 노출, 허브 활성 시 하이라이트) 추가 + 브레드크럼 홈에 Home 아이콘·hover 밑줄로 발견성 강화 + `handleGoHub` 가 stale 선택상태(`selectedId`/`scrollToItemId`)를 클리어하도록 보강.
+- **핫픽스1 lint (fix, data-craft)** `1ced9df86`: `GuideCanvas` 의 `t()` 함수 호출을 이 패키지 `useI18n` 의 중첩 객체 접근(`t.guide.viewer.canvasPinPending`)으로 교정(TS2349).
+- 게이트: `pnpm typecheck:all && pnpm lint` exit 0 (warnings 110). advisor 완료 검증 PASS.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/guide/components/GuideMockScreen.tsx (신규)
+- packages/fs-data-viewer/src/widgets/guide/components/GuideCanvas.tsx
+- packages/fs-data-viewer/src/widgets/guide/components/DocsSidebar.tsx
+- packages/fs-data-viewer/src/widgets/guide/DocsViewerContent.tsx
+- packages/fs-data-viewer/src/shared/config/guide/content/ko/guide/getting-started.json
+- packages/fs-data-viewer/src/shared/config/guide/content/en/guide/getting-started.json
+- packages/fs-data-viewer/src/shared/config/i18n/translations/{ko,en,zh,ja}.ts
+- packages/fs-data-viewer/src/shared/config/i18n/types.ts
+
+### 비고
+- 본 핫픽스는 죽은 세션(API 529 중단)이 lint 재검증 직전까지 작성한 3커밋을 다른 세션이 인수, lint 재실행 통과 확인 후 i-dev 머지·완료한 복구 경로 산출물.
+- 메인 세션은 렌더를 볼 수 없으므로 캔버스 핀 좌표·목업 디테일 등 시각 미세조정은 마스터 스크린샷 확인 후 추가 핫픽스 권장.
+
 ## v001.931.0
 
 > 통합일: 2026-06-17
