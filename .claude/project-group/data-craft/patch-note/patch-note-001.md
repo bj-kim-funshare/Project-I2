@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.854.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #349 (funshare-inc/data-craft)
+
+**디자인 모드 페이지 트리에서 자식 보유 부모를 다른 자식 보유 부모의 (물리적) 아래 중간 위치로 재정렬하면 원위치로 복귀하는 버그 진단용 런타임 프로브 임시 추가.** 가장 밑(EndOfListDropZone) 드롭은 정상, 중간 지점만 실패. 정적 분석상 FE 의도 분류(`getDragIntent`)·`reorderRootPages`·BE `updatePageOrders` 가 모두 reorder-root 를 정상 지속하도록 올바르고, end-of-list 와 동일 체인이라 BE 도 대칭 배제 → 정적으로 핀포인트 불가. 동일 컴포넌트가 #278 핫픽스2 / #248 에서 같은 "정적 OK·실제 실패" 패턴으로 프로브 사이클을 소모한 선례에 따라 추측 수정을 묶지 않고 **프로브 전용**으로 1차 증거를 확보한다(마스터 스크린샷 후 핫픽스에서 진짜 수정 + 프로브 제거).
+
+### 페이즈 결과
+- **Phase 1** (chore, `77161ee` + lint `686c938`): 화면 우하단 고정 진단 패널 추가 — 드롭 시점에 발화 분기(`early-return:over-null` / `promote` / `end-of-list` / `main-intent`), active/raw over.id, `verticalPointerCollision` 후보 배열+winner, 해석된 overPage, `getDragIntent` 결과, reorder-root 단락 지점(@52/@61/BE 도달) 미러를 표시(드롭 후 유지). collision/reorder 판정 로직·BE 무수정(읽기 전용 기록·display-only 미러).
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx
+- src/widgets/page-navigation/lib/verticalPointerCollision.ts
+
+### 비고
+- typecheck:all / lint(0 errors, 102 warnings) PASS. advisor() 5관점 PASS x2(계획·완료) — BLOCK 없음.
+- 임시 진단 프로브 — 핫픽스에서 제거 예정.
+
 ## v001.852.0
 
 > 통합일: 2026-06-16
