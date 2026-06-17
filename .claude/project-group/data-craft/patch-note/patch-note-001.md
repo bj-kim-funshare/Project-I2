@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.914.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스35
+
+**섹션 시나리오에 뷰어 생성 단계 복원 — 최초 단일 튜토리얼의 "텍스트 위젯 → 뷰어 생성까지 하나의 흐름" 복구.** 마스터 확인: 최초 온보딩(단일 hint 체인)은 텍스트 위젯 스타일링 후 곧바로 뷰어 전환·그룹 생성·컬럼 추가까지 한 흐름이었는데, 3-시나리오 분리 시 그 4단계가 `userForm`(사용자 입력폼) 시나리오로만 옮겨져 섹션 시나리오는 텍스트 위젯+저장에서 끝났다. 마스터 지시(B안)로 섹션 시나리오에도 뷰어 생성 흐름을 복원.
+
+### 페이즈 결과
+- **핫픽스35 (feat, data-craft)** `93718d139`: `src/features/onboarding/model/scenarioRegistry.ts` `sectionCustom` 에 뷰어 4단계 삽입(`widgetLeftAlign` 뒤·`saveLayout` 앞).
+  - 추가: `widgetTextToViewer`(뷰어로 전환) → `viewerCreateGroupButton`(그룹 만들기) → `viewerCreateGroupDialog`(그룹 이름 입력) → `viewerCreateColumn`(첫 컬럼 추가).
+  - 앵커·textKey·completeWhen 모두 `userForm` 시나리오의 기존 검증된 단계를 그대로 재사용 → 신규 i18n/앵커 불요. HF34(드롭다운 격상)로 뷰어 전환 셀렉트도 이미 대응.
+  - 최종 흐름: 섹션 생성/선택/높이 → 2번째 섹션(추가/선택/확장) → 위젯 추가 → 텍스트(유형/제목/디자인/정렬) → **뷰어 전환 → 그룹 생성 → 컬럼 추가** → 저장. (19단계, prereq 제외 표시 16단계)
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts
+
+### 비고
+- 뷰어 단계는 userForm 과 일부 중복되나, 섹션 시나리오 단독으로 "텍스트→뷰어 생성"까지 완결되는 최초 설계로 복원(마스터 명시 의도).
+- FE 전용 → 하드 리프레시 반영. 검증: 섹션 커스텀 시나리오 진행 시 텍스트 위젯 정렬 후 "뷰어로 전환" 풍선 → 그룹 만들기 → 이름 입력 → 컬럼 추가 → 저장까지 안내되는지.
+
 ## v001.913.0
 
 > 통합일: 2026-06-17
