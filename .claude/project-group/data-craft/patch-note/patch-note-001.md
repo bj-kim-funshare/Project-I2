@@ -27292,3 +27292,22 @@ data-craft:
 - **실측 검증**: node 시뮬로 한글 페이지 `target===decode(pathname)`=true(루프 멈춤), 옛 slug `target===decode(wrong)`=false(rename 시 1회 정규화 유지). typecheck:all && lint exit 0. 루프는 멈추되 정규화 기능 보존.
 - 교훈(메모리화): `buildPageUrl`은 디코딩 경로, `location.pathname`은 인코딩 → 비교 전 디코딩 필수. RRv7. typecheck/lint 못 잡는 런타임 결함.
 - #345(동적 탭)과 무관(방관자). origin push 미수행.
+
+## v001.850.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #348
+
+디자인 모드 → **"화면 편집"(EditPageDialog) 모달이 세로로 긴 화면에서 대응되지 않던** 문제 개선. 근본 원인 = `DialogContent`가 **고정** 높이 `h-[80vh]`를 사용해 콘텐츠가 짧아도 뷰포트의 80%를 강제로 차지 → 세로(portrait) 뷰포트에서 폼 콘텐츠 아래로 큰 빈 공간이 생기고 푸터만 바닥에 고정. 같은 코드베이스의 잘 대응되는 형제 모달 `ReferralInfoDialog`는 적응형 `max-h-[85vh]`를 사용 — 동일 패턴 적용.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** `661b1bf`: `src/features/page-management/ui/EditPageDialog.tsx`의 `DialogContent` className에서 고정 높이 `h-[80vh]` → 적응형 `max-h-[85vh]`로 교체. 세로 화면에서 모달이 콘텐츠 높이에 맞게 축소되고, 콘텐츠가 상한 초과 시에만 기존 `flex-1 overflow-y-auto` 중앙 영역이 스크롤. 너비(`sm:max-w-[1100px]`)·grid(`md:grid-cols-[1fr_360px]`)·`overflow-hidden`·flex 구조는 불변.
+
+### 영향 파일
+data-craft:
+- src/features/page-management/ui/EditPageDialog.tsx
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) exit 0 (0 errors, 98 기존 warnings).
+- 알려진 미해결(범위 밖): 긴 페이지 트리에서 좌/우 패널 grid 행 높이 비대칭은 별개 문제(우측 미리보기 내부 스크롤화는 후속 검토). 가로 대응은 범위 밖.
+- 시각 검증(세로 창에서 모달 축소·콘텐츠 많을 때 중앙만 스크롤)은 마스터 확인 대상. dev=src alias라 머지만으로 반영(미반영 시 하드 리프레시). origin push 미수행.
