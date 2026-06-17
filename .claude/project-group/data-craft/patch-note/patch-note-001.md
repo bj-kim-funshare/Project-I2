@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.883.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 (funshare-inc/data-craft)
+
+**미디어 메시지 (A: 파일 선택 송수신).** Sendbird 채팅에 이미지·동영상·오디오·일반 파일을 골라 전송·수신 + 자동 썸네일 + 25MB 크기 제한. 웹 호환. (인앱 녹음/녹화·네이티브 매니페스트·기기 실측은 후속 B로 분리.)
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft-mobile)** `95cab1c`: 미디어 deps(file_picker·video_player·chewie·just_audio·url_launcher) + `chat_messages_provider.sendFileMessage` — **웹 호환 `FileMessageCreateParams.withFileBytes`**(`withFile(File)`은 웹 throw), `Size`=dart:ui, `thumbnailSizes=[Size(320,320)]`로 자동 썸네일, 채널 null시 false 반환→에러 안내(silent drop 금지). `_Composer` 첨부 버튼+서비스디자인 바텀시트(image_picker `pickMedia` / FilePicker `withData`) + 25MB 가드(에러에 한도값 명시) + l10n.
+- **Phase 2 (feat, data-craft-mobile)** `96bf73e`: `chat_room_screen` itemBuilder의 UserMessage-only drop을 **FileMessage 분기**로 교체, `_FileMessageBubble` 신설. MIME(확장자 fallback): 이미지=`Image.network(thumbnail/secureUrl)` 인라인+풀스크린 InteractiveViewer, 동영상=썸네일+play 오버레이, 오디오=카드, 일반파일=카드(이름·크기)+`url_launcher`. 표시는 `secureUrl`(dio 불필요). 안읽음 카운트·발신자·시간 동일.
+- **Phase 3 (feat, data-craft-mobile)** `bb2b2f5`: `video_message_view.dart`(chewie+video_player 풀스크린, `networkUrl` 웹호환, dispose 순서정리)·`audio_message_player.dart`(just_audio 인라인 play/pause+진행, setUrl 실패 폴백) 신설. chat_room 영상=Navigator.push, 오디오=카드 내 임베드.
+
+### 영향 파일
+data-craft-mobile:
+- pubspec.yaml
+- lib/chat/chat_messages_provider.dart
+- lib/screens/dm/chat_room_screen.dart
+- lib/chat/widgets/video_message_view.dart (신규)
+- lib/chat/widgets/audio_message_player.dart (신규)
+- lib/l10n/app_ko.arb, lib/l10n/app_en.arb
+
+### 비고
+- 검증=Chrome 웹(첨부→4종 송수신·이미지 인라인·자동 썸네일·파일 카드·25MB 안내). 영상/오디오 재생은 web HTML 미디어 기반 best-effort. advisor #1·#2 PASS.
+- 신규 dep으로 i-dev pull 환경은 `flutter pub get`+재기동 필요. 자동 생성 플러그인 등록 파일(linux/macos/windows)은 pub get 산출물.
+- 비차단 후속 후보: ①이미지 풀스크린 swipe-down 닫기 ②오디오 setUrl/dispose 레이스 mounted 가드 ③네이티브 미디어(B). origin push 미수행.
+
 ## v001.881.0
 
 > 통합일: 2026-06-17
