@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.878.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #352 핫픽스2
+
+"열 숨기기" 영속 결함의 **진짜 근본 원인** 수정(핫픽스1 으로 미해결 — 여전히 새로고침 시 숨김 풀림 + 설정 토글 OFF). advisor 검증으로 확정한 원인: 뷰어 **진입 로드는 meta 경로**(`getViewerMeta`)를 쓰는데, FE 의 meta 변환 체인 2곳이 `isHidden` 을 버리고 있었다. v001.869.0 이 패치한 `serverToColumnModel` 은 meta 가 아닌 별도 경로(전체 데이터 로드)라 메인 로드에 무효였다. BE 는 핫픽스1 이후 `setting.isHidden` 을 정상 전송하지만 FE 가 받지 못해 `columnModel.isHidden` 이 항상 false 였다.
+
+### 페이즈 결과
+- **핫픽스2 (fix, data-craft)** `f6c07bf`: `frozen` 이 흐르는 meta 변환 2개 사이트에 `isHidden` 병행 추가.
+  - `src/features/viewer/lib/serverToViewerMetaResult.ts`: BE meta 응답 평탄화 map 에서 `setting.isHidden → col.isHidden`(frozen 과 동일 안전 캐스트).
+  - `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts` `convertColumnsToColumnModelList`: 평탄화 `col.isHidden → FsGridColumnModel.isHidden`(frozen 옆).
+  - `pnpm typecheck:all` + lint 0. FE 전용 — 추가 DDL/BE 불요.
+
+### 영향 파일
+data-craft:
+- src/features/viewer/lib/serverToViewerMetaResult.ts
+- packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts
+
+### 비고
+- 교훈: data-craft 뷰어는 **컬럼모델 변환기가 경로별로 둘**이다 — meta 진입 로드 = `serverToViewerMetaResult`→`convertColumnsToColumnModelList`, 전체 데이터 로드 = `serverToColumnModel`. 신규 컬럼 setting 속성은 **양쪽 체인 모두**에 배선해야 하며, 뷰어 진입의 주 경로는 meta 다. typecheck 통과해도 변환기 누락은 못 잡으므로 런타임 검증 필수.
+- FE 전용(dev=vite src alias) → 하드 리프레시로 반영. 검증(마스터): 이전에 숨긴 열(예 column_id=6879, DB is_hidden=1)을 **재토글 없이** 하드 리프레시만으로 뷰 모드에서 숨겨져 있고 설정 토글이 ON 으로 복원되는지 확인. origin push 미수행.
+
 ## v001.876.0
 
 > 통합일: 2026-06-17
