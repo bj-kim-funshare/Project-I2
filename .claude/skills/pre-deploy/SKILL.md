@@ -62,6 +62,22 @@ Dispatch `deploy-validator` once via the Task tool, with all selected targets in
 
 Per-target parallel dispatch is not used: per-target work is mechanical I/O and shell probes; serial-internal beats the token cost of parallel agent dispatch for this workload.
 
+## DB 드리프트 사전 게이트 (배포 전 — deploy.md 정의 그룹)
+
+Validator dispatch 직후·Decision branch 진입 전에 실행한다. **조건**: 리더의 `deploy.md` 에 "배포 전 DB 드리프트 게이트" 섹션이 정의되어 있고(현재 `data-craft`), 선택 타겟에 그 그룹 타겟이 **하나라도** 포함될 때(FE-only 선택 포함 — FE 도 dev 스키마를 가정한 BE API 를 호출하므로). 게이트 정의가 없는 그룹은 본 단계 전체 skip.
+
+**근거**: dev/prod DB 분리 환경에서 dev 에만 적용된 미배포 스키마 변경을 안고 코드 배포가 나가면 prod 런타임이 코드와 불일치한다. data-craft 는 마이그레이션 원장 테이블이 없어 라이브 스키마 지문 대조로 판정한다(마스터 결정). psql 읽기전용 인가 근거 = `.claude/project-group/<leader>/db.md` §"pre-deploy DB 드리프트 게이트 psql 인가".
+
+1. `bash .claude/scripts/db-drift-check.sh [<server-.env-path>]` 실행. `<server-.env-path>` 미지정 시 스크립트 기본값(`data-craft-server/.env`) 사용 — data-craft 는 인자 생략 가능. (다른 그룹으로 일반화 시 BE 타겟 cwd 의 `.env` 경로를 명시.) 스크립트는 dev/prod psql 좌표를 `.env` 의 `PG_*`/`PG_*_PROD`·`DB_NAME`/`DB_NAME_PROD` 에서 로드하며, 읽기전용 카탈로그 조회만 수행하고 시크릿 값을 출력하지 않는다.
+2. **exit code → 합성 block finding 주입** (validator 가 만든 것이 아니라 pre-deploy 가 생성; Decision branch 가 평소대로 처리):
+   - `0` clean → finding 없음. 통과.
+   - `2` drift → block finding `{ target: "<DB>", check: "db_drift", confidence: 100, severity: "block", message: "dev psql 이 prod 보다 앞섬(미배포 스키마 N건) — 배포 시 런타임 불일치.", suggested_fix: "task-db-structure 로 prod 에 적용 후 재시도. dev 우위 객체는 스크립트 출력 참조." }`. 스크립트 stdout 의 dev 우위 객체 목록을 이슈 본문에 포함.
+   - `3` unreachable → block finding `{ check: "db_unreachable", severity: "block", message: "prod psql 미접속 — 드리프트 검증 불가(검증 불가 시 배포 중단, 마스터 정책).", suggested_fix: "prod psql 도달성 확보(네트워크/자격) 후 재시도, 또는 마스터 명시 우회." }`.
+   - `4` config → block finding `{ check: "db_drift_config", severity: "block", message: "드리프트 게이트 설정 오류(env/필수변수 누락).", suggested_fix: "data-craft-server/.env 의 PG_*/PG_*_PROD·DB_NAME(_PROD) 확인." }`.
+3. 합성 finding 을 validator findings 배열에 **append** 한다. 이후 Decision branch 가 평소대로 평가 → block 존재 시 Branch A(이슈 생성/append + halt, 빌드·배포 미실행). clean 이면 Branch B 진행.
+
+> 이 게이트는 그룹 레벨 1회만 실행한다(타겟별 아님). 합성 finding 의 `target` 은 대조한 prod DB명(예: `data_craft_production`)으로 표기해 추적성을 둔다.
+
 ## Decision branch
 
 After receiving the findings array:
@@ -141,7 +157,7 @@ After receiving the findings array:
 The universal `{skill}-{이슈번호}` WIP rule from `README.md` §G does not apply here. This skill produces no git commits of its own:
 
 - Branch A creates a GitHub issue, no code change.
-- Branch B runs deploy commands, whose side effects (artifacts, deployed assets) are operational, not source-tree changes. If the deploy tool itself creates commits (e.g., `gh-pages` publishes to a branch), that is the tool's behavior and is not subject to this skill's WIP discipline.
+- Branch B runs deploy commands, whose side effects (artifacts, deployed assets) are operational, not source-tree changes. If the deploy tool itself creates commits (e.g., `gh-pages` publishes to a branch; `data-craft-mobile-apk` 의 `apk-deploy.sh` 가 release APK 를 orphan `apk-deploy` 브랜치에 커밋·push), that is the deploy command's behavior and is not subject to this skill's WIP discipline. `apk-deploy.sh` 는 main working tree·소스 브랜치를 건드리지 않고 전용 시블링 worktree 에서만 동작한다.
 
 The "이슈번호" the WIP rule references is, for this skill, the issue that **Branch A** creates — but no branch is named after it because no commits are made under this skill's name.
 

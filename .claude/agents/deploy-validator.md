@@ -41,6 +41,7 @@ Manifest field non-empty. Missing/empty → `severity: warn`. Build runs; deploy
 | `vercel` | `vercel` | `vercel --version` → `block` on failure. |
 | `netlify` | `netlify` | `netlify --version` → `block` on failure. |
 | `aws` | `aws` | `aws --version` (binary presence) → `block` on failure; `aws sts get-caller-identity` (credentials/network) → `warn` on failure. |
+| `flutter` | `flutter` | `flutter --version` → `block` on failure. |
 | (other) | — | Skip — master responsibility. |
 
 **Skip rule**: if the trigger token is absent from the `deploy_command` token set, the entire row is skipped — emit no finding. The `tool` label alone never forces a probe.
@@ -49,6 +50,8 @@ Manifest field non-empty. Missing/empty → `severity: warn`. Build runs; deploy
 
 ### 3. `build_command` invocability
 Parse the first whitespace-separated token. Run `command -v <token>` (or `which`). Token unresolvable → `severity: block`. Do NOT execute the full build.
+
+> Note (data-craft-mobile-apk): this target's `deploy_command` is `bash <abs>/apk-deploy.sh <repo>` (no `flutter` token), so the check-2 `flutter` row does not fire from `deploy_command`. `flutter` availability is instead validated here in check 3 via the `build_command` first token (`flutter build apk --release` → `command -v flutter`). The `apk-deploy.sh` script's own existence is not a separate validator check — a missing script surfaces as a non-zero `deploy_command` exit, which halts pre-deploy's Branch B loop.
 
 ### 4. env policy compliance
 Map by `target.env_management`:
