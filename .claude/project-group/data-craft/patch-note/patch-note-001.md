@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.890.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #354 · 핫픽스1
+
+**노션 DnD 재설계(v001.876.0) 마스터 런타임 피드백 3건 수정.**
+
+### 페이즈 결과
+- **핫픽스1** (fix, `11225f1`+`75a8c6b`):
+  - **① 자식 모드 "루트로 이동" 박스 위치**: 전체 리스트 맨 아래가 아니라 드래그 중인 자식의 **부모, 그 마지막 자식 행 바로 아래**에 인라인 렌더(`rootMoveAnchorId`). 마지막/유일 자식이면 드래그 행 자신 뒤.
+  - **② 부모 모드(자식보유·선택상자 = mode C, 자식없는 비-선택상자 = mode B) 루트 구분선 사각지대 해소**: 다른 부모 A의 **자식 영역 위에 드래그**해도 "A 뒤" 루트 구분선이 A의 마지막 자식 아래에 표기되도록, B/C 모드에서 비활성 자식 행을 collision-visible(`useSortable disabled:{draggable:true,droppable:false}` + SortableContext items 확장)로 유지하고 `resolveDropTarget`에 descendant 가드 직후 "자식 위→그 부모 뒤 루트 divider" 분기 추가. (band는 자식 행 위에선 무시.)
+  - **③ nest 하이라이트 재호버 미표시**: `dropTarget`을 over 변경 시에만 발화하는 `onDragOver` 대신 **`onDragMove`(연속 발화)**로 매 이동마다 재계산 → 같은 부모 행 안에서 밴드 경계(edge↔mid)를 넘을 때 nest/divider가 라이브 갱신. `onDragCancel` 추가(중단 시 상태 초기화). (dnd-kit `onDragOver`=over-change-driven 함정.)
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/lib/getDragIntent.ts
+- src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx
+- src/widgets/page-navigation/ui/SortableTreeItem.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor 완료 5관점 PASS, BLOCK 없음.
+- 런타임 검증(PENDING): ② 규칙은 mode B(자식없는 비-선택상자 부모)에도 대칭 적용 — 양 모드 모두 다른 부모 자식 영역에서 구분선 확인 필요.
+
 ## v001.888.0
 
 > 통합일: 2026-06-17
