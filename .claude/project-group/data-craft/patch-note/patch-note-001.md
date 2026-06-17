@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.917.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #364
+
+**"열 설정 편집" 모달 외부 영역 딤 처리 통일.** 데이터 뷰어 디자인 모드에서 열 메뉴 또는 열 정보 편집을 통해 "열 설정 편집" 모달을 여는 모든 경우에 외부 영역이 `bg-black/50` 으로 어두워지게 통일했다. 두 트리거(열 메뉴·열 정보 편집)는 모두 동일 라우터 `ColumnSettingsDialogHost` 를 거쳐 컬럼 타입별 다이얼로그를 렌더하므로, 딤이 없던 다이얼로그 컴포넌트에 직접 딤을 추가해 전 경로를 커버했다.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** `adad9f6b`: 딤이 없던 4개 다이얼로그(formula·simpleFormula·button·connection)에 `bg-black/50` 외부 딤 추가 + 기존 vote 딤 `bg-black/30`→`bg-black/50` 통일.
+  - FormulaEditDialog·SimpleFormulaEditDialog: 기존 `fixed inset-0` 컨테이너에 `bg-black/50` 추가(단일 레이어).
+  - ButtonSettingsDialog: `modal={false}`·`showOverlay={false}` 보존(Radix `Dialog.Overlay` 는 `modal={false}` 에서 null 반환, #309 의도 유지). `createPortal` 로 `isOpen` 게이팅된 딤 div 를 NESTED_MODAL_BACKDROP(11900)에 렌더.
+  - ConnectionSettingsDialog: `Dialog.Portal` 안에 커스텀 딤 div 추가 + `Dialog.Content` z-index 를 `z-50`→NESTED_MODAL_CONTENT(12000)로 격상(열 정보 편집 경로의 ViewColumnManagerDialog=9900 위에 정합 표시).
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridFormulaCellRenderer/FormulaEditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridSimpleFormulaCellRenderer/SimpleFormulaEditDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/FsGridButtonCellRenderer/button-settings-dialog/ButtonSettingsDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/connection/ConnectionSettingsDialog.tsx`
+- `packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/VoteSettingsWrapper.tsx`
+
+### 비고 / 위험
+- Button 다이얼로그의 딤은 클릭-닫힘(onClick) 미부여 — 기존 `modal={false}` 비-dismiss 동작 보존. 나머지 3개(formula/simpleFormula/connection·vote)는 딤 클릭 시 닫힘. 시각 딤만이 명령 범위였으므로 보수적으로 기존 동작 유지. 균일 닫힘이 필요하면 핫픽스로 `onClick={onClose}` 추가 가능.
+
 ## v001.916.0
 
 > 통합일: 2026-06-17
