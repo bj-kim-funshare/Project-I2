@@ -28139,3 +28139,20 @@ data-craft:
 - `useScrollLock` 미사용(모달 본문 스크롤은 유지되어야 함 — 위젯 카드 3개).
 - typecheck:all && lint exit 0 (3 페이즈, Phase 1은 lint hotfix 1회 후).
 - 검증(마스터): dev:5173 데이터 뷰어 디자인 모드 → 듀얼 위젯 열 추가 → (1) 외부 영역 딤, (2) 하단 카드 드롭다운 비-클립, (3) 항목 클릭 정상 선택, (4) 모달 내부 스크롤 시 드롭다운 닫힘, (5) 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.889.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 4 / 핫픽스1 (fix, 3개 뷰어 패키지)**: v001.886.0에서 추가한 듀얼 위젯 구성 모달 드롭다운의 **내부 스크롤 시 즉시 닫히던** 버그 수정. 드리프트 방지용 `window` `scroll`(capture) 핸들러가 드롭다운 메뉴 자체 스크롤(`max-h-60 overflow-y-auto`)까지 잡아 닫아버리던 문제 — 단일 `handleClose`를 `handleScroll`/`handleResize`로 분리하고, `handleScroll`이 `event.target`이 `menuRef` 내부 Node면(`menuRef.current.contains(event.target)`) 닫지 않도록 가드. 모달 본문/외부 스크롤일 때만 닫혀 드리프트 방지는 유지. `c983dfa5`(머지), 3개 뷰어 패키지 parity 동일 적용(`5427a1b`).
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/DualWidgetConfigDialog.tsx
+
+### 비고
+- `scroll` 이벤트는 버블 안 되므로 `{capture:true}` 유지(window에서 포착). 스크롤러가 메뉴 div 자체일 때 `event.target === menuRef.current`이고 `Node.contains`는 자기 자신 포함 → 닫지 않음.
+- typecheck:all && lint exit 0. origin push 미수행.
+- 검증(마스터): 드롭다운 목록을 열고 목록 내부를 휠/드래그 스크롤해도 닫히지 않고, 모달 본문을 스크롤하면 닫히는지 확인.
