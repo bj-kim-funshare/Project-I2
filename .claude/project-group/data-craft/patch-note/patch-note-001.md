@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.872.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스8
+
+멤버 **내보내기(강퇴) 후 방장(요청자) 본인의 방장 UI가 사라지던** 버그 수정 — 클라 그룹 판별 결함.
+
+### 페이즈 결과
+- **Phase 12(핫픽스8) (fix, data-craft-mobile)** `42f883b`: `channel_settings_screen.dart` `_isGroup` getter가 `_loadedMembers.length > 2`라, 3인 그룹에서 1명 강퇴 → 멤버 2명 → 1:1로 오판 → 방장 전용 UI(`_isGroup && _isCurrentUserOperator`: 이름변경·삭제·멤버 액션·뱃지) 전부 숨김 → "방장 권한 사라진 것처럼" 보임. **서버/Sendbird는 정상**(curl 실측: 강퇴 후 operators 불변). 수정: `_isGroup`을 `_channel != null ? !_channel!.isDistinct : _loadedMembers.length > 2`로 — 서버가 1:1만 `is_distinct=true`로 만들므로 멤버수 변화와 무관하게 그룹 판별 안정. flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/channel_settings_screen.dart
+
+### 비고
+- 교훈: 1:1↔그룹 구분은 멤버수가 아니라 `channel.isDistinct`(생성 시 결정). 멤버수 기반은 강퇴/나가기로 깨짐. origin push 미수행.
+
 ## v001.870.0
 
 > 통합일: 2026-06-17
