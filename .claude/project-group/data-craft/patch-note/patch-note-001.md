@@ -27687,3 +27687,28 @@ data-craft:
 - typecheck:all && lint exit 0 (3 페이즈 전부).
 - 미해결(후속 후보): 동일 다이얼로그의 `user` 열 타입 값 드롭다운도 `menuItems`가 `userList` 미전달로 비어 있음 — 배선(`useTableViewInit → useGridColumnMenu`) 추가가 필요해 본 플랜 제외.
 - 검증(마스터): 스크린샷의 선택 상자형 열 + `optionList` 빈/`customDataList` 보유 열에서 조건 값 드롭다운에 선택지 노출 확인. dev=fs_data_viewer src alias(머지만으로 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 dist alias라 build:packages 후 재기동. origin push 미수행.
+
+## v001.869.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #353 (핫픽스1)
+
+선택 상자형 열 조건 값 드롭다운 수정(v001.863.0) 후, 마스터가 **사용자(user) 타입 열**에서 검증하니 조건 값 드롭다운이 여전히 "—"만 노출. v001.863.0에서 후속 후보로 명시 제외했던 인접 결함을 핫픽스로 해결. 원인: dialog의 `userList`는 `openCellStyleDialog()`의 4번째 인자(=dialog state)에서 오는데, `menuItems`가 이를 넘기지 않고 열 메뉴 훅 체인에도 `userList`가 배선돼 있지 않아 항상 빈 배열 → `renderUserSelect`의 `safeUsers`가 비어 "—"만 표시. 수신 측 플러밍(`useCellStyleDialog.open` 4번째 인자 → TableDialogs → ConditionSettingWidget.renderUserSelect)은 이미 완비되어 있었음.
+
+### 페이즈 결과
+- **핫픽스1 (fix, 3개 뷰어 패키지)**: 각 패키지 `menuItems → types(UseGridColumnMenuProps) → useGridColumnMenu → useTableViewInit` 체인에 `userList: FsGridUserModel[]`를 배선하고, `menuItems`의 `openCellStyleDialog` 호출에 userList를 4번째 인자로 전달. 기존 선택 상자형 3번째 인자(optionList/deriveSelectOptions·customDataList 폴백)는 보존.
+  - fs-data-viewer `ac445f73`, fs-sub-data-viewer `d7ecca14`, fs-external-data-viewer `a6ba5eae`.
+
+### 구조적 비대칭 (의도적 — drift)
+fs-data-viewer는 메뉴 빌더(`getColumnMenuItems`)가 **비-memoize plain 함수**라 매 렌더 최신 userList를 클로저 캡처(의존성 배열 수정 불필요, diff 2줄). fs-sub/external은 **`useCallback`**이라 의존성 배열에도 `userList` 추가(diff 3줄). 패키지 구조 divergence로 인한 의도된 차이이며 누락이 아님(둘 다 stale closure 없음 — 검증 완료).
+
+### 영향 파일
+data-craft (패키지별 동일 4파일):
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/features/grid/hooks/column-menu/menuItems.ts
+- packages/{...}/src/features/grid/hooks/column-menu/types.ts
+- packages/{...}/src/features/grid/hooks/column-menu/useGridColumnMenu.ts
+- packages/{...}/src/widgets/grid-table/hooks/useTableViewInit.ts
+
+### 비고
+- typecheck:all && lint exit 0 (12파일 교차 타입 배선 end-to-end 검증; react-hooks/exhaustive-deps는 warning 버킷이라 dep 누락은 별도 수동 확인으로 검증).
+- 검증(마스터): user 타입 열 → 열 본문 스타일 편집 → 조건 행 '값 =' 드롭다운에 사용자 목록 노출 확인. dev=fs_data_viewer src alias(머지만으로 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 dist alias라 build:packages 후 dev 재기동. origin push 미수행.
