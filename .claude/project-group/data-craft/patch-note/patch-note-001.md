@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.920.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #364 핫픽스1
+
+**v001.917.0 audit 누락 정정 — singleSelect/multiSelect "열 설정 편집" 모달 외부 딤 추가.** v001.917.0 패치노트는 선택지(단일/복수 선택상자) 다이얼로그가 "이미 딤 있음"으로 적었으나 실제로는 안 어두워졌다. 원인: `SelectOptionsSettingsWrapper` 는 공용 `DialogContent`(기본 `showOverlay=true`)를 쓰지만 `modal={false}` 라서 Radix `Dialog.Overlay` 가 null 을 반환(button 과 동일 버그 클래스를 초기 조사에서 놓침). button 과 같은 커스텀 portal 딤 div 로 수정.
+
+### 페이즈 결과
+- **핫픽스1 (fix, data-craft)** `76bc198d`: `SelectOptionsSettingsWrapper.tsx` 에 `createPortal` 커스텀 딤 div(`bg-black/50`, NESTED_MODAL_BACKDROP 11900) 추가. `modal={false}` 유지. 단일 래퍼가 single/multi 공용이라 한 파일로 두 타입 모두 커버. 이로써 `ColumnSettingsDialogHost` 의 8개 경로 전부 외부 딤 적용 완료.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/column-settings-dialog/wrappers/SelectOptionsSettingsWrapper.tsx`
+
 ## v001.919.0
 
 > 통합일: 2026-06-17
