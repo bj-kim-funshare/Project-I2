@@ -16,7 +16,7 @@
 
 🟢 /plan-enterprise data-craft data-craft-mobile — **미디어 메시지 (A: 파일 선택 송수신)**(2번 선행). ✅완료 2026-06-17(이슈 #356, patch-note v001.883~894 — 본작업 3페이즈 + 핫픽스 6건). master 실측 합격(웹). ⚠️핵심 학습: Sendbird 파일은 **서버 Api-Token 전용 접근**→`GET /api/chat/file` **프록시 필수**(웹 미디어/launchUrl은 Authorization 헤더 불가→**public 마운트**+SSRF 가드). helmet `CORP: same-origin`이 cross-origin `<video>/<audio>` 차단→프록시만 `CORP: cross-origin` override. 한글 파일명 다운로드는 `Content-Disposition` **RFC5987**(`filename*=UTF-8''`). `withFileBytes`는 웹 필수(`withFile`은 throw)+업로드 전 url=''→SDK `messageList` 재시드로 반영. 기기/스토리지의 기존 파일 선택 전송+자동 첫프레임+크기 제한. 인앱 녹음/녹화·네이티브 매니페스트·기기 실측은 B로 분리.
 
-🔴 /plan-enterprise data-craft data-craft-server data-craft-mobile — **프리즈 + 어드민 메시지**(3번 선행, 채널 존재 전제). 무료 플랜은 대시보드 모더레이션 UI 잠김 → data-craft-server가 Platform API로 채널 freeze/unfreeze·admin 메시지 발송(채널 생성 시 지정된 operator 권한). 모바일은 operator(회사 오너/관리자)에게만 프리즈·공지 트리거 노출. 검증: operator만 프리즈 가능·프리즈 중 일반멤버 발송 차단·admin 메시지 수신 로컬 실측.
+🟢 /plan-enterprise data-craft data-craft-server data-craft-mobile — **프리즈 + 어드민 메시지**(3번 선행). ✅완료 2026-06-17(이슈 #361, patch-note v001.903~907 — 본작업 4페이즈 + 핫픽스 2건). master 실측 합격(웹). data-craft-server가 Platform API로 freeze/unfreeze·admin 발송(operator 가드), 모바일은 operator에게만 프리즈 토글(설정)·공지 📢(채팅방 헤더) 노출. ⚠️핵심 학습: admin 메시지 type=**`ADMM`**(ADMIN 아님). 공지는 **단일 편집형**=`channel.data`에 영속(배너·편집 pre-fill 소스)+ADMM 본문. 서버 발송 admin은 발송 운영자에게도 unread 잡힘→`mark_as_read`로 본인만 정리. AdminMessage는 itemBuilder 분기 없으면 silent drop. **이로써 Roadmap-11 단계 목록 전부 🟢 — 이후는 아래 종료 후속(1~4)만 남음.**
 
 ---
 
