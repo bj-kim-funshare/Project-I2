@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.931.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스40
+
+**입력폼 시나리오 순서 교정 — 화면 추가(페이지 생성)를 맨 앞에서 위젯 배치 시작 시점으로 이동.** 핫픽스39 재구축 시 prereq(화면 추가)가 시나리오 맨 앞에 있었으나, 사용자 입력폼은 폼이 먼저여야 한다(마스터 지시: 폼 생성 → 사용자 설정 → 페이지 위젯). 폼 빌더·설정 다이얼로그는 페이지 없이 디자인 모드에서 접근 가능하므로, 화면 추가+섹션을 ③페이지 위젯 시작 직전으로 이동.
+
+### 페이즈 결과
+- **핫픽스40 (fix, data-craft)** `f95fa8b61`: `scenarioRegistry.ts` userForm steps 순수 순서 재배치(단계 정의 무변경).
+  - 새 순서: enterDesignMode → **[userForm·userFormSaveForm](폼 생성)** → **[userFormOpenSettings·userFormOpenSettingsEdit·userFormRegisterForm·userFormCloseSettings](사용자 설정 등록)** → **[createFirstPage·freshPage·createPageSubmit(화면 추가)·addSection·firstSectionSelect]** → [areaControlBar·widgetTextToUserForm·userFormSelectForm](위젯+폼 연결) → closeDrawer → saveLayout.
+  - enterDesignMode 는 폼 빌더 접근(헤더 관리 버튼=디자인 모드)을 위해 맨 앞 유지(화면 추가 아님).
+  - `pnpm lint`/`typecheck:all` 0. diff 21+/21−(순수 이동).
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts
+
+### 비고
+- 흐름: 디자인 모드 진입 → 폼 생성·등록(페이지 0개여도 가능) → 화면 추가 → 섹션 → 위젯 배치 → 이미 등록된 폼 연결. 폼이 먼저 등록돼 위젯 폼 선택 드롭다운에 존재.
+- FE 전용 → 하드 리프레시 반영. 검증: 입력폼 시나리오가 폼 생성·설정 등록을 먼저 안내하고, 그 뒤에 화면 추가→위젯→폼 연결 순으로 진행되는지.
+
 ## v001.930.0
 
 > 통합일: 2026-06-17
