@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.909.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스33
+
+**섹션 시나리오에 누락된 "첫 섹션 선택" 단계 추가 — 섹션 추가 후 풍선이 중앙 부유하던 결함 수정.** `addSection`(섹션 추가)은 섹션을 만들지만 자동 선택하지 않는데, 다음 단계 `firstSectionHeight80`(높이 조정)의 앵커는 `FloatingSectionBanner`(섹션 선택 시에만 렌더) 안에 있어, 선택 단계 없이 점프하면 앵커가 DOM에 없어 풍선이 타깃 없이 중앙에 떠버렸다(마스터 "3/12 섹션 높이 조정"에서 발견). 기존 `secondSectionSelect`(빈 영역 클릭→선택) 패턴을 첫 섹션용으로 미러링해 선택 단계를 삽입.
+
+### 페이즈 결과
+- **핫픽스33 (fix, data-craft)** `426bee720`: sectionCustom·userForm 양쪽에 `firstSectionSelect` 단계 추가.
+  - `model/hintRegistry.ts`: `HintContext.firstSectionFirstAreaId?` 추가.
+  - `lib/useActiveOnboardingHint.ts`: `firstSectionFirstAreaId = !anySectionSelected && sections.length>=1 ? sections[0].areas[0].id : null`(미선택 시에만 활성 → 선택 후 null 로 충돌 방지).
+  - `model/scenarioRegistry.ts`: `addSection` 다음(섹션 높이/위젯추가 앞)에 `firstSectionSelect`(completeWhen: anySectionSelected===true) 삽입 — sectionCustom·userForm 공통.
+  - `widgets/layout-canvas/ui/AreaWidgetContent.tsx`: 빈 영역 placeholder 분기 맨 앞에 `firstSectionFirstAreaId === area.id → OnboardingHint hintId="firstSectionSelect"`(emptyArea 死문서보다 우선).
+  - i18n ko/en `onboarding.firstSectionSelect.body`.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/hintRegistry.ts, src/features/onboarding/lib/useActiveOnboardingHint.ts, src/features/onboarding/model/scenarioRegistry.ts, src/widgets/layout-canvas/ui/AreaWidgetContent.tsx, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- **advisor-fallback PASS — 3개 시나리오 전체 스토리 로직 재검수 포함**(마스터 명시 요구). 모든 단계의 anchorId 가 도달 시점 화면 상태(선택/드로어/확장)에서 DOM 렌더됨 확인. 핵심: TutorialOverlay 는 `getAnchorElement(anchorId)` 로만 앵커 조회(hintRegistry showOn 무관), 위젯 추가 시 `handleAddWidget` 가 위젯 생성+선택+드로어 자동 오픈으로 위젯 단계 앵커 등록.
+- 비치명 관찰(별도 추적): pageCustom 의 `freshPage`/`createPageSubmit` 가 OR-no-sections 조건으로 콜드스타트 시 자동 스킵(클린 캔버스용 prereq라 pageCustom 흐름엔 무해). 사용자가 도중 deselect 시 advanceFloor 단조로 멈출 수 있으나 정상 경로상 미발생.
+- FE 전용 → 하드 리프레시 반영. 검증: 섹션 커스텀 시나리오에서 섹션 추가 → "섹션 선택" 풍선이 추가된 섹션에 앵커 → 클릭해 선택 → 높이 조정 단계 풍선이 속성 배너에 정상 앵커.
+
 ## v001.908.0
 
 > 통합일: 2026-06-17
