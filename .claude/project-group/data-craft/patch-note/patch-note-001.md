@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.855.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #349 (funshare-inc/data-craft) · 핫픽스1
+
+**디자인 모드 페이지 트리에서 루트 페이지를 다른 부모의 자식 영역에 수직으로 드롭하면 이동이 적용되지 않고 원위치로 복귀하던 버그 수정.** v001.854.0 진단 프로브로 확보한 런타임 증거(루트 311 영업 관리 시스템을 루트 348 의 자식 359 위로 드롭 → `intent: noop`)로 원인 확정: 311 이 **선택 상자(isSelectorBox)** 라서, 루트를 다른 루트의 자식 영역에 드롭하는 크로스 컨테이너 분기(`getDragIntent`)가 **deltaX 검사 없이 무조건 인덴트(자식 편입) 의도로 해석** → 선택 상자는 자식이 될 수 없어 noop → 복귀. 같은-컨테이너 루트→루트 경로는 이미 `deltaX > 30` 일 때만 인덴트하고 그 외에는 reorder-root 하는데, 크로스 컨테이너 경로에만 이 게이트가 빠져 있던 비대칭이 원인.
+
+### 페이즈 결과
+- **핫픽스1** (fix, `14c8f2d`): `getDragIntent.ts` 크로스 컨테이너 분기(`activeParentId===null && overParentId!==null`) 진입부에 deltaX 게이트 추가 — `deltaX <= 30`(수직 드래그) 이면 `isSelectorBox` 검사 이전에 `reorder-root(active, overParentId)` 반환. 선택 상자·자식 보유 루트·자식 없는 루트 모두 수직 드롭 시 루트 레벨 재정렬로 동작. 더불어 v001.854.0 진단 프로브를 완전 제거(DesignSidebarDndArea.tsx·verticalPointerCollision.ts 를 프로브 도입 전 상태로 복원 — 고정 패널·`__lastCollisionDebug`·ProbeSnapshot 삭제).
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/lib/getDragIntent.ts
+- src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx (프로브 제거)
+- src/widgets/page-navigation/lib/verticalPointerCollision.ts (프로브 제거)
+
+### 비고
+- **동작 변경 주의**: 자식 없는 비-선택상자 루트도 이제 다른 루트의 자식 영역에 **수직** 드롭 시 인덴트(자식 편입)가 아니라 루트 레벨 재정렬로 처리된다. 인덴트(자식 편입) 하려면 **오른쪽으로 드래그(deltaX > 30)** 해야 한다. 같은-컨테이너 루트→루트 동작과 동일해진 것(일관성 개선)이나 UX 가 바뀌므로 재테스트 시 확인 필요.
+- typecheck:all / lint(0 errors, 102 warnings 베이스라인) PASS. advisor 5관점 PASS x2(계획·완료) — BLOCK 없음.
+
 ## v001.854.0
 
 > 통합일: 2026-06-17
