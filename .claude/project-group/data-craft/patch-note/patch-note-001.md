@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.857.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스21
+
+**튜토리얼 시나리오가 "새 화면 추가" 후 뜨는 페이지 생성 다이얼로그(CreatePageDialog)를 안내하지 못하던 논리 공백 보완.** freshPage 단계가 사이드바 버튼만 가리키고, 클릭 후 뜨는 이름 입력 모달을 따라가지 못했다.
+
+### 페이즈 결과
+- **핫픽스21** (feat, `826ee44d`·보정 `2d9c430f`):
+  - `layoutStore`에 `pageCreateDialogOpen` 상태/setter 추가. `CreatePageDialog`가 useEffect로 `open` prop을 이 전역 신호와 동기화(cleanup=false). 다이얼로그의 폼+생성버튼 `<div>`를 `<OnboardingHint hintId="createPageSubmit">`로 감싸 컷아웃이 다이얼로그를 노출(이름 입력·생성 가능). `HintContext`+ctx에 `pageCreateDialogOpen` 추가.
+  - `scenarioRegistry`: `freshPage.completeWhen`을 `pageCreateDialogOpen || hasSections===false`로(다이얼로그 열리면 완료). 신규 **`createPageSubmit`** 단계(anchor 'createPageSubmit', completeWhen `hasSections===false`)를 **3 시나리오 모두** freshPage 다음에 삽입. i18n `onboarding.createPageSubmit.body` ko/en.
+  - 흐름: 새 화면 추가 클릭→다이얼로그 열림(freshPage 완료)→createPageSubmit 활성(폼 스포트라이트, 이름 입력+생성)→빈 페이지 생성(hasSections false)→빌드 단계. 다이얼로그 취소 시 freshPage 재활성.
+
+### 영향 파일
+data-craft:
+- src/entities/layout/model/{layoutTypes,layoutStore}.ts
+- src/features/page-management/ui/CreatePageDialog.tsx
+- src/features/onboarding/model/{hintRegistry,scenarioRegistry}.ts, src/features/onboarding/lib/useActiveOnboardingHint.ts
+- src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(무한루프·2 다이얼로그 인스턴스·엔진 정합 검증). (1차 실행 API 529 중단 → i18n 누락·createPageSubmit 일부 시나리오 누락을 보정 커밋으로 완결.)
+- 후속: userForm의 데이터 그룹 생성 다이얼로그(CreateDataDialog)도 동일 패턴 wiring 필요(미적용) — dev 실측 후속.
+
 ## v001.856.0
 
 > 통합일: 2026-06-17
