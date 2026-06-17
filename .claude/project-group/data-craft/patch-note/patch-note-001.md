@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.876.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #354
+
+**디자인 모드 사이드바 페이지 트리 DnD를 노션 방식으로 전면 재설계.** #349 등 반복 버그의 근본 원인이던 "드롭 의도 추론(collision+deltaX)" 모델을 폐기하고, **불법 타겟을 비활성(드롭 불가+collision 제외)**으로 만들어 추론을 제거한 결정론 모델로 교체. 드래그 모드를 드래그 대상 타입으로 결정(A 자식 / B 자식없는 비-선택상자 부모 / C 자식보유 or 선택상자 부모). 가로 구분선 삽입 + 부모 중앙밴드 중첩(드롭=마지막 자식) + 하단 "루트로 이동" 박스(자식 승격) UX. 밀림 애니메이션 제거, 원본 행 dim + DragOverlay 고스트.
+
+### 페이즈 결과
+- **Phase 1** (`d2b5059`): lib 순수 로직 신설 — `DragMode`/`DropBand`/`DropTarget` 타입 + `computeDragMode`/`computeActivePageIds`/`resolveDropTarget`/`isDescendantOfActive`(선택상자·3단계·self/descendant 불법규칙 인코딩).
+- **Phase 2** (`2ee468a`): `verticalPointerCollision` 단순 hit-test화 + `computeBand`(25/50/25, `BAND_TOP_RATIO`/`BAND_BOTTOM_RATIO` 상수=라이브 튜닝).
+- **Phase 3** (`b0a63e0`): 스토어 `movePageTo(pageId,targetParentId,newIndex)` 통합 액션 — 같은컨테이너=reorderPages, 부모변경=updatePage→reorderPages + 실패 시 부모변경 보상 롤백.
+- **Phase 4** (`e3bf7fb`): `SortableTreeItem` `disabled`(inert) prop + 구식 인디케이터 렌더 제거, 신규 `DropDivider`/`RootMoveDropZone`.
+- **Phase 5a** (`806c089`): `DesignSidebarDndArea` 구조 전환 — collapse 폐기·비활성 행 SortableContext 제외·`movePageTo` 디스패치·구 드롭존 제거. (+`resolveDropTarget` index에서 active 제외로 `movePageTo` 계약 정합.)
+- **Phase 5b** (`fe077f9`): 드롭 구분선/부모 nest 하이라이트 렌더 + 밀림 애니메이션(transform/transition) 제거.
+- **Phase 6** (`70a60e5`): 미사용 `EndOfListDropZone`/`PromoteDropZone` 삭제.
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/lib/types.ts, lib/getDragIntent.ts, lib/verticalPointerCollision.ts
+- src/widgets/page-navigation/ui/SortableTreeItem.tsx, ui/DropDivider.tsx(신규), ui/RootMoveDropZone.tsx(신규), ui/DesignSidebarDndArea.tsx
+- src/widgets/page-navigation/ui/EndOfListDropZone.tsx(삭제), ui/PromoteDropZone.tsx(삭제)
+- src/entities/page/model/pageNavigationActions.ts, model/pageTypes.ts
+
+### 비고
+- typecheck:all / lint(0 errors, 103 warnings 베이스라인) 전 페이즈 PASS. advisor 계획·완료 5관점 PASS, BLOCK 없음. BE 무변경(기존 updatePage+reorderPages 재사용).
+- **런타임 검증 필요(PENDING)**: 25/50/25 밴드 체감은 마스터 스크린샷으로 확정, 필요 시 상수 라이브 튜닝(핫픽스 아닌 정상 조정).
+- 후속 정리(비차단): Phase 1 `@deprecated` shim(`getDragIntent`/`DragIntent`/`DropIndicatorInfo`)·`SortableTreeItem.dropIndicator` 무시 prop·스토어 미참조 `reorderRootPages`/`reorderChildPages`/`movePageToParent` 일괄 제거 가능.
+
 ## v001.875.0
 
 > 통합일: 2026-06-17
