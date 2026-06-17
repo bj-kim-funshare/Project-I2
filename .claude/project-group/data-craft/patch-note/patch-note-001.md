@@ -28301,3 +28301,19 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0. className-only(textarea 배경) 단일 토큰 변경.
 - 검증(마스터): 코드 타입 셀 모달 본문 배경이 코드 편집기 스타일(회색 muted)로 표시되는지 확인. dev=fs_data_viewer src alias(하드 리프레시); sibling 뷰어는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.897.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #360
+
+### 페이즈 결과
+- **Phase 1**: 데이터 뷰어 그리드뷰 디자인 모드 열 메뉴(ColumnMenuDropdown)의 높이 상한을 max-h-[678px]에서 max-h-[730px]로 확대. 기존 반고정 메커니즘(콘텐츠 높이대로 자라되 상한 도달 시 내부 본문 영역만 스크롤)은 그대로 유지하고 상한값만 52px 늘림. className 내 나머지 토큰(w-[392px]·overflow-hidden·flex flex-col 등)과 위치 보정 로직(useLayoutEffect·getBoundingClientRect·adjustOverlayPosition)은 불변 — 위치 보정은 실측 기반이라 상한값 변경에 자동 추종.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/ColumnMenuDropdown.tsx
+
+### 비고
+- typecheck:all && lint exit 0. className 내 max-h 단일 토큰(678→730) 변경, 기능/로직 무영향.
+- 검증(마스터): 그리드뷰 디자인 모드에서 열 메뉴를 열어 (a) 항목 적을 때 콘텐츠 높이대로 짧게, (b) 항목 많을 때 730px까지 펼쳐진 뒤 내부 본문만 스크롤, (c) 화면 하단 근처 열에서 잘림 없이 위치 보정되는지 확인. dev=fs_data_viewer src alias(머지+하드 리프레시, Fast Refresh 미적용 시 하드 리프레시). origin push 미수행.
