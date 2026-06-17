@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.862.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스22
+
+**[디자인 시안 적용 1/3] 안내 모달(통합 가이드 선택)을 디자인팀 `.helpcard` 시안으로 전면 재디자인.**
+
+### 페이즈 결과
+- **핫픽스22** (feat, `47d84e0b`): `GuideSelectionContent`를 시안 구조로 재작성 — eyebrow("데이터 크래프트 도움말")+제목("무엇이 궁금하신가요?")+부제+우상단 X / 검색바(돋보기+placeholder+`/` kbd) / "바로 시작" 캡션 + 3옵션(tile 아이콘 blue·green·violet + 제목 + 설명 + chevron, 튜토리얼 "실습" badge) / 푸터("원하는 답을 못 찾으셨나요?"+"고객센터 문의 →"). 색·간격·라운드·그림자·hover 전이를 시안 CSS 값 그대로 인라인 구현. `GuideDialogShell` selection 크기 484px auto + DialogContent p-0/shadow-none. onSelectGuide/Docs/Tutorial·showTutorial·X닫기·Radix a11y 보존.
+
+### 영향 파일
+data-craft (fs-data-viewer 패키지):
+- packages/fs-data-viewer/src/widgets/guide/{GuideSelectionContent,GuideDialogShell}.tsx
+
+### 비고
+- build:packages / typecheck:all / lint(0 errors) / prod build PASS. advisor-fallback PASS(시안 1:1 구조·콜백 보존·회귀 없음).
+- 후속: 신규 카피는 한국어 하드코딩(뷰어 i18n 4언어 parity 부담 회피) — i18n 후속. 시각 충실도 dev 확인 권장. 시안 적용 2/3(시나리오 모달)·3/3(코치마크) 진행 예정.
+
 ## v001.861.0
 
 > 통합일: 2026-06-17
