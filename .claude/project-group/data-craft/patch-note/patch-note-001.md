@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.848.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스19
+
+**튜토리얼 풍선의 "다음" 버튼 제거 — 실제 조작형 설계 정합.** "실제 조작형" 튜토리얼에서는 사용자가 시나리오 동작을 수행하는 것이 곧 진행 트리거(컨트롤러가 `completeWhen`으로 자동 전진)인데, 풍선의 "다음" 버튼(`skip`)은 동작 미수행 상태로 단계를 강제 진행해 이후 단계 앵커가 없어 시나리오가 망가졌다.
+
+### 페이즈 결과
+- **핫픽스19** (fix, `5a483817`): `TutorialOverlay` 풍선 푸터의 "다음" Button(`onClick={skip}`) 제거 + 미사용된 `skip` 셀렉터 제거. "종료" Button(`onClick={stop}`)만 유지. 진행은 전적으로 사용자 동작 → 컨트롤러 자동 전진에 의존. (store의 skip 액션은 타 파일이라 무해 잔존.)
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS.
+
 ## v001.846.0
 
 > 통합일: 2026-06-16
