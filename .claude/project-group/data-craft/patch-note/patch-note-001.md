@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.866.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스5
+
+모든 모달(다이얼로그·바텀시트·메뉴)에 Material 3 특유의 **연한 보라빛 elevation 틴트(surfaceTint)** 가 깔리던 것을 전역 제거(master 요청).
+
+### 페이즈 결과
+- **Phase 9(핫픽스5) (fix, data-craft-mobile)** `cfe2a90`: `app_theme.dart` — 앱이 `ColorScheme.fromSeed`+`useMaterial3:true`라 elevated surface에 M3 surfaceTint(primary 파생) 오버레이가 보라빛으로 깔림. 라이트·다크 `ColorScheme.copyWith`에 `surfaceTint: Colors.transparent` 추가(전역 근본 차단) + 양 `ThemeData`에 `DialogThemeData`·`BottomSheetThemeData`·`PopupMenuThemeData`의 `surfaceTintColor: Colors.transparent` 명시(이중 보호). 색·surface·버튼 테마 등 그 외 무변경. flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/theme/app_theme.dart
+
+### 비고
+- 교훈: M3 `fromSeed` 테마는 `surfaceTint`를 명시 제거(transparent)하지 않으면 모든 elevated surface에 seed 파생 틴트가 깔림. origin push 미수행.
+
 ## v001.865.0
 
 > 통합일: 2026-06-16
