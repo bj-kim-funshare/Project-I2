@@ -1,5 +1,49 @@
 # data-craft — Patch Note (001)
 
+## v001.867.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #352
+
+데이터 뷰어 전 타입 열에 **"열 숨기기"** 기능 도입. 디자인(설정) 모드에서만 표시되고 그리드·캘린더·칸반·간트 4개 뷰의 작성/뷰 모드에서는 숨겨지는 영속 열 속성(`isHidden`). 영속 패턴은 기존 `frozen` 선례(타입드 컬럼 + 화이트리스트 + change 헬퍼 + setting 매핑)를 그대로 따른다.
+
+### 🚨 배포 전 필수 — DB 마이그레이션 실행 (하드 게이트)
+**dev·prod 라이브 psql** 환경에서, BE 읽기 경로(`getViewerMeta`/`getColumnSettings`/`getViewerData`)가 `data_viewer_column_setting.is_hidden` 을 SELECT 한다. 마이그레이션 미실행 상태로 BE 코드가 반영되면 **뷰어 메타/조회가 500(`column vcs.is_hidden does not exist`)으로 파손**(2026-06-17 dev 에서 실제 발생). 코드 사용 전 아래 DDL 을 각 환경(dev→prod)에 **반드시 먼저 실행**(`/task-db-structure` 권장 — 라이브 psql 직접 실행은 해당 스킬 전용 권한):
+- up: `data-craft-server/docs/migration/ddl/run4-data-viewer-column-setting-is-hidden.up.sql` (`ALTER TABLE data_viewer_column_setting ADD COLUMN is_hidden smallint NOT NULL DEFAULT 0;`)
+- down: `data-craft-server/docs/migration/ddl/run4-data-viewer-column-setting-is-hidden.down.sql`
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-server)** `34d64b2`: `data_viewer_column_setting` 에 `is_hidden smallint NOT NULL DEFAULT 0` 추가하는 run4 up/down 마이그레이션 파일 페어 작성(기존 run1~3 BEGIN/COMMIT 컨벤션). 라이브 실행은 위 게이트 참조.
+- **Phase 2 (feat, data-craft-server)** `8c7ebc6`: `is_hidden` 를 `COLUMN_SETTING_ALLOWED_FIELDS` 화이트리스트에 등록(쓰기 경로 generic UPDATE 통과) + `ViewerColumnSetting` required 필드 + SELECT 컬럼 추가 + 양쪽 읽기 경로(`getColumnSettings`·`getViewerData`) `toBooleanFields` 기본값·반환 포함. `pnpm build`(tsc)+lint 0.
+- **Phase 3 (feat, data-craft)** `0e664ed`: `FsGridColumnModel.isHidden?: boolean` 추가, `serverToColumnModel` 읽기 매핑(`frozen` 과 동일 cast), `createColumnHiddenChange` 헬퍼, `columnFromJson/columnToJson` 라운드트립.
+- **Phase 4 (feat, data-craft)** `1b2a433` + 수정 `63a4266`: 그리드/비그리드 열 메뉴 + 열 정보 편집(자동 렌더)에 "열 숨기기" `toggle` 추가(전 타입 공통) + i18n 4개 언어(`hideColumn`). **머지 전 검증서 발견한 결함 수정**: 메뉴 렌더러(`ColumnMenuVariantB`)가 `role` 로 토글을 버킷팅 → role 없는 항목이 죽은 onClick 행으로 렌더되던 것을 `role:'hideColumn'`(+`TOGGLE_ROLES`/switch/`EyeOff` 아이콘) 배선으로 정상 `SwitchChipB` 토글화(typecheck 미검출 런타임 결함).
+- **Phase 5 (feat, data-craft)** `50816ce`: 숨김 열을 4개 뷰 **표시 지점에서만** 제외, `columnModelList` 원본 보존(구조 무영향). 그리드 `customColumnGenerator`(`isSettingMode(mode) || !isHidden`, 설정 모드 노출·서브그리드 단일 소스 자동 반영), 캘린더 date/label 후보, 칸반 카드 셀·상세, 간트 상세. 칸반 group-by·간트 timeline/label 은 구조용이라 무영향. typecheck:all 8/8 + lint 0.
+
+### 영향 파일
+data-craft-server:
+- docs/migration/ddl/run4-data-viewer-column-setting-is-hidden.up.sql · .down.sql
+- src/utils/sqlFieldWhitelist.ts · src/types/viewer.types.ts · src/models/viewer.model.ts
+- src/services/viewer/viewer.query.ts · src/services/viewer/viewer.service.ts
+
+data-craft:
+- packages/fs-data-viewer/src/entities/column-model.types.ts · column-json.types.ts
+- packages/fs-data-viewer/src/features/data-viewer/lib/columnChangeHelpers.ts
+- src/features/viewer/lib/serverToColumnRow.ts
+- packages/fs-data-viewer/src/features/grid/hooks/column-menu/menuItems.ts
+- packages/fs-data-viewer/src/features/column-settings/createViewColumnMenuItems.ts
+- packages/fs-data-viewer/src/features/grid/lib/gridMenuTypes.ts
+- packages/fs-data-viewer/src/widgets/grid-table/components/column-menu-b/groupItems.ts · iconMap.ts
+- packages/fs-data-viewer/src/shared/config/i18n/translations/{ko,en,ja,zh}.ts · types.ts
+- packages/fs-data-viewer/src/widgets/fs_grid_util/customColumnGenerator.ts
+- packages/fs-data-viewer/src/widgets/calendar/calendar-chart/useCalendarColumns.ts
+- packages/fs-data-viewer/src/widgets/kanban-board/kanban-card/useKanbanCard.ts · KanbanDetailDrawerBody.tsx
+- packages/fs-data-viewer/src/widgets/gantt-chart/GanttDetailDrawerBody.tsx
+
+### 비고
+- **DDL 게이트(위) 미실행 시 뷰어 메타/조회 500 파손** — 가장 중요한 후속.
+- dev=fs_data_viewer src alias(머지만으로 반영, 미반영 시 하드 리프레시). 서브/외부 뷰어 사본은 본 기능 미적용(메인 fs-data-viewer 단일).
+- 검증(마스터): ①DDL 실행 후 ②설정 모드 열 메뉴/열 정보 편집에서 "열 숨기기"(눈-가림 아이콘) 토글 → 뷰 모드 전환 시 4개 뷰 모두 해당 열 미표시, 설정 모드 복귀 시 재표시, 하드 리프레시 후 영속 유지. ③숨긴 열도 설정 모드 열 관리에서 다시 보임(언숨김 가능). origin push 미수행.
+
 ## v001.866.0
 
 > 통합일: 2026-06-17
