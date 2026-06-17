@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.868.0
+
+> 통합일: 2026-06-16
+> 플랜 이슈: #338 (funshare-inc/data-craft) · 핫픽스24
+
+**[디자인 시안 적용 3/3] 튜토리얼 코치마크(말풍선)를 디자인팀 `.coachtip` 시안으로 전면 재디자인.** 시안 적용 3종(안내 모달·시나리오 모달·코치마크) 완료.
+
+### 페이즈 결과
+- **핫픽스24** (feat, `d9fc5a03`): `TutorialOverlay` 풍선을 `.coachtip` 구조로 교체 — 상단 카테고리 pill(zap 아이콘+`step.pill`) + 단계 카운트(`현재/총`), h3 제목(`step.title`), 본문(`dangerouslySetInnerHTML` strong 강조 유지), 하단 dots(진행점, 총 단계수·현재 강조) + **건너뛰기(=stop)** + **다음(=skip, 시안대로 부활)**. `scenarioRegistry` 전 step에 `pill`/`title`(인라인 한국어) 추가. count/dots는 `activeStepIndex+1` / `scenario.steps.length`. `DiscoveryHint`도 동일 카드 룩(라운드16/그림자, dots/pill 없이 본문+확인). **위치계산(setReference(anchorEl)+autoUpdate+isPositioned)·컷아웃 dim·blockPointer·z·centered 인프라 전부 보존, 원자 셀렉터 유지(무한루프 무위험).**
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/{TutorialOverlay,DiscoveryHint}.tsx, src/features/onboarding/model/scenarioRegistry.ts
+
+### 비고
+- typecheck:all / lint(0 errors) PASS. advisor() 지속 과부하로 advisor-fallback(opus-4-7) 5관점 PASS(원자 셀렉터·인프라 보존·시안 충실).
+- 시안 적용 완결(1/3 안내 v001.862.0, 2/3 시나리오 v001.865.0, 3/3 코치마크 본건). "다음" 버튼은 시안 지시로 부활(=수동 advance) — 사용자 동작 자동 전진과 병행.
+
 ## v001.867.0
 
 > 통합일: 2026-06-17
