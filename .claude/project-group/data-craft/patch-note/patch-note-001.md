@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.859.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스1
+
+방장 권한 UI 2건 보정(master): (1) 멤버 액션 메뉴가 기본 Material PopupMenu(시스템 디자인)라 이질적 → 앱 서비스 디자인 바텀시트로 교체. (2) 방장이 "채널 나가기"를 누르면 바로 나가져 operator-less 채널 위험 → 위임 후 나갈 수 있다는 안내로 차단.
+
+### 페이즈 결과
+- **Phase 5(핫픽스1) (fix, data-craft-mobile)** `4b51202`: `channel_settings_screen.dart` — ① 멤버 타일 trailing `PopupMenuButton`(시스템 팝업)을 제거하고 `more_vert` IconButton→`_showMemberActions` 모달 바텀시트로 교체(앱 유일 sheet 선례 미러: 둥근 상단 16·드래그 핸들·멤버명 헤더·Divider·ListTile 행, colorScheme 토큰 일관 — 방장으로 지정=`admin_panel_settings_outlined`/primary(대상이 비operator일 때만), 내보내기=`person_remove_outlined`/error). ② `_leave` 진입 시 `_isCurrentUserOperator`면 위임 안내 AlertDialog(단일 확인) 표시 후 return — 방장은 다른 멤버에게 위임한 뒤에만 나갈 수 있게 차단(나가기 ListTile 표기는 유지). 비방장은 기존 confirm→leave 흐름 무수정. 신규 l10n `dmSettingsLeaveOperatorNotice`(en/ko). flutter analyze 0(변경 파일).
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/channel_settings_screen.dart
+- lib/l10n/app_en.arb
+- lib/l10n/app_ko.arb
+
+### 비고
+- 비차단 후속 후보: 현재 모든 operator의 직접 나가기를 일률 차단 — operator 2명 이상이면 한 명은 위임 없이 나가도 채널 안전(유일 방장만 차단/다중 방장 통과가 더 자연스러울 수 있음). master 결정 대기. origin push 미수행.
+
 ## v001.858.0
 
 > 통합일: 2026-06-17
