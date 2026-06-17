@@ -28816,3 +28816,46 @@ data-craft (3개 뷰어 패키지 동일):
 - 기존 save 경로(`stringifyDualWidgetCellValue` + saveGridModelWithAutoUpdate + recordHistory)·lazy import cyclic 회피·`editingValues` 버퍼링은 무수정 — 트리거만 Save 버튼→닫힘으로 이동.
 - 신규 i18n 키 0. typecheck:all && lint exit 0(typecheck hotfix 1회 — 2번째 렌더 사이트 position 누락).
 - 검증(마스터): 듀얼 셀 클릭/더블클릭/Enter → 오버레이가 셀 바로 아래 표시(중앙 모달 아님), 상단 탭이 sub-widget 수만큼, 탭별 에디터가 타입에 맞게(text/date/select/number) 일반 셀과 동일, 백드롭/Esc 닫힘 시 commit, 화면 하단 셀에서도 잘림 없음, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
+
+## v001.921.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #347 (핫픽스 1~17)
+
+뷰모드 드롭다운 통일(기본 플랜 v001.851.0) 이후 마스터 시각 검증 기반 핫픽스 17회 + 드롭다운 디자인 시스템의 추가 컬럼 타입/UI 확장. 누적 결과: `ViewModeDropdownPanel`(+ `ViewModeExpandModal`) 단일 컴포넌트가 뷰어의 거의 모든 단일/복수 선택 오버레이를 통일.
+
+### 핫픽스 결과
+- **핫픽스1**(`9cd564e6`): 인라인/모달 푸터 구성을 시안대로 분리 — 인라인=카운트+초기화+저장, 모달=카운트+전체선택(3-state)+저장(이전엔 양쪽에 4항목 욱여넣어 250px서 세로 깨짐). 더보기 띠=꺾쇠 아이콘, 초기화 라벨 교정.
+- **핫픽스2**(`455105496`): 더보기 화살표 아이콘 가시화 — lucide `color` prop(SVG stroke 속성)에 CSS var() 미해석 → `currentColor` 상속으로 수정.
+- **핫픽스3**(`c7a1276a`): 저장 버튼 시안 블루(`#3B82F6`, 라이트/다크) — 앱 `--primary`(라이트 블랙)에서 전용 `--fs-view-save-bg` 토큰으로.
+- **핫픽스4**(`24c93083`): 체크박스·선택 체크 아이콘도 블루 통일(`--fs-view-blue`).
+- **핫픽스5**(`212390a9`): 확장 모달 열 때 인라인 드롭다운 닫기(`!isExpanded` 게이팅), 모달 닫으면 전체 닫힘.
+- **핫픽스6**(`12179c64`): 크게보기 제목=열 제목 / 세계시간 모달 번호·프로필 정렬 / **국가 국기 표시**(`nationFlags.ts`, ISO alpha-2→이모지 196개국).
+- **핫픽스7**(`f432dfae`): 크게보기 더보기 띠 풀폭(`left/right:-10`) + 검색어 클리어 시 자동 전체표시.
+- **핫픽스8~10**(`88a43190`·`214df866`·`a1fac00d`): 크게보기 더보기 띠 바닥 미숨김 — 진단 프로브로 원인 확정(이벤트 미발화로 `showMore` stale) 후 **100ms 인터벌 폴링** 구동으로 해소.
+- **핫픽스9**(`214df866`): **국가 타입 셀 표기에도 국기**(그리드+간이).
+- **핫픽스11~12**(`e261d584`·`b344e810`): **단일 선택 셀** → 패널 적용. 옵션 관리는 드롭다운에서 제거(열 설정 편집으로 일원화), '선택 안 함'=빨강(`ViewModeItem.danger`).
+- **핫픽스13**(`9c9715ea`): **복수 선택 셀** → 패널(multi, 색상 칩, 선택 전용).
+- **핫픽스14**(`3950e4c8`): **투표 셀** → 패널(단일선택 적응 — 득표수 trailing, 내 투표=선택, 빨강 투표취소, 중앙모달→셀 앵커).
+- **핫픽스15**(`e859cf08`): 옵션 행 leading(색 원형) 수직 중앙 정렬.
+- **핫픽스16**(`8de0cde2`): **뷰어 헤더 필터 드롭다운**(전체 ▼) → 패널.
+- **핫픽스17**(`a5052ffd`): **수식 열 컬럼선택** + **간단수식 연산유형** → 패널. 고정 모달(z 12000) 대응 `zIndex` prop 추가.
+
+### 적용 범위 (누적, 뷰어)
+사용자 / 세계시간 / 국가 / 단일선택 / 복수선택 / 투표 셀(그리드+간이 2레이어), 헤더 컬럼 필터, 수식 컬럼선택, 간단수식 연산유형.
+
+### 영향 파일 (주요)
+data-craft:
+- packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/* (패널/모달/draft/types/LiveClock/index)
+- packages/fs-data-viewer/src/styles.css · shared/config/theme/componentColors/uiColors.ts (`--fs-view-*` 토큰)
+- packages/fs-data-viewer/src/shared/config/nationFlags.ts (신규)
+- packages/fs-data-viewer/src/widgets/cell-renderers/{FsGridSingleSelectCellRenderer,FsGridMultiSelectCellRenderer,FsGridVoteCellRenderer,FsGridNationCellRenderer,user-cell,world-time-cell,FsGridFormulaCellRenderer,FsGridSimpleFormulaCellRenderer}/*
+- packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/{SingleSelectRenderer,MultiSelectRenderer,VoteRenderer,UserRenderer,NationRenderer,WorldTimeRenderer}.tsx
+- packages/fs-data-viewer/src/widgets/data-viewer-header/header-search/{SearchDropdown,HeaderSearch}.tsx
+
+### 비고
+- 옵션/선택지 편집은 드롭다운이 아니라 **열 설정 편집**(property-drawer)으로 일원화(단일/복수/투표 공통).
+- 더보기 띠 바닥 숨김은 이벤트가 아닌 인터벌 폴링으로 구동(모멘텀 스크롤·콘텐츠 높이 변화에 강건). 국기는 이모지 방식(Windows/Chrome 일부 미렌더 가능).
+- 투표는 득표 수만 표시(선택지별 투표자 상세는 미표시 — 디자인 패스 감축).
+- 각 핫픽스 게이트(typecheck:all && lint) exit 0. JS 변경(CSS 변경분은 dist 재빌드 반영). origin push 미수행.
+- 검증(마스터): 시각 반복 확인 완료(인라인/모달 푸터, 더보기 띠 바닥 숨김, 저장/체크박스/선택안함/국기 색, 정렬, 헤더·수식 드롭다운).
