@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.919.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스37
+
+**섹션/입력폼 시나리오 2결함 수정 — 생성 다이얼로그 버튼 차단 + 저장 전 드로어 열림.** (1) 데이터 그룹 생성 다이얼로그(`CreateDataDialog`)의 "생성" 버튼이 튜토리얼 비활성막(z13000)에 가려 클릭 불가. (2) 그룹 생성 후 설정 드로어가 열린 채로 "레이아웃 저장"을 안내(원래 hint 는 `propertyDrawerOpen !== true` 게이팅이었음).
+
+### 페이즈 결과
+- **핫픽스37 (fix, data-craft)** `4f3fa9a48`:
+  - **결함1 (다이얼로그 격상)**: `src/app/styles/index.css` — HF34 의 popper 규칙 아래에 `body.tutorial-spotlight-active [data-slot="dialog-overlay"] { z-index: 13002 }` / `[data-slot="dialog-content"] { z-index: 13003 }` 추가. 공유 Radix Dialog(생성 다이얼로그 등)를 튜토리얼 레이어 위로 → 생성 버튼 클릭 가능. (CreateDataDialog 가 공유 DialogContent 사용 확인.)
+  - **결함2 (저장 전 드로어 닫기 단계)**: saveLayout 앞에 `closeDrawer` 단계 신설 — sectionCustom·userForm 양쪽.
+    - `src/widgets/property-drawer/ui/PropertyDrawer.tsx`: 드로어 헤더 닫기(X) 버튼을 `<OnboardingHint hintId="closeDrawer">` 로 래핑.
+    - `src/features/onboarding/model/scenarioRegistry.ts`: `closeDrawer`(completeWhen `propertyDrawerOpen === false`) 를 viewerCreateColumn 뒤·saveLayout 앞에 삽입.
+    - i18n ko/en `onboarding.closeDrawer.body` 추가.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/app/styles/index.css, src/widgets/property-drawer/ui/PropertyDrawer.tsx, src/features/onboarding/model/scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- 결과 흐름(섹션·입력폼 끝): … viewerCreateColumn → **closeDrawer(설정 패널 닫기)** → saveLayout(레이아웃 저장). 드로어를 닫은 뒤에야 저장 안내.
+- 다이얼로그 격상 시 다이얼로그가 풍선 위로 와 안내 풍선이 일부 가려질 수 있으나, 다이얼로그 자체가 자명(이름 입력+생성)하여 무방. createPageSubmit 다이얼로그도 함께 완전 상호작용 가능해짐(회귀 없음).
+- FE 전용 → 하드 리프레시 반영. 검증: 그룹 생성 다이얼로그에서 제목 입력 후 "생성" 버튼이 밝게 클릭되는지, 컬럼/그룹 설정 후 드로어 닫기 안내 → 닫으면 저장 안내로 넘어가는지.
+
 ## v001.917.0
 
 > 통합일: 2026-06-17
