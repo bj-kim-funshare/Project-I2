@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.891.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #356 핫픽스4
+
+동영상/오디오가 **`net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`(200인데 차단)** — 파일 프록시 응답에 `helmet()`이 건 **`Cross-Origin-Resource-Policy: same-origin`** 때문. Flutter 웹(다른 포트)의 `<video>`/`<audio>` 요소가 cross-origin 프록시 리소스를 CORP로 차단당함(이미지는 canvaskit fetch+CORS라 통과).
+
+### 페이즈 결과
+- **Phase 7(핫픽스4 server) (fix, data-craft-server)** `c7dbece`: `getChatFileController` 응답에 `Cross-Origin-Resource-Policy: cross-origin` + `Access-Control-Allow-Origin: *` 헤더를 set(helmet 전역 same-origin을 이 엔드포인트만 override). 미디어 요소의 cross-origin 로드 허용 → 비디오 인라인 미리보기·풀스크린 재생·오디오 재생 차단 해소. **실측: 프록시 응답 헤더 `CORP: cross-origin`·`ACAO: *` 확인. master 실측 합격(동영상 정상).** build+lint 0.
+
+### 영향 파일
+data-craft-server:
+- src/controllers/chat.controller.ts
+
+### 비고
+- 보안: 미디어는 SSRF 가드(*.sendbird.com)+비추측 해시로 이미 보호 — CORP override는 표시 허용일 뿐. origin push 미수행.
+
 ## v001.890.0
 
 > 통합일: 2026-06-17
