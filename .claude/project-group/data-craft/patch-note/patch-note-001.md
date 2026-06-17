@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.930.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스39
+
+**"사용자 입력폼" 시나리오 풀 재구축 — 뷰어 중복 제거하고 실제 입력폼(`user-form` 위젯) 3단계 흐름으로 교체.** "사용자 입력폼"은 데이터 뷰어가 아니라 별도 위젯 타입 `'user-form'`(폼 빌더로 정의한 입력 필드 수집). 기존 userForm 시나리오가 뷰어 생성 흐름(섹션 시나리오와 중복)을 하던 것을, 마스터 지시(A안)대로 **폼 생성 → 사용자 설정에서 폼 등록 → 페이지 위젯으로 폼 연결** 3단계 전 과정으로 재작성. 4 Phase 빌드.
+
+### 페이즈 결과 (단일 WIP, 4 커밋)
+- **P1 (`db630e14c`)**: 온보딩 ctx 플러밍 — layoutStore 에 `formBuilderDialogOpen`/`settingsDialogOpen`(+P4 `editSettingsFormDialogOpen`) 미러 필드, AppHeader 에서 useHeaderDialogs 다이얼로그 open 동기화, HintContext+useActiveOnboardingHint 에 `hasAnyForm`(useFormStore)·`hasAnySettingsForm`(useSettingsForms)·`selectedWidgetHasFormId` 노출.
+- **P2 (`e2778070a`)**: OnboardingHint 앵커 래핑 — `userFormSaveForm`(폼빌더 저장), `userFormOpenSettings`(설정 버튼), `userFormRegisterForm`(설정 폼 추가), `userFormCloseSettings`(설정 닫기), `widgetTextToUserForm`(위젯타입 Select 동적), `userFormSelectForm`(폼 선택). 위젯타입 Select 는 `useCurrentTutorialStepId` 로 섹션(widgetTextToViewer)·입력폼(widgetTextToUserForm) 분기.
+- **P3 (`97f8134ad`)**: userForm 시나리오 steps 재작성(뷰어 단계 제거) + i18n 6키.
+- **P4 (`81dcdd912`, advisor BLOCK 해소)**: `SettingsSidebar` "사용자 설정" 섹션이 `hasAccessibleForms`(폼>0) 게이트로 폼 0개 시 미렌더 → 첫 폼 등록 경로 부재(닭-달걀)였던 결함을 `(hasAccessibleForms || canSettingsEdit)` 로 완화. `editSettingsFormDialogOpen` 미러 + Pencil 앵커(`userFormOpenSettingsEdit`) + 중간 단계 추가.
+
+### 최종 userForm 시나리오 (14단계 = prereq 4 + 10)
+… addSection → firstSectionSelect → **userForm(폼빌더 열기) → userFormSaveForm(폼 생성·저장) → userFormOpenSettings(설정 열기) → userFormOpenSettingsEdit(연필 클릭) → userFormRegisterForm(폼 사용 등록) → userFormCloseSettings(설정 닫기) → areaControlBar(위젯 추가) → widgetTextToUserForm(입력폼 위젯 전환) → userFormSelectForm(폼 연결)** → closeDrawer → saveLayout.
+
+### 영향 파일 (15)
+layoutStore/Types, AppHeader, hintRegistry, useActiveOnboardingHint, scenarioRegistry, FormPanelButtonBar, DesignModeToolbar, AvailableFormsSection, SettingsDialog, SettingsSidebar, WidgetTypeSelector, UserFormGeneralSettings, ko.ts, en.ts.
+
+### 비고
+- **advisor-fallback 2회 검증**: 1차에서 SettingsSidebar 게이트 BLOCK 발견 → P4 수정 → 2차 PASS(13단계 전 앵커 도달성·미러·단조성·회귀 확인). `pnpm lint`/`typecheck:all` 0, `build:packages`+prod build 성공.
+- 게이트 완화는 편집권한자(`canSettingsEdit`)가 폼 0개 상태에서도 폼 등록 UI 접근 가능하게 한 정당한 개선(비편집·무폼 사용자 동작 보존). HF34/37/38 의 다이얼로그/드롭다운 z-격상으로 폼빌더·설정 다이얼로그 버튼도 클릭 가능.
+- FE 전용 → 하드 리프레시 반영. 검증: 입력폼 시나리오에서 폼 빌더로 폼 생성 → 설정 연필로 폼 등록 → 위젯을 입력폼으로 전환하고 폼 연결까지 끊김 없이 안내되는지.
+
 ## v001.928.0
 
 > 통합일: 2026-06-17
