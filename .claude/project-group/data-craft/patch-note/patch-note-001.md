@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.923.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #365
+
+**모바일 prod URL 자동 전환 — release 빌드 시 배포 서버 자동 타겟팅.** 모바일(data-craft-mobile, Flutter)이 빌드 모드 분기 없이 `--dart-define` 미지정 시 localhost로 떨어져, APK로 설치하면 배포 서버를 못 찾던 문제. 웹(`src/shared/config/env.ts resolveUrl`)과 동일하게 release 빌드에서 prod URL을 코드 상수로 자동 강제하도록 중앙 설정을 신설했다. (실배포 파이프라인 이니셔티브의 코드 워크스트림 A — 그룹 정책·pre-deploy 확장은 후속.)
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-mobile)** `17627639`: `lib/config/env.dart` 신설 — 웹 `resolveUrl`을 Dart로 미러. `kReleaseMode`(웹 `import.meta.env.PROD` 대응) 게이트 + 비-prod 호스트 정규식(localhost/127.0.0.1/0.0.0.0/.local/RFC1918). release 빌드면 `API_BASE_URL` dart-define이 비었거나 사설/localhost를 가리킬 때 `https://d3u7b7cxusjkuc.cloudfront.net`(CloudFront), `WEB_BASE_URL`은 `https://datacraft.ai.kr`로 자동 강제. dev 빌드는 기존 localhost(:8000/:5173) 동작 유지. inline `String.fromEnvironment` 5개 호출부(dio_client·chat_file_image·user_avatar·web_config·employee_settings)를 중앙 getter(`apiBaseUrl`/`webBaseUrl`)로 위임, `employee_settings_screen.dart`의 스테일 디폴트 `https://app.data-craft.io` 제거. `web_config.dart`는 `export 'env.dart' show webBaseUrl`로 기존 호출부 무수정.
+- 게이트: `flutter analyze` 0 issues + `flutter build apk --release` 성공(app-release.apk 72.9MB, kReleaseMode 분기 컴파일 검증).
+
+### 영향 파일
+data-craft-mobile:
+- `lib/config/env.dart` (신규)
+- `lib/api/dio_client.dart`
+- `lib/chat/widgets/chat_file_image.dart`
+- `lib/chat/widgets/user_avatar.dart`
+- `lib/config/web_config.dart`
+- `lib/screens/me/settings/employee_settings_screen.dart`
+
+### 비고
+- prod URL 확정 근거: API=서버/웹과 동일 CloudFront, WEB=메인 data-craft 웹 CNAME(`datacraft.ai.kr`)+vite `base:'/'`. webview는 `$webBaseUrl/m/<pageId>` 루트 상대 경로로 메인 웹을 로드.
+- release 빌드만 prod 검증 가능(dev=localhost라 증상 가림). 실기기 webview/서버 동작 검증은 그룹 정책(B)·pre-deploy 확장(C) 머지 후 종합 단계에서.
+
 ## v001.922.0
 
 > 통합일: 2026-06-17
