@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.874.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스9
+
+그룹 채팅에서 **보낸 메시지의 안읽음 카운트(카카오톡식 "2")가 표시되지 않던** 미구현 보완.
+
+### 페이즈 결과
+- **Phase 13(핫픽스9) (feat, data-craft-mobile)** `5d1679e`: `chat_room_screen.dart` — 내 메시지마다 `GroupChannel.getUnreadMembers(message).length`(v4 API, 기본 `includeAllMembers:false`라 발신자·본인 제외 → 안 읽은 타 멤버 수)를 계산해 `_MessageBubble`에 전달, isMe 버블의 시간 위에 amber(#F59E0B) 숫자로 표시(0이면 숨김). 채널은 `ref.watch(chatChannelsProvider)`에서 취득 → 읽음 수신(onUserMarkedRead) 시 자동 갱신(카운트 감소). flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/screens/dm/chat_room_screen.dart
+
+### 비고
+- 1:1도 상대 미독 시 "1" 표시 후 읽으면 사라짐(읽음 표시로 동작). origin push 미수행.
+
 ## v001.872.0
 
 > 통합일: 2026-06-17
