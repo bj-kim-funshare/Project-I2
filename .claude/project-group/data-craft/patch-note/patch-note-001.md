@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.864.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #350 핫픽스3·4
+
+핫픽스2 신규 서비스 다이얼로그가 **열릴 때 무한 폭 단언으로 크래시**(창 안 뜨고 콘솔 `BoxConstraints forces an infinite width` box.dart:2251 반복). 두 단계로 근본 수정.
+
+### 페이즈 결과
+- **Phase 7(핫픽스3) (fix, data-craft-mobile)** `ae3d552`: 1차 시도 — `_ServiceConfirmDialog`·`_ServiceNoticeDialog`의 `Dialog` child를 `ConstrainedBox(maxWidth:400)`로 감싸 콘텐츠 폭을 유한히 제약. **미해소**(아래 진짜 원인은 별개).
+- **Phase 8(핫픽스4) (fix, data-craft-mobile)** `ed00a5b`: **진짜 근본 원인** — 앱 테마(`app_theme.dart`)가 `filledButtonTheme.minimumSize = Size(double.infinity, 50)`로 **모든 버튼을 전체폭(무한 minWidth)** 으로 강제하는데, 다이얼로그 액션 버튼이 `Row(mainAxisAlignment:end)` 안에 있어 Row가 비-flex 자식을 **무제한 폭으로 측정** → 버튼의 무한 minWidth가 실제 무한 폭 요구가 되어 assertion 폭주. 해결: 액션 `Row`를 제거하고 `SizedBox(width: double.infinity, child: 버튼)` **세로 스택**으로(앱의 검증된 `withdraw_dialog.dart` 패턴) — 버튼이 부모 Column(유한 폭, ConstrainedBox로 묶임)의 폭으로 클램프돼 무한 폭 경로가 차단된다. confirm=확인(전체폭, destructive면 error색)+취소(전체폭 TextButton) 세로, notice=확인 단일. flutter analyze 0.
+
+### 영향 파일
+data-craft-mobile:
+- lib/chat/widgets/service_dialog.dart
+
+### 비고
+- 교훈: **전체폭 테마 버튼(minimumSize.width=∞)을 `Row`에 넣으면 무한 폭 단언** — Row는 비-flex 자식을 무제한 폭으로 잰다. 다이얼로그 액션은 세로 스택(SizedBox 전체폭) 또는 Expanded 사용. 외곽 ConstrainedBox만으론 불충분(Row 내부 측정 우회). 정적 분석 미검출, 런타임만. origin push 미수행.
+
 ## v001.862.0
 
 > 통합일: 2026-06-16
