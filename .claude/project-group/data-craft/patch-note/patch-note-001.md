@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.928.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #359 핫픽스3
+
+마감일 타입 피커의 **작업 완료 버튼 상태 구분** 개선. 핫픽스2 리디자인 후 미완료/완료 상태가 잘 구분되지 않던 문제(미완료=초록·완료=파랑, 아이콘 동일)를 색·아이콘 모두 상태별로 분리.
+
+### 페이즈 결과
+- **Phase 9 핫픽스3 (refactor, data-craft)** `e9a48f4`:
+  - **미완료 = 빨강 계통 + 빈 원 아이콘**: `text-[#D33A3F] bg-[#FCEBEC] shadow-[inset_0_0_0_1px_#F3C0C3] hover:bg-[#F8DDDF]` + lucide `Circle`.
+  - **완료 = 초록 계통 + 체크 원 아이콘**: `text-[#0E7D58] bg-[#E6F6EF] shadow-[inset_0_0_0_1px_#BFE6D2] hover:bg-[#DBF0E5]` + lucide `CircleCheck`.
+  - 3개 뷰어 패키지 DeadlineCalendarOverlay 동일 적용. 버튼 크기/레이아웃·라벨·초기화 버튼·입력칸·그리드 무변경.
+
+### 영향 파일
+data-craft (3 파일): `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/FsGridDeadlineCellRenderer/DeadlineCalendarOverlay.tsx`
+
+### 비고
+- typecheck:all 8/8 · lint 0 errors. `onToggleCompleted`/`isCompleted` 로직 무변경(색·아이콘만).
+- origin push 미수행.
+
 ## v001.926.0
 
 > 통합일: 2026-06-17
