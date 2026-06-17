@@ -28283,3 +28283,21 @@ data-craft:
 ### 비고
 - typecheck:all && lint exit 0(양 페이즈). className-only 변경, 기능/로직 무영향.
 - 검증(마스터): 그리드뷰에서 긴 텍스트 타입·코드 타입 셀 더블클릭 → 두 모달 외곽 너비(700px)·그림자·닫기버튼·푸터 회색 배경·저장 버튼(파란+흰글씨) 동일 여부, 코드 본문 monospace 유지 확인. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.896.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #358 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1 — 코드 본문 배경 정정)**: v001.895.0에서 코드 셀 모달 본문(textarea) 배경을 긴 텍스트와 동일하게 bg-white로 통일했으나, 코드 모달 본문은 코드 편집기 스타일 배경(bg-muted)을 유지하는 것이 맞다는 마스터 의도에 따라 3개 뷰어 패키지 CodeEditDialog의 textarea 배경을 bg-white→bg-muted로 환원. 본문 배경은 "코드 본문" 정체성으로 통일 대상에서 제외됨. 프레임(그림자/닫기/푸터/파란 저장버튼/focus 링)·외곽 너비(700px)·font-mono 등 나머지 통일 결과는 그대로 유지.
+
+결과: 두 모달은 프레임·너비가 동일하고, 본문 차이는 코드의 monospace 폰트 + 코드 편집기 배경(bg-muted) 두 가지로 한정.
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/code-cell/CodeEditDialog.tsx
+
+### 비고
+- typecheck:all && lint exit 0. className-only(textarea 배경) 단일 토큰 변경.
+- 검증(마스터): 코드 타입 셀 모달 본문 배경이 코드 편집기 스타일(회색 muted)로 표시되는지 확인. dev=fs_data_viewer src alias(하드 리프레시); sibling 뷰어는 build:packages 후 dev 재기동. origin push 미수행.
