@@ -28196,3 +28196,35 @@ data-craft:
 - `scroll` 이벤트는 버블 안 되므로 `{capture:true}` 유지(window에서 포착). 스크롤러가 메뉴 div 자체일 때 `event.target === menuRef.current`이고 `Node.contains`는 자기 자신 포함 → 닫지 않음.
 - typecheck:all && lint exit 0. origin push 미수행.
 - 검증(마스터): 드롭다운 목록을 열고 목록 내부를 휠/드래그 스크롤해도 닫히지 않고, 모달 본문을 스크롤하면 닫히는지 확인.
+
+## v001.892.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #353 (핫픽스4 — 전 열 타입 전수조사)
+
+마스터 지시: 열 본문 스타일 편집의 모든 열 타입에 대해 조건 오동작/미동작을 advisor 검증 하에 정밀 전수조사·해결. 3개 탐색 에이전트 보고가 multiSelect/tag/user 저장 포맷에서 상충 → writer + `getComparableCellValue` 1차 소스로 직접 검증 후 advisor 교차 검증.
+
+### 페이즈 결과 (핫픽스4 — TIER 1 해결)
+그리드 조건 평가기 `getComparableCellValue`가 일부 다중값 C1 타입의 **저장 포맷과 불일치**:
+- **multiSelect** (3개 뷰어 패키지 전부): 저장 = 콤마 구분 라벨(`serializeValues = values.join(', ')`)인데 코드는 `JSON.parse(cellValue)` → throw → `{arr:[]}`. 결과적으로 equal/notEqual/contains/notContains 전부 미동작 + isEmpty가 비-empty 셀에 오매칭. **JSON.parse 기대가 도입된 이래 multiSelect 조건부 서식은 한 번도 동작한 적 없는 잠복 갭**.
+- **tag** (3개 전부): 저장 = `joinTags = tags.join(', ')` vs `JSON.parse` → 동일 미동작.
+- **user** (fs-sub-data-viewer · fs-external-data-viewer): `getComparableCellValue`의 user 케이스가 `JSON.parse`(드리프트)였음 — fs-data-viewer만 올바른 comma-split. 이 두 패키지에서는 user 조건이 무동작이었고, **본 수정으로 v001.871.0(핫픽스1, userList 배선)·v001.882.0(핫픽스3, 포함 부분일치)이 sub/external에서 비로소 동작**한다.
+
+수정: `getComparableCellValue`의 `multiSelect`/`user`/`tag` 세 케이스를 단일 콤마-split 블록으로 통합(저장 포맷과 정합). 다중값 의미는 `포함`=부분문자열(v001.882.0), `일치`=전체 라벨 정확일치, `비어있음`/`채워짐`=세그먼트 수 기준으로 정상화. 미사용 `optionList` 파라미터는 `_optionList`로 rename(noUnusedParameters).
+  - fs-data-viewer `019cbef2`, fs-sub-data-viewer `9700ceb6`, fs-external-data-viewer `a21674be`.
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/fs_grid_renderer/utils.ts
+
+### 전수조사 결과 — 안전 확인된 타입
+text/longText/link/phone/email/code/colorPicker/nation/worldTime(원시 문자열), singleSelect(라벨 문자열), document(title 추출), number/currency/percent/formula/simpleFormula/progress(숫자 파싱), timer(초 파싱), date/dateTime/deadline/time(날짜·시간 파싱), boolean/checkbox(truthy 판정), timeline(parseTimelineValue) — 모두 저장 포맷과 평가 정합 확인.
+
+### TIER 2 — 별도 후속 (제품 결정 필요, 본 핫픽스 제외)
+다음 타입은 어느 조건 카테고리에도 없어 LEGACY 연산자(range/greater/less/equal)가 제공되나 comparable이 인코딩 값이라 조건이 사일런트 무동작:
+- **rating/vote**(커스텀 key:value 인코딩), **connection/dualWidget/image/file**(JSON 인코딩), **deadline의 isEmpty**(JSON 저장 시 비어있지 않은 str로 오매칭 엣지).
+처리 방향(① 이 타입들에 값 조건 제공 자체를 비활성 vs ② 타입별 comparable 구축)은 타입별 유효 조건 판단이 필요한 제품 결정 사항이라 분리. (tlDurationBetween off-by-one은 실재하나 C4 미제공 dead code라 제외.)
+
+### 비고
+- typecheck:all && lint exit 0. 회귀 위험 0(현재 100% 미동작 상태에서의 수정).
+- 검증(마스터): multiSelect/tag/user 열 → 조건(일치·포함·비어있음 등) → 그리드뷰 셀 스타일 반영 확인. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
