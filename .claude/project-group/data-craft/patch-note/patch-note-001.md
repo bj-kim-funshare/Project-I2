@@ -28416,3 +28416,19 @@ data-craft:
 - react-refresh `only-export-components` 위반(컴포넌트 파일에서 비-컴포넌트 함수 export 금지) 회피 위해 `hasSettings`/`needsOptionSettings`/`needsUnitSettings`를 `settingsHelpers.ts`로 분리.
 - typecheck:all && lint exit 0(lint hotfix 1회 후). origin push 미수행.
 - 검증(마스터): 듀얼 위젯 열 추가 → (1) select/number 타입 카드에 휴지통 옆 파란 설정 아이콘, text/date 등엔 휴지통만, (2) 아이콘 클릭 시 모달이 부모 모달 위로 잘림 없이 표시, (3) 옵션 추가/드래그 정렬/삭제·단위 입력이 그리드 열 설정과 동일 동작, (4) 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동.
+
+## v001.903.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #360 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 2 (핫픽스1 — 상한 730→750 추가 확대)**: v001.897.0에서 그리드뷰 디자인 모드 열 메뉴(ColumnMenuDropdown) 높이 상한을 678→730px로 올렸는데, 마스터가 750px로 더 늘려달라고 하여 className의 max-h 토큰을 max-h-[730px]→max-h-[750px]로 추가 교체. 반고정 메커니즘(콘텐츠 자람 + 상한 도달 시 내부 본문 스크롤)과 위치 보정 로직(useLayoutEffect·getBoundingClientRect·adjustOverlayPosition)은 그대로 불변 — 상한값만 변경.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/grid-table/components/ColumnMenuDropdown.tsx
+
+### 비고
+- typecheck:all && lint exit 0. className 내 max-h 단일 토큰(730→750) 변경, 기능/로직 무영향.
+- 검증(마스터): 그리드뷰 디자인 모드 열 메뉴가 항목 많을 때 750px까지 펼쳐진 뒤 내부 본문만 스크롤되는지 확인. dev=fs_data_viewer src alias(머지+하드 리프레시). origin push 미수행.
