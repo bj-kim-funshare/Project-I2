@@ -28080,3 +28080,23 @@ data-craft:
 - `일치`(equal)·`불일치`(notEqual)는 정확 멤버십 유지 — user/select 열에서 일치는 저장 표시 문자열(예 `이동화(6)`) 전체와 정확히 일치해야 함.
 - typecheck:all && lint exit 0.
 - 검증(마스터): 사용자·multiSelect·tag 열 → 포함 조건에 부분문자열 입력 → 그리드뷰 셀 스타일 반영 확인. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
+
+## v001.886.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357
+
+### 페이즈 결과
+- **Phase 1 (fix, fs-data-viewer)**: 데이터 뷰어 디자인 모드의 **듀얼 위젯 구성** 모달(`DualWidgetConfigDialog`) 개선. (A) backdrop div(`fixed inset-0 ... z-50`)에 `bg-black/50` 추가 → 모달 외부 영역 딤 처리로 뒷배경과 시각 구분. (B) 각 카드(상단/하단 좌측/하단 우측)의 타입 선택 드롭다운(`WidgetSelector`)이 모달 `max-h-[80vh] overflow-hidden` 컨테이너에 잘리던 문제를, 드롭다운을 `createPortal(document.body)` + `adjustOverlayPosition`(`ColumnMenuDropdown` 선례 패턴, zIndex 9999, visibility 게이팅)으로 전환해 클립 경계를 탈출시켜 해결. portal 전환의 파생 결함 2종 선반영 — click-outside를 `triggerRef`+`menuRef` 양측 검사로 수정(항목 클릭 시 선택 회귀 방지), 모달 내부 스크롤/리사이즈 시 드롭다운 자동 닫힘(드리프트 방지). 구현 `6ca19b7` + lint `805dd23`(set-state-in-effect 억제, 선례 일치).
+- **Phase 2 (fix, fs-sub-data-viewer)**: 서브 데이터 뷰어 동일 사본에 Phase 1과 동일 변경 적용(fork-drift parity). `aefe73e`.
+- **Phase 3 (fix, fs-external-data-viewer)**: 외부 데이터 뷰어 동일 사본에 Phase 1과 동일 변경 적용(fork-drift parity). `e11e666`.
+
+### 영향 파일
+data-craft:
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/DualWidgetConfigDialog.tsx
+
+### 비고
+- 본 모달은 Radix Dialog가 아니라 커스텀 `fixed inset-0` div이므로 "Radix Dialog 안 커스텀 드롭다운 createPortal 금지" 안티패턴 비해당 — in-repo 선례(`ColumnMenuDropdown`/`ViewModeDropdownPanel`)와 동일한 createPortal+adjustOverlayPosition 패턴 사용.
+- `useScrollLock` 미사용(모달 본문 스크롤은 유지되어야 함 — 위젯 카드 3개).
+- typecheck:all && lint exit 0 (3 페이즈, Phase 1은 lint hotfix 1회 후).
+- 검증(마스터): dev:5173 데이터 뷰어 디자인 모드 → 듀얼 위젯 열 추가 → (1) 외부 영역 딤, (2) 하단 카드 드롭다운 비-클립, (3) 항목 클릭 정상 선택, (4) 모달 내부 스크롤 시 드롭다운 닫힘, (5) 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지만 반영, 미반영 시 하드 리프레시); 형제 뷰어(sub/external)는 build:packages 후 dev 재기동. origin push 미수행.
