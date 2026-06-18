@@ -29543,3 +29543,22 @@ data-craft-server (로컬 .env, 비커밋 운영 설정):
 - **prod 인제스트 env**: 위 INTERNAL_IPS·ANALYTICS_PROPERTIES_ENABLED는 dev 로컬에만 적용됨. prod(EC2 data-craft-server)에 반영하려면 배포 서버 env 설정 + 재시작(git-tracked .env 배포 경로) 필요.
 - **자기 트래픽 제외 ↔ 검증 딜레마**: 마스터 본인 PC(localhost/211.x)는 이제 제외되므로 본인 테스트 이벤트는 적재되지 않음 → 테마/언어 실데이터 확인은 비제외 단말에서. 기존 unknown은 플래그 OFF 시절 수집분.
 - 게이트: 각 핫픽스 typecheck/lint(+BE build) exit 0.
+
+## v001.953.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스11 — phase B, 라이브 경로 정정)
+
+### 페이즈 결과
+- **Phase 15 / 핫픽스11 phase B (fix, fs-data-viewer 전용)**: hotfix11a가 3슬롯 역할 디자인을 **라이브 경로가 아닌** `DualWidgetRenderer`(registry, 2차 컨텍스트용)에만 적용해 마스터의 메인 그리드 셀·구성 미리보기가 그대로였던 문제를 정정. 실제 라이브 표시 경로 = `fs_grid_renderer` 맵 → `FsGridDualWidgetCellRenderer` → **`DualWidgetLayout`**(셀 표시)이며 구성 미리보기(`DualWidgetPreview`)도 동일 `DualWidgetLayout`을 렌더 → **단일 수정점**. `DualWidgetLayout`의 7-템플릿 자동선택(getLayoutTemplate switch: Profile/Checklist/Schedule/Kpi/Status/Title/Default)을 제거하고, hotfix11a에서 만든 `SubWidgetRenderer`(role) + `dualWidgetSlotTokens`를 직접 호출하는 3슬롯 역할 레이아웃(top=primary/bottomLeft=support/bottomRight=trailing)으로 교체. `DualWidgetPreview`의 "상태 템플릿" 라벨(getTemplateName) 제거. 결과: 그리드 셀 + 구성 미리보기가 동시에 새 디자인 반영. 머지 `08238c04`, 구현 `bf9bbf32`.
+
+### 영향 파일
+data-craft (fs-data-viewer 전용):
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/DualWidgetLayout.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/DualWidgetPreview.tsx
+
+### 비고
+- **DualWidgetRenderer(registry)는 데드 코드 아님** — `getRendererForType('dualWidget')`를 호출하는 2차 컨텍스트(UniversalCellRenderer·BatchInputRenderer·rowLink 위임)에서 사용. 단 메인 그리드 셀 표시는 DualWidgetLayout 경로. hotfix11a/b로 두 경로 모두 동일 토큰/역할 사용 → 일관성 유지.
+- 7개 템플릿 파일(ProfileTemplate 등) + entities `getLayoutTemplate`는 DualWidgetLayout/Preview에서 더 이상 호출 안 됨(데드 코드) — 삭제는 별도 cleanup hotfix.
+- typecheck:all && lint exit 0(lint hotfix 0회).
+- 검증(마스터, 시각): dev 그리드의 듀얼 셀 + 구성 미리보기 둘 다 3슬롯 역할 디자인(상단 강조/하단좌 보조/하단우 꼬리)으로 바뀌는지, 단일선택×3/text×3/progress×3 슬롯별 차별, 편집(탭 오버레이) 무회귀. dev=fs_data_viewer src alias(머지+하드 리프레시). fs-data-viewer만 적용 — 시각 OK 후 sub/external 복제(phase C).
