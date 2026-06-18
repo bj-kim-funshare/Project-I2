@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.939.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스45
+
+**튜토리얼 진행 중 폼 빌더 X 버튼을 누르면 모달이 닫혀 풍선만 남던 문제 수정.** HF44 가 바깥클릭/Esc 닫힘은 막았으나 X 버튼은 여전히 닫았다. 입력폼 시나리오에서 폼 빌더의 가이드된 닫기 단계는 `userFormCloseBuilder` 뿐이므로, 그 단계가 아닐 땐 X 가 모달을 닫지 않게 게이팅(실제 조작형: 가이드된 닫기 단계에서만 닫기 허용).
+
+### 페이즈 결과
+- **핫픽스45 (fix, data-craft)** `8fcd16a85`: `FormBuilderDialog.tsx` X 버튼 onClick 게이팅.
+  - `useCurrentTutorialStepId()` 구독 + `handleDialogClose`: 튜토리얼 진행 중(currentStep 존재)이고 현재 단계가 `userFormCloseBuilder` 가 아니면 닫기 무시. 평상시(미실행)엔 정상 닫힘.
+  - X 버튼 onClick 을 `handleDialogClose` 로 교체. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/form-builder/ui/FormBuilderDialog.tsx
+
+### 비고
+- 다이얼로그 내부 폼 편집(이름/필드/저장 등)은 다중 요소가 필요하므로 그대로 상호작용 유지. **닫기 경로(X HF45 + 바깥/Esc HF44)만 가이드 단계로 제한**해 실수 닫힘으로 흐름이 끊기는 것 방지.
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 빌더 단계에서 X 눌러도(닫기 단계 전) 모달이 유지되고, 폼 빌더 닫기 단계에서만 X 로 닫히는지.
+
 ## v001.938.0
 
 > 통합일: 2026-06-18
