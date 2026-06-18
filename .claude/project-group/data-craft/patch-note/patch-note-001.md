@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.942.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스46
+
+**튜토리얼 단일타깃 다이얼로그 단계에서 모달 내부 비가이드 영역을 어둡게(스포트라이트) 처리.** 동작 차단(HF44/45)만으로는 부족하다는 지적 — 가이드 대상만 밝고 나머지는 어둡게 보여야 함. HF37/38 로 다이얼로그가 튜토리얼 dim(z13000) 위(13001/13002)에 있어 모달 내부가 안 어두워졌다. 단일 타깃 다이얼로그 단계에선 dim 을 다이얼로그 위(z13010)로 올려 타깃 컷아웃만 노출.
+
+### 페이즈 결과
+- **핫픽스46 (fix, data-craft)** `80d7d2ba9`:
+  - `scenarioRegistry.ts`: `TutorialStep.dialogSpotlight?` 추가 + 단일타깃 다이얼로그 단계 4개(`userFormAddForm`·`userFormCloseBuilder`·`userFormOpenSettingsEdit`·`userFormRegisterForm`)에 `dialogSpotlight: true`.
+  - `TutorialOverlay.tsx`: dialogSpotlight 단계면 dim 컨테이너 z `13000→13010`(다이얼로그 위), 풍선 z `13003→13011`. box-shadow 가 모달 내부를 어둡게 + 차단 rect 가 비타깃 클릭 차단 + 컷아웃이 타깃만 밝게/클릭 가능.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts, src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- **폼 편집 단계(`userFormSaveForm`)는 제외** — 이름/필드/내부 드롭다운 등 다중 요소 자유 조작이 필요해 dim 을 씌우지 않음(씌우면 편집 불가). 다중요소 다이얼로그(뷰어/페이지 생성)도 dialogSpotlight 미부여로 기존 자유 상호작용 유지.
+- 즉 "단일 클릭 단계"는 스포트라이트(타깃만 밝게+나머지 차단/어둡게), "편집 단계"는 자유 조작(닫기 경로만 가이드 제한)으로 이원화.
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 추가([+])·빌더 닫기(X)·설정 연필·폼 등록([+]) 단계에서 해당 타깃만 밝고 모달의 나머지는 어둡게 표시·클릭 차단되는지.
+
 ## v001.941.0
 
 > 통합일: 2026-06-18
