@@ -30112,3 +30112,35 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 ### 비고
 - 게이트: `typecheck:all && lint` 0 errors, advisor 핫픽스 검증 PASS.
 - ⚠️ **잔존**: empty-input 위임은 `MobileInputWidget` 자체가 inputDataGroupId 기반 실데이터 fetch를 구현하지 않아 빈 입력 폼만 렌더 — input 위젯 전반의 데이터 영속성 미구현과 동일 사안으로 별도 결정 필요(핫픽스 범위 외).
+
+## v001.977.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (문서 위젯 추가 보정 2차 — 저장 실패 + 영역 채움 + 브랜드명 제거)
+
+마스터 보고 결함 3건 보정. 작업 저장소 2개(BE + FE).
+
+### 변경 결과
+- **BE 저장 실패 `INVALID_WIDGET_TYPE` 해소** (data-craft-server) `defdc34`: 레이아웃 저장 시 BE가 `document` 위젯 타입을 string 이름으로 검증(`builder.layout.ts:174` → `LayoutWidgetTypeIndex[widget.type]`)하는데 미등록이라 400 발생. `src/types/builder.types.ts` 의 `LayoutWidgetType` 유니온 + `LayoutWidgetTypeFromIndex`(20) + `LayoutWidgetTypeIndex`('document':20) 세 곳에 등록. FE/BE 인덱스 정수는 설계상 상이(전송은 string 이름)하므로 BE 다음 빈 번호 20 사용, 기존 번호 무변경. `pnpm build`(tsc)+`pnpm lint` 통과.
+- **위젯이 영역을 안 채우고 찌그러짐 해소** (data-craft FE) `e930286`: `SingleWidgetRenderer` 가 wrapper 에 `flex-1`/`flex flex-col` 을 뷰어/확장형 타입에만 부여해 `document` 는 콘텐츠 높이로 수축하던 문제 — `document` 를 self-scrolling 뷰어와 동일 취급(`isDocumentWidget` 플래그)해 wrapper `flex-1 flex flex-col w-full min-h-0` + container `flex-1 min-h-0 overflow-hidden` 적용. 뷰어 전용 분기(`isViewerType`)에는 섞지 않음. 이제 뷰어 위젯처럼 영역을 채움.
+- **브랜드명 제거** (data-craft FE) `e930286`: 제품 텍스트·주석·검색어에서 브랜드명을 제거. 위젯 설명(widgetTypeConfig + ko/en locale `typeDescDocument`)을 "블록 편집 문서 — 데이터 그룹의 행을 페이지로 편집" 류로 교체, 뷰어 패키지 i18n/주석·테마 토큰 주석·페이지 트리 주석 등 잔존 표기 정리.
+
+### 영향 파일
+**data-craft-server** (i-dev)
+- `src/types/builder.types.ts`
+
+**data-craft** (i-dev) — 영역 채움
+- `src/widgets/layout-canvas/ui/SingleWidgetRenderer.tsx`
+
+**data-craft** (i-dev) — 브랜드명 제거(제품 텍스트 + 주석/검색어)
+- `src/widgets/property-drawer/ui/widgetTypeConfig.ts`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`, `src/shared/types/widget-base.types.ts`
+- `src/widgets/page-navigation/lib/getDragIntent.ts`, `src/widgets/page-navigation/lib/types.ts`, `src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx`
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidget.tsx`, `packages/fs-data-viewer/src/widgets/column-generator/tags.ts`, `packages/fs-data-viewer/src/widgets/kanban-board/DrwSaveStatus.tsx`
+- `packages/fs-data-viewer/src/features/print/lib/printHtmlBuilder.ts`, 뷰어 패키지 i18n(translations ko/en/ja/zh + types) 및 theme 토큰
+- `packages/fs-external-data-viewer/.../translations/ko.ts`, `packages/fs-sub-data-viewer/.../translations/ko.ts`
+
+### 비고
+- 게이트: BE `pnpm build`(tsc)+`pnpm lint`, FE `typecheck:all && lint` 모두 0 errors. advisor 보정 검증 PASS.
+- ⚠️ **검색어 동작 변경**: `tags.ts` 의 document 컬럼 검색 키워드에서 브랜드명을 제거 — 해당 단어로 검색해도 문서 컬럼이 더는 매칭 안 됨(브랜드명 제거 정책 반영). 발견 경로 `문서/노트/메모/기록` 은 유지. 검색어만 되돌리길 원하면 1줄 복원 가능.
+- ⚠️ **BE dev 서버 반영**: BE 타입 등록은 dev 서버가 변경을 감지해야 적용됨. 저장이 계속 실패하면 BE dev 서버 재기동 필요(nodemon 미감지 시).
+- dev=`fs_data_viewer` src alias → FE 는 i-dev pull + 하드 리프레시로 반영.
