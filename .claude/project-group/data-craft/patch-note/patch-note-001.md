@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.947.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스2
+
+**기능 가이드 섹션별 목업 레지스트리 아키텍처 도입(배선만, 시각 변화 없음).** 가이드 9개 섹션 중 섹션 1만 전용 목업·핀을 갖고 나머지는 동일한 전역 목업을 핀 없이 재사용하는 문제를 해소하기 위한 기반 작업. 후속 핫픽스에서 각 섹션에 전용·step별 목업을 추가할 수 있도록 per-section 목업 레지스트리를 도입했다.
+
+### 페이즈 결과
+- **핫픽스2 (fix, data-craft)** `3d214557`:
+  - `features/guide/lib/mockupRegistry.ts` 신설: `Record<sectionId, MockupComponent>` + `getSectionMockup(id)`. MockupComponent 시그니처 = `({stepIndex, step}) => ReactElement`(섹션 컴포넌트가 내부에서 step별 변형 렌더 가능).
+  - `widgets/guide/components/mockups/MockupGettingStarted.tsx` 신설: 기존 GuideMockScreen 위임 얇은 래퍼(JSX 중복 없음), getting-started에 등록.
+  - `GuideCanvas.tsx` 렌더 분기를 이미지 → 레지스트리 매칭 → GuideMockScreen 폴백 3단계로 변경. 핀 오버레이(step.pin)는 불변.
+  - 순효과: getting-started·섹션 2~9 모두 이전과 동일 렌더 → 시각 변화 없음. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/features/guide/lib/mockupRegistry.ts, packages/fs-data-viewer/src/widgets/guide/components/mockups/MockupGettingStarted.tsx, packages/fs-data-viewer/src/widgets/guide/components/GuideCanvas.tsx
+
+### 비고
+- 본 핫픽스는 시각 변화가 없는 plumbing. 가시적 변화(섹션 2~9 전용 목업·핀)는 후속 핫픽스(view-modes/widgets/forms/modes/그 외)부터 단계적으로 적용.
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영.
+
 ## v001.945.0
 
 > 통합일: 2026-06-18
