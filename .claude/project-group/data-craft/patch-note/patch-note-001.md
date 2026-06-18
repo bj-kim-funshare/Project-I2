@@ -30189,3 +30189,27 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors. advisor 핫픽스 검증 PASS.
 - 진단: 마스터가 본 "파란 안 사라짐"은 stale-cache(웹뷰 하드 리프레시 누락) 가능성도 있음 — 검증 시 모바일 hot restart(R) + 웹뷰 내부 하드 리프레시 권장.
 - ⚠️ **잔존(다음 핫픽스 후보)**: `_embedUrl` 빌드(토큰 refresh ~100-300ms) 동안 흰 빈 화면 잠깐 노출 — React 미로드라 검정 로더를 아직 못 띄움. 흰 깜박임이 거슬리면 Flutter 측 일시 검정 배경으로 대체 가능.
+
+## v001.980.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (문서 위젯 추가 보정 3차 — 페이지 태그칩 + 추가버튼 + 아이콘 픽커)
+
+마스터 시각/UX 지시 3건. 작업 저장소 1개(data-craft FE), 커밋 `ebcc9e2`.
+
+### 변경 결과
+- **페이지 목록을 탭 → 모서리 둥근 사각형 태그칩으로 변경**: 다중 페이지(2개 이상) 목록의 각 페이지를 `rounded-lg` + 전체 테두리 태그칩(아이콘 + 제목)으로 교체. 탭 바 밑줄(`border-b`) 제거해 칩 행으로 표현. 가로 스크롤·삭제(✕ hover)·선택 동작 유지.
+- **`+` 추가 버튼을 사각 테두리 파란 버튼으로**: 단일/다중 페이지 양쪽 `+` 버튼을 회색 고스트에서 `rounded-md border border-primary text-primary hover:bg-primary/10`(사각 테두리·파란색) 버튼 형태로 변경.
+- **페이지 아이콘 픽커를 공용 픽커로 교체**: 자체 이모지 인라인 픽커를 제거하고 화면 편집과 동일한 패키지 공용 `IconPicker`(카테고리 탭 + 검색)를 재사용. 아이콘 값은 Lucide 아이콘 이름 문자열. 헤더/칩 아이콘 표시는 신규 `LucideIconByName`(이름→Lucide 컴포넌트, 비유효 시 텍스트 폴백)로 렌더.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidgetContainer.tsx`
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/document/LucideIconByName.tsx` (신규)
+
+### 비고
+- 게이트: `typecheck:all && lint` 0 errors(실측 실행). advisor 보정 검증 PASS.
+- 아이콘 값 포맷이 이모지 → Lucide 이름으로 전환됨. 기존 테스트로 만든 이모지 아이콘은 `LucideIconByName` 폴백으로 텍스트 렌더되며(작게 보일 수 있음), 아이콘을 다시 고르면 정상화됨 — 일회성 마이그레이션은 의도적으로 미실시.
+- 공용 `IconPicker`가 `useI18n()`을 요구해 문서 위젯 트리에서 `I18nProvider`로 감쌈 — 픽커 탭 라벨은 provider 기본 언어를 따름(앱 언어 전환과 무관). 앱 전체 언어 연동이 필요하면 host 래퍼에서 현재 언어 주입 후속 가능.
+- dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
