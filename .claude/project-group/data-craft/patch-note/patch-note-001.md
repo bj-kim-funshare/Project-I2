@@ -29763,3 +29763,19 @@ data-craft (fs-data-viewer 전용):
 - slot rect는 ref 대신 `e.currentTarget`(react-compiler refs-during-render 회피). DualWidgetEditDialog는 sub/external 사용 중이라 미삭제.
 - typecheck:all && lint exit 0(lint hotfix 3회).
 - 검증(마스터): 각 서브위젯 클릭 시 그 위치에 타입 에디터(탭 없음), 값 변경 즉시 반영, view 모드선 편집 안 열림, Enter/F2→상단. dev=fs_data_viewer src alias(머지+하드 리프레시).
+
+## v001.964.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #357 (핫픽스16 — 인라인 select 이중 테두리)
+
+### 페이즈 결과
+- **Phase 20 / 핫픽스16 (fix, fs-data-viewer 전용)**: 듀얼 슬롯 단일선택 에디터의 **이중 테두리** 해소. 원인 = 인라인 `ViewModeDropdownPanel`이 자체 `panelBoxStyles`(border+radius+shadow) 적용 + 이를 감싸는 `PerSlotSubWidgetEditorPortal` 카드(`rounded-lg shadow-xl border`)도 프레임 → 중첩. 수정 = **인라인 컨테이너에서 border/radius/shadow 제거**(배경+overflow만 유지, 프레임은 포털 카드가 제공). portal 모드 무변경(그리드 일반 select 회귀 0). 머지 `b052cd0b`, 구현 `acfc951f`.
+
+### 영향 파일
+- packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/ViewModeDropdownPanel.tsx
+
+### 비고
+- 인라인 모드만 borderless, portal 모드(그리드 일반 셀 편집)는 panelBoxStyles 유지.
+- typecheck:all && lint exit 0.
+- 검증(마스터): 듀얼 슬롯 단일선택 클릭 시 테두리 1겹만. dev=fs_data_viewer src alias(머지+하드 리프레시).
