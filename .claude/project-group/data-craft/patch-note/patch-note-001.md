@@ -1,5 +1,14 @@
 # data-craft — Patch Note (001)
 
+## v001.988.0
+
+> 통합일: 2026-06-18
+
+### 변경 파일
+
+- (data-craft-server) (수정) .env
+- (data-craft-admin-server) (수정) .env
+
 ## v001.987.0
 
 > 통합일: 2026-06-18
