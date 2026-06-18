@@ -29264,3 +29264,41 @@ data-craft (3개 뷰어 패키지 동일):
 - 신규 인라인 컴포넌트는 단일 컴포넌트 export(react-refresh 회피). value contract는 각 그리드 렌더러와 동일 미러(저장값 호환).
 - typecheck:all && lint exit 0(lint hotfix 1회 — 미사용 useState import).
 - 검증(마스터): 듀얼 타입 피커에 rowLink/button 미표시; 듀얼 셀 편집에서 user/nation/worldTime/colorPicker 탭이 탭 내부 인라인(2중 팝업 없음)·선택/저장 정상; 다른 타입 탭 기존 동작; 메인/서브/외부 3 뷰어. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
+
+## v001.940.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #367
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-server)**: user_events에 `properties jsonb NULL` 추가 마이그레이션 SQL(up/down/plan) 작성. ALTER ADD COLUMN NULL(비파괴·즉시·RANGE 파티션 자동 전파). **DB 실행은 별도 task-db-structure** (작성만). 커밋 `e8f2a15`.
+- **Phase 2 (feat, data-craft-server)**: 분석 이벤트 인제스트에 ① 사내 IP silent drop(`INTERNAL_IPS` env Set 매칭 시 비기록·200 동일), ② `properties` 수용을 `ANALYTICS_PROPERTIES_ENABLED`(기본 false) 플래그로 게이트(OFF=기존 7컬럼 INSERT 그대로, ON=8컬럼). controller가 req.ip 전달. 커밋 `3054f9c`.
+- **Phase 3 (feat, data-craft)**: 분석 클라이언트 `track()`·wire 타입에 `properties` 후방호환 확장 + 신규 `context.ts getAnalyticsContext()`(게스트 라우트=preAuthTheme/실제 표시값, language=getCurrentLanguage()) + page_view 보강. GUEST_ROUTES(themeStore) 기준. 커밋 `bb8d6b3`.
+- **Phase 4a (feat, data-craft)**: `login_success`(공용/기업 단일 발화점 useSignin onSuccess, auto_login=rememberMe) + `nav_to_public_login`(기업→공용 이동 버튼). 커밋 `5089a44`.
+- **Phase 4b (feat, data-craft)**: 가입·인증·재설정 성공 분기 6종 계측 — `signup_email_verified`(공용/기업 auth_kind), `signup_business_verified`, `signup_complete`, `register_complete`, `password_reset_complete`. 커밋 `9c64bd2`.
+- **Phase 5 (feat, data-craft-admin-server)**: `GET /api/admin/analytics/auth-metrics?granularity&range&authGroup` 신설 + 7단위 버킷팅 엔진(반기=커스텀 date_trunc식, granularity는 화이트리스트 상수식). 카운트 zero-fill 시계열(total=합/average=total÷range), 테마·언어 분포, 공용 4단계/기업 3단계 distinct-actor 퍼널+잔존율. `/overview` 제거(결제 `/funnel` 유지). 커밋 `f0f34bc`.
+- **Phase 6 (feat, data-craft-admin)**: 분석 탭을 로그인/비로그인 → 공용/기업 인증 축으로 재설계. granularity Select(7) + 총계/평균 토글 + fetchAuthMetrics, 신규 features/analytics-auth(지표·분포·퍼널 차트 3종). 보정 커밋으로 결제 퍼널을 인증 range 결합에서 분리(독립 paymentDays 30 + 7/30/90 셀렉터). 커밋 `849bc11`, `c7763bb`.
+
+### 영향 파일
+data-craft-server:
+- docs/migration/ddl-changes/20260618000000_user-events-properties/{up,down}.sql, plan.md (신규)
+- src/config/constant.ts, src/controllers/analytics.controller.ts, src/services/analytics.service.ts, src/models/analytics.model.ts
+
+data-craft:
+- src/shared/lib/analytics/{types,client,context(신규),usePageTracking,index}.ts
+- src/features/auth/lib/{useSignin,useSignup,useRegisterUser}.ts
+- src/pages/auth/SubdomainLoginPage.tsx, src/pages/auth/reset-password/ResetPasswordRequestPage.tsx
+- src/pages/auth/signup/{useEmailVerification,useBusinessNumberVerification}.ts, src/pages/auth/subdomain-register/useEmailVerification.ts
+
+data-craft-admin-server:
+- src/services/adminAnalytics.service.ts, src/controllers/adminAnalytics.controller.ts, src/routes/adminAnalytics.routes.ts, src/config/constant.ts
+
+data-craft-admin:
+- src/pages/analytics/AnalyticsPage.tsx, src/entities/analytics/{api,types,index}.ts
+- src/features/analytics-auth/{AuthMetricsCharts,DistributionCharts,AuthFunnelChart,index} (신규)
+
+### 비고 / 라이브화 후속 (마스터 액션)
+- **라이브화 전제 3종**: (i) `/task-db-structure data-craft`로 properties 컬럼 dev→prod 적용 (ii) 각 환경 env에 `INTERNAL_IPS`(맥북 현재 공인 IP)·`ANALYTICS_PROPERTIES_ENABLED=true` 설정 (iii) data-craft/data-craft-server prod 배포 시 마이그레이션 선행. 플래그 OFF 기본이라 미적용 상태에서도 인제스트 무중단(properties 미수집 구간은 관리자에서 theme/language=unknown 집계).
+- **런타임 e2e 미수행(머지 후 마스터 확인)**: (a) `/auth-metrics` 7 granularity(특히 half)×공용/기업 응답·퍼널 rates, (b) admin FE 5175 탭/총계·평균 토글/분포·퍼널 렌더, 하단 결제 퍼널 불변. AuthFunnelChart가 BE 동적 rates 키를 읽는지 1회 화면 확인 필요.
+- **잔여 비차단**: 구 `AnalyticsOverviewCharts.tsx` + `fetchAnalyticsOverview`(가리키던 `/overview`는 Phase 5에서 제거)는 페이지 미참조 고아 dead code — 후속 정리 대상.
+- 게이트: 각 페이즈 lint+build/typecheck exit 0.
