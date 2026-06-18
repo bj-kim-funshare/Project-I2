@@ -29637,3 +29637,28 @@ data-craft (fs-data-viewer 전용):
 - 레이아웃/정렬만 변경, SubWidgetRenderer 타입별 렌더·역할 토큰(정렬 외)·편집 경로 무수정.
 - typecheck:all && lint exit 0(lint hotfix 0회).
 - 검증(마스터, 시각): 듀얼 셀 — 구분선 없고, 요소가 모서리에 핀되지 않으며(하단 좌측 그룹), 너무 중앙 군집도 아닌 균형 배치인지. dev=fs_data_viewer src alias(머지+하드 리프레시). 추가 미세조정은 토큰/레이아웃 단일 파일 수정으로 반복.
+
+## v001.958.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #357 (핫픽스13 — 4건 일괄)
+
+### 페이즈 결과
+- **Phase 17 / 핫픽스13 (fix)**: 듀얼 위젯 관련 4건 일괄 수정.
+  - **(A) 한글 IME 추가 중복** (3개 뷰어 + fs-data-viewer 6개): 텍스트 입력에서 한글 조합 중 Enter 시 마지막 글자가 분리돼 항목이 2개 생기던 버그("개발"→"개발"+"발"). Enter 핸들러에 `&& !e.nativeEvent.isComposing` 가드. 듀얼 옵션 에디터(`DualWidgetSettingsDialog`) 3패키지 + 동일 패턴(HolidayCustomSection·FormulaEditDialog·DeleteConditionBuilder·BatchRowPreview·kanban ColumnHeader·FsSubGrid). div-레벨/네이티브 리스너는 비해당 제외.
+  - **(B) 빈 값 타입별 표기** (fs-data-viewer): 듀얼 셀 빈 값을 "-" 대신 타입별 기본 디자인으로 — select=점선 아웃라인 칩, date류=캘린더 아이콘, user=점선 아바타, colorPicker=빈 스와치, tag=빈 필, number/text류=흐린 ··· 자리표시, boolean=꺼진 토글, nation/worldTime=Globe/Clock. 역할별 가시도 차등.
+  - **(C) 오버레이 라이브 반영** (fs-data-viewer): 듀얼 셀 편집 오버레이에서 값 조작 시 닫을 때가 아니라 **즉시** 셀 반영. `handleValueChange`가 변경 즉시 `onSave` 커밋, 닫기/커밋 분리(handleSave에서 `setIsEditDialogOpen(false)` 제거). hotfix6의 close-커밋 변경.
+  - **(D) 인라인 선택 '선택 안함'** (fs-data-viewer): `InlineOptionPicker` 상단에 "선택 안함"(single=`viewModeDropdown.none`, multi=`deselectAll`) 행 추가 — 기본 그리드 select 에디터와 동일 환경.
+  - 머지 `00c3450a`, 구현 `62a9792b`(A)+`76677858`(B)+`e3c755cf`(C·D).
+
+### 영향 파일
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/.../dual-widget/DualWidgetSettingsDialog.tsx (A)
+- packages/fs-data-viewer/src/widgets/{data-viewer-header/header-settings/HolidayCustomSection, cell-renderers/FsGridFormulaCellRenderer/FormulaEditDialog, batch-input-dialog/batch-delete/DeleteConditionBuilder, batch-input-dialog/batch-row/BatchRowPreview, kanban-board/kanban-column/ColumnHeader, fs_grid_sub/FsSubGrid}.tsx (A)
+- packages/fs-data-viewer/.../dual-widget/SubWidgetRenderer.tsx (B)
+- packages/fs-data-viewer/.../dual-widget/{DualWidgetEditDialog, useDualWidgetCellHandlers, InlineOptionPicker}.tsx + shared/ui/cell-renderers/renderers/DualWidgetRenderer.tsx (C·D)
+
+### 비고
+- A는 3패키지(듀얼)+fs-data-viewer(나머지). B·C·D는 fs-data-viewer 전용(디자인 phase A — 시각 OK 후 sub/external 복제).
+- C 라이브 커밋은 변경마다 saveGridModel 호출(텍스트는 키 입력마다) — 마스터 요구(즉시 반영) 우선.
+- typecheck:all && lint exit 0.
+- 검증(마스터): (A) 듀얼 옵션 한글+Enter 시 1개만, (B) 빈 셀 타입별 표기, (C) 오버레이 값 변경 즉시 셀 반영, (D) 인라인 선택에 "선택 안함" 노출·해제. dev=fs_data_viewer src alias(머지+하드 리프레시).
