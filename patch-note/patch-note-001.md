@@ -1,5 +1,32 @@
 # 아이OS — Patch Note (001)
 
+## v001.115.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #63
+> 대상: 아이OS
+
+### 배경
+
+`pre-deploy` 의 DB 드리프트 게이트(`.claude/scripts/db-drift-check.sh`)가 `data_craft_dev` 와 `data_craft_production` 의 전체 스키마 지문을 무차별 대조해, admin/관리 도메인 객체(설계상 dev psql 전용·prod 미적재)를 dev-우위 드리프트로 오판해 false block(#379, 예: `admin_internal_company_id`)을 냈다. 게이트를 "서비스 스키마 도메인 한정 논리 비교"로 전환해 admin 도메인을 자기 유지되는 명명-규약(`admin_` 접두) 기반으로 비교에서 제외하되, 서비스 스키마의 진짜 dev-우위 드리프트는 여전히 exit 2 로 차단(회귀 없음)한다.
+
+### 페이즈 결과
+
+- **Phase 1** (게이트 메커니즘, `71ae541f`): `db-drift-ignore.txt` → `db-drift-domain.txt` 로 리네임 + admin/관리 도메인 정의 파일로 재작성. `prefix:` 지시자 도입(`prefix:admin_` 한 줄로 admin 명명 규약 전체 자동 제외 — 신규 admin 객체 무수정 자가 유지). 기존 exact `admin_email_verification` 항목은 prefix 로 흡수돼 폐기. `db-drift-check.sh` 의 `IGNORE_FILE` 기본 경로·헤더 주석(서비스 도메인 한정 비교) 갱신, `normalize_fp()` awk 를 prefix 지시자 지원으로 확장(지문 객체명 field 가 exact 또는 admin prefix 시작 시 드롭). exit 코드·읽기전용 계약·`$2` override 무변경. 메인 세션 독립 awk 실측: admin_ 객체(COL/CON/FN) 전부 드롭 / 서비스 객체 유지 / 서비스 dev-우위는 `comm -23` 잔존 → exit 2 유지.
+- **Phase 2** (문서 명문화, `7551481e`): `deploy.md` §"배포 전 DB 드리프트 게이트" 에 '서비스 도메인 한정 비교' 하위 섹션 신설(비교 도메인=서비스 한정 / 도메인 정의 출처·판정 / 회귀 없음 / 경계: 본 게이트는 admin-메타-in-prod 가드 아님 — 그 방어는 `task-db-structure` 책임). `db.md` §"관리자 콘솔 DB 상호작용" 에 admin 도메인 명명 규약 명문화.
+- **머지 정합** (`bdbd45ff` 머지 + `24444d60` 교정): 작업 중 sibling `group-policy` 커밋(`0f615f7c`)이 main 에 동일 주제 정책 계층(관리자 DB 분리 + 배포 DB 검수 하드 규칙)을 추가 — 본 구현의 정책 선행 문서("구현은 plan-enterprise-os 가 수행"). 마스터 승인 하에 양측 소실 없이 정합: main 의 새 정책 섹션 보존 + 구현 훅/지문 정규화 bullet 의 옛 `db-drift-ignore.txt`(객체명 단위) 서술을 `db-drift-domain.txt` 의 `prefix:admin_` 자가유지 메커니즘으로 교정, admin 명명 규약을 테이블·제약·루틴 전체로 확장 fold(드리프트 지문=COL/CON/FN), 중복 불릿 제거.
+
+### 영향 파일
+
+- `.claude/scripts/db-drift-check.sh`
+- `.claude/scripts/db-drift-domain.txt` (신규, `db-drift-ignore.txt` 리네임)
+- `.claude/project-group/data-craft/deploy.md`
+- `.claude/project-group/data-craft/db.md`
+
+### Treadmill Audit
+
+PASS — 새 예방 메커니즘 추가가 아니라 과대차단(false positive) 축소 + 논리 도메인 분리. Q1(재발성): #379 false-block 실발생 + Roadmap-7 admin 콘솔 진행으로 admin 객체 상시 증가. Q2(엣지): admin 도메인 dev-only / 신규 admin 테이블·제약·루틴 / `user_events` 는 서비스라 비교 유지. Q3(폐기): 깨지기 쉬운 per-name exact enumeration(`admin_email_verification` 개별 열거 포함) + '무차별 전체 비교' 과대 범위 폐기.
+
 ## v001.114.0
 
 > 통합일: 2026-06-16
