@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.937.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스44
+
+**튜토리얼 진행 중 다이얼로그 바깥을 클릭하면 모달이 닫히고 풍선만 남던 문제 일괄 수정.** 폼 빌더 등 Radix Dialog 가 바깥 클릭(DismissableLayer interactOutside)·Esc 로 닫히는데, 튜토리얼 단계가 진행 중이면 모달만 사라지고 풍선이 앵커 없이 남았다(HF37/38 로 다이얼로그가 튜토리얼 dim 위라 차단 rect 가 못 막음). 공유 Dialog 차원에서 튜토리얼 실행 중 외부 닫힘을 차단.
+
+### 페이즈 결과
+- **핫픽스44 (fix, data-craft)** `714c4658f`: `src/shared/ui/shadcn/dialog.tsx` `DialogContent` 에 dismiss 가드.
+  - `onInteractOutside`/`onEscapeKeyDown` 래퍼: `document.body.classList.contains('tutorial-spotlight-active')`(HF34, 시나리오 실행 중) 이면 `preventDefault()` → 모달 안 닫힘. 평상시엔 기존 핸들러 위임.
+  - X 버튼(DialogPrimitive.Close)·프로그래밍적 onOpenChange 는 영향 없음 → 가이드된 닫기(예: userFormCloseBuilder)는 정상.
+  - 모든 공유 Dialog 사용처(폼빌더·설정·생성 다이얼로그 등)에 일괄 적용. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/shared/ui/shadcn/dialog.tsx
+
+### 비고
+- 동작 변화는 **튜토리얼 활성 시로 한정**(클래스 없으면 기존 외부 닫힘 동작 유지). 튜토리얼 중 실수로 모달이 닫혀 흐름이 끊기는 것 방지(실제 조작형 일관).
+- FE 전용 → 하드 리프레시 반영. 검증: 입력폼 시나리오 폼 빌더 단계에서 모달 바깥/Esc 눌러도 모달이 유지되고, X 또는 가이드된 닫기 단계로만 닫히는지.
+
 ## v001.936.0
 
 > 통합일: 2026-06-18
