@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.960.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스52
+
+**입력폼 시나리오에 "설정 편집 닫기" 단계 신설 — 폼 등록 후 편집창을 먼저 닫고 설정을 닫도록.** 폼 등록(userFormRegisterForm) 완료 후 설정 편집(EditSettingsFormDialog)이 아직 열려 있는데 바로 "설정 닫기"(userFormCloseSettings)가 안내돼, 설정 X가 편집창 뒤에 가려 순서가 어긋났다(마스터 지적: "설정 편집을 닫는 게 먼저인데").
+
+### 페이즈 결과
+- **핫픽스52 (fix, data-craft)** `76a866488`:
+  - `EditSettingsFormDialog.tsx`: 공유 기본 X(앵커 불가) 대신 `showCloseButton={false}` + **앵커 가능한 커스텀 X**(absolute 우상단, `OnboardingHint hintId="userFormCloseEditDialog"`).
+  - `scenarioRegistry.ts`: `userFormRegisterForm` 와 `userFormCloseSettings` 사이에 `userFormCloseEditDialog`(completeWhen `editSettingsFormDialogOpen===false`, dialogSpotlight: true) 삽입.
+  - i18n ko/en. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/widgets/settings-dialog/ui/EditSettingsFormDialog.tsx, src/features/onboarding/model/scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- 최종 설정 구간: 폼 등록 → **설정 편집 닫기(편집 X 스포트라이트)** → 설정 닫기(설정 X). 중첩 다이얼로그를 안→밖 순서로 닫음.
+- FE 전용 → 하드 리프레시 반영. 검증: 만든 폼 등록 후 "설정 편집 닫기" 풍선이 편집창 X에 뜨고, 닫으면 "설정 닫기"로 진행되는지.
+
 ## v001.959.0
 
 > 통합일: 2026-06-18
