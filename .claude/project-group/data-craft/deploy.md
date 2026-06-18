@@ -7,13 +7,6 @@ projects:
     build_command: pnpm build
     deploy_command: git checkout main && npx gh-pages -d dist
     env_management: code-constants
-  - name: data-craft-mobile
-    role: FE
-    tool: gh-pages
-    target: https://bj-kim-funshare.github.io/data-craft-mobile/
-    build_command: pnpm build
-    deploy_command: git checkout main && npx gh-pages -d apps/web/dist
-    env_management: code-constants
   - name: data-craft-mobile-apk
     role: FE
     tool: flutter
@@ -62,12 +55,10 @@ projects:
 ## 배포 전략 요약
 
 - **`data-craft-admin` / `data-craft-admin-server` (관리자 콘솔, Roadmap-7 신규) — 배포 제외**(`deploy_excluded: true`, `deploy_command` 미부여, `tool: none`). 운영자 로컬에서 `pnpm dev` 로만 기동하는 콘솔이라 `pre-deploy` / `deploy_command` 대상이 아니다. `pre-deploy` 호출 시 본 2종은 배포 타깃에서 제외. (마스터 명시 — Roadmap-7)
-- `data-craft` (리더), `data-craft-ai-preview` (프리뷰), `data-craft-mobile` (모바일 웹 번들) — GitHub Pages 배포.
-- `data-craft-mobile` (gh-pages 타겟) 은 `apps/web` Vite 웹 번들을 gh-pages 에 배포한다. **단 네이티브 Flutter APK 의 webview 는 이 gh-pages 가 아니라 메인 `data-craft` 웹(`https://datacraft.ai.kr`, 커스텀 도메인 루트 배포)을 로드한다** (코드 `$webBaseUrl/m/<pageId>` 루트 상대 경로 + `MobilePageView.tsx` 가 메인 data-craft 웹 거주, 2026-06-17 실측). 즉 APK 동작의 webview 콘텐츠 최신성은 `data-craft` FE 타겟 배포에 의존하며, mobile gh-pages 타겟과는 독립이다. (apps/web gh-pages 의 실제 사용처는 별도 — 한시적 잔재일 수 있으나 본 갱신 범위에서 제거하지 않음.)
-- **`data-craft-mobile-apk` (네이티브 Flutter APK, 2026-06-17 신규)** — 실제 설치용 Android APK 산출·배포 타겟. `flutter build apk --release` 로 빌드(release 게이트가 prod URL 코드 상수 자동 강제 — `lib/config/env.dart`: API→CloudFront, WEB→datacraft.ai.kr). `deploy_command` 는 산출 APK(`build/app/outputs/flutter-apk/app-release.apk`, ~73MB)를 **orphan `apk-deploy` 배포 브랜치**에 커밋·push 한다(시블링 worktree, `app-release.apk` + 버전 `MANIFEST` 만 — main 히스토리 미상속 orphan 으로 바이너리 비대화 완화). 실행 스크립트 `.claude/scripts/apk-deploy.sh` 는 Workstream C(pre-deploy 확장)가 제공한다. 서명: `android/key.properties` 부재로 release 는 debug 서명 — 사이드로딩 설치 가능, Play Store 등록은 본 타겟 범위 밖. ⚠️ **APK 비대 보존 비용**: 매 배포 ~73MB 누적 → 장기적으로 retention 정책(최근 N개 유지 orphan 재작성) 또는 GitHub Releases 전환을 C/후속에서 검토.
-- 모바일 빌드 산출물 = `apps/web/dist/` (확정 — 루트 `pnpm build` 시 apps/web 에 dist 생성).
-- 모바일 GitHub owner 는 개인 계정 `bj-kim-funshare` (나머지 3개는 조직 `funshare-inc`).
-- 모바일 base 처리 (v001.449.0 검증 확정): `apps/web/vite.config.ts` 가 `base: mode === 'production' ? '/data-craft-mobile/' : '/'` 로 조건부 base 적용 중. 프로덕션 빌드 시 `dist/index.html` 에 `/data-craft-mobile/...` 경로로 출력되어 gh-pages project pages 호환. 루트 `vite.config.ts` 의 `base: '/'` 는 `pnpm dev` (포트 5174) 용으로 별개 — 빌드 산출물에 영향 없음.
+- `data-craft` (리더), `data-craft-ai-preview` (프리뷰) — GitHub Pages 배포. (data-craft-mobile 의 옛 `apps/web` Vite 웹 번들 gh-pages 타겟은 2026-06-18 제거 — repo 가 순수 Flutter 로 전환되며 웹 번들 소스가 소멸했고, 아래대로 APK webview 는 메인 `data-craft` 웹을 로드해 사문화됐다.)
+- **`data-craft-mobile-apk` (네이티브 Flutter APK, 2026-06-17 신규) — mobile 의 유일 배포 타겟** — 실제 설치용 Android APK 산출·배포 타겟. `flutter build apk --release` 로 빌드(release 게이트가 prod URL 코드 상수 자동 강제 — `lib/config/env.dart`: API→CloudFront, WEB→datacraft.ai.kr). `deploy_command` 는 산출 APK(`build/app/outputs/flutter-apk/app-release.apk`, ~73MB)를 **orphan `apk-deploy` 배포 브랜치**에 커밋·push 한다(시블링 worktree, `app-release.apk` + 버전 `MANIFEST` 만 — main 히스토리 미상속 orphan 으로 바이너리 비대화 완화). 실행 스크립트 `.claude/scripts/apk-deploy.sh` 는 Workstream C(pre-deploy 확장)가 제공한다. 서명: `android/key.properties` 부재로 release 는 debug 서명 — 사이드로딩 설치 가능, Play Store 등록은 본 타겟 범위 밖. ⚠️ **APK 비대 보존 비용**: 매 배포 ~73MB 누적 → 장기적으로 retention 정책(최근 N개 유지 orphan 재작성) 또는 GitHub Releases 전환을 C/후속에서 검토.
+  - **APK webview 콘텐츠 출처**: 네이티브 Flutter APK 의 webview 는 메인 `data-craft` 웹(`https://datacraft.ai.kr`, 커스텀 도메인 루트 배포)을 로드한다 (코드 `$webBaseUrl/m/<pageId>` 루트 상대 경로 + `MobilePageView.tsx` 가 메인 data-craft 웹 거주, 2026-06-17 실측). 즉 APK 동작의 webview 콘텐츠 최신성은 `data-craft` FE 타겟 배포에 의존한다 — 별도 mobile gh-pages 타겟은 불필요(상기 제거 근거).
+- 모바일 GitHub owner 는 개인 계정 `bj-kim-funshare` (나머지는 조직 `funshare-inc`).
 - `data-craft-server` — AWS EC2 (또는 유사). Docker 미사용. **부분 자동 타겟**. `pre-deploy` 가 자동 수행: (1) main 기준 검증, (2) `pnpm build`, (3) `main` → `aws-deploy` 브랜치 fast-forward push. 이후 마스터가 EC2 인스턴스에 SSH 접속하여 `git pull && pnpm build && pm2 restart` 수동 실행 (AWS 측이 `aws-deploy` 브랜치를 pull).
 
 ## 배포 우선순위
