@@ -30092,3 +30092,23 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 ### 영향 파일
 **data-craft** (i-dev)
 - `src/widgets/header/ui/ModeSwitchButton.tsx`
+
+## v001.976.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #372 (핫픽스1 — empty-* 위젯 데이터 바인딩)
+
+#372 PENDING 게이트에서 마스터 "핫픽스 먼저 수행" 지시로 1순위 후보(empty-* 위젯) 보강. Phase 4에서 placeholder로만 렌더되던 empty-* 위젯이 `defaultDataGroupId` 바인딩 시 실제 데이터를 표시하도록 위임 구현. (버전: v001.975.0 은 #371 핫픽스4 가 점유해 976 채번.)
+
+### 변경 결과
+- **HF1 (fix, data-craft)** `de36c3b`: `MobileEmptyWidget`이 `defaultDataGroupId` 보유 시 empty-viewer/sub-viewer/external-viewer를 `MobileViewerCard`에 위임(string→number 변환·NaN 가드, ViewerWidgetProps.dataViewerField 매핑), empty-input은 `MobileInputWidget`에 위임. 미설정/변환 실패 시 기존 placeholder 폴백.
+- **HF1 보강** `b967473`: `MobileWidgetDispatcher`의 empty-* 분기 4곳에 `accessLevel` 전달 누락 수정 + `MobileEmptyWidget` Props에 accessLevel 수용 → 위임된 뷰어가 페이지 권한대로(read/write) 렌더(이전엔 'read' 하드코딩으로 항상 읽기전용).
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/pages/mobile/widgets/MobileEmptyWidget.tsx`
+- `src/pages/mobile/MobileWidgetDispatcher.tsx`
+
+### 비고
+- 게이트: `typecheck:all && lint` 0 errors, advisor 핫픽스 검증 PASS.
+- ⚠️ **잔존**: empty-input 위임은 `MobileInputWidget` 자체가 inputDataGroupId 기반 실데이터 fetch를 구현하지 않아 빈 입력 폼만 렌더 — input 위젯 전반의 데이터 영속성 미구현과 동일 사안으로 별도 결정 필요(핫픽스 범위 외).
