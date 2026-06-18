@@ -29365,3 +29365,20 @@ data-craft-server:
 
 data-craft:
 - src/widgets/settings-dialog/ui/PageAccessList.tsx
+
+## v001.944.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #367 (핫픽스1)
+
+### 페이즈 결과
+- **핫픽스1 (ops/db, data-craft-server DB)**: 관리자 분석 "인증 분석 데이터를 불러올 수 없습니다" 원인 = `/auth-metrics` 쿼리가 참조하는 `user_events.properties` 컬럼이 DB에 미적용(Phase 1 마이그레이션 작성만 됨, 미실행)이라 `column "properties" does not exist`(ADMIN-ANALYTICS-R-001) 발생. **조치**: Phase 1 마이그레이션(`ALTER TABLE user_events ADD COLUMN properties jsonb NULL` + COMMENT)을 **dev·prod 양 환경에 직접 적용**(트랜잭션, `ADD COLUMN IF NOT EXISTS`). 동시에 마스터 지시대로 **기존 user_events 데이터 1회성 전체 정리**(`TRUNCATE TABLE user_events`, 파티션 포함) — **dev 1869행→0, prod 2877행→0**. 적용 후 분포(`properties->>'theme'`)·반기 버킷·`properties->>'auto_login'` 대표 쿼리 무에러 실행 확인 → 로드 에러 해소. 코드 변경 없음(DB 운영 작업).
+
+### 영향 (DB 운영 — 코드 커밋 없음)
+- dev `data_craft_dev` · prod `data_craft_production`: `user_events` 에 `properties jsonb` 컬럼 추가 + 전체 데이터 TRUNCATE.
+- 적용 SQL 출처: `data-craft-server/docs/migration/ddl-changes/20260618000000_user-events-properties/up.sql`(Phase 1 작성분).
+
+### 비고
+- **삭제 데이터 복구 불가**: TRUNCATE 전 캡처 미수행(마스터 "전부 정리해서 깨끗하게" 1회성 지시 — 행동 텔레메트리). 롤백 불가.
+- **라이브 수집 활성화(잔여, 마스터)**: 새 이벤트가 theme/language/auto_login 을 실제 적재하려면 인제스트 환경변수 `ANALYTICS_PROPERTIES_ENABLED=true`(dev 테스트/ prod) + (prod) `INTERNAL_IPS`(사무실 공인 IP) 설정 후 data-craft-server 재기동 필요. 미설정 시 분포는 `unknown`(컬럼은 존재하므로 에러 없음).
+- 관리자 BE(8100)는 DB 스키마 변경이라 코드 재기동 불필요 — 다음 요청부터 정상(정리 직후라 빈 데이터).
