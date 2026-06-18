@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.936.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스43
+
+**입력폼 "폼 만들기" 단계에서 저장을 눌러도 안 넘어가던 문제 수정 — 저장 액션으로 진행 + 빌더 닫기를 별도 단계로 분리.** 핫픽스41 이 `userFormSaveForm` completeWhen 에 `&& formBuilderDialogOpen === false`(빌더 닫힘)를 넣어, 저장만으로는 완료되지 않고 빌더를 닫아야 넘어갔다(사용자는 저장 누르면 진행 기대 → 어긋남).
+
+### 페이즈 결과
+- **핫픽스43 (fix, data-craft)** `a00b58d82`:
+  - **저장 신호 ctx**: `selectedFormSaved = selectedFormId != null && selectedFormId in savedFormIds`(`formSyncActions.replaceFormId` 가 저장 시 임시ID→서버ID 교체+savedFormIds 등록 — [+]로 추가한 새 폼은 미저장→저장 시 true). `hintRegistry`+`useActiveOnboardingHint`(savedFormIds 구독).
+  - `userFormSaveForm` completeWhen → `(c) => c.selectedFormSaved === true` (저장 시 즉시 진행, 닫기 조건 제거).
+  - `userFormCloseBuilder` 단계 신설(userFormSaveForm 뒤): `FormBuilderDialog` X 닫기 버튼에 OnboardingHint 앵커, completeWhen `formBuilderDialogOpen === false`. 저장 후 빌더 닫기를 별도 안내 → 다음(설정 열기) 시 헤더 설정 버튼 노출.
+  - i18n ko/en 갱신(저장 본문 닫기 언급 제거 + 빌더 닫기 신규). `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/hintRegistry.ts, src/features/onboarding/lib/useActiveOnboardingHint.ts, src/features/onboarding/model/scenarioRegistry.ts, src/features/form-builder/ui/FormBuilderDialog.tsx, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- 흐름: 폼 추가([+]) → 폼 만들기(구성+저장, 저장 시 진행) → 폼 빌더 닫기 → 설정 열기. 각 단계가 사용자의 해당 액션으로 진행. HF31 단조 floor로 역행 없음.
+- (후속 참고) `userFormRegisterForm`(폼 등록) 은 HF41 의 "편집 창 닫힘" 완료조건 유지 — 본 핫픽스 범위 밖(등록 단계는 미보고).
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 추가 후 구성·저장하면 즉시 다음(빌더 닫기 안내)으로 넘어가고, 닫으면 설정 단계로 진행되는지.
+
 ## v001.935.0
 
 > 통합일: 2026-06-18
