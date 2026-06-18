@@ -29403,3 +29403,16 @@ data-craft:
 - **삭제 데이터 복구 불가**: TRUNCATE 전 캡처 미수행(마스터 "전부 정리해서 깨끗하게" 1회성 지시 — 행동 텔레메트리). 롤백 불가.
 - **라이브 수집 활성화(잔여, 마스터)**: 새 이벤트가 theme/language/auto_login 을 실제 적재하려면 인제스트 환경변수 `ANALYTICS_PROPERTIES_ENABLED=true`(dev 테스트/ prod) + (prod) `INTERNAL_IPS`(사무실 공인 IP) 설정 후 data-craft-server 재기동 필요. 미설정 시 분포는 `unknown`(컬럼은 존재하므로 에러 없음).
 - 관리자 BE(8100)는 DB 스키마 변경이라 코드 재기동 불필요 — 다음 요청부터 정상(정리 직후라 빈 데이터).
+
+## v001.946.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #367 (핫픽스2)
+
+### 페이즈 결과
+- **핫픽스2 (feat, data-craft-admin)**: 분석 탭의 총계/평균 표시를 **탭 분리 → 카드 내 동시 표기**로 변경. `AnalyticsPage`에서 `VIEW_TABS`·`view` 상태·총계/평균 Tabs 토글 제거, `AuthMetricsCharts`의 `view` 프롭 제거. 각 메트릭 카드가 **합계(2xl bold)** 와 **버킷 평균(sm semibold, N.N)** 을 세로로 동시에 표시. 공용/기업 인증 탭·단위/기간 셀렉터·미니 바차트는 그대로 유지. 커밋 `6c3b67d`. 게이트 typecheck/lint 0.
+
+### 영향 파일
+data-craft-admin:
+- src/pages/analytics/AnalyticsPage.tsx (VIEW_TABS/view 토글 제거)
+- src/features/analytics-auth/AuthMetricsCharts.tsx (총계+평균 동시 렌더)
