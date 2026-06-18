@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.987.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #376
+
+**data-craft 그룹 lint 게이트 부채 2건 정리.** ① data-craft-admin 의 `typecheck` 가 빌드(`tsc -b`)보다 좁게 검사하던 false-green 사각(#375 가 통과했던 부류)을 닫고, ② data-craft-mobile 의 `flutter analyze` deprecation 9건을 정리해 lint 게이트를 green 으로 복구했다.
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-admin)** `a13ac73`: `package.json` 의 `typecheck` 스크립트를 `tsc --noEmit` → `tsc -b --noEmit` 로 변경. 기존 명령은 루트 tsconfig(`files: []`, 소스 0개)만 검사해 build(`tsc -b` = app+node 프로젝트 참조)가 잡는 결함을 못 잡았음. 두 참조 config 가 이미 `noEmit:true` 라 `--noEmit` 은 무해·명시적. 워크트리에서 `pnpm typecheck` + `pnpm lint` exit 0 확인.
+- **Phase 2 (fix, data-craft-mobile)** `f4aee9d`: Flutter 3.35.6 deprecation 9건 마이그레이션 — `withOpacity` → `withValues(alpha:)` 3곳, `surfaceVariant` → `surfaceContainerHighest` 1곳, Switch `activeColor` → `activeThumbColor` 1곳, RadioListTile `groupValue`/`onChanged` → `RadioGroup` 조상으로 이전(`_ThemeSection`=`RadioGroup<ThemeMode>`, `_LocaleSection`=`RadioGroup<String>`, 각 RadioListTile 의 `value`/`activeColor` 유지) 2그룹 4건. `flutter analyze` exit 0 "No issues found!" 확인.
+
+### 영향 파일
+data-craft-admin:
+- `package.json`
+
+data-craft-mobile:
+- `lib/screens/me/me_screen.dart`
+- `lib/screens/me/widgets/me_header.dart`
+- `lib/screens/me/settings/plan_management_screen.dart`
+- `lib/screens/me/settings/widgets/permission_tree_editor.dart`
+- `lib/screens/me/settings/app_settings_screen.dart`
+
 ## v001.986.0
 
 > 통합일: 2026-06-18
