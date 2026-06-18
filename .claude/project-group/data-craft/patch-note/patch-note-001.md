@@ -29437,3 +29437,25 @@ data-craft:
 data-craft-admin:
 - src/pages/analytics/AnalyticsPage.tsx (VIEW_TABS/view 토글 제거)
 - src/features/analytics-auth/AuthMetricsCharts.tsx (총계+평균 동시 렌더)
+
+## v001.948.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스11 — phase A)
+
+### 페이즈 결과
+- **Phase 14 / 핫픽스11 phase A (fix, fs-data-viewer 전용)**: 듀얼 위젯 **셀 표시(읽기 모드)** 를 전용 재설계. 기존 7-템플릿 자동선택(상단 큰 배지 + 하단 "2·1" muted) 이 마스터 불만 → 칸반 카드의 **"위치별로 같은 타입을 다르게 렌더"는 원리만 참조**(칸반 코드/클래스/variant 명칭 import·복제 없음)하고, 듀얼 전용 토큰 시스템을 신설. 신규 `dualWidgetSlotTokens.ts`(단일 진실 소스, 순수 상수/함수)에 `DualSlotRole = primary/support/trailing` 정의 + 슬롯별 크기·굵기·색·정렬·밀도 토큰. `SubWidgetRenderer`에 `role` prop 추가, 25개 지원 타입을 역할별로 차등 렌더(text류=primary 큰 bold/support 아이콘+텍스트/trailing dot+muted, singleSelect=채운배지/외곽선칩/색점라벨, progress=가로막대/짧은막대/%텍스트, rating=별 5/3/0, user·date·checkbox 등 전 타입). 라이브 셀 표시 컴포넌트 `DualWidgetRenderer`(registry)의 read 영역을 top→primary/bottomLeft→support/bottomRight→trailing 레이아웃으로 교체, `formatSubWidgetValue`·`getDualWidgetLayoutInfo` 제거. **편집 경로(탭 오버레이·containerRef·overlayPosition·lazy DualWidgetEditDialog) 무수정**. 머지 `d2ebd81`, 구현 `7126d7bb` + wiring `0b9a22af`.
+
+### 영향 파일
+data-craft (fs-data-viewer 전용 — phase A):
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/dualWidgetSlotTokens.ts (신규, 단일 진실 소스)
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/SubWidgetRenderer.tsx
+- packages/fs-data-viewer/src/shared/ui/cell-renderers/renderers/DualWidgetRenderer.tsx
+
+### 비고 (phasing — 마스터 시각 검증 게이트)
+- **phase A = fs-data-viewer(메인 뷰어)만**. 마스터가 dev에서 시각 확인 후 → (a) 토큰 조정(`dualWidgetSlotTokens.ts` 단일 파일 수정으로 전체 일관 변경), (b) sub/external 복제(phase B), (c) 추가 디자인 조정 중 분기. **sub/external 셀 표시는 기존 그대로(미변경)**.
+- 칸반은 **원리만 참조** — 칸반 컴포넌트/클래스/variant 명칭 import·복제 없음, 듀얼 전용 토큰(primary/support/trailing) 자체 구축.
+- 마스터 규칙 충족: 같은 타입 3개도 슬롯별로 다른 시각 패턴(크기/정렬/명도 + text류는 아이콘/dot 보조 시각요소, rating은 별 개수, select는 배지 형태 3종).
+- widgets-layer `DualWidgetLayout`/7-templates dead code 정리 + 호출자(DualWidgetPreview 등) role 부여는 별도 cleanup hotfix로 분리.
+- typecheck:all && lint exit 0(lint hotfix 1회 — 미배선 심볼 결선).
+- 검증(마스터, 시각): dev:5173 그리드에서 듀얼 셀 → 단일선택×3/text×3/progress×3 각각 3슬롯이 시각적으로 다른지, 혼합 조합 위계 자연스러운지, 편집(탭 오버레이) 무회귀. dev=fs_data_viewer src alias(머지+하드 리프레시).
