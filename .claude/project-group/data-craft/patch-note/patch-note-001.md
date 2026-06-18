@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.941.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스1
+
+**기능 가이드 모달 본문 너비 초과 해소 — 다이얼로그 총 너비 확대.** v001.938.0 목업 재설계 후, 우측 "이 섹션의 단계" 패널(스텝 설명·하단 팁박스)이 다이얼로그 오른쪽 경계를 벗어나 `overflow-hidden`에 잘리는 문제가 마스터 스크린샷으로 확인됐다(목업 재설계·핀 위치 자체는 정상). v001.938.0의 rail 폭 축소·break-words 하드닝만으론 부족 → 마스터 지시대로 모달 총 너비를 키워 우측 패널이 온전히 들어가도록 했다.
+
+### 페이즈 결과
+- **핫픽스1 (fix, data-craft)** `7f98aca2`: `GuideDialogShell.tsx` `getDialogStyle`의 guide 케이스 width를 `min(1360px, 95vw)` → `min(1520px, 96vw)`로 +160px 확대. height(`min(900px,92vh)`)·maxWidth(`none`) 및 docs/default 케이스 불변. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/GuideDialogShell.tsx
+
+### 비고
+- 관측된 우측 패널 초과량(~20~40px)을 +160px 여유로 충분히 흡수. 정확한 오버플로 메커니즘은 정적상 미특정이나, 마스터 지시 + 관측 기반의 직접 해법이며 잔여 여부는 스크린샷으로 재확인.
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영. 검증: 기능 가이드 모달 우측 "이 섹션의 단계" 스텝 설명/팁박스가 잘리지 않고 온전히 보이는지.
+
 ## v001.939.0
 
 > 통합일: 2026-06-18
