@@ -29978,3 +29978,21 @@ data-craft (fs-data-viewer 전용):
 ### 영향 파일
 **data-craft** (i-dev)
 - `src/widgets/header/ui/ModeSwitchButton.tsx`
+
+## v001.972.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371 (핫픽스3)
+
+**헤더 모드 전환 아이콘 — 그라데이션을 주황색 계열로 변경.** 마스터 지시로 아이콘 그라데이션 색을 sky→indigo(`#0ea5e9`→`#6366f1`)에서 주황 계열로 교체했다. 무빙 애니메이션·구조는 그대로.
+
+### 변경 결과
+- **Phase 5 (fix, data-craft)** `65cb6c2`: `ModeSwitchButton` 의 `linearGradient` 두 stop 색만 `#ea580c`(orange-600)→`#fbbf24`(amber-400)로 교체(2줄). SMIL `<animateTransform>` 무빙 애니메이션(2초 sweep + 5초 정지 무한 반복), `gradientUnits`/좌표, forwardRef·고스트 아이콘 버튼·`LayoutDashboard size-5`·`h-8 w-8`·`{...rest}` 등 나머지는 전부 유지.
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 0 errors, 신규 경고 없음.
+- 색 톤(더 진하게/노랗게) 미세 조정은 1라인 교체로 추가 핫픽스 가능.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/header/ui/ModeSwitchButton.tsx`
