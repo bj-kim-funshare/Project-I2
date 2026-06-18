@@ -29562,3 +29562,21 @@ data-craft (fs-data-viewer 전용):
 - 7개 템플릿 파일(ProfileTemplate 등) + entities `getLayoutTemplate`는 DualWidgetLayout/Preview에서 더 이상 호출 안 됨(데드 코드) — 삭제는 별도 cleanup hotfix.
 - typecheck:all && lint exit 0(lint hotfix 0회).
 - 검증(마스터, 시각): dev 그리드의 듀얼 셀 + 구성 미리보기 둘 다 3슬롯 역할 디자인(상단 강조/하단좌 보조/하단우 꼬리)으로 바뀌는지, 단일선택×3/text×3/progress×3 슬롯별 차별, 편집(탭 오버레이) 무회귀. dev=fs_data_viewer src alias(머지+하드 리프레시). fs-data-viewer만 적용 — 시각 OK 후 sub/external 복제(phase C).
+
+## v001.954.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스12 — 레이아웃 균형 조정)
+
+### 페이즈 결과
+- **Phase 16 / 핫픽스12 (fix, fs-data-viewer 전용)**: hotfix11b 디자인에 대한 마스터 시각 피드백 반영 — (1) 슬롯 간 **구분선 제거**(top 슬롯의 `border-b border-border/20 pb-1` 삭제), (2) **모서리 핀 해제**(하단 행 `justify-between` → 좌측 그룹 `gap-3`, bottomRight `justify-end max-w-[45%]` 제거, `trailing` 정렬 `text-right`→`text-left`), (3) **세로 스트레치 완화**(`flex-[3]`/`flex-[2]` 제거 + 외곽 `justify-center gap-1`로 컴팩트 그룹 세로 중앙). 옛 디자인(중앙 군집)과 hotfix11b(모서리 분산)의 중간 균형으로 조정. `DualWidgetLayout` + `dualWidgetSlotTokens`(trailing align)만 수정. 머지 `f621471b`, 구현 `676ced9d`.
+
+### 영향 파일
+data-craft (fs-data-viewer 전용):
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/DualWidgetLayout.tsx
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/dualWidgetSlotTokens.ts (trailing 정렬)
+
+### 비고
+- 레이아웃/정렬만 변경, SubWidgetRenderer 타입별 렌더·역할 토큰(정렬 외)·편집 경로 무수정.
+- typecheck:all && lint exit 0(lint hotfix 0회).
+- 검증(마스터, 시각): 듀얼 셀 — 구분선 없고, 요소가 모서리에 핀되지 않으며(하단 좌측 그룹), 너무 중앙 군집도 아닌 균형 배치인지. dev=fs_data_viewer src alias(머지+하드 리프레시). 추가 미세조정은 토큰/레이아웃 단일 파일 수정으로 반복.
