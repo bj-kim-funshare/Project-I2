@@ -29744,3 +29744,22 @@ data-craft (fs-data-viewer 전용):
 - multi draft+Save와 hotfix13c live-commit 정합. expand modal은 인라인에서도 활성.
 - typecheck:all && lint exit 0(rules-of-hooks 무위반).
 - 검증(마스터): 듀얼 탭 select/user/nation/worldTime 편집이 기본 셀과 동일(검색·확장·none·체크·leading), 2중 팝업 없음, 그리드 일반 select 회귀 0, 라이브 commit. dev=fs_data_viewer src alias(머지+하드 리프레시). fs-data-viewer 전용 — 시각 OK 후 sub/external phase B.
+
+## v001.963.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #357 (핫픽스15 — 탭 폐기·슬롯별 편집 step1)
+
+### 페이즈 결과
+- **Phase 19 / 핫픽스15 step1 (fix, fs-data-viewer 전용)**: 듀얼 셀 편집의 **탭 오버레이(DualWidgetEditDialog) 폐기** → 셀 안 각 서브위젯(상단/하단좌/하단우)을 **개별 클릭** 시 그 위치에 타입별 에디터가 앵커되어 열림. 신규 `PerSlotSubWidgetEditorPortal`(클릭 슬롯 `e.currentTarget` rect 앵커, `createPortal`+`adjustOverlayPosition`+scroll-lock+backdrop, 기존 `SubWidgetEditor` 담음). `DualWidgetLayout` 슬롯별 onClick(`onSlotClick(position,rect)`), `FsGridDualWidgetCellRenderer`/`DualWidgetRenderer`는 `editingSlot`+anchor로 탭 대신 포털 렌더, write 모드 게이트, Enter/F2→상단, 변경 즉시 셀 머지 커밋(live). 머지 `7b6fe2e7`, 구현 `c453f01d`(+lint 보정 3회).
+
+### 영향 파일
+data-craft (fs-data-viewer 전용):
+- packages/fs-data-viewer/.../dual-widget/{PerSlotSubWidgetEditorPortal.tsx(신규), DualWidgetLayout, FsGridDualWidgetCellRenderer, types, useDualWidgetCellHandlers, useDualWidgetCellState}.tsx + shared/ui/cell-renderers/renderers/DualWidgetRenderer.tsx
+
+### 비고 (단계)
+- **step1(이번)**: 탭 폐기 + 슬롯별 클릭 앵커. select/text/number/user/nation/worldTime은 한 클릭=한 에디터.
+- **step2(다음)**: date/dateTime/deadline/timeline/colorPicker는 native 에디터 자체 트리거 구조라 현재 포털 안 트리거 한 번 더 보임 → additive `autoOpen` 추가로 한 클릭 직열 예정.
+- slot rect는 ref 대신 `e.currentTarget`(react-compiler refs-during-render 회피). DualWidgetEditDialog는 sub/external 사용 중이라 미삭제.
+- typecheck:all && lint exit 0(lint hotfix 3회).
+- 검증(마스터): 각 서브위젯 클릭 시 그 위치에 타입 에디터(탭 없음), 값 변경 즉시 반영, view 모드선 편집 안 열림, Enter/F2→상단. dev=fs_data_viewer src alias(머지+하드 리프레시).
