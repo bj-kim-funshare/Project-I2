@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.938.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366
+
+**기능 가이드 "데이터 크래프트 시작하기" 목업을 실제 첫 화면으로 재설계하고 번호 핀을 설명 대상에 1:1로 재매핑.** 기존 GuideMockScreen 은 "상단바 + 이슈/개선 데이터 테이블"만 그려, getting-started 스텝(사이드바·디자인모드 토글·물음표 버튼 설명)이 가리킬 대상이 목업에 없어 핀이 엉뚱한 영역에 찍혔다. 목업을 실제 데이터크래프트 첫 화면(헤더+좌측 사이드바+메인 캔버스)으로 재설계해 스텝과 핀을 일치시키고, 3-pane 너비를 방어적으로 하드닝.
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft)** `233e45d9`: 기능 가이드 목업 재설계 + ko/en 핀 재매핑 + 너비 하드닝.
+  - **GuideMockScreen 재설계**: 헤더(브랜드 "주식회사 펀셰어" + 디자인/뷰 모드 토글 pill + 물음표(?) 버튼 `bg-primary/10` 강조 + 사용자 칩) / 좌측 사이드바 `w-[118px]`(화면 목록 4개, 활성 항목 강조) / 메인 캔버스(섹션 타이틀바 + 위젯 그리드·사이드 위젯 플레이스홀더). 색은 시맨틱 토큰만, `aria-hidden`/`tabIndex={-1}` 비상호작용 유지, 다크모드 대응.
+  - **ko/en 핀 재매핑**(스텝 텍스트 불변, x/y만): gs-1 데이터 크래프트란→메인 캔버스 {58,54}, gs-2 화면(페이지) 개념→사이드바 {8,50}, gs-3 디자인/뷰 모드→디자인모드 토글 {73,5}, gs-4 첫 화면 만나기→물음표(?) {83,5}.
+  - **너비 하드닝**: 우측 rail `w-[340px]→w-[336px]`(서브픽셀 exact-fit 클리핑 방지), 스텝 리스트 `overflow-x-hidden`, 스텝 텍스트 `break-words`. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/components/GuideMockScreen.tsx, packages/fs-data-viewer/src/widgets/guide/components/GuideStepRail.tsx, packages/fs-data-viewer/src/shared/config/guide/content/ko/guide/getting-started.json, packages/fs-data-viewer/src/shared/config/guide/content/en/guide/getting-started.json
+
+### 비고
+- **너비(req 1)**: 정적 분석상 3-pane 합(280+700+340=1320)이 다이얼로그 내부폭과 정확히 일치해 구조적 오버플로 경로가 없어, 이번 변경은 예방적 하드닝. 실제 깨짐 지점 확정·교정은 마스터 스크린샷 기반 핫픽스 루프로 처리.
+- **핀 좌표**: 새 목업 렌더 후 마스터 스크린샷 기준 미세조정 예정(핫픽스).
+- **gs-4↔물음표 매핑**: 스텝 텍스트("첫 화면 만나기")는 로그인 시 열리는 화면을 설명하고 물음표 버튼을 직접 언급하진 않음 — 마스터 명시 지시(gs-4→헤더 물음표)에 따른 의도적 매핑. 게이트에서 마스터 확인.
+- **zh/ja**: getting-started.json 이 ko/en 과 다른 옛 튜토리얼(그리드 보기/편집)이라 gs 핀을 붙일 짝 없음 → 마스터 결정으로 핀 없이 현행 유지(GuideCanvas 가 `pin!=null` 필터 + pending 안내 렌더). zh/ja 가이드 개편은 별도 후속.
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영. 검증: 기능 가이드 > "데이터 크래프트 시작하기"에서 핀 1~4가 메인캔버스/사이드바/디자인토글/물음표를 가리키는지, 모달 너비, 다크모드.
+
 ## v001.937.0
 
 > 통합일: 2026-06-18
