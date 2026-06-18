@@ -29935,3 +29935,22 @@ data-craft (fs-data-viewer 전용):
 - `src/widgets/header/ui/ModeSwitchButton.tsx`
 - `src/widgets/header/ui/ViewModeToolbar.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`
 - `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+## v001.970.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371 (핫픽스2)
+
+**헤더 모드 전환 아이콘 — 그라데이션 색 #0ea5e9 기준 변경 + 움직이는 애니메이션.** 마스터 지시로 아이콘 그라데이션 색을 `#0ea5e9`(sky) 기준으로 바꾸고, 그라데이션이 정지해 있지 말고 움직이도록 애니메이션을 넣되 "재생 완료 후 5초 대기 → 다시 재생"을 무한 반복하게 했다.
+
+### 변경 결과
+- **Phase 4 (fix, data-craft)** `cc1ae90`: `ModeSwitchButton` 의 `linearGradient` stop 을 `#0ea5e9`→`#6366f1`(sky→indigo)로 교체. `gradientUnits="userSpaceOnUse"` 좌표계에서 SVG SMIL `<animateTransform>`(gradientTransform translate `-20 0`→`20 0`, `dur="2s"`)로 그라데이션이 아이콘을 가로질러 흐르게 하고, `begin="0s; modeGradMove.end+5s"` + `fill="freeze"` 로 **2초 sweep → 5초 정지(끝 상태 유지) → 무한 반복**을 구현. forwardRef·고스트 아이콘 버튼·`LayoutDashboard size-5`·`h-8 w-8`·`{...rest}` 구조 유지(아이콘 전용, 라벨/배경 pill 없음).
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 0 errors, 신규 경고 없음(JSX 가 SMIL `animateTransform` 을 유효 SVGProps 로 수용).
+- SMIL 은 Chrome/Safari/Firefox 데스크탑 안정 지원. 만약 마스터 환경에서 sweep 이 안 보이면 폴백 = CSS keyframes(전체 cycle 7s = 2s sweep + 5s hold) 또는 버튼 배경 gradient + mask-image 패턴. 색 톤·sweep 속도는 1라인 교체로 추가 핫픽스 가능.
+- 애니메이션(모션)은 정지 스크린샷으로 확인 어려우므로 마스터 라이브 관찰 필요.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/header/ui/ModeSwitchButton.tsx`
