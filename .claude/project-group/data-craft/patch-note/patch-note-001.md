@@ -29135,3 +29135,26 @@ data-craft (3개 뷰어 패키지 동일):
 - `InlineOptionPicker`는 단일 컴포넌트만 export(react-refresh 위반 회피, hotfix2 학습). native 셀 렌더러/`rendererMap` 무수정(그리드 셀 동작 영향 0).
 - typecheck:all && lint exit 0(lint hotfix 0회).
 - 검증(마스터): 듀얼 셀 편집 → singleSelect/multiSelect 탭에서 옵션이 탭 내부 인라인 표시(2중 팝업 없음)·선택 반영, 다른 타입 탭 기존 동작, 메인/서브/외부 3 뷰어 동일. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
+
+## v001.934.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #357 (핫픽스10)
+
+### 페이즈 결과
+- **Phase 13 / 핫픽스10 (fix, 3개 뷰어 패키지)**: 듀얼 위젯 타입 정리 + 탭 내 인라인 편집 확장(1/2차). **Part 1**: `DUAL_WIDGET_EXCLUDED_TYPES`에 `rowLink`·`button` 추가 → 듀얼 위젯 타입 피커에서 자동 제외(getAllowedWidgetTypes 파생). **Part 2(Group A+C)**: 그리드 렌더러를 건드리지 않고 dual-widget 디렉토리에 **신규 인라인 컴포넌트**를 만들어 4개 타입을 탭 내부 인라인 편집화(2중 팝업 제거) — `InlineListPicker`(검색+스크롤+체크) 재사용으로 **user**(아바타 이니셜·다중·`Name(id)` 저장), **nation**(국기+이름·검색·단일·ko name 저장), **worldTime**(라이브시계·단일·country name 저장); `InlineColorPicker`(PaletteGrid/OpacitySlider/RecentColors + readCellColor/writeCellColor 조합)로 **colorPicker**(rgba 저장). 그리드 셀 렌더러 무수정 → 그리드 회귀 0, parity divergence 무관. 머지 `de8a6d08`, 구현 `96f840e1`(A)+`3e543380`(C)+`811364e6`(lint).
+
+### 영향 파일
+data-craft (3개 뷰어 패키지 동일):
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/entities/dual-widget/constants.ts (rowLink/button 제외)
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/SubWidgetEditor.tsx
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/InlineListPicker.tsx (신규)
+- packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/dual-widget/InlineColorPicker.tsx (신규)
+
+### 비고 (진행 분리 — 마스터 확인)
+- **이번 처리(4 type 인라인)**: user, nation, worldTime, colorPicker + 제외목록(rowLink/button).
+- **다음 hotfix 예정(Group B, 5 type)**: date, dateTime, time, deadline, timeline — 캘린더/시간 피커는 각 그리드 에디터의 inner content 추출(특히 TimeRenderer는 인라인 내장이라 분리 자체가 신규 작업)이 필요해 작업량/회귀범위가 커서 별도 hotfix로 분리(advisor 권고). 마스터 진행 의사 확인 후 즉시 디스패치 가능.
+- fs-sub/fs-external은 `nationFlags`/`LiveClock` 의존 부재로 nation 국기·worldTime 라이브시계 **시각만 생략**(선택 기능은 3패키지 동작 동일). 메인 fs-data-viewer는 완전 표시.
+- 신규 인라인 컴포넌트는 단일 컴포넌트 export(react-refresh 회피). value contract는 각 그리드 렌더러와 동일 미러(저장값 호환).
+- typecheck:all && lint exit 0(lint hotfix 1회 — 미사용 useState import).
+- 검증(마스터): 듀얼 타입 피커에 rowLink/button 미표시; 듀얼 셀 편집에서 user/nation/worldTime/colorPicker 탭이 탭 내부 인라인(2중 팝업 없음)·선택/저장 정상; 다른 타입 탭 기존 동작; 메인/서브/외부 3 뷰어. dev=fs_data_viewer src alias(머지+하드 리프레시); 형제 뷰어는 build:packages 후 재기동.
