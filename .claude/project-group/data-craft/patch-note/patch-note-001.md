@@ -30165,3 +30165,27 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - `src/widgets/header/ui/ModeSwitchButton.tsx`
 - `src/widgets/header/ui/ViewModeToolbar.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`
 - `src/widgets/header/ui/__IconCandidateProbe.tsx` (임시 프로브 — 삭제)
+
+## v001.979.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #372 (핫픽스2 — 로딩 표시 정정: 웹뷰 로딩만)
+
+마스터 피드백("파란 Flutter 로딩이 계속 나오고 검정 웹뷰 로딩과 공존하며 안 사라짐 — 검정 웹뷰측 로딩만 나오는 게 정상")에 따라 Phase 6/7의 로딩 설계를 정반대로 정정. 기존: Flutter 파란 스피너 1개 유지 + React 로더 억제. 정정: **Flutter 스피너 전면 제거 → 웹뷰(React) 자체 로딩만 표시.** 파란 스피너가 코드에서 사라져 "안 사라짐" 버그가 구조적으로 불가능해짐. (max 978 다음 979 채번 — 977/978은 #371 핫픽스가 점유.)
+
+### 변경 결과
+- **HF2 mobile (fix, data-craft-mobile)** `1818cf7`: `page_web_view_screen.dart`에서 `CircularProgressIndicator`(pre-url + 오버레이) 및 로딩 머신(`_isLoading`·`_loadingDone`·`_loadingFallbackTimer`·`_completeLoading`·`_startLoadingTimer`·`dcPageReady` JS 핸들러·`dart:async`) 전부 제거(-66줄). `_embedUrl` 빌드 구간은 흰 배경(ColoredBox)만, 웹뷰 흰 배경 유지. 웹뷰 내부 React 로딩이 유일 로딩.
+- **HF2 web (fix, data-craft)** `32694bd`: `MobilePageView.tsx`의 Phase 6 embed 억제(embed 시 return null)·`dcPageReady` useEffect·`readyFired` ref·`isFlutterEmbed` 사용 제거 → embed 여부 무관 항상 자체 `Loader2` 표시. 미사용된 `embedBridge.ts` 삭제.
+
+### 영향 파일
+**data-craft-mobile** (i-dev)
+- `lib/screens/page/page_web_view_screen.dart`
+
+**data-craft** (i-dev)
+- `src/pages/mobile/MobilePageView.tsx`
+- `src/pages/mobile/embedBridge.ts` (삭제)
+
+### 비고
+- 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors. advisor 핫픽스 검증 PASS.
+- 진단: 마스터가 본 "파란 안 사라짐"은 stale-cache(웹뷰 하드 리프레시 누락) 가능성도 있음 — 검증 시 모바일 hot restart(R) + 웹뷰 내부 하드 리프레시 권장.
+- ⚠️ **잔존(다음 핫픽스 후보)**: `_embedUrl` 빌드(토큰 refresh ~100-300ms) 동안 흰 빈 화면 잠깐 노출 — React 미로드라 검정 로더를 아직 못 띄움. 흰 깜박임이 거슬리면 Flutter 측 일시 검정 배경으로 대체 가능.
