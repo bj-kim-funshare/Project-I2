@@ -78,6 +78,14 @@ dev/prod DB 가 분리(`dev_prod_separation: 분리`, db.md)된 상태에서 dev
   - **unreachable** (prod psql 미접속·자격 실패): **배포 절차 중단 + 안내**(마스터 요구 직역 — "검증하고 배포 중단", 검증 불가도 중단). warn 아님, block. 도달성 확보 후 재시도 또는 마스터 명시 우회.
 - **구현**: `pre-deploy` 가 `.claude/scripts/db-drift-check.sh`(dev/prod psql 좌표는 `data-craft-server/.env` 의 `PG_*`/`PG_*_PROD` + `DB_NAME`/`DB_NAME_PROD` 에서 로드)를 호출. 스크립트·스킬 통합은 Workstream C(pre-deploy 확장)가 제공. pre-deploy 의 psql 읽기전용 사용 인가 근거는 db.md §"pre-deploy DB 드리프트 게이트 psql 인가" 참조.
 
+### 서비스 도메인 한정 비교 (2026-06-18 명문화 — #379 교정)
+
+본 게이트의 비교 대상은 **서비스 스키마 한정**이다. admin/관리 도메인 객체는 dev psql 전용·prod 미적재가 설계 원칙(최중요 — db.md §"관리자 콘솔 DB 상호작용")이므로 prod 에 없는 것이 정상 상태다 — 즉 드리프트가 아니다. 이전의 '전체 스키마 무차별 대조' 방식이 admin 객체를 dev-우위 드리프트로 오판해 false block 을 낸 것이 #379 의 원인이었으며, 본 명문화는 그 교정을 정책으로 고정한다.
+
+- **도메인 정의 출처 및 게이트 판정 기준**: admin/관리 도메인 = db.md §"관리자 콘솔 DB 상호작용" 의 `admin_` 명명 규약이 source-of-truth. 게이트 구현은 `.claude/scripts/db-drift-domain.txt` 의 `prefix:admin_` 규칙으로 인코딩한다 — 스크립트 내 `normalize_fp()` 가 지문 객체명 field 가 `admin_` 접두로 시작하면 비교에서 드롭한다. **새 admin 테이블/루틴 추가 시 게이트·정의 파일 무수정으로 자동 제외**(자가 유지).
+- **판정 로직 (회귀 없음)**: 서비스 도메인의 dev-우위 차이만 `exit 2` 로 배포 차단. admin 도메인 차이는 통과(드리프트 아님).
+- **경계 — 이 게이트가 하지 않는 것**: 본 게이트는 **admin 메타가 실수로 prod 에 적재되는 것을 막는 가드가 아니다** — admin 도메인을 비교에서 제외하므로 그런 적재는 이 게이트에 잡히지 않는다. 그 방어는 `task-db-structure` 의 책임이다. 또한 서비스 테이블에 admin 전용 컬럼을 추가하는 것은 도메인-by-객체명 규칙 밖이다 — 현재 admin 객체는 모두 독립 테이블이고 admin↔서비스 FK 0 디커플 원칙상 그런 혼합은 발생하면 안 된다.
+
 ## env 관리
 
 > **env_management 값 의미 (2026-06-15 정정 — 역할별 구분)**. 기존 전 타겟 `git-tracked` 오선언이 deploy-validator 의 FE false-block 을 유발해 바로잡음.
