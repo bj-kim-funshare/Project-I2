@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.951.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스3
+
+**기능 가이드 "데이터 보기 — 뷰 모드" 섹션에 step별로 달라지는 전용 목업 도입.** 핫픽스2 레지스트리 기반 위에서, view-modes 섹션의 6개 단계가 각각 다른 본문을 보여주도록 `MockupViewModes`를 추가. 마스터가 지목한 "뷰 모드·위젯은 고정 HTML 하나로 소화 못 함 — 단계에 따라 달라져야" 요건을 충족.
+
+### 페이즈 결과
+- **핫픽스3 (feat, data-craft)** `0dd7f90`·`1dd1793`:
+  - `mockups/MockupViewModes.tsx` 신설: 상단 뷰 모드 토글 툴바(그리드/칸반/간트/캘린더/대시보드, 현재 단계의 뷰가 활성 강조) + `switch(stepIndex)`로 단계별 본문 분기. 본문 렌더러 5종 — renderGrid(스프레드시트 표), renderKanban(상태 컬럼+카드), renderGantt(타임라인 헤더+태스크 막대), renderCalendar(월간 격자+이벤트 칩), renderDashboard(스탯 카드+막대 차트).
+  - 단계 매핑: vm-1 뷰어/뷰모드(그리드+툴바), vm-2 그리드, vm-3 칸반, vm-4 간트, vm-5 캘린더, vm-6 대시보드.
+  - `mockupRegistry.ts`에 `view-modes` 등록. ko/en `view-modes.json` vm-1~6 step별 핀 좌표 추가(스텝 텍스트 불변).
+  - 색은 시맨틱 토큰만, 다크모드 안전, aria-hidden/tabIndex 비상호작용. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/components/mockups/MockupViewModes.tsx, packages/fs-data-viewer/src/features/guide/lib/mockupRegistry.ts, packages/fs-data-viewer/src/shared/config/guide/content/ko/guide/view-modes.json, packages/fs-data-viewer/src/shared/config/guide/content/en/guide/view-modes.json
+
+### 비고
+- 핀 좌표는 목업 JSX에서 역산한 초기값 — 마스터 스크린샷으로 단계별 미세조정 예정. vm-1은 뷰 모드 개념 소개라 핀이 툴바를 가리키도록 의도(튜닝 후보).
+- zh/ja는 핀 없이 현행 유지(마스터 결정, 전 섹션 일관).
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영. 검증: 가이드 > 데이터 보기 — 뷰 모드에서 6단계를 넘기며 본문이 step마다 바뀌고 핀이 설명 요소를 가리키는지.
+
 ## v001.950.0
 
 > 통합일: 2026-06-18
