@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.961.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스6
+
+**기능 가이드 사실 오류 정정 — modes "새 화면 추가" 버튼 위치(하단→상단).** 마스터가 "실제 서비스는 화면 추가가 위에 있는데 가이드는 왜 하단이냐"고 지적. 9개 섹션을 실제 제품 소스와 대조 검증한 결과 modes mode-2가 텍스트·목업 모두 틀렸음을 확인(`DesignSidebar.tsx`는 사이드바 **상단**에 풀폭 프라이머리 "새 화면 추가" 버튼, 목록은 그 아래). 정정.
+
+### 페이즈 결과
+- **핫픽스6 (fix, data-craft)** `295583144`:
+  - `MockupModes` renderSidebar: "+새 화면" 버튼을 페이지 목록 하단 → **상단 헤더 블록**(border-b, bg-primary full-width)으로 이동. mode-2 강조(ring) = 상단 버튼. 다른 단계도 동일한 상단 버튼 사이드바 공유(실제 제품 일치).
+  - ko/en modes.json mode-2: 설명 "사이드바 하단" → "사이드바 상단", 핀 {x:9,y:88} → {x:9,y:12}.
+- **논리 검증(9개 섹션 실제 제품 대조)**: widgets(19종)·forms(필드 정확히 12종·조건부표시)·collaboration(초대·승인/권한그룹/화면별접근/SSE알림)·advanced(정렬·필터·그룹/집계 하단행/플랜게이팅)·tips(테마·언어/단축키/검색)·troubleshooting(읽기전용배지/권한게이팅) 전부 기능 실재·일치 확인. mode-2만 사실 오류였음.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/components/mockups/MockupModes.tsx, packages/fs-data-viewer/src/shared/config/guide/content/{ko,en}/guide/modes.json
+
+### 비고
+- 본 검증은 기능 **실재** 대조 수준(컴포넌트 존재·플로우 일치). 목업의 **시각적 묘사**(아이콘·레이아웃 배치 순서 등)가 실제 UI와 다른 경우는 마스터 스크린샷 피드백으로 추가 정정.
+- 소스로 확정 불가(미수정): adv-4 "시작 화면 지정" UI, 커스텀 컬러 테마, undo 50단계 한도 — 마스터 확인 권장.
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영.
+
 ## v001.960.0
 
 > 통합일: 2026-06-18
