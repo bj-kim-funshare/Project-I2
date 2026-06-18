@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.950.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스49
+
+**입력폼 "폼 사용 등록" 단계에서 풍선이 앵커를 못 찾아 중앙에 뜨고 스포트라이트가 안 되던 버그 수정.** `AvailableFormsSection` 이 "추가 가능한 폼" 목록을 map 하며 **각 폼의 + 버튼마다 같은 `hintId="userFormRegisterForm"`** 로 래핑했는데, OnboardingHint 가 unmount 시 `unregisterAnchor(hintId)` 로 hintId 항목을 통째 삭제 → 다른 폼이 등록되며 unmount 될 때 공유 앵커가 삭제 → 남은 폼이 있어도 앵커 null → 풍선 centered + 컷아웃 없어 dim 무의미.
+
+### 페이즈 결과
+- **핫픽스49 (fix, data-craft)** `b33571b10`: `AvailableFormsSection.tsx` — map 첫 항목(index===0)의 + 버튼에만 OnboardingHint 적용(Button 추출 후 조건부 래핑). 단일 안정 앵커 확보 → 다른 폼 등록/unmount 가 앵커 삭제 안 함.
+
+### 영향 파일
+data-craft: src/widgets/settings-dialog/ui/AvailableFormsSection.tsx
+
+### 비고
+- 앵커가 잡히면 dialogSpotlight(HF46/47) 컷아웃이 첫 + 만 밝게/설정 편집 다이얼로그 나머지를 어둡게 처리.
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 사용 등록 단계에서 풍선이 "추가 가능한 폼"의 + 에 앵커되고 다이얼로그가 어둡게 스포트라이트되는지.
+
+## v001.949.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스48
+
+**튜토리얼 단계 전환 시 다음 단계 앵커가 아직 마운트 안 돼 풍선이 순간 중앙에 떴다 앵커되는 깜박임 제거.** 예: "입력폼 열기"(userForm) 완료 → userFormAddForm 활성 시 폼 빌더가 막 열려 [+] 앵커가 DOM 에 없는 짧은 구간에 centered 폴백 풍선이 깜박임.
+
+### 페이즈 결과
+- **핫픽스48 (fix, data-craft)** `31aced582`: `TutorialOverlay.tsx` — `allowCentered` state + 유예 타이머(450ms). anchorEl=null 인 동안 오버레이 미렌더(중앙 폴백 보류), 앵커 마운트되면 즉시 스포트라이트. 유예 후에도 null 이면(진짜 누락) 그때 중앙 폴백.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- 앵커 있는 단계는 영향 없음(즉시 스포트라이트). 전환 깜박만 제거.
+- FE 전용 → 하드 리프레시 반영.
+
 ## v001.947.0
 
 > 통합일: 2026-06-18
