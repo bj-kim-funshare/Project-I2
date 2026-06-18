@@ -30213,3 +30213,27 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - 아이콘 값 포맷이 이모지 → Lucide 이름으로 전환됨. 기존 테스트로 만든 이모지 아이콘은 `LucideIconByName` 폴백으로 텍스트 렌더되며(작게 보일 수 있음), 아이콘을 다시 고르면 정상화됨 — 일회성 마이그레이션은 의도적으로 미실시.
 - 공용 `IconPicker`가 `useI18n()`을 요구해 문서 위젯 트리에서 `I18nProvider`로 감쌈 — 픽커 탭 라벨은 provider 기본 언어를 따름(앱 언어 전환과 무관). 앱 전체 언어 연동이 필요하면 host 래퍼에서 현재 언어 주입 후속 가능.
 - dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
+
+## v001.981.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #372 (핫픽스3 — 페이지 진입 속도: keepAlive 웹뷰 재사용)
+
+마스터 피드백("누른 후 거의 3초 지나고 검정 로딩 뜸 — 개선 안되나")에 따라 페이지 진입 콜드 부팅을 개선. 원인: 페이지 진입마다 새 웹뷰 생성 → React 앱 매번 콜드 부팅(~3초, dev/Vite에서 특히 느림). 해결: 웹뷰를 1개만 유지·재사용하여 첫 진입만 콜드, 2번째+ 진입은 부팅된 React 앱을 클라이언트 사이드(SPA)로 전환. 다른 화면(목록·네비·홈/알림/DM/마이)은 모두 네이티브 유지(웹뷰는 페이지 상세 1곳).
+
+### 변경 결과
+- **HF3 web (feat, data-craft)** `24baa0a`: `MobilePageView`가 embed에서 `window.__dcNavigatePage(pageId)` 전역 등록(마운트 시, navigateRef로 stale 방지, unmount 시 정리). React Router로 `/m/<pageId>` 클라이언트 사이드 전환 → 재부팅 없음.
+- **HF3 mobile (feat, data-craft-mobile)** `9ba10dd` + `094a8d3` + `119c907`: `PageWebViewHolder` 싱글턴(앱 세션 생존)이 단일 `InAppWebViewKeepAlive`·controller 보유. 첫 진입만 refresh+URL 콜드 부팅, 2번째+ 진입은 `window.__dcNavigatePage` 호출로 SPA 전환. JS 식 IIFE 수정(navigate undefined 반환으로 항상 폴백되던 버그) + flutter web evaluateJavascript 반환 직렬화 차이 대비 typeof 2단계·관대 파싱(`contains('true')`). 함수 미존재/컨트롤러 null 시 loadUrl 폴백.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/pages/mobile/MobilePageView.tsx`
+
+**data-craft-mobile** (i-dev)
+- `lib/screens/page/page_web_view_screen.dart`
+- `lib/screens/page/page_webview_holder.dart` (신규)
+
+### 비고
+- 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors. advisor 핫픽스 검증 PASS.
+- 검증 흐름: ①첫 페이지 진입(~3초 콜드, 정상) → ②뒤로 → 다른 페이지 진입(즉시/매우 빠름 = SPA 내비 작동 신호).
+- ⚠️ **잔존**: 첫 부트 완료 전 빠른 2번째 진입 시 `window.__dcNavigatePage` 미존재 → loadUrl 폴백(1회 콜드 재발, 드묾). 메모리 압박으로 OS가 웹뷰 회수 시에도 폴백으로 복구. dev(Vite)보다 prod(CloudFront 번들)가 콜드 부팅 더 빠름.
