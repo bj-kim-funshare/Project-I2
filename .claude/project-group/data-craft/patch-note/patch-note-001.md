@@ -29864,3 +29864,25 @@ data-craft (fs-data-viewer 전용):
 - `src/entities/internalCompany/{api,types,index}.ts`
 - `src/pages/internal-company/InternalCompanyPage.tsx`
 - `src/app/router/index.tsx`, `src/app/router/RootLayout.tsx`
+
+## v001.967.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371
+
+**헤더 디자인/뷰 모드 전환 버튼을 눈에 띄는 라벨형 그라데이션 pill 로 개편.** 제품의 핵심 기능인 모드 전환 버튼이 헤더에서 옆의 설정·AI·가이드 아이콘과 똑같은 무채색 고스트 아이콘이라 사용자 눈에 잘 띄지 않았다. 플랜명 뱃지처럼 현재 모드("뷰 모드"/"디자인 모드") 라벨 + 전환 아이콘을 담은 그라데이션 pill 로 교체해 시각적으로 고유하게 강조했다. 구독 티어 뱃지 색과는 구별되는 emerald→teal 계열을 써 상태 오인을 방지했다.
+
+### 페이즈 결과
+- **Phase 1 (feat, data-craft)** `e14aa79`: 신규 공용 `ModeSwitchButton` 컴포넌트 — `forwardRef<HTMLButtonElement>`(OnboardingHint/Tooltip asChild 정합), emerald→teal 그라데이션 pill + `ArrowLeftRight` 아이콘 + 현재모드 i18n 라벨, `h-8` 높이 유지(주변 아이콘과 수직 정렬), hover/active/focus-ring. ko.ts/en.ts header 네임스페이스에 `modeLabel.view`/`modeLabel.design` 키 추가.
+- **Phase 2 (feat, data-craft)** `dcfb993`: `ViewModeToolbar`(mode="view")·`DesignModeToolbar`(mode="design") 의 기존 고스트 아이콘 토글을 `ModeSwitchButton` 으로 교체. 래핑 순서(`OnboardingHint > TooltipTrigger asChild > ModeSwitchButton`)·`canDesign` 게이팅·`onModeToggle` 핸들러·aria-label 보존, 미사용 `LayoutDashboard` import 정리.
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 양 페이즈 0 errors, 신규 경고 없음.
+- 최종 시각 결과(색 톤·라벨 표현)는 마스터 스크린샷 확인 후 핫픽스 경로로 미세 조정 가능. "버튼이 아니라 라벨처럼 보임" 피드백 시 폴백 = segmented "뷰 | 디자인" 토글.
+
+### 영향 파일
+**data-craft**
+- `src/widgets/header/ui/ModeSwitchButton.tsx` (신규)
+- `src/widgets/header/ui/ViewModeToolbar.tsx`
+- `src/widgets/header/ui/DesignModeToolbar.tsx`
+- `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
