@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.971.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #373
+
+**데이터 뷰어 모달 dim 배경 누락 일괄 수정.** 캘린더 뷰 → 공휴일 설정 모달이 뜰 때 외부 영역이 어두워지지 않던 신고 버그(`CalendarHolidayDialog` 백드롭에 `bg-black/50` 누락)를 고치고, 전수조사로 같은 결함을 가진 모든 중앙 정렬 블로킹 모달을 3개 뷰어 패키지에 걸쳐 일괄 수정했다. 마스터 결정에 따라 설정/구성 다이얼로그 + 중앙 정렬 셀 편집기 오버레이(코드/색상/긴텍스트/별점/세계시각)를 모두 dim 대상에 포함. 앵커형 셀 피커(날짜/시간/타이머 등 셀 옆에 뜨는 투명 클릭캐처)는 의도적으로 제외.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft)** `a7efe34`: fs-data-viewer 13개 모달 백드롭에 `bg-black/50` 추가(신고 버그 포함). 전용 backdrop div 보유 4개(FsGridCellStyle/ColumnGroup/IntegrityCheck/ViewColumnManager)는 그 div 에, 나머지는 centering 루트에 적용.
+- **Phase 2 (fix, data-craft)** `d46a022`: fs-sub-data-viewer 미러 사본 7개 동일 수정.
+- **Phase 3 (fix, data-craft)** `479cc28`: fs-external-data-viewer 미러 사본 7개 동일 수정.
+
+### 비고
+- 표준 dim 클래스 = `bg-black/50` (기존 `FileDialog`/`KanbanCardAreasDialog`/`ImageDialog` 컨벤션). 루트 앱 `src/` 는 shadcn `Dialog`(내장 `bg-black/70`) 사용으로 정상 — 수정 불필요.
+- 전수조사 범위: 전 패키지(`packages/*`) + 루트 `src/`. 3개 뷰어 외 패키지(fs-api/fs-data-link/fs-shared/fs-*-explorer/fs-file-attachment)에는 dim 누락 블로킹 모달 없음(grep 검증).
+- 로직 변경 없음(순수 Tailwind className 추가). lint 게이트(`pnpm typecheck:all && pnpm lint`) 각 페이즈 0 errors.
+- 형제 뷰어 패키지(fs-sub/fs-external)는 dist alias 소비 → 적용 확인 시 `pnpm build:packages` 후 하드 리프레시 필요. fs-data-viewer 는 src alias 라 머지 즉시 반영.
+
+### 영향 파일
+**data-craft** (i-dev) — 27개 파일, 각 백드롭 레이어에 `bg-black/50` 1줄 추가
+- `packages/fs-data-viewer/src/widgets/` : data-viewer-header/header-settings/{CalendarHolidayDialog, CalendarLabelColumnDialog, GanttLabelColumnDialog, KanbanColumnDialog}.tsx, cell-style-dialog/FsGridCellStyleDialog.tsx, grid-table/components/column-group-dialog/ColumnGroupDialog.tsx, grid-table/components/grid-footer/AggregationDialog.tsx, cell-renderers/{code-cell/CodeEditDialog, color-picker-cell/ColorPickerDialog, long-text-cell/EditDialog, rating-cell/RatingOverlay}.tsx, dialogs/IntegrityCheckDialog.tsx, view-column-manager/ViewColumnManagerDialog.tsx
+- `packages/fs-sub-data-viewer/src/widgets/` : cell-style-dialog/FsGridCellStyleDialog.tsx, grid-table/components/column-group-dialog/ColumnGroupDialog.tsx, grid-table/components/grid-footer/AggregationDialog.tsx, cell-renderers/{code-cell/CodeEditDialog, color-picker-cell/ColorPickerDialog, world-time-cell/WorldTimeOverlay}.tsx, dialogs/IntegrityCheckDialog.tsx
+- `packages/fs-external-data-viewer/src/widgets/` : cell-style-dialog/FsGridCellStyleDialog.tsx, grid-table/components/column-group-dialog/ColumnGroupDialog.tsx, grid-table/components/grid-footer/AggregationDialog.tsx, cell-renderers/{code-cell/CodeEditDialog, color-picker-cell/ColorPickerDialog, world-time-cell/WorldTimeOverlay}.tsx, dialogs/IntegrityCheckDialog.tsx
+
 ## v001.961.0
 
 > 통합일: 2026-06-18
