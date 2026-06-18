@@ -29493,3 +29493,31 @@ data-craft (fs-data-viewer 전용 — phase A):
 - widgets-layer `DualWidgetLayout`/7-templates dead code 정리 + 호출자(DualWidgetPreview 등) role 부여는 별도 cleanup hotfix로 분리.
 - typecheck:all && lint exit 0(lint hotfix 1회 — 미배선 심볼 결선).
 - 검증(마스터, 시각): dev:5173 그리드에서 듀얼 셀 → 단일선택×3/text×3/progress×3 각각 3슬롯이 시각적으로 다른지, 혼합 조합 위계 자연스러운지, 편집(탭 오버레이) 무회귀. dev=fs_data_viewer src alias(머지+하드 리프레시).
+
+## v001.951.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #367 (핫픽스3·4 + 인제스트 env 활성화)
+
+### 페이즈 결과
+- **핫픽스3 (feat, data-craft-admin)**: 분석 페이지에서 **결제 펀넬 섹션 전체 제거**(마스터 요구=인증 영역 공용/기업뿐). AnalyticsPage의 결제 state·useEffect·JSX 제거, 유일 소비자였던 `features/analytics-funnel/`(PaymentFunnelCharts·index)와 entities의 `fetchPaymentFunnel`·`PaymentFunnel` 타입까지 삭제. 공용/기업 탭·지표 카드·분포·인증 퍼널·헤더 유지. 커밋 `5d1dcaa`.
+- **핫픽스4 BE (feat, data-craft-admin-server)**: `/auth-metrics`를 `range`(버킷 수) → **`from`~`to` ISO datetime 정밀 윈도우**로 변경. 모든 시간 필터 `created_at >= $from AND < $to` 바인딩, [from,to] 구간 zero-fill 버킷 시계열, average=total/bucketCount. 검증 `INVALID_RANGE`/`TOO_MANY_BUCKETS`(1000버킷 상한), 응답에 from·to·bucketCount 에코. 커밋 `3eedf85`.
+- **핫픽스4 FE (feat, data-craft-admin)**: 기간 입력을 **연월일시분~연월일시분 datetime-local 2개(시작/종료)** + 단위 Select로 교체, `from`/`to` ISO 전송. **새로고침 버튼** 추가(loadMetrics useCallback 공유). 400 에러코드 한국어 안내 매핑. 커밋 `11306db`.
+- **인제스트 env 활성화 (ops, data-craft-server 로컬 .env)**: 마스터 지시로 `INTERNAL_IPS=211.211.222.105,127.0.0.1,::1`(사무실 공인 IP + 로컬) 및 `ANALYTICS_PROPERTIES_ENABLED=true` 설정 후 로컬 인제스트(8000) 재기동. **실측 검증**: localhost·211.x(XFF) 이벤트 드롭 확인, 비제외 IP는 properties(theme/language) 저장 확인.
+
+### 영향 파일
+data-craft-admin:
+- src/pages/analytics/AnalyticsPage.tsx (결제 제거 + datetime 입력 + 새로고침)
+- src/entities/analytics/{api,types,index}.ts (fetchAuthMetrics from/to, 결제 타입 제거)
+- src/features/analytics-funnel/* (삭제)
+
+data-craft-admin-server:
+- src/controllers/adminAnalytics.controller.ts, src/services/adminAnalytics.service.ts (from/to 윈도우)
+
+data-craft-server (로컬 .env, 비커밋 운영 설정):
+- INTERNAL_IPS, ANALYTICS_PROPERTIES_ENABLED 추가 (dev 즉시 적용).
+
+### 비고 / 잔여 (마스터)
+- **prod 인제스트 env**: 위 INTERNAL_IPS·ANALYTICS_PROPERTIES_ENABLED는 dev 로컬에만 적용됨. prod(EC2 data-craft-server)에 반영하려면 배포 서버 env 설정 + 재시작(git-tracked .env 배포 경로) 필요.
+- **자기 트래픽 제외 ↔ 검증 딜레마**: 마스터 본인 PC(localhost/211.x)는 이제 제외되므로 본인 테스트 이벤트는 적재되지 않음 → 테마/언어 실데이터 확인은 비제외 단말에서. 기존 unknown은 플래그 OFF 시절 수집분.
+- 게이트: 각 핫픽스 typecheck/lint(+BE build) exit 0.
