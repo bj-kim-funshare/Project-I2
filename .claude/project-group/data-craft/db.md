@@ -9,6 +9,32 @@ connection_style: PG_* 환경변수
 
 # data-craft — db 환경 규정
 
+## 관리자 DB 분리 — 하드 규칙 (최중요, 마스터 2026-06-18)
+
+> 본 절은 data-craft 관리자 콘솔(`data-craft-admin` / `data-craft-admin-server`, Roadmap-7) 의 DB 운영에 대한 **최상위 하드 규칙**이다. 아래 §"관리자 콘솔 DB 상호작용" · §"pre-deploy DB 드리프트 게이트 psql 인가" 의 모든 admin 관련 서술은 본 절을 source of truth 로 삼는다. #370(`admin_internal_company_id` 가 토글 풀로 prod 를 때려 실패) · #379(드리프트 게이트가 admin 객체 dev/prod 차이를 false-block) 두 사고의 직접 재발 방지가 목적이며, 메모리 `project_data_craft_admin_meta_not_in_prod` 와 정합한다.
+
+### admin 전용 테이블의 정의 (좁게 한정 — 분류 기준)
+
+- **admin 전용 테이블** = **admin 콘솔/`data-craft-admin-server` 만 read/write** 하는 테이블. 예: `admin_email_verification`(고정 단일 계정 2단계 로그인 인증번호), `admin_promotion_audit`(관리자 행위 감사), `admin_internal_company_id` 등 관리 메타·감사·인증 객체. 신규 admin 전용 테이블은 반드시 **`admin_` 접두**로 명명한다(아래 §배포 DB 검수 정책의 도메인 식별 근거).
+- **service 테이블이 admin 콘솔에 의해 read 되는 경우는 admin 테이블이 아니다** — prod 적재가 정상이다. 명시 반례:
+  - `user_events` — 데이터 **인입은 배포되는 data-craft 본체**(FE 계측 + data-craft-server 엔드포인트)가 하고 admin 콘솔은 **read-only** 로 소비한다 → **service**, dev + prod 양쪽 적재.
+  - 프로모션 4종(`promotion` / `client_promotion` / `promotion_audit_log` / `promotion_business_lock`) — 서비스 결제/프로모션 도메인 → **service**, prod 적재.
+- 분류 디스크리미네이터: "admin 콘솔이 만지는가" 가 아니라 **"admin 콘솔/admin-server 만 read/write 하는 admin 동작 전용 객체인가"**. read-by-admin / written-by-service 테이블은 service 다.
+
+### 세 하드 규칙
+
+1. **admin 전용 테이블은 절대 prod DB(`data_craft_production`)에 올리지 않는다** — dev DB(`data_craft_dev`)에만 둔다. prod 빌드 DDL 에서 제외한다.
+2. **관리자 페이지/서버는 prod DB 에서 "일반(서비스) 데이터만" 받는다** — prod 에서 admin 전용 객체를 읽거나 쓰지 않는다.
+3. **admin 동작 전용 정보는 반드시 dev DB(`data_craft_dev`)에만 둔다** — `data-craft-admin-server` 의 데이터 풀이 prod 로 토글되어도 **인증/admin 메타 풀은 dev-side 고정 연결**이다(prod 토글로 admin 정보가 prod 에 새면 보안 사고 — #370 직접 재발). 2풀 구조 상세는 §"관리자 콘솔 DB 상호작용".
+
+## 배포 DB 검수 정책 — 하드 규칙 (마스터 2026-06-18)
+
+`pre-deploy` 의 DB 드리프트 검수(§"pre-deploy DB 드리프트 게이트 psql 인가" · deploy.md §"배포 전 DB 드리프트 게이트")는 다음을 따른다.
+
+- 드리프트 검수는 **단순 전체 비교가 아니라 "서비스 스키마 한정 논리 비교"** 다.
+- **admin/관리 도메인 객체의 dev/prod 차이는 설계상 정상이며 드리프트로 보지 않는다**(위 §관리자 DB 분리 하드 규칙 1·3 — admin 전용 객체는 dev 에만 존재하는 것이 정상). 게이트는 **서비스 도메인만 대조**해 진짜 서비스 스키마 드리프트만 차단한다.
+- **구현 훅**(원칙 → wire): 도메인 제외 메커니즘 = `.claude/scripts/db-drift-ignore.txt`(객체명 단위 제외) + **`admin_*` 접두 규율**(신규 admin 전용 테이블이 접두를 따르면 게이트가 도메인을 기계적으로 식별 가능). #379 false-block 은 이 접두 규율 부재로 admin 객체가 서비스 지문에 섞여 발생했다. **게이트 로직(서비스 도메인 한정 대조)의 실제 구현은 `plan-enterprise-os` 가 수행**하며, 본 절은 그 정책 근거다.
+
 ## 전환 상태 (DEV 전환 완료 2026-06-02 · PROD 컷오버 진행 — Roadmap-6 PROD-1)
 
 - **DEV·PROD 모두 PostgreSQL 라이브**: dev 는 PostgreSQL 라이브 가동 — 앱 드라이버 mysql2→pg 전환(#220) + data_values `HASH(group_id)` 재파티션 + 빌드 DDL psql 정합(#239) 완료. **prod 도 PROD-1 컷오버 완료(2026-06-11, #301)로 PostgreSQL 라이브** — `engine: postgresql` 이 dev·prod 양 환경과 일치한다. 후속 TimescaleDB 도입 여부는 별도 결정(본 status 범위 외 — 현 EAV 현재상태 그리드는 하이퍼테이블 타깃 없음으로 도입 보류 결론).
@@ -54,9 +80,11 @@ connection_style: PG_* 환경변수
 
 - **psql 사용 인가 범위 확장**: 본 게이트를 위해 `pre-deploy` 컨텍스트는 dev/prod psql 에 대한 **읽기전용 스키마 introspection** 목적의 psql 호출을 인가받는다. 기존 `Bash(psql *)` 인가는 CLAUDE.md 주석상 `task-db-structure`/`task-db-data` 한정이었으나, pre-deploy 의 드리프트 게이트(`.claude/scripts/db-drift-check.sh`)는 SELECT-only 스키마 카탈로그 조회(`information_schema`, `pg_catalog`, `pg_get_functiondef`)만 수행하며 DDL/DML 을 실행하지 않는다. 안전장치: ① 읽기전용 쿼리만, ② prod 미접속 시 block(배포 차단)으로 안전 측 실패, ③ 좌표는 `data-craft-server/.env` 의 `PG_*`/`PG_*_PROD`·`DB_NAME`/`DB_NAME_PROD` 에서 로드(정책 파일 비적재). 본 인가는 Workstream C 에서 `.claude/settings.json` + CLAUDE.md 주석에 반영된다.
 - **접속 좌표**: dev = `PG_HOST`/`PG_USER`/`PG_PASSWORD` + `DB_NAME`(`data_craft_dev`), prod = `PG_HOST_PROD`/`PG_USER_PROD`/`PG_PASSWORD_PROD` + `DB_NAME_PROD`(`data_craft_production`). 양 환경 `PG_PORT`=5432. (2026-06-17 실측: dev 127.0.0.1:5432·prod 사설망 호스트:5432 양쪽 이 머신에서 TCP 도달 확인.)
-- **지문 정규화**: 거짓양성 억제를 위해 시퀀스 현재값, 파티션 자동생성 child(예: `data_values` HASH(group_id) 8 서브파티션), 통계/스토리지 메타는 지문에서 제외하고 DDL 구조(테이블·컬럼·타입·제약·루틴 정의) 표면만 비교. 첫 실측에서 dev==prod(현재 동기 가정)여야 정상.
+- **지문 정규화**: 거짓양성 억제를 위해 ① 시퀀스 현재값, ② 파티션 자동생성 child(예: `data_values` HASH(group_id) 8 서브파티션), ③ 통계/스토리지 메타, ④ **admin/관리 도메인 객체**(§"배포 DB 검수 정책 — 하드 규칙" — admin 전용 테이블은 dev 에만 존재하는 것이 설계상 정상이므로 드리프트 아님; `admin_*` 접두 + `db-drift-ignore.txt` 로 제외)는 지문에서 제외하고 **서비스 도메인의** DDL 구조(테이블·컬럼·타입·제약·루틴 정의) 표면만 비교. 첫 실측에서 서비스 도메인 dev==prod(현재 동기 가정)여야 정상.
 
 ## 관리자 콘솔 DB 상호작용 (Roadmap-7 신규 — 마스터 명시)
+
+> **상위 규칙**: admin 테이블 분류·prod 비적재·dev-side 고정 인증 풀의 source of truth 는 최상단 §"관리자 DB 분리 — 하드 규칙"이다. 본 절은 그 하드 규칙의 구체 적용(테이블 목록·풀 구조)이며 제약을 재정의하지 않는다.
 
 - **DB 인스턴스는 dev 1 / prod 1 유지** — 관리자용 별도 DB 인스턴스 신설 없음. 관리자 전용 테이블만 기존 data-craft DB 에 추가한다.
 - **신규 테이블 2종**:
