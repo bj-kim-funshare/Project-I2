@@ -1,0 +1,27 @@
+# db-drift-domain.txt — admin/관리 domain definition for db-drift-check.sh.
+#
+# This file defines which objects belong to the admin/관리 domain and must NOT
+# count as deploy-drift. The service-schema drift gate compares ONLY the service
+# domain (objects not excluded here); admin/관리 domain objects are dev-psql-only
+# by design and are never loaded to prod, so their absence in prod is expected
+# behaviour — not an un-deployed migration.
+#
+# Source of truth for the admin domain:
+#   .claude/project-group/data-craft/db.md §"관리자 콘솔 DB 상호작용"
+#
+# The admin console follows the `admin_` object-naming convention (tables,
+# constraints, and routines all prefixed with `admin_`). The `prefix:` directive
+# below excludes the entire convention-based domain in one rule, making the gate
+# self-maintaining: new admin_ objects added later are automatically excluded
+# without any edit to this file.
+#
+# Directive syntax:
+#   prefix:<value>   — exclude any object whose name STARTS WITH <value>.
+#   <name>           — exclude a single exact object name (still supported for
+#                      any future env-specific object that does not follow a
+#                      naming-convention prefix).
+#
+# Blank lines and lines starting with '#' are ignored.
+
+# Admin/관리 domain — entire prefix excluded (admin_ naming convention).
+prefix:admin_

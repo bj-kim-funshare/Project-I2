@@ -15,6 +15,14 @@
 # RANGE-by-month partitions created at different times on dev vs prod do not
 # register as false drift — only the partitioned PARENT structure is compared.
 #
+# This gate performs a SERVICE-SCHEMA-DOMAIN-ONLY logical comparison. The
+# admin/관리 domain (objects following the `admin_` naming convention) is
+# dev-psql-only by design and is never loaded to prod; its absence in prod is
+# expected behaviour, not an un-deployed migration. Admin-only divergence is
+# therefore not drift and does not trigger exit 2. Domain exclusions are
+# declared in db-drift-domain.txt (next to this script); the admin_ prefix
+# rule makes the gate self-maintaining as new admin objects are added.
+#
 # Connection coordinates are read from the data-craft-server .env (PG_*/PG_*_PROD
 # + DB_NAME/DB_NAME_PROD pairs). Secret values are never printed.
 #
@@ -22,7 +30,7 @@
 # / pg_get_constraintdef / pg_get_functiondef). No DDL, no DML.
 #
 # Exit codes:
-#   0  clean       — dev and prod fingerprints identical.
+#   0  clean       — dev and prod fingerprints identical (service domain only).
 #   2  drift       — fingerprints differ (dev ahead, prod ahead, or both).
 #   3  unreachable — could not connect to dev or prod (verification impossible).
 #   4  config      — env file / required vars missing (cannot run).
@@ -71,9 +79,10 @@ if [[ -z "$DEV_USER" || -z "$DEV_DB" || -z "$PROD_HOST" || -z "$PROD_USER" || -z
   exit 4
 fi
 
-# Ignore list — object names that are intentionally environment-specific (not
-# un-deployed migrations). Default sits next to this script; overridable as $2.
-IGNORE_FILE="${2:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db-drift-ignore.txt}"
+# Domain definition file — declares which objects belong to the admin/관리
+# domain and are intentionally dev-only (not un-deployed migrations). Default
+# sits next to this script; overridable as $2.
+IGNORE_FILE="${2:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/db-drift-domain.txt}"
 
 # Deterministic DDL-surface fingerprint. One text column 'line', ORDER BY line.
 # - COL : table columns of NON-partition-child tables (data_type + nullable + default).
@@ -125,15 +134,31 @@ if ! run_fp "$PROD_HOST" "$PROD_USER" "$PROD_PASS" "$PROD_DB" > "$PROD_FP" 2>"$T
 fi
 
 # Normalize BOTH fingerprints before comparing:
-#  (a) drop intentionally env-specific objects (ignore list), matched on the
-#      fingerprint's object-name field (tab field 2);
+#  (a) drop objects belonging to excluded domains (domain file), matched on the
+#      fingerprint's object-name field (tab field 2) — both exact names and
+#      prefix: directives are supported;
 #  (b) re-sort with LC_ALL=C so cmp/comm's byte-order contract holds regardless
 #      of the psql server collation that produced the ORDER BY.
 normalize_fp() {
   local fp="$1"
   awk -F'\t' '
-    NR==FNR { if ($0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/) { gsub(/^[[:space:]]+|[[:space:]]+$/,"",$0); ig[$0]=1 } next }
-    !($2 in ig)
+    NR==FNR {
+      if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) next
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",$0)
+      if (index($0,"prefix:") == 1) {
+        p = substr($0, 8)
+        gsub(/^[[:space:]]+|[[:space:]]+$/,"",p)
+        if (p != "") prefixes[++np] = p
+      } else {
+        ig[$0] = 1
+      }
+      next
+    }
+    {
+      if ($2 in ig) next
+      for (i = 1; i <= np; i++) if (index($2, prefixes[i]) == 1) next
+      print
+    }
   ' "${IGNORE_FILE:-/dev/null}" "$fp" | LC_ALL=C sort > "$fp.norm" && mv "$fp.norm" "$fp"
 }
 normalize_fp "$DEV_FP"
