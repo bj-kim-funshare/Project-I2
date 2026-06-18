@@ -30291,3 +30291,29 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 ### 비고
 - 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors.
 - 페이지 진입 ~3초(콜드 로드)는 다시 존재하나 **정상 동작**. 속도 개선은 flutter-web 호환 방식(예: 헤드리스 웜업/HTTP 캐시 프리로드, 또는 네이티브 빌드에서만 keepAlive 적용)으로 별도 재설계 필요 — keepAlive 단순 적용은 web에서 불가 확인.
+
+## v001.984.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (문서 위젯 추가 보정 4차 — 랜덤 기본아이콘/삭제확인/파란테두리/아이콘 영속/헤더 저장상태)
+
+마스터 지시 5건. 작업 저장소 1개(data-craft FE). 커밋 `f9d41a7`(로직) + `2485148`(UI).
+
+### 변경 결과
+- **(1) 최초/추가 페이지 기본 아이콘 = 목록 랜덤**: 빈 그룹 자동 시드 첫 페이지와 페이지 추가 시 아이콘을 빈 값 대신 `PAGE_ICONS` 카탈로그에서 무작위 선택해 부여.
+- **(2) 페이지 태그 삭제 버튼 = 항상 표시 + 확인 후 삭제**: ✕ 의 hover-only 게이팅 제거(상시 노출), 클릭 시 즉시 삭제 대신 칩 내부 인라인 2단계 확인("삭제하시겠어요? 삭제/취소")으로 전환. `pendingDelete`를 `{groupId,rowNum}`로 관리해 그룹 전환·타 칩 간섭 방지(window.confirm 미사용).
+- **(3) 태그·+ 버튼 검정 테두리 제거 → 명시적 파란색**: 이 테마의 `primary` 토큰이 near-black(`oklch(0.205 0 0)`)이라 `border-primary`가 검정으로 렌더되던 문제 — 칩/+ 버튼에서 primary 토큰을 제거하고 명시적 `blue-*`(활성칩 `bg-blue-50 border-blue-500 text-blue-700`, 비활성 `border-blue-200`, + 버튼 `border-blue-500 text-blue-600 hover:bg-blue-50`)로 교체.
+- **(4) 아이콘이 새로고침하면 사라지던 버그 해소**: `findIconColumn`이 컬럼명 `'아이콘'` 정확 매칭에 의존 → 명칭 라운드트립 불일치 시 아이콘 컬럼 미탐색 → 저장 사일런트 스킵 + 읽기 누락이 원인. 2단계 탐색으로 교체(명칭 우선, 없으면 body(document) 제외 **단일** text 컬럼 폴백; 모호하면 null로 무동작). 이로써 아이콘 영속.
+- **(5) 제목/본문/아이콘/페이지추가·삭제 작업의 헤더 "저장중 → 저장완료" 표시**: 컨테이너에 인플라이트 저장 카운터 + `onSaveStateChange` prop 추가, 6개 저장 지점에서 saving/saved/error 방출. root 래퍼가 `useDataViewerSaveStore`에 연결(뷰어 위젯과 동일 패턴). 저장 실패 시 더는 사일런트가 아니라 헤더에 오류 상태 표시.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidgetContainer.tsx`
+- `src/widgets/document-widget/ui/Document.widget.tsx`
+
+### 비고
+- 게이트: `typecheck:all && lint` 0 errors(실측 117s). advisor 보정 검증 PASS.
+- (4) 관련: 1차 보정에서 `findIconColumn`의 text-컬럼 폴백을 임의 그리드 오염 우려로 제거한 것이 아이콘 영속을 깨뜨린 과수정이었음 — 4차에서 **단일 text 컬럼 한정**(모호 시 null)의 안전한 폴백으로 복원. 향후 "정확 명칭 매칭이 더 안전"이라는 이유로 되돌리지 말 것.
+- (5) 관련: 저장 catch 가 더 이상 사일런트가 아니라 'error' 상태를 방출 → 기존에 숨어 있던 BE/네트워크 저장 실패가 헤더에 "저장 실패"로 보일 수 있음(의도된 개선 방향).
+- 기본 아이콘은 `Math.random()` 기반(제품 코드)이라 매 생성 시 달라짐.
+- dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
