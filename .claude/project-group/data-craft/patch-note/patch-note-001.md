@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.945.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스47
+
+**튜토리얼 다이얼로그 스포트라이트 2건 보강 — 중첩 설정 다이얼로그 dim + "폼 만들기" 편집영역 스포트라이트.** (1) 폼 사용 등록(userFormRegisterForm) 단계의 중첩 설정 편집 다이얼로그가 dialogSpotlight dim(z13010)보다 위라 안 어두워짐. (2) "폼 만들기"(userFormSaveForm) 단계는 dim 미적용이라 비가이드 영역이 안 어두움.
+
+### 페이즈 결과
+- **핫픽스47 (fix, data-craft)** `6cf28d3cd`:
+  - **dim z 격상**: `TutorialOverlay.tsx` dialogSpotlight dim z `13010→13900`, 풍선 `13011→13901` → 중첩 다이얼로그(EditSettingsFormDialog)까지 덮어 어둡게.
+  - **popper 격상**: `index.css` `[data-radix-popper-content-wrapper]` z `→13902`(스포트라이트 dim 13900 위) → 편집기/다이얼로그 드롭다운이 dim 위에서 동작.
+  - **폼 만들기 편집영역 컷아웃**: `scenarioRegistry.ts` userFormSaveForm 에 `dialogSpotlight: true`(placement left). 앵커를 저장 버튼(`FormPanelButtonBar`)에서 **편집 영역(중앙 FormEditorPanel + 우측 FormSizePanel 묶음)**(`FormBuilderDialog`)으로 이동 → 폼목록(좌)·헤더X 어둡게+차단, 편집기(이름/필드/저장) 밝게+자유 조작.
+  - `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx, src/app/styles/index.css, src/features/onboarding/model/scenarioRegistry.ts, src/features/form-builder/ui/FormPanelButtonBar.tsx, src/features/form-builder/ui/FormBuilderDialog.tsx
+
+### 비고
+- 폼 만들기 단계: 편집기는 컷아웃으로 밝게 두어 이름/필드 구성·내부 드롭다운까지 자유 조작 가능(다중요소), 폼 목록·X 만 스포트라이트로 어둡게+차단. 즉 가이드 영역=편집기.
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 만들기에서 편집 영역만 밝고 좌측 폼목록·X 어둡게/차단되며 편집·저장 가능한지, 폼 사용 등록에서 중첩 설정 편집 다이얼로그가 어둡게+[+]만 밝은지.
+
 ## v001.942.0
 
 > 통합일: 2026-06-18
