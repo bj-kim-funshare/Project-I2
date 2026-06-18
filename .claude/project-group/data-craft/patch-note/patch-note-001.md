@@ -30033,3 +30033,42 @@ data-craft (fs-data-viewer 전용):
 - ⚠️ **잔존 race**: 2위젯 동시(완전 동시 마운트) 빈 그룹 시드는 재-fetch 완화로도 드물게 중복 가능 — "빈 페이지 2개" 리포트 시 1차 진단 지점.
 - ⚠️ **의도된 동작 변경**: `'아이콘'` 컬럼이 없는 그룹(문서 위젯이 시드하지 않은 일반/공유 그룹)을 바인딩하면 아이콘 어포던스가 표시되지 않음(데이터 오염 방지 목적, 회귀 아님).
 - 정적 분석 한계(레이아웃 전환·픽커·BlockNote 인라인 렌더)는 마스터 스크린샷 검증 권장.
+
+## v001.974.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #372
+
+data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전면 개편. 마스터 지적 5건(자식 점 아이콘·이중 로딩·고정 카드·반투명 네비·상단 여백)을 모두 수정. 페이지 상세는 네이티브 카드가 아니라 웹뷰(`{webBaseUrl}/m/{pageId}`)이며, 이미 존재하던 웹 `/m` 전환 엔진(data-craft repo)을 제대로 고치고 로딩을 단일화하는 A안 채택(네이티브 전면 재구축 B안은 로드맵급이라 scope-out). 멀티-repo 플랜: data-craft(웹 /m) + data-craft-mobile(네이티브 화면).
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile, fix)** `6e0100d`: 페이지 목록 아이콘 전면 대응. `page_icon.dart` `_iconByName`를 웹 피커 전체 세트(`iconCategories.ts`, 656/660개; github·gitlab·codepen·codesandbox 4개는 lucide_icons_flutter 3.1.14+2 미존재 제외)로 확장. 폴백 사다리 도입, 아이콘 없는 자식 폴백 dot→chevron-right(`>`, 마스터 명시). `_icDot` 제거.
+- **Phase 2 (data-craft-mobile, fix)** `f0bef89`: 목록 상단 여백 제거(`SizedBox(8)`·`Column` 래퍼 삭제, 컨테이너 상단 밀착) + 바텀 네비 불투명화(`bottom_nav_bar.dart` alpha 0.88→1.0, BackdropFilter blur 제거) + `main_shell.dart` `extendBody:false`로 콘텐츠 비침 차단.
+- **Phase 3 (data-craft, feat)** `2d81dd4`: 웹 `/m` 전환 엔진에 비-데이터 프리미티브 위젯(button/selector/tabs/input) 경량 모바일 렌더러 신설 + 디스패처 분기. `MobileLayoutRenderer`에 section/area 스타일·빈 영역 스킵 적용(좌→우=위→아래 유지).
+- **Phase 4 (data-craft, feat)** `9112ab7`: user-form/file-uploader/file-attachment/file-explorer/empty-*(4종) 8개 타입 경량 렌더러 신설 + 디스패처 분기. `MobileUnsupportedWidget` 노출 사실상 소거.
+- **Phase 5 (data-craft, feat)** `7d4f0a2`: `MobileViewerCard`를 메타 디스패처로 재편 + viewType별 전용 뷰 5종(grid/kanban/gantt/calendar/dashboard) 신설. "고정 카드"→viewType 차별 모바일 렌더. 데스크톱 뷰어 패키지 미import(번들 경량).
+- **Phase 6 (data-craft, feat)** `edc402a`: `/m` 로딩 단일화 브리지. `embedBridge.ts`(window.flutter_inappwebview 감지 + `dcPageReady` 발신), embed 시 자체 Loader2/검정 배경 생략, 로딩 종료(전 종단 상태) 직후 `dcPageReady` 1회 발신.
+- **Phase 7 (data-craft-mobile, feat)** `2af09c3`+`f041408`: 단일 Flutter 스피너로 통합(이중 스피너 제거), 웹뷰 흰 배경(검정 플래시 차단), `addJavaScriptHandler('dcPageReady')` 수신→즉시 해제, 폴백 7→5s. 보정: 토큰 조건부 스킵(스테일 401 위험) 되돌려 refresh 무조건 호출.
+
+### 영향 파일
+**data-craft-mobile** (i-dev)
+- `lib/screens/page/page_icon.dart`
+- `lib/screens/page/page_screen.dart`
+- `lib/screens/page/page_web_view_screen.dart`
+- `lib/screens/main_shell.dart`
+- `lib/screens/main_shell/widgets/bottom_nav_bar.dart`
+
+**data-craft** (i-dev)
+- `src/pages/mobile/MobileWidgetDispatcher.tsx`
+- `src/pages/mobile/MobileLayoutRenderer.tsx`
+- `src/pages/mobile/MobilePageView.tsx`
+- `src/pages/mobile/embedBridge.ts` (신규)
+- `src/pages/mobile/widgets/MobileButtonWidget.tsx`, `MobileSelectorWidget.tsx`, `MobileTabsWidget.tsx`, `MobileInputWidget.tsx` (신규)
+- `src/pages/mobile/widgets/MobileUserFormWidget.tsx`, `MobileFileUploaderWidget.tsx`, `MobileFileAttachmentWidget.tsx`, `MobileFileExplorerWidget.tsx`, `MobileEmptyWidget.tsx` (신규)
+- `src/pages/mobile/widgets/MobileViewerCard.tsx`
+- `src/pages/mobile/widgets/MobileViewerGridView.tsx`, `MobileViewerKanbanView.tsx`, `MobileViewerGanttView.tsx`, `MobileViewerCalendarView.tsx`, `MobileViewerDashboardView.tsx` (신규)
+
+### 비고
+- 게이트: data-craft 각 페이즈 `typecheck:all && lint` 0 errors, data-craft-mobile 각 페이즈 `flutter analyze` 클린. advisor 계획(#1)·완료(#2) 모두 PASS.
+- ⚠️ **deferred(표시 레벨 대응, 1순위 핫픽스 후보)**: empty-*(defaultDataGroupId 바인딩 시 뷰어/입력 전환), user-form(스키마 fetch·제출), file-*(업로드/다운로드 API), button 액션(navigate/popup/api), tabs 내장 콘텐츠 — 현재 placeholder/inert. 뷰어 심층 파리티(풀 간트/캘린더 그리드·서버 aggregation·kanban 슬롯)도 후속.
+- ⚠️ 런타임 미검증(plan-enterprise 런타임 게이트 없음): 마스터 PENDING 게이트에서 단일 로딩·dcPageReady 해제·검정 플래시 부재·viewType 차별·extendBody 타 탭 회귀를 실기 확인 권장.
