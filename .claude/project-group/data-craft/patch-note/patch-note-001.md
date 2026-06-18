@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.956.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스51
+
+**입력폼 "폼 사용 등록" 단계 종합 수정 — 튜토리얼에서 만든 폼만 가이드·등록, 등록 즉시 완료(닫기 막힘 해소).** 기존 completeWhen=`hasAnySettingsForm && editSettingsFormDialogOpen===false` 라 등록 후 편집창을 닫아야 완료인데, 이 단계 dialogSpotlight 가 X 를 가려 닫을 수 없어 영원히 미완료 → 사용자가 추가 가능한 폼을 다 등록하게 됨. 또 앵커가 첫 폼에 걸려 사용자가 만든 폼이 아닌 다른 폼을 가리킴.
+
+### 페이즈 결과
+- **핫픽스51 (fix, data-craft)** `56a8bfc51`:
+  - **튜토리얼 폼 추적**: `tutorialStore.tutorialFormId`(폼 빌더에서 저장 시 selectedFormId 1회 캡처, start/stop 리셋). `useActiveOnboardingHint` capture effect + `tutorialFormRegistered`(settingsForms 에 tutorialFormId 등록 여부) ctx.
+  - **앵커**: `AvailableFormsSection` 이 첫 항목(index 0) 대신 **`form.id === tutorialFormId`** 인 폼의 + 에만 OnboardingHint → 사용자가 만든 폼을 정확히 가리킴.
+  - **완료조건**: userFormRegisterForm completeWhen → `c.tutorialFormRegistered === true`(만든 폼 등록 즉시 완료, 닫기 요구 제거). 닫기는 다음 단계 userFormCloseSettings(dialogSpotlight 아님)에서 X 도달 가능.
+  - i18n 본문 갱신. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: tutorialStore.ts, hintRegistry.ts, useActiveOnboardingHint.ts, AvailableFormsSection.tsx, scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- 사용자가 만든 폼의 +만 스포트라이트 → 그 폼 클릭 등록 → 즉시 완료 → 편집창·설정 닫기 가능. "다 등록/닫기 막힘/엉뚱한 폼 지칭" 3종 해소.
+
+## v001.955.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스50
+
+**단계 전환 시 화면(dim) 깜박임 제거.** 핫픽스48 이 앵커 미마운트 유예 동안 오버레이를 통째 숨겨(`return null`) dim 이 꺼졌다 켜지는 토글 깜박이 발생(폼 빌더 열 때 등). → 유예 동안 **dim 은 유지하고 풍선만 숨김**.
+
+### 페이즈 결과
+- **핫픽스50 (fix, data-craft)** `f5edf4629`: `TutorialOverlay.tsx` — `if (centered && !allowCentered) return null` 제거 → `hideBubble` 플래그로 대체. dim 오버레이는 항상 렌더, 풍선/화살표 블록만 `{!hideBubble && (...)}` 조건부. 페이지 dim 연속 유지로 토글 깜박 제거.
+
+### 영향 파일
+data-craft: src/features/onboarding/ui/TutorialOverlay.tsx
+
+### 비고
+- FE 전용 → 하드 리프레시 반영. 검증: 입력폼 관리 열기 등 전환 시 화면 dim 이 깜박이지 않고 풍선만 부드럽게 나타나는지.
+
 ## v001.952.0
 
 > 통합일: 2026-06-18
