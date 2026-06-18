@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.986.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #375
+
+**data-craft-admin 프로덕션 빌드(`pnpm build` = `tsc -b && vite build`) 복구.** i-dev 에서 두 결함으로 깨져 있던 관리자 콘솔 빌드를 통과시켰다. 기존 lint 게이트(`pnpm typecheck`)가 못 잡던 클래스라 검증은 `pnpm build`(tsc -b)로 수행했다.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-admin)** `2b2a1a6`: ① recharts v3 Tooltip formatter 값 인자 타입(`ValueType | undefined`)에 맞춰 두 곳(`AuthMetricsCharts.tsx`, `DistributionCharts.tsx`)의 명시적 `number` 어노테이션 제거 + `Number(v ?? 0)` 안전 정규화. ② `tsconfig.node.json` 의 `types:["node"]` 요구 충족을 위해 `@types/node@^24.10.1`(그룹 표준) devDependencies 추가 + pnpm install lock 갱신. `pnpm build` exit 0 확인(phase-executor + gate-runner 독립 2회).
+
+### 영향 파일
+data-craft-admin:
+- `src/features/analytics-auth/AuthMetricsCharts.tsx`
+- `src/features/analytics-auth/DistributionCharts.tsx`
+- `package.json`
+- `pnpm-lock.yaml`
+
 ## v001.971.0
 
 > 통합일: 2026-06-18
