@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.989.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #380
+
+**admin 전용 감사 객체(`admin_promotion_audit`) 쓰기를 prod 토글과 무관하게 항상 고정 dev 풀(`authPool` → `data_craft_dev`)로 라우팅.** 최중요 원칙(admin_* 는 절대 prod DB 금지) 적용. 마스터가 지목한 `adminInternalCompany.service.ts` 는 이미 authPool 고정(#370 Phase3 시작부터)이라 무변경 — 동일 결함 클래스의 실제 잔존 인스턴스인 `admin_promotion_audit` INSERT 3곳(`adminPromotion.service.ts`)이 토글 데이터풀(`withDataClient(mode)`) 경유였고, `ADMIN_PROD_TOGGLE_ENABLED=true` 활성으로 라이브 결함이었다.
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-admin-server) `8d1aefd`: `createPromotion`/`updatePromotion`/`togglePromotion` 의 `admin_promotion_audit` INSERT 를 토글 트랜잭션 밖으로 분리. `promotion`/`client_promotion` 변경(읽기-수정-쓰기)은 기존 `withDataClient(mode)` 토글 트랜잭션 유지(일반 서비스 데이터)하고 before/after 행만 반환받은 뒤, 커밋 완료 후 파일 내 공통 헬퍼 `writeAuditDev` 가 `authPool` 로 감사 INSERT 실행. 감사 쓰기는 try/catch + `logger.error` best-effort(실패해도 요청 성공). 컬럼셋·`::jsonb` 캐스트·action enum('insert'/'update')·before(insert=NULL)/after 의미 보존. `pnpm lint` exit 0.
+
+### 동작 변경 / 비고
+- **감사 타임스탬프 시퀀싱**: 기존 `admin_promotion_audit.changed_at = now()` 는 promotion 변경과 동일 토글 트랜잭션 안에서 찍혔으나, 분리 후엔 트랜잭션 커밋 직후 별도로 찍힌다 → `changed_at` 이 `promotion.updated_at` 보다 미세하게 늦을 수 있다. forensic 상관은 promotion_id + admin_actor 로 그대로 자명. 결함 아님.
+- **원자성**: promotion 변경과 감사는 더 이상 한 트랜잭션이 아니다(cross-DB 라 불가). promotion 변경이 진실의 원천, 감사는 dev-side 관측 기록이라는 전제로 수용. 그 사이 프로세스 사망 시 감사 행 유실 가능(best-effort).
+- **스코프 밖 후속**: `data_craft_production` 의 `admin_*` 잔재 테이블 정리 + pre-deploy 드리프트 게이트 `admin_*` 제외목록(#379)은 본 admin-server 코드 수정 범위 밖.
+
+### 영향 파일
+- data-craft-admin-server: `src/services/adminPromotion.service.ts`
+
 ## v001.988.0
 
 > 통합일: 2026-06-18
