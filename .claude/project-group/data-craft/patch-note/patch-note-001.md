@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.955.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스4
+
+**기능 가이드 핀을 상황에 맞게 표시 — step별로 본문이 바뀌는 섹션은 현재 단계의 핀만 노출.** view-modes처럼 단계마다 목업이 바뀌는 섹션에서, 모든 단계의 핀이 현재 본문 위에 한꺼번에 찍혀 다른 단계용 좌표가 엉뚱한 위치에 몰려 보이던 문제(마스터 스크린샷 확인)를 해소. "모든 핀이 항상 나올 필요는 없다 — 상황에 맞게" 지시 반영.
+
+### 페이즈 결과
+- **핫픽스4 (fix, data-craft)** `92bdd451`:
+  - `mockupRegistry.ts`: 레지스트리 항목을 `{ Component, pinMode: 'all' | 'current' }`로 재구성. getting-started=`all`(단일 화면에 4핀 전부 유효), view-modes=`current`(단계별 본문 → 현재 단계 핀만).
+  - `GuideCanvas.tsx`: pinMode에 따라 렌더할 핀을 결정 — `current`면 현재 stepIndex 핀 1개만, `all`이면 섹션 전체 핀. pending 안내는 섹션 전체 핀 유무로 유지. 미등록 섹션 기본값 `all`(핀 없어 영향 없음).
+  - 순효과: getting-started 4핀 동작 무변경, view-modes는 각 단계 본문에 그 단계 핀만 표시. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/features/guide/lib/mockupRegistry.ts, packages/fs-data-viewer/src/widgets/guide/components/GuideCanvas.tsx
+
+### 비고
+- 후속 per-step 섹션(widgets/forms/modes 등)도 `pinMode: 'current'`로 등록하면 동일하게 단계별 핀 1개 노출.
+- `current` 모드에선 표시되는 핀이 항상 active 상태(펄스) — done/pending 시각 상태는 안 나타남(설계상 의도, 단계별 본문이라 현재 핀만 의미 있음).
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영.
+
 ## v001.952.0
 
 > 통합일: 2026-06-18
