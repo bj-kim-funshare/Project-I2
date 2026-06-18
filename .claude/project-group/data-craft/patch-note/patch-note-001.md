@@ -30144,3 +30144,24 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - ⚠️ **검색어 동작 변경**: `tags.ts` 의 document 컬럼 검색 키워드에서 브랜드명을 제거 — 해당 단어로 검색해도 문서 컬럼이 더는 매칭 안 됨(브랜드명 제거 정책 반영). 발견 경로 `문서/노트/메모/기록` 은 유지. 검색어만 되돌리길 원하면 1줄 복원 가능.
 - ⚠️ **BE dev 서버 반영**: BE 타입 등록은 dev 서버가 변경을 감지해야 적용됨. 저장이 계속 실패하면 BE dev 서버 재기동 필요(nodemon 미감지 시).
 - dev=`fs_data_viewer` src alias → FE 는 i-dev pull + 하드 리프레시로 반영.
+
+## v001.978.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371 (핫픽스5)
+
+**헤더 모드 전환 아이콘을 Palette 로 확정.** 디자인 모드 전환 버튼에 더 어울리는 아이콘을 찾기 위해, 후보 12종(LayoutDashboard 현재 포함)을 헤더에 한 줄로 띄우는 임시 비교 프로브를 dev 에 머지 → 마스터가 화면에서 비교 후 `Palette`(팔레트) 선택 → 실제 아이콘 교체 + 프로브 제거로 마무리.
+
+### 변경 결과
+- **Phase 7 (fix, data-craft)** `c973a39`: 모드 전환 버튼 아이콘을 `LayoutDashboard` → `Palette`(lucide)로 교체. indigo-500(#6366f1)→sky-400(#38bdf8) stroke 그라데이션 + reflect 무빙 애니메이션(2초 sweep + 5초 정지 seamless 루프)·forwardRef·고스트 아이콘 버튼·`h-8 w-8` 구조 전부 유지(아이콘 컴포넌트만 교체). 임시 후보 비교 프로브(`__IconCandidateProbe.tsx` + 양 툴바의 import/JSX)를 완전 제거.
+
+### 비고
+- 임시 프로브는 메인 세션이 렌더를 못 보는 제약(블라인드)을 우회하기 위한 instrument→select→remove 사이클로, 같은 플랜 안에서 도입+제거되어 흔적 0(트레이서빌리티 기록). 정식 핫픽스 회계(advisor·patch-note)는 최종 교체분에만 적용.
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 0 errors, 삭제 잔존 참조 없음.
+- 마스터 dev 하드 리프레시 시 ①프로브 행 사라짐 ②Palette 아이콘이 indigo→sky 그라데이션으로 매끄럽게 흐르는지 한 번에 확인 가능. Palette 모양(원 3개+외곽선) 특성상 그라데이션 sweep 체감이 다르면 stop 위치/reflect 주기 1라인 조정 핫픽스 가능.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/header/ui/ModeSwitchButton.tsx`
+- `src/widgets/header/ui/ViewModeToolbar.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`
+- `src/widgets/header/ui/__IconCandidateProbe.tsx` (임시 프로브 — 삭제)
