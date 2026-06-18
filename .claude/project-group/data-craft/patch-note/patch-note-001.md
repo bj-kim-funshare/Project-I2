@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.933.0
+
+> 통합일: 2026-06-17
+> 플랜 이슈: #338 핫픽스41
+
+**입력폼 시나리오 "폼 생성"·"폼 등록" 단계가 기존 폼이 있으면 자동 스킵되며 깜박이고 다음 단계로 점프하던 문제 수정.** `userFormSaveForm` completeWhen 이 `hasAnyForm`(forms.length>0)인데, 폼 빌더를 열면 기존 폼이 로드되며 `forms`/`savedFormIds` 가 채워져 즉시 true → 단계 자동완료/스킵. (`savedFormIds` 는 로드 시에도 채워져 "세션 신규 저장" 구분 불가 — `syncFormsFromServer` 가 서버 폼 전부 등록.)
+
+### 페이즈 결과
+- **핫픽스41 (fix, data-craft)** `0af03955f`: 완료조건에 "해당 다이얼로그 닫힘" 추가로 자동 스킵 차단.
+  - `userFormSaveForm`: `(c) => c.hasAnyForm === true && c.formBuilderDialogOpen === false` — 빌더가 열려 있는 동안엔 active 유지(스킵·깜박 없음), 폼 생성·저장 후 빌더를 닫아야 완료.
+  - `userFormRegisterForm`: `(c) => c.hasAnySettingsForm === true && c.editSettingsFormDialogOpen === false` — 같은 버그 클래스(기존 settingsForm) 동반 수정.
+  - i18n ko/en 본문에 "닫기" 안내 추가.
+  - HF31 단조 floor(advanceFloor)가 닫힘 시 이전 단계 역행 방지. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/onboarding/model/scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- 다음 단계가 자연스럽게 닫힌 상태를 요구(폼 생성 후 설정 열기 / 폼 등록 후 설정 닫기)하므로 "닫기" 완료조건이 흐름상 자연스러움.
+- FE 전용 → 하드 리프레시 반영. 검증: 기존 폼이 있는 계정에서도 폼 빌더를 열면 "폼 생성" 단계가 유지되고(스킵·깜박 없음), 폼 만들고 빌더를 닫아야 다음(설정)으로 넘어가는지.
+
 ## v001.932.0
 
 > 통합일: 2026-06-17
