@@ -29996,3 +29996,40 @@ data-craft (fs-data-viewer 전용):
 ### 영향 파일
 **data-craft** (i-dev)
 - `src/widgets/header/ui/ModeSwitchButton.tsx`
+
+## v001.973.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (핫픽스1 — 문서 위젯 i18n + 데이터 손실/오염 + 견고성)
+
+문서 위젯 전체 검수(읽기 전용 + advisor 검증)에서 발견된 10개 결함을 3버킷으로 수정. 마스터 스크린샷(한글 UI에 "document" 노출)이 직접 계기. (버전 충돌로 972→973 재번호.)
+
+### 변경 결과
+- **HF1 (fix, i18n/추가메뉴)** `9a2aa2b`: 위젯명 표시가 `WIDGET_TYPE_INFO.name` 이 아니라 별도 i18n 키맵을 쓰는데 `'document'` 누락 → raw "document" fallback 이던 누수 해소. `WidgetTypeSelector`(typeNameKeyMap·typeDescKeyMap), `useWidgetNavigatorItems`(WIDGET_TYPE_NAME_KEY)에 `propertyDrawer.typeName/DescDocument` 추가, `AddWidgetButton.WIDGET_TYPE_KEYS`에 document 엔트리 추가(`widget.typeName/DescDocument`), `ko.ts`/`en.ts` 양 네임스페이스에 키 추가('문서'/'Document'). 셀렉터 경로(propertyDrawer)에서 '문서' 표시 확인.
+- **HF2 (fix, 데이터 손실/오염·UX)** `e50db4f` (+ 린트 `738390a`):
+  - B1·B2: 제목·본문 저장이 `createDefaultDocumentModel()` 전개로 매 저장 `options`(담당자·레이블·우선순위·기한…)·`createdAt` 를 초기화하던 **데이터 손실** 수정 — 페이지 모델에 `bodyModel`(원본 `FsGridDocumentModel`) 보존, 저장 시 기존 모델 위에 title/content/updatedAt 만 머지(options·createdAt 보존). 공유 `document` 셀 포맷 불변식 준수.
+  - B3: 본문 Cmd/Ctrl-S(`onSave`)가 pending 디바운스 저장을 flush 없이 취소해 직전 편집을 유실하던 문제 — 디바운스 저장소를 `{timer, fn}` 으로 바꿔 `flushAllDebounce`(Mod-S, fn 실행)와 `cancelAllDebounce`(정리, 실행 안 함)를 분리.
+  - B5: groupId 변경·언마운트 시 pending 타이머 미정리로 옛 groupId+새 컬럼에 기록될 수 있던 **cross-group 오염** — useEffect cleanup 으로 타이머 전체 취소.
+  - B7: 아이콘 컬럼 fallback 이 본문 외 임의 text 컬럼을 잡아 무관 데이터를 덮어쓰던 오염 — fallback 제거(없으면 null), 아이콘 UI 는 `iconEnabled` state 로 조건부 렌더.
+  - B8: 아이콘 픽커가 `onBlur` 로 클릭 전에 닫혀 선택 불가하던 문제 — onBlur 제거 + `useClickOutside` 외부 클릭 감지로 교체(프리셋·제거·직접입력·확인 모두 동작).
+- **HF3 (fix, 견고성)** `af5b7a3`:
+  - 2개 위젯이 같은 빈 그룹 공유 시 동시 auto-seed 로 페이지 2개 중복 생성되던 회귀 — seed 직전 재-fetch 후 여전히 0행일 때만 생성(순차 마운트 race 차단).
+  - B4: `handleAddPage` 400ms `setTimeout` 경쟁 제거 — 데이터 로드를 `loadPages()` 로 추출해 await 후 새 행 인덱스로 직접 전환.
+  - B9: auto-create 실패 시 `autoCreateFiredRef` 를 false 로 롤백해 재시도 차단 해소.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx`
+- `src/widgets/property-drawer/ui/useWidgetNavigatorItems.ts`
+- `src/features/widget-placement/ui/AddWidgetButton.tsx`
+- `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidgetContainer.tsx`
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidget.tsx`
+- `packages/fs-data-viewer/src/widgets/document/types.ts`
+
+### 비고
+- 게이트: HF1/HF2/HF3 각 `typecheck:all && lint` 0 errors, 최종 `pnpm build`(prod) PASS(cross-package export gap 없음). advisor 핫픽스 검증 PASS(BLOCK 없음).
+- ⚠️ **관찰된 기존 결함(범위 외)**: `ko.ts` 의 `widget` 네임스페이스는 document 외 위젯명이 영어값(`typeNameText: 'Text'` 등)이라 `AddWidgetButton` 메뉴가 한글 UI에서 영어 라벨을 보임 — #369 이전부터 존재. 본 핫픽스의 `widget.typeNameDocument` 는 정상 한글('문서'). 별도 수정 필요 시 후속.
+- ⚠️ **잔존 race**: 2위젯 동시(완전 동시 마운트) 빈 그룹 시드는 재-fetch 완화로도 드물게 중복 가능 — "빈 페이지 2개" 리포트 시 1차 진단 지점.
+- ⚠️ **의도된 동작 변경**: `'아이콘'` 컬럼이 없는 그룹(문서 위젯이 시드하지 않은 일반/공유 그룹)을 바인딩하면 아이콘 어포던스가 표시되지 않음(데이터 오염 방지 목적, 회귀 아님).
+- 정적 분석 한계(레이아웃 전환·픽커·BlockNote 인라인 렌더)는 마스터 스크린샷 검증 권장.
