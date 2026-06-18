@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.959.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #366 핫픽스5
+
+**기능 가이드 나머지 7개 섹션에 step별 전용 목업 + 핀 일괄 반영.** view-modes(핫픽스3)·핀 상황별 표시(핀픽스4) 검증 후, 마스터 "다른 섹션도 전부 반영" 지시에 따라 남은 7개 섹션에 단계별로 바뀌는 전용 목업을 추가. 이로써 가이드 9개 섹션 전부 전용 본문을 보유한다.
+
+### 페이즈 결과
+- **핫픽스5 (feat, data-craft)** `efe9679`·`928b852`·`93e5154`·`4605002`·`ed05659`·`8c239a7`·`85f3725`:
+  - 신규 목업 7종(모두 `switch(stepIndex)` + 전용 렌더러, focal 요소 ring 하이라이트): MockupModes(4단계: 디자인모드 토글/새 화면 추가/섹션·영역/위젯 배치), MockupWidgets(4: 기본위젯/선택기·탭/데이터뷰어/입력폼·파일), MockupForms(4: 폼빌더/12필드유형/조건부표시/입력·수정·삭제), MockupCollaboration(4: 초대·승인/권한그룹/화면별권한/실시간알림), MockupAdvanced(5: 관리주기/정렬·필터·그룹/집계/시작화면/플랜제한), MockupTips(5: 단축키/스크롤·탐색/검색·필터/테마·언어/Excel복붙), MockupTroubleshooting(5: 빈화면/데이터없음/편집불가/권한없음/저장실패 문제상태).
+  - `mockupRegistry.ts`에 7개 섹션 등록(전부 `pinMode: 'current'` → 단계별 본문에 현재 단계 핀만). ko/en 각 섹션 JSON step별 핀 좌표 추가(zh/ja 핀 없이 유지).
+  - 색 시맨틱 토큰만, 다크모드 안전, aria-hidden/tabIndex 비상호작용, 캔버스 내 fit. `pnpm typecheck:all`/`pnpm lint` 0 errors.
+
+### 영향 파일
+data-craft: packages/fs-data-viewer/src/widgets/guide/components/mockups/{MockupModes,MockupWidgets,MockupForms,MockupCollaboration,MockupAdvanced,MockupTips,MockupTroubleshooting}.tsx, packages/fs-data-viewer/src/features/guide/lib/mockupRegistry.ts, packages/fs-data-viewer/src/shared/config/guide/content/{ko,en}/guide/{modes,widgets,forms,collaboration,advanced,tips,troubleshooting}.json
+
+### 비고
+- 핀 좌표는 목업 JSX 기반 초기값(view-modes 외 미튜닝) → 섹션별 마스터 스크린샷 미세조정 예정.
+- troubleshooting 목업은 문제 상태 화면을 임의 구성한 것 → 실제 제품 UX와 다르면 핫픽스로 조정.
+- FE 전용·fs-data-viewer src alias → 빌드 불필요, 하드 리프레시 반영.
+
 ## v001.957.0
 
 > 통합일: 2026-06-18
