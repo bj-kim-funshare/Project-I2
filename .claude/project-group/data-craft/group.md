@@ -32,6 +32,7 @@
 - `i-dev` → `main` 승격은 별도 결정 (이 그룹의 `i-dev` 가 안정 상태로 누적된 시점에 master 가 trigger).
 - **적용 범위 = 6개 data-craft 저장소 한정.** 본 정책 파일이 거주하는 I2 harness 저장소 자체는 CLAUDE.md §5 에 따라 `main` 직접 적용 — `new-project-group` / `group-policy` 스킬이 로컬 `git merge` 사용하는 것은 본 정책 위반 아님.
 - **관리자 콘솔 2저장소 (`data-craft-admin` / `data-craft-admin-server`, Roadmap-7 신규)**: i-dev 필수·dev-merge 경로는 동일 적용하나 **배포는 제외**(deploy.md `deploy_excluded: true`). `i-dev` 는 첫 `plan-enterprise` 실행 시 `main` 에서 lazy-create 된다(genesis 커밋 완료 — README). bj-kim-funshare 소유.
+  - **관리자 DB 분리 하드 규칙** — db.md §"관리자 DB 분리 — 하드 규칙" 참조 (admin 전용 테이블은 prod 비적재·dev 전용, admin-server 2풀 = 고정 dev 인증 풀 / 토글 데이터 풀, 배포 드리프트 검수는 서비스 도메인 한정). admin 코드 수정(`plan-enterprise`)·드리프트 게이트 구현(`plan-enterprise-os`)의 정책 근거.
 
 ## 운영 메모
 
