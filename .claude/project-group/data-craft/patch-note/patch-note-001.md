@@ -30438,3 +30438,17 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - **`admin_client_audit` 테이블 DDL 미실행**: `DB/migrations/20260618_create_admin_client_audit.sql` 를 `task-db-structure` 로 **dev auth DB(`DB_NAME_AUTH`, 고정 dev psql)** 에 적용해야 감사 로그가 기록된다(#380 의 admin_promotion_audit 배치와 동일, 토글 data DB 아님). 적용 전까지 감사 INSERT 는 `logger.error` best-effort 로 사일런트 no-op 되고 **기업 제어 쓰기 자체는 정상 동작**한다.
 - 관리자 콘솔 2저장소는 배포 제외(`pnpm dev` 전용) — 운영자 로컬 기동.
 - 게이트: admin-server eslint+tsc / admin typecheck+eslint 전부 exit 0. 검증 중 psql 트랜잭션 격리·tsc 타입·#380 감사 정합 3건 교정.
+
+## v001.991.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #377 (핫픽스1)
+
+기업 플랜 관리 목록의 **ID 컬럼 말줄임표 제거**. 기존 `company_id.slice(0, 8)…` 하드 절단(CSS 아님)으로 공간이 충분한데도 ID 가 8자+말줄임표로 잘리던 문제를 전체 `company_id` 표시로 수정. `whitespace-nowrap` 으로 한 줄 유지.
+
+### 영향 파일
+**data-craft-admin** (i-dev)
+- `src/pages/companies/CompaniesPage.tsx` (`311c19c`)
+
+### 비고
+- 시각 핫픽스(원인=하드 slice, 마스터 스크린샷 + 정확한 원인 특정 + 게이트 green) — 별도 advisor 사이클 생략(마이크로트윅 ceremony 회피). typecheck/eslint exit 0.
