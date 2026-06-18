@@ -30072,3 +30072,23 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - 게이트: data-craft 각 페이즈 `typecheck:all && lint` 0 errors, data-craft-mobile 각 페이즈 `flutter analyze` 클린. advisor 계획(#1)·완료(#2) 모두 PASS.
 - ⚠️ **deferred(표시 레벨 대응, 1순위 핫픽스 후보)**: empty-*(defaultDataGroupId 바인딩 시 뷰어/입력 전환), user-form(스키마 fetch·제출), file-*(업로드/다운로드 API), button 액션(navigate/popup/api), tabs 내장 콘텐츠 — 현재 placeholder/inert. 뷰어 심층 파리티(풀 간트/캘린더 그리드·서버 aggregation·kanban 슬롯)도 후속.
 - ⚠️ 런타임 미검증(plan-enterprise 런타임 게이트 없음): 마스터 PENDING 게이트에서 단일 로딩·dcPageReady 해제·검정 플래시 부재·viewType 차별·extendBody 타 탭 회귀를 실기 확인 권장.
+
+## v001.975.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371 (핫픽스4)
+
+**헤더 모드 전환 아이콘 — 그라데이션 색을 엔터프라이즈 "맞춤 견적" 색상으로 + 애니메이션 끊김 제거.** 마스터 지시로 (1) 아이콘 그라데이션 색을 플랜 업그레이드 모달의 엔터프라이즈 "맞춤 견적" 텍스트와 동일하게 맞추고, (2) sweep 종료 후 재시작 시 발생하던 "뚝 끊김"을 없애 매끄럽게 이어지도록 했다.
+
+### 변경 결과
+- **Phase 6-a (fix, data-craft)** `fcceee8`: `ModeSwitchButton` 그라데이션 stop 을 `#6366f1`(indigo-500)→`#38bdf8`(sky-400)로 교체 — `src/features/subscription/ui/PlanComparisonPrice.tsx:27` 의 "맞춤 견적" 텍스트 스타일 `bg-gradient-to-r from-indigo-500 to-sky-400` 와 동일 색.
+- **Phase 6-b (fix, data-craft)** `cf9a70d`: 애니메이션 끊김 제거. 기존 `fill="freeze"` + `begin="modeGradMove.end+5s"` 는 sweep 종료 후 시작점으로 즉시 점프해 끊김 발생. `spreadMethod="reflect"` + translate 한 전체 주기(48 = 2×24)로 끝 상태와 시작 상태를 시각적으로 동일하게 만들고, 단일 `repeatCount="indefinite"` + `keyTimes`(2s 이동/5s 정지) + `calcMode="spline"` easing 으로 **이음매 없고 가감속이 매끄러운 루프**로 교체.
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 0 errors, ModeSwitchButton 단독 0 경고.
+- 5초 정지 리듬은 유지(마스터의 "잘 이어지게"=이음매 없는 매끄러운 wrap 으로 해석). 정지 없이 완전 연속 흐름을 원하면 keyTimes 정지 구간 1라인 조정으로 핫픽스 가능.
+- 모션은 정지 스크린샷으로 확인 어려우므로 마스터 라이브 관찰 필요.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/header/ui/ModeSwitchButton.tsx`
