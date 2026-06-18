@@ -29886,3 +29886,32 @@ data-craft (fs-data-viewer 전용):
 - `src/widgets/header/ui/ViewModeToolbar.tsx`
 - `src/widgets/header/ui/DesignModeToolbar.tsx`
 - `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+## v001.968.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #357 (핫픽스17)
+
+**듀얼 위젯 셀의 슬롯별 편집 오버레이를 기본 그리드 셀 편집과 시각적으로 동일하게 정렬.** 핫픽스16(이중 테두리 제거) 이후에도 마스터가 "기본 위젯과 디자인이 다르고 여백이 너무 크다"고 지적. 근본 원인은 `PerSlotSubWidgetEditorPortal` 이 모든 타입을 동일한 카드 + `p-4`(16px) 래퍼로 감싸, 자기 프레임을 가진 select 계열 패널이 이중 프레임 + 과도한 여백으로 렌더된 것. 패널 기반 타입은 기본 컴포넌트를 네이티브 portal 모드로 직접 렌더(근사 복제 금지, 메모리 `feedback_match_base_reuse_not_reimplement` 준수)하고, 나머지 카드 경로는 여백·프레임을 기본 패널과 통일했다. 이번 라운드는 `fs-data-viewer` 만 — 마스터 dev 확인 후 서브/외부 뷰어 parity 예정.
+
+### 변경 결과
+- **패널 5종(singleSelect·multiSelect·user·nation·worldTime)**: 카드 래퍼 제거. `SubWidgetEditor` 에 `anchor`/`onClose` prop 추가 → `anchor` 있으면 `ViewModeDropdownPanel` 을 `inline` 대신 **portal 모드(anchor)** 로 렌더. 패널이 자체 positioning·scroll-lock·backdrop·`panelBoxStyles`(radius 12, 동일 shadow) 프레임을 소유 → 기본 셀 드롭다운과 픽셀 동일(검색·확장·선택안함·체크·leading 색원·multi save footer 전부 동일). single 은 선택 즉시 커밋+닫힘, multi 는 Save 시 커밋+닫힘(기본 동작 일치). 기존 `inline` 경로(탭 다이얼로그 등 타 컨텍스트)는 무회귀로 보존.
+- **카드 경로(text·number·link·email·phone·tag·colorPicker·date류 등)**: 내부 패딩 `p-4`→`p-2`(colorPicker 는 자체 `p-2` 보유라 outer `p-0`), 카드 프레임을 기본 `panelBoxStyles`(radius 12 + `0 12px 32px / 0 2px 6px` shadow)로 통일.
+
+### 비고 (이월 — 마스터 결정 대기)
+- **colorPicker**: 여전히 듀얼 전용 `InlineColorPicker` 사용(기본 `ColorPickerDialog` 와 다른 컴포넌트). 팔레트/동작 차이 가능 — 기본 픽커로 교체 여부는 마스터 확인 후.
+- **date/dateTime/deadline/timeline/time**: 슬롯 클릭 → 버튼 → 캘린더의 2-step 유지(핫픽스15 step2 `autoOpen` 별건으로 이월).
+- **bare-input(text/number 등)**: 기본 표 모드는 무프레임이나, 부유 에디터 특성상 최소 카드 프레임 유지(의도).
+- **패널 너비**: 기본 셀 드롭다운과 동일한 minWidth 적용 — 슬롯 폭이 좁으면 패널도 좁게(base 동작 일치, 기존 260px floor 제거).
+
+### 검증 (마스터 dev 하드 리프레시 — 타입군별)
+- singleSelect/multiSelect/user/nation/worldTime: 패널이 기본 셀 드롭다운과 동일(프레임·검색·확장·선택안함·체크·색원·multi footer).
+- text/number/link/email/phone/tag: 카드(radius 12) + p-2 입력.
+- colorPicker: 카드 flush + 기존 InlineColorPicker.
+- date/time류: 카드 + 버튼(여전히 2-step).
+
+### 영향 파일
+**data-craft** (i-dev, fs-data-viewer)
+- `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/PerSlotSubWidgetEditorPortal.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/SubWidgetEditor.tsx`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/types.ts`
