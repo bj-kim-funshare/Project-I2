@@ -30268,3 +30268,26 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - **scope 확장(기록)**: Phase 3에서 Multi 저장·Nation 앵커 caller 연결에 원 affected_files 외 인접 파일(FsGrid*CellRenderer·use*Cell)이 필요해 메인 세션이 동일-셀 기계적 완성으로 자체 승인·진행(이슈 #374 코멘트 기록).
 - **런타임/시각 검증 미실시**: 정적 게이트만 통과. 디자인 통일은 시각 작업이므로 dev 재기동 후 각 셀 타입 오버레이를 실제로 열어 검색·확대·체크·"선택 안함"·타입별 trailing(득표수·LiveClock)·관리 모드 진입을 마스터 화면 확인 필요. dev=자매 dist alias → i-dev pull + 패키지 빌드 + 하드 리프레시로 반영.
 - 후속(별도 트랙): Tier2(기준 패키지 잔여), Tier3(빌더/앱 ~50표면). 본 플랜 완료 시점 재보고 예정.
+
+## v001.983.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #372 (핫픽스4 — 핫픽스3 되돌림: flutter web 빈 화면 회귀 복구)
+
+핫픽스3(keepAlive 웹뷰 재사용)이 **flutter web(`flutter run -d chrome`) 환경에서 재진입 시 빈 흰 화면 회귀**를 유발(마스터 스크린샷 1차 증거: 페이지 한 번 들어갔다 나온 뒤 재진입 시 상세 본문 공백). 원인: `flutter_inappwebview_web`의 keepAlive는 headless 인스턴스 id 매핑 방식이라 위젯 재마운트 시 기존 iframe을 신뢰성 있게 reattach하지 못함(재사용 경로 `initialUrlRequest: null` → 빈 iframe). 흰 화면은 ~3초 지연보다 심각한 회귀이므로 핫픽스3을 되돌려 정상 동작(매 진입마다 웹뷰 로드 = 핫픽스2 상태)으로 복원.
+
+### 변경 결과
+- **HF4 mobile (revert, data-craft-mobile)** `f34f91d`: `page_web_view_screen.dart`를 핫픽스2 시점으로 복원, `page_webview_holder.dart` 삭제. 매 진입마다 단일 웹뷰 로드(파란 스피너 없음, 웹뷰 자체 로딩만).
+- **HF4 web (revert, data-craft)** `c57b2ed`: `MobilePageView.tsx`에서 `window.__dcNavigatePage` 전역 제거(핫픽스2 상태 복원).
+
+### 영향 파일
+**data-craft-mobile** (i-dev)
+- `lib/screens/page/page_web_view_screen.dart`
+- `lib/screens/page/page_webview_holder.dart` (삭제)
+
+**data-craft** (i-dev)
+- `src/pages/mobile/MobilePageView.tsx`
+
+### 비고
+- 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors.
+- 페이지 진입 ~3초(콜드 로드)는 다시 존재하나 **정상 동작**. 속도 개선은 flutter-web 호환 방식(예: 헤드리스 웜업/HTTP 캐시 프리로드, 또는 네이티브 빌드에서만 keepAlive 적용)으로 별도 재설계 필요 — keepAlive 단순 적용은 web에서 불가 확인.
