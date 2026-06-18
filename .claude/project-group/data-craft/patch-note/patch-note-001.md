@@ -30452,3 +30452,33 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 
 ### 비고
 - 시각 핫픽스(원인=하드 slice, 마스터 스크린샷 + 정확한 원인 특정 + 게이트 green) — 별도 advisor 사이클 생략(마이크로트윅 ceremony 회피). typecheck/eslint exit 0.
+
+## v001.992.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #381 (데이터 뷰어 선택지 드롭다운 동일 규격 통합 Tier 2 — 기준 패키지 잔여 A계열)
+
+#374(자매 뷰어 셀 6종)에 이어, 통일 선택 드롭다운 규격 `ViewModeDropdownPanel`을 기준 패키지 fs-data-viewer에 아직 남은 "선택지 목록 드롭다운"과 그 자매 평행 사본에 적용(Tier 2). 마스터 정정 스코프 = A계열 선택지 드롭다운 3그룹만(RowLink 열 선택 · 대시보드/집계 Select · 시간 셀의 **시·분 선택만**). 마감일 달력·색상 피커·월 피커·컨텍스트 메뉴·푸터 집계 팝오버는 성격이 달라 제외, 시간 셀의 캘린더/날짜 부분(B계열)도 제외. 원칙은 "동일 규격·타입별 변형". barrel export는 #374 P1에서 완료되어 선행 불필요, i18n 키도 #374에서 3패키지에 이미 존재.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `fb8bcbd`: RowLink 열 선택(custom createPortal)을 패널 single-select로. number↔string 경계, anchor 클릭 캡처, 부모 Dialog 위 zIndex 20000, ColumnTypeChip trailing 보존.
+- **Phase 2** (refactor) `d463757`: 대시보드 ColumnSelector(clearable, danger none 항목)·AggregationSelector(5종 고정, searchable=false) Radix Select→패널. zIndex=Z_INDEX.NESTED_MODAL_DROPDOWN.
+- **Phase 3** (refactor) `90f10e2`: AggregationTypeSelector 3패키지 동일 전환. 동적 AGGREGATION_TYPE_OPTIONS[typeId] 보존. fs-data-viewer 내부 상대경로·자매 barrel import.
+- **Phase 4** (refactor) `c36554d`: DateTimeDropdown 시·분 Radix Select 2개만 패널로(3패키지). **캘린더 그리드·onDateSelect/visibleMonth/pendingDate 무변경**(diff grep으로 실증). 중첩 portal zIndex={12200}.
+- **Phase 5** (refactor) `9ed8b45`: TimeSelector(순수 시간 서브컴포넌트)·TimeRenderer(셀 portal) 시·분 6파일(3패키지) 패널 전환. 패키지별 폭·i18n·분 간격 보존.
+
+### 영향 파일
+**data-craft** (i-dev) — 머지 커밋 `790c98f`
+- `packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkColumnDropdown.tsx`
+- `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/{ColumnSelector,AggregationSelector}.tsx`
+- `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/aggregation-view/AggregationTypeSelector.tsx`
+- `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/shared/ui/cell-renderers/renderers/datetime/DateTimeDropdown.tsx` (시·분만)
+- `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/widgets/cell-renderers/FsGridDateTimeCellRenderer/TimeSelector.tsx`
+- `packages/{fs-data-viewer,fs-sub-data-viewer,fs-external-data-viewer}/src/shared/ui/cell-renderers/renderers/TimeRenderer.tsx`
+
+### 비고
+- 게이트: build:packages 9/9, typecheck:all 8/8, lint 0 errors(실측). advisor 계획·완료 검증 2회 PASS.
+- 모두 자체 완결적 셀렉터라 #374 같은 caller-wiring 분리 거의 불필요. 시·분은 중첩 오버레이라 패널 zIndex로 부모 위 정렬.
+- **런타임/시각 검증 미실시**(메인 세션 블라인드) → dev 재기동 후 마스터 화면 확인 필요. **#374(Tier 1)와 합쳐 한 번에 확인 권장** — 통일 패널 사용처가 자매 셀 6×2 + ext 2 + RowLink + 대시보드 2 + AggType×3 + DateTime 시·분×3 + Time×6으로 다수. 특히 시·분이 캘린더와 분리 동작·부모 위 표시되는지, 대시보드/집계가 모달 위에 뜨는지 확인.
+- 배포 안전: 본 작업은 배포 일시정지 사이에 WIP 브랜치에서만 진행, 머지는 배포 후 i-dev behind=0 확인 후 수행(외부 commit 충돌 없음).
+- 후속(별도 트랙): Tier 3(빌더/앱 ~50표면). 본 플랜 완료 시점 마스터 재안내.
