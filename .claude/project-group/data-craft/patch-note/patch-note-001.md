@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.935.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #338 핫픽스42
+
+**입력폼 시나리오 "폼 만들기" 단계에서 풍선이 중앙에 떠 안내가 안 되던 문제 수정 — 누락된 "폼 추가([+])" 단계 보강.** 폼 빌더를 열면 폼 미선택 상태("폼을 선택하세요")라 저장 버튼(userFormSaveForm 앵커, FormPanelButtonBar)이 부모(FormSizePanel)의 `!selectedForm` early-return 으로 미렌더 → 풍선이 앵커 없이 중앙 부유. 좌하단 [+] 로 새 폼을 추가해야 편집기·저장 버튼이 나타나는데 그 단계가 빠져 있었다.
+
+### 페이즈 결과
+- **핫픽스42 (fix, data-craft)** `e3b2282da`: userForm(빌더 열기)과 userFormSaveForm(저장) 사이에 `userFormAddForm` 단계 보강.
+  - `FormListPanel.tsx`: [+] 폼 추가 버튼에 OnboardingHint hintId="userFormAddForm" 래핑.
+  - `hintRegistry.ts`+`useActiveOnboardingHint.ts`: `formEditing`(=selectedFormId != null) ctx 추가.
+  - `scenarioRegistry.ts`: `userFormAddForm`(completeWhen `formEditing===true`) 삽입. [+] 클릭 시 createForm 이 selectedFormId 설정 → 편집기·저장 버튼 렌더 → 다음 userFormSaveForm 앵커 정상.
+  - i18n ko/en 추가. `pnpm lint`/`typecheck:all` 0.
+
+### 영향 파일
+data-craft: src/features/form-builder/ui/FormListPanel.tsx, src/features/onboarding/lib/useActiveOnboardingHint.ts, src/features/onboarding/model/hintRegistry.ts, src/features/onboarding/model/scenarioRegistry.ts, src/shared/i18n/locales/{ko,en}.ts
+
+### 비고
+- **advisor-fallback PASS — 입력폼 전 단계 앵커 가시성 재검증**(마스터 "시나리오 논리검증 다시해"). 폼 생성/설정/페이지·위젯 서브플로우 모든 앵커가 도달 시점에 렌더됨 확인.
+- 비차단 관찰(후속 정리 권장): [+]·Pencil 버튼의 `TooltipTrigger asChild > OnboardingHint > Button` 중첩이 호버 툴팁을 비활성화할 가능성(앵커/풍선은 정상, 기존 DesignModeToolbar 동일 패턴). 튜토리얼 기능 영향 없음.
+- FE 전용 → 하드 리프레시 반영. 검증: 폼 빌더 열면 좌하단 [+] 안내 → 클릭해 폼 추가 → 편집·저장 안내가 저장 버튼에 정상 앵커되는지.
+
 ## v001.933.0
 
 > 통합일: 2026-06-17
