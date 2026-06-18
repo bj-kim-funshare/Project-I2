@@ -29779,3 +29779,47 @@ data-craft (fs-data-viewer 전용):
 - 인라인 모드만 borderless, portal 모드(그리드 일반 셀 편집)는 panelBoxStyles 유지.
 - typecheck:all && lint exit 0.
 - 검증(마스터): 듀얼 슬롯 단일선택 클릭 시 테두리 1겹만. dev=fs_data_viewer src alias(머지+하드 리프레시).
+
+## v001.965.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (문서(Document) 위젯 추가 — 노션 스타일, 데이터 그룹 바인딩)
+
+### 페이즈 결과
+- **Phase 1 (chore)**: 신규 `'document'` 빌더 위젯 타입 등록. `WidgetType` 유니온 + FE 전용 DB 인덱스 19, `WIDGET_TYPE_INFO` + `WIDGET_GROUPS.general`("일반 위젯")에 "문서"(FileText) 추가, `DocumentWidgetProps`(`dataViewerField` — 뷰어 그룹 바인딩 필드 재사용), 기본값, 레지스트리 등록, 스텁 컴포넌트. 커밋 `0f570ee`.
+- **Phase 2 (feat)**: `DocumentPropertiesEditor` — `ViewerDataSection` 패턴 차용(`useViewerGroups` Select + enterprise-480 stale-group 클리어 + `CreateDataDialog`). 새 그룹 생성 시 `seedDocumentSchema()`가 아이콘 컬럼(text, 80px) + 본문 컬럼(document, 300px)을 자동 시드(`viewerApi.postChanges` columnSettings 재사용 — BE 신설 없음). 커밋 `646c4bb`.
+- **Phase 3 (feat)**: fs-data-viewer 패키지에 `FsDocumentWidget`(props-driven 프레젠테이셔널 코어) 신설 — 단일 페이지(아이콘/제목/본문) 렌더, 본문은 기존 `DocumentEditor`(BlockNote + "/" 슬래시 메뉴) 재사용. `FsDocumentWidget`/`DocumentEditor` 패키지 export 노출. 커밋 `6499abb`.
+- **Phase 4a (feat)**: `FsDocumentWidgetContainer` — `viewerApi.getViewerData`로 그룹 행 로드 → 본문/아이콘 컬럼 식별 → seq 정렬 → 페이지 매핑. **레이아웃 전환**: 1페이지=+버튼 제목 우측 상단 / ≥2페이지=가로 스크롤 페이지 탭 목록 + +버튼을 제목 위로 이동. 커밋 `e3de58c`(+ 린트 핫픽스 `3ec8b87`: effect 내 동기 setState 제거).
+- **Phase 4b (feat)**: 영속 구현 — `+`로 페이지(행) 추가, 제목·본문·아이콘 셀 저장(500ms 디바운스, 교차 덮어쓰기 방지), 페이지 삭제, 빈 그룹 자동 초기 페이지 생성(useRef 가드). 인라인 이모지 아이콘 픽커(프리셋 8 + 직접 입력). 커밋 `fef9f25`.
+- **Phase 5 (chore)**: root `Document.widget.tsx` 래퍼 결선(`dataViewerField`→groupId, `usePageReadOnly`→mode, 미바인딩 시 플레이스홀더). 패키지 dist 재빌드 + **prod build PASS(cross-package export gap 없음)**. 커밋 `c91e195`.
+
+### 영향 파일
+**data-craft (root app)**
+- src/shared/types/widget-base.types.ts
+- src/shared/types/widget-props.types.ts
+- src/shared/types/widget.types.ts
+- src/entities/widget/model/widgetDefaults.ts
+- src/app/providers/WidgetRegistryProvider.tsx
+- src/widgets/document-widget/index.ts
+- src/widgets/document-widget/ui/Document.widget.tsx
+- src/widgets/property-drawer/ui/widgetTypeConfig.ts
+- src/widgets/property-drawer/ui/widgetDefaultProperties.ts
+- src/widgets/property-drawer/ui/WidgetPropertiesEditor.tsx
+- src/widgets/property-drawer/ui/property-editors/index.ts
+- src/widgets/property-drawer/ui/property-editors/DocumentPropertiesEditor.tsx
+
+**data-craft (packages/fs-data-viewer)**
+- packages/fs-data-viewer/src/widgets/document/FsDocumentWidget.tsx
+- packages/fs-data-viewer/src/widgets/document/FsDocumentWidgetContainer.tsx
+- packages/fs-data-viewer/src/widgets/document/types.ts
+- packages/fs-data-viewer/src/widgets/document/index.ts
+- packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/index.ts
+- packages/fs-data-viewer/src/index.ts
+
+### 비고
+- 모델: 기존 데이터 뷰어 위젯과 동형 — 그룹 공용 가능, 행 1개 = 페이지 1개. 위젯별 설정은 widget.properties 개별 보유.
+- 페이지 스키마 = 고정 자동 시드 `[아이콘(text) + 본문(document)]`. 본문 = 기존 `document` 컬럼 포맷 `{title, content}` BlockNote JSON 그대로(포맷 불변식 보존), 아이콘은 별도 text 컬럼.
+- 아이콘 컬럼 식별: 우선 title==='아이콘', fallback=본문 외 첫 text 컬럼. ⚠️ "공용" 정책상 문서 위젯이 **일반 그리드 뷰어 그룹**(아이콘 컬럼 미보유)을 바인딩하면 본문 외 임의 text 컬럼이 아이콘으로 해석될 수 있음 — v1 허용, "아이콘 값 이상" 리포트 시 1차 진단 지점.
+- `+`/편집은 뷰·디자인 모드 양쪽 동일 동작(페이지 read-only 시에만 readOnly).
+- 게이트: 전 페이즈 `typecheck:all && lint` exit 0, Phase 5 `pnpm build`(prod) PASS.
+- ⚠️ 정적 분석 한계(메인 세션 렌더 불가): 1페이지 +버튼 위치·≥2페이지 탭 오버플로·아이콘 픽커 팝오버·위젯 셀 내 BlockNote 인라인 렌더는 마스터 스크린샷 검증 필요 — 핫픽스 1~2회 예상.
