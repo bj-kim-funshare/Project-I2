@@ -30237,3 +30237,34 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - 게이트: 모바일 `flutter analyze` 클린, 웹 `typecheck:all && lint` 0 errors. advisor 핫픽스 검증 PASS.
 - 검증 흐름: ①첫 페이지 진입(~3초 콜드, 정상) → ②뒤로 → 다른 페이지 진입(즉시/매우 빠름 = SPA 내비 작동 신호).
 - ⚠️ **잔존**: 첫 부트 완료 전 빠른 2번째 진입 시 `window.__dcNavigatePage` 미존재 → loadUrl 폴백(1회 콜드 재발, 드묾). 메모리 압박으로 OS가 웹뷰 회수 시에도 폴백으로 복구. dev(Vite)보다 prod(CloudFront 번들)가 콜드 부팅 더 빠름.
+
+## v001.982.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #374 (데이터 뷰어 선택지 드롭다운 동일 규격 통합 → 자매 뷰어 반영)
+
+기준 패키지 `fs-data-viewer`가 채택한 통일 선택 드롭다운 규격(`ViewModeDropdownPanel`: 검색박스·확대모달·체크행·헤더·"선택 안함"·시각 언어)을, 옛 custom createPortal 구현으로 남아있던 자매 뷰어 2패키지(`fs-sub-data-viewer`=서브/연결 뷰어, `fs-external-data-viewer`=외부/연동 뷰어)의 선택지 셀 드롭다운에 적용. 원칙은 "완전 동일 복제"가 아니라 **"동일 규격·타입별 변형"** — 공유 규격은 동일하게 깔되 셀 타입별 items 슬롯(leading/trailing/subtitle/danger/searchText)·multi·문구만 그 타입에 맞게 변형. 옵션 관리 모드(isManageMode 분기)는 자매에 별도 column-settings-dialog가 없어 유일 경로이므로 현행 유지(무회귀).
+
+### 페이즈 결과
+- **Phase 1** (feat) `37f8e6d`: fs-data-viewer 공개 barrel(src/index.ts)에 ViewModeDropdownPanel·LiveClock·ViewModeExpandModal·useViewModeDraft + 타입 6종 re-export. build:packages 후 dist 실재(grep) 검증 — cross-package export gap 차단.
+- **Phase 2** (chore) `3f4b9e1`: fs-sub-data-viewer i18n에 패널 라벨 키(viewModeDropdown·multiSelect) 4언어 additive.
+- **Phase 3** (refactor) `6e2edae`+`16e9d30`: fs-sub Single/Multi/Nation 선택 표면을 패널로 통일. 관리 분기 유지, 렌더러 getBoundingClientRect 앵커, Multi 저장·Nation 앵커 caller 연결, dead SelectMode/MultiSelectMode 삭제.
+- **Phase 4** (refactor) `ec594b7`: fs-sub User(아바타)/Vote(득표수 trailing·취소)/WorldTime(LiveClock trailing) 통일. 관리 분기·caller 저장/앵커 완성, dead VoteSelectMode 삭제.
+- **Phase 5** (chore) `f498c1a`: fs-external-data-viewer i18n 패널 라벨 키 4언어 additive.
+- **Phase 6** (refactor) `1e66857`: fs-external Single/Multi/Nation 통일(sub diff-port). 그라데이션 헤더→패널 헤더, dead 파일 삭제.
+- **Phase 7** (refactor) `43b3e90`: fs-external User/Vote/WorldTime 통일(sub diff-port).
+- **Phase 8** (refactor) `b7f55a0`: fs-external 문서편집 AssigneeSelect/PrioritySelect를 패널 single-select로 통일(number↔string id 경계 변환).
+
+### 영향 파일
+**data-craft** (i-dev) — 머지 커밋 `4349f74`
+- `packages/fs-data-viewer/src/index.ts`
+- `packages/fs-sub-data-viewer/` : i18n(types+ko/en/ja/zh), 셀 6종 오버레이·렌더러·caller(FsGrid*CellRenderer·use*Cell) — Single/Multi/Nation/User/Vote/WorldTime
+- `packages/fs-external-data-viewer/` : i18n(types+ko/en/ja/zh), 셀 6종 오버레이·렌더러·caller — Single/Multi/Nation/User/Vote/WorldTime, 문서편집 AssigneeSelect/PrioritySelect
+- 삭제: 양 패키지 SelectMode/MultiSelectMode/VoteSelectMode (패널 교체로 dead)
+
+### 비고
+- 게이트: build:packages 9/9, typecheck:all 8/8, lint 0 errors(머지 후 i-dev 재실측 포함). advisor 계획·완료 검증 2회 PASS.
+- **머지 충돌 해소(주의)**: WIP 분기 후 i-dev에 plan-enterprise #373("모달 dim 배경 추가")이 양 패키지 WorldTimeOverlay에 `bg-black/50` dim 모달을 더해 충돌. 통일 규격은 canonical과 동일하게 **앵커형 드롭다운(dim 없음)** 이고 다른 5종 통일 셀도 모두 앵커형이라, WorldTime을 통일 버전(앵커·dim 없음)으로 해소. #373이 더한 나머지 6개 다이얼로그(Code/Color/CellStyle/Integrity/ColumnGroup/Aggregation) dim은 그대로 보존. → WorldTime의 dim 모달감이 필요하면 마스터 결정 필요.
+- **scope 확장(기록)**: Phase 3에서 Multi 저장·Nation 앵커 caller 연결에 원 affected_files 외 인접 파일(FsGrid*CellRenderer·use*Cell)이 필요해 메인 세션이 동일-셀 기계적 완성으로 자체 승인·진행(이슈 #374 코멘트 기록).
+- **런타임/시각 검증 미실시**: 정적 게이트만 통과. 디자인 통일은 시각 작업이므로 dev 재기동 후 각 셀 타입 오버레이를 실제로 열어 검색·확대·체크·"선택 안함"·타입별 trailing(득표수·LiveClock)·관리 모드 진입을 마스터 화면 확인 필요. dev=자매 dist alias → i-dev pull + 패키지 빌드 + 하드 리프레시로 반영.
+- 후속(별도 트랙): Tier2(기준 패키지 잔여), Tier3(빌더/앱 ~50표면). 본 플랜 완료 시점 재보고 예정.
