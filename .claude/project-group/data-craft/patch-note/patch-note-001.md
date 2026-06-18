@@ -29915,3 +29915,23 @@ data-craft (fs-data-viewer 전용):
 - `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/PerSlotSubWidgetEditorPortal.tsx`
 - `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/SubWidgetEditor.tsx`
 - `packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/types.ts`
+
+## v001.969.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #371 (핫픽스1)
+
+**헤더 모드 전환 버튼 — 라벨 pill 폐기, 아이콘 유지 + 색만 그라데이션.** v001.967.0 의 라벨형 그라데이션 pill 에 대해 마스터가 "이런 걸 원한 게 아니다 — 아이콘은 유지하면서 특별해 보이게 색만 그라데이션으로 넣고 싶다"고 피드백. 이에 따라 `ModeSwitchButton` 을 기존 헤더 아이콘들과 동일한 고스트 아이콘 버튼(`LayoutDashboard`, `h-8 w-8`)으로 되돌리되, 아이콘 stroke 색만 단색 대신 emerald→teal 그라데이션으로 칠해 특별해 보이게 했다.
+
+### 변경 결과
+- **Phase 3 (fix, data-craft)** `43e35d3`: `ModeSwitchButton` 을 배경 pill + ArrowLeftRight + 텍스트 라벨에서 → `LayoutDashboard` 아이콘 전용 고스트 버튼으로 재작성. SVG hidden `<defs>` 의 `linearGradient`(`#10b981`→`#14b8a6`)를 선언하고 아이콘 `stroke="url(#mode-switch-icon-gradient)"` 로 색만 그라데이션 적용. `forwardRef`(OnboardingHint/Tooltip asChild 정합) 유지. `mode` prop·`useTranslation`/i18n 라벨 제거, 양 툴바에서 `mode` prop 삭제, `ko.ts`/`en.ts` 의 `header.modeLabel` 키 삭제.
+
+### 비고
+- lint 게이트(`pnpm typecheck:all && pnpm lint`) 0 errors, 신규 경고 없음.
+- 최종 시각 결과(그라데이션 가독성·체감 강도)는 마스터 스크린샷 확인 필요. stroke 그라데이션이 일부 브라우저/다크모드에서 fallback 으로 떨어지면 inline svg def 패턴으로, 색 톤이 약하면 색만 1라인 교체로 핫픽스 가능.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `src/widgets/header/ui/ModeSwitchButton.tsx`
+- `src/widgets/header/ui/ViewModeToolbar.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`
+- `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
