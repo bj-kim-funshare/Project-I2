@@ -30317,3 +30317,21 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - (5) 관련: 저장 catch 가 더 이상 사일런트가 아니라 'error' 상태를 방출 → 기존에 숨어 있던 BE/네트워크 저장 실패가 헤더에 "저장 실패"로 보일 수 있음(의도된 개선 방향).
 - 기본 아이콘은 `Math.random()` 기반(제품 코드)이라 매 생성 시 달라짐.
 - dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
+
+## v001.985.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #369 (문서 위젯 추가 보정 5차 — 삭제 확인 버튼 글자색)
+
+마스터 지시 1건(시각 미세조정). 커밋 `ac8e825`.
+
+### 변경 결과
+- 페이지 태그 삭제 확인 버튼의 "삭제" 글자색을 `text-destructive-foreground`(이 테마에서 흰색이 아니었음) → `text-white`로 교체. 배경(`bg-destructive`)·나머지 무변경.
+
+### 영향 파일
+**data-craft** (i-dev)
+- `packages/fs-data-viewer/src/widgets/document/FsDocumentWidgetContainer.tsx`
+
+### 비고
+- 단일 className 토큰 변경(타입/린트 위험 없음)이라 정식 게이트/advisor 생략, diff 1줄 확인 후 머지.
+- dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
