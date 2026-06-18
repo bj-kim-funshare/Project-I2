@@ -29779,3 +29779,44 @@ data-craft (fs-data-viewer 전용):
 - 인라인 모드만 borderless, portal 모드(그리드 일반 셀 편집)는 panelBoxStyles 유지.
 - typecheck:all && lint exit 0.
 - 검증(마스터): 듀얼 슬롯 단일선택 클릭 시 테두리 1겹만. dev=fs_data_viewer src alias(머지+하드 리프레시).
+
+## v001.965.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #370
+
+**관리자 분석 수치 — 사내 IP·로컬 제외 폐지 → 전체 합산 + 괄호 내부수치, 기업 ID 관리 UI 신설.** 기존엔 사내 IP·로컬 이벤트를 수집 단계에서 통째로 버려 통계에서 제외했으나, 이제 전체를 합산해 표시하되 모든 수치에 괄호로 사내(사내 IP·로컬 + 지정 기업 ID) 내부수치를 함께 보여준다. 지정 기업 ID(meatvalue/funshare/funshare-ms/aica) 데이터도 괄호 수치에 합산하며, 이 목록은 관리자 페이지 "기업 ID 관리"에서 추가·수정·삭제할 수 있다.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-server)** `e21bff6`: `analytics.service.ts` 의 내부 IP 이벤트 드롭(early-return) 제거 → 정상 적재하되 내부 IP/로컬은 `properties.src_internal=true` 태깅. 괄호 내부수치 식별 근거 확보.
+- **Phase 2 (feat, data-craft-server)** `c5726e9`: `admin_internal_company_id` 설정 테이블 DDL(up/down/plan) + 시드 4건(CREATE 분리 INSERT, ON CONFLICT 멱등). ⚠️ 라이브 적용은 task-db-structure 핸드오프.
+- **Phase 3 (feat, data-craft-admin-server)** `1faa48e`: 기업 ID CRUD 엔드포인트 `/api/admin/config/internal-company-ids`(GET/POST/PUT/DELETE), verifyAdminToken 보호, authPool, UNIQUE→409.
+- **Phase 4 (feat, data-craft-admin-server)** `dbab277`: `adminAnalytics.service.ts` 메트릭·분포·퍼널 쿼리가 단일 패스 FILTER 로 전체 total + 내부수치(`src_internal` OR `company_id=ANY(활성목록)`) 동시 산출. 활성 목록 try/catch 폴백(테이블 미적용 시 빈 배열).
+- **Phase 5 (feat, data-craft-admin)** `602adb1`: analytics types + 차트 컴포넌트가 모든 수치에 `(사내 N)` 괄호 표기(메트릭 total/average, 분포, 퍼널 단계).
+- **Phase 6 (feat, data-craft-admin)** `0a1cddf`: "기업 ID 관리" 신규 페이지(추가/수정/삭제) + 라우트 `/config/internal-company` + 네비 + CRUD API 클라이언트.
+
+> work repo 표기 정정: 본 플랜 P5/P6 는 이슈 본문에서 "data-craft" 로 표기됐으나 실제 관리자 콘솔 FE 저장소는 **data-craft-admin** 이다.
+
+### ⚠️ 후속 필수 (배포 전)
+- **`task-db-structure data-craft` 로 `admin_internal_company_id` 테이블을 dev(추후 prod)에 적용**해야 Phase 3 CRUD 엔드포인트와 Phase 4 기업 ID 합산이 실동작한다. 적용 전에는 CRUD 4종이 500, 분석 내부수치는 `src_internal`(사내 IP/로컬)만 반영, "기업 ID 관리" 페이지는 에러/빈 상태.
+
+### 비고
+- 사내 IP 괄호 수치는 과거분이 0에서 시작(변경 전 내부 IP 이벤트는 미적재·복구 불가). 기업 ID 분류는 company_id 가 원래 적재돼 소급 집계 가능.
+- 각 repo lint 게이트(eslint/typecheck/tsc) 전부 통과. 런타임 검증은 DDL 적용 후 가능.
+
+### 영향 파일
+**data-craft-server**
+- `src/services/analytics.service.ts`
+- `docs/migration/ddl-changes/20260618000000_admin-internal-company-id/{up,down}.sql`, `plan.md`
+
+**data-craft-admin-server**
+- `src/services/adminAnalytics.service.ts`
+- `src/routes/adminInternalCompany.routes.ts`, `src/controllers/adminInternalCompany.controller.ts`, `src/services/adminInternalCompany.service.ts`
+- `src/app.ts`
+
+**data-craft-admin**
+- `src/entities/analytics/types.ts`
+- `src/features/analytics-auth/{AuthMetricsCharts,DistributionCharts,AuthFunnelChart}.tsx`
+- `src/entities/internalCompany/{api,types,index}.ts`
+- `src/pages/internal-company/InternalCompanyPage.tsx`
+- `src/app/router/index.tsx`, `src/app/router/RootLayout.tsx`
