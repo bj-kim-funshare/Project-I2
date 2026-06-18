@@ -29319,3 +29319,28 @@ data-craft-admin:
 - **런타임 e2e 미수행(머지 후 마스터 확인)**: (a) `/auth-metrics` 7 granularity(특히 half)×공용/기업 응답·퍼널 rates, (b) admin FE 5175 탭/총계·평균 토글/분포·퍼널 렌더, 하단 결제 퍼널 불변. AuthFunnelChart가 BE 동적 rates 키를 읽는지 1회 화면 확인 필요.
 - **잔여 비차단**: 구 `AnalyticsOverviewCharts.tsx` + `fetchAnalyticsOverview`(가리키던 `/overview`는 Phase 5에서 제거)는 페이지 미참조 고아 dead code — 후속 정리 대상.
 - 게이트: 각 페이즈 lint+build/typecheck exit 0.
+
+## v001.942.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #368
+
+페이지 권한 모달에서 (1) 부모-자식 카드의 "전체 선택"(그룹별 일괄 부여)으로 부여하면 대상 계정에서 그 부모 페이지와 자식들이 사이드바에 통째로 사라지던 버그, (2) 선택상자가 아닌 부모 페이지를 본인 자체로 직접 부여할 수 없던 문제를 해소한다.
+
+근본 원인: 부모-자식 카드 헤더의 "전체 선택"이 자식 id만 부여 배열에 담고 부모 id를 누락 → `PUT /api/roles/:roleId/pages`가 부모 행 없이 전송 → BE `findPages`의 `INNER JOIN page_role`에서 부모가 탈락 → FE 사이드바는 부모 없는 고아 자식을 렌더하지 못해 가지 전체 소실.
+
+### 페이즈 결과
+- **Phase 1 (BE, data-craft-server `f776413`)**: `builder.model.ts`에 `getAncestorPageIds`(WITH RECURSIVE, parent_id 상향, company_id + is_deleted 스코프, 자신·sentinel 0 제외) 추가. `roles.service.ts` `setRolePages`에서 비오너 액터 스코프 가드 통과 후 `replaceRolePages` 호출 전, 제출된 각 pageId의 조상을 수집해 미포함 조상을 `'read'`로 자동 백필(명시 항목 미오버라이드, 백필 scope-exempt). 어떤 FE 경로가 부모를 빠뜨려도 부모 가지가 탈락하지 않도록 하는 구조적 단일 안전망.
+- **Phase 2 (FE, data-craft `8adcd9c`)**: `PageAccessList.tsx`에서 비선택상자 부모(`!isSelectorBox`) 카드 헤더의 "전체 선택/해제" 버튼을 `@/shared/ui` `Checkbox`(checked=allOn)로 대체. 체크 → 모든 unlocked 자식 + 부모 행 부여('write'), 해제 → 자식 전부 + 부모 행 제거. 개별 자식 해제 시 비선택상자 부모 행도 함께 제거하여 "자식 해제시 부모도 해제" 충족. `handleToggle` 부모 자동추가(기존 97-99행) 제거 — 구조 보장은 BE 백필로 일원화. 선택상자 부모는 기존 버튼 경로 유지.
+
+### 레벨 체계 / 비고
+- 구조적·BE 백필 = `'read'`(최소권한 안전망), FE 명시 부여(부모 체크박스·자식) = `'write'`. 백필은 명시 항목을 절대 덮어쓰지 않음.
+- read/write 뉘앙스(비차단): 자식을 **개별 클릭**으로 모두 부여해 allOn에 도달한 경우 FE는 부모 explicit 행을 추가하지 않아 BE 백필이 부모를 `'read'`로 넣음(부모 카드에 별도 read/write UI 없으므로 사용자에겐 비가시). 부모 'write'를 원하면 부모 체크박스로 명시 부여하는 경로가 정답. 부모 가지 렌더는 모든 경로에서 정상. 향후 부모 레벨 세분 컨트롤이 필요하면 후속.
+- 검증: BE lint(`pnpm lint`)+build(tsc) exit 0, FE `typecheck:all`+lint exit 0(warnings 기존). dev psql 실측은 직접 psql carve-out 밖이라 미수행(CTE 로직 추론 검증 + tsc로 대체). 런타임 e2e(권한 부여→비오너 로그인 사이드바 렌더)는 머지 후 마스터 확인.
+
+### 영향 파일
+data-craft-server:
+- src/models/builder.model.ts, src/services/roles.service.ts
+
+data-craft:
+- src/widgets/settings-dialog/ui/PageAccessList.tsx
