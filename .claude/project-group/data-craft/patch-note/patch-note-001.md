@@ -30401,3 +30401,40 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 ### 비고
 - 단일 className 토큰 변경(타입/린트 위험 없음)이라 정식 게이트/advisor 생략, diff 1줄 확인 후 머지.
 - dev=`fs_data_viewer` src alias → i-dev pull + 하드 리프레시로 반영.
+
+## v001.990.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #377
+
+관리자 콘솔(data-craft-admin / data-craft-admin-server)에 모든 기업(client)의 플랜 종류(프로모션 포함)·만료일·월간/연간 모드·좌석수를 조회·직접 제어하는 운영자 오버라이드 페이지를 추가했다. 결제 흐름을 거치지 않고 client 결제 모델을 직접 수정한다.
+
+### 페이즈 결과
+- **Phase 1 (BE)**: 기업 목록 조회 `GET /api/admin/config/companies` — `client`(is_deleted 제외) + 활성 프로모션(client_promotion/promotion) LEFT JOIN + pending(plan/cycle/seat 집계) 반환. dbMode 토글 데이터 풀. (`60cc20d`)
+- **Phase 2 (BE)**: 직접 제어 `POST /:companyId/update` — partial payload(plan_type/plan_expires_at/billing_cycle/seats) 동적 SET, pending flag clear, 좌석 1~10000(active-user floor 의도적 우회), 프로모션 활성 시 `PROMOTION_ACTIVE_REMOVE_FIRST` 거부(만료·주기는 허용), payment_history 미생성. `admin_client_audit` 감사. (`92aa601`)
+- **Phase 3 (BE)**: 프로모션 카탈로그 `GET /promotions-catalog` + 배정 `POST /:companyId/promotion`(client_promotion 스냅샷 14컬럼, plan_type='free' 강제 불변식) + 해제 `DELETE`(retention 미차감). (`a127dba`)
+- **감사 패턴 정합(#380)**: 진행 중 병렬 잡 #380(`admin_promotion_audit 고정 dev authPool 분리`)이 i-dev 에 머지되어, `admin_client_audit` 도 토글 데이터 풀 트랜잭션 내부 → 고정 dev authPool 별도 best-effort 기록(`writeClientAuditDev`)으로 정렬. admin↔service 디커플 + prod 데이터 DB 비기록.
+- **Phase 4 (FE)**: companies entity 모듈 — types(Company/CompanyUpdateInput/PromotionCatalogItem) + api(fetch/update/catalog/assign/remove, dbModeHeader). (`b225028`)
+- **Phase 5 (FE)**: CompaniesPage + CompanyEditModal — 전 기업 표·클라이언트 검색, 행별 편집(플랜 select·만료 date·월/연·좌석·프로모션 picker), 프로모션 활성 시 플랜/좌석 disabled, prod 모드 뮤테이션 useConfirm 경고. route `/config/companies` + nav "기업 플랜 관리". (`6e4e358`)
+
+### 영향 파일
+**data-craft-admin-server** (i-dev)
+- `src/services/adminCompanies.service.ts`
+- `src/controllers/adminCompanies.controller.ts`
+- `src/routes/adminCompanies.routes.ts`
+- `src/app.ts`
+- `src/config/constant.ts`
+- `DB/migrations/20260618_create_admin_client_audit.sql` (미실행 — 후속 task-db-structure)
+
+**data-craft-admin** (i-dev)
+- `src/entities/companies/types.ts`
+- `src/entities/companies/api.ts`
+- `src/pages/companies/CompaniesPage.tsx`
+- `src/pages/companies/CompanyEditModal.tsx`
+- `src/app/router/index.tsx`
+- `src/app/router/RootLayout.tsx`
+
+### 비고 (후속 필수)
+- **`admin_client_audit` 테이블 DDL 미실행**: `DB/migrations/20260618_create_admin_client_audit.sql` 를 `task-db-structure` 로 **dev auth DB(`DB_NAME_AUTH`, 고정 dev psql)** 에 적용해야 감사 로그가 기록된다(#380 의 admin_promotion_audit 배치와 동일, 토글 data DB 아님). 적용 전까지 감사 INSERT 는 `logger.error` best-effort 로 사일런트 no-op 되고 **기업 제어 쓰기 자체는 정상 동작**한다.
+- 관리자 콘솔 2저장소는 배포 제외(`pnpm dev` 전용) — 운영자 로컬 기동.
+- 게이트: admin-server eslint+tsc / admin typecheck+eslint 전부 exit 0. 검증 중 psql 트랜잭션 격리·tsc 타입·#380 감사 정합 3건 교정.
