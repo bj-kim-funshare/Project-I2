@@ -29724,3 +29724,23 @@ data-craft (fs-data-viewer 전용):
 - C 라이브 커밋은 변경마다 saveGridModel 호출(텍스트는 키 입력마다) — 마스터 요구(즉시 반영) 우선.
 - typecheck:all && lint exit 0.
 - 검증(마스터): (A) 듀얼 옵션 한글+Enter 시 1개만, (B) 빈 셀 타입별 표기, (C) 오버레이 값 변경 즉시 셀 반영, (D) 인라인 선택에 "선택 안함" 노출·해제. dev=fs_data_viewer src alias(머지+하드 리프레시).
+
+## v001.962.0
+
+> 통합일: 2026-06-18
+> 플랜 이슈: #357 (핫픽스14 — 기본 에디터 인라인 통일)
+
+### 페이즈 결과
+- **Phase 18 / 핫픽스14 (fix, fs-data-viewer 전용)**: 마스터 지적 — 듀얼 탭 select-계열 편집이 custom 피커(InlineOptionPicker/InlineListPicker, hotfix9)라 **기본 그리드 select 에디터와 달랐다**(검색·확장 없음, none/체크 스타일 상이). 정정 = 기본 에디터 `ViewModeDropdownPanel`에 **additive `inline` prop** 추가(default false → 그리드 무영향: portal/backdrop/anchor/scroll-lock만 우회, rules-of-hooks 준수=hook 무조건 호출+효과만 param 게이팅·positioning effect `if(inline)return`)하고, `SubWidgetEditor`의 singleSelect/multiSelect/user/nation/worldTime 5개를 **기본 패널 인라인 렌더**로 교체. items 구성(noneItem danger·색점 leading·ItemAvatar·국기·LiveClock·다국어 searchText·labels)을 기본 렌더러와 동일 복제. 결과: 듀얼 탭 select 편집이 기본 셀과 100% 동일(검색·확장 modal·"선택 안 함"·체크·멀티 footer Save/Clear), 2중 팝업 없이 인라인. 머지 `9878f8b7`, 구현 `fe3df401`.
+
+### 영향 파일
+data-craft (fs-data-viewer 전용):
+- packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/ViewModeDropdownPanel.tsx + types.ts (inline prop)
+- packages/fs-data-viewer/src/widgets/cell-renderers/dual-widget/SubWidgetEditor.tsx (5 type 재배선)
+
+### 비고
+- **교훈**: 마스터의 "기본 기능과 동일" = base 컴포넌트를 additive prop으로 inline화해 직접 재사용이 정답 — custom 재구현(hotfix9)은 divergence를 낳음.
+- hotfix13d "선택 안함"·hotfix9 custom 피커는 base 패널 채택으로 superseded(fs-data-viewer dead path). InlineOptionPicker/InlineListPicker는 sub/external 사용 중이라 미삭제.
+- multi draft+Save와 hotfix13c live-commit 정합. expand modal은 인라인에서도 활성.
+- typecheck:all && lint exit 0(rules-of-hooks 무위반).
+- 검증(마스터): 듀얼 탭 select/user/nation/worldTime 편집이 기본 셀과 동일(검색·확장·none·체크·leading), 2중 팝업 없음, 그리드 일반 select 회귀 0, 라이브 commit. dev=fs_data_viewer src alias(머지+하드 리프레시). fs-data-viewer 전용 — 시각 OK 후 sub/external phase B.
