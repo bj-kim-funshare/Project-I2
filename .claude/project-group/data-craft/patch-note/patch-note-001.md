@@ -31045,3 +31045,28 @@ data-craft (FE):
 - src/app/MobileNotSupportedScreen.tsx
 - src/shared/i18n/locales/ko.ts
 - src/shared/i18n/locales/en.ts
+
+## v001.1015.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #398
+
+관리자 콘솔 "격리 기업 ID 관리"에서 운영자 메모용 레이블(label)을 코드 전반에서 제거하고, 그 자리에 company_id 로 해석한 기업명(서비스 client.name)을 표기하도록 변경했다. (레이블은 선택·고유성 없음·기능 효과 0의 메모라 영구 불필요 — 마스터 B안.)
+
+### 페이즈 결과
+- **Phase 1** (`f598e69`, data-craft-admin-server): `adminInternalCompany.service.ts`(InternalCompanyRow·listInternalCompanies SELECT·create INSERT/RETURNING·update 시그니처/동적 set/RETURNING)와 `adminInternalCompany.controller.ts`(create/update label 추출·파싱·전달)에서 label 전부 제거. company_id/is_active 흐름 보존. SELECT 미참조화로 후속 DROP COLUMN 안전 전제 충족. lint(eslint)+build(tsc) 통과.
+- **Phase 2** (`5b42bc4`, data-craft-admin): `types.ts`(InternalCompany/InternalCompanyInput label)·`InternalCompanyPage.tsx`(state·생성/편집 폼·payload·"레이블" th/td) 제거. "기업명" 컬럼 추가 — `fetchCompanies()` company_id→name 맵, 없으면 muted "—". `useDbModeStore` 모드 인식하되 companies effect=[mode, refreshTick], internal-list effect=[refreshTick] 유지(authPool 모드 무관 라운드트립 차단). colSpan 정합, 새로고침/생성/편집/활성토글 보존. typecheck+eslint 통과.
+
+### ⚠️ 후속 (별도 작업)
+- admin BE(localhost:8100) 재기동 필요 — 현재 운영 중인 dev BE 는 Phase 1 머지 전 구코드 실행 중. 재기동해야 label 미참조 신코드 반영.
+- `admin_internal_company_id` 테이블의 `label` 컬럼 DROP 은 task-db-structure 로 별도 진행(BE 재기동 후 안전). 본 플랜은 코드만.
+- 관리자 콘솔은 배포 제외·`pnpm dev` 전용.
+
+### 영향 파일
+data-craft-admin-server:
+- src/services/adminInternalCompany.service.ts
+- src/controllers/adminInternalCompany.controller.ts
+
+data-craft-admin:
+- src/entities/internalCompany/types.ts
+- src/pages/internal-company/InternalCompanyPage.tsx
