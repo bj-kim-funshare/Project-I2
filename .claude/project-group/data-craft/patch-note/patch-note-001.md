@@ -30603,3 +30603,23 @@ data-craft-mobile:
 - lib/api/dio_client.dart
 - lib/api/platform_auth_io.dart (신규), lib/api/platform_auth_web.dart (신규)
 - lib/api/web_credentials_stub.dart (삭제), lib/api/web_credentials_web.dart (삭제)
+
+## v001.997.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #383 (핫픽스1)
+
+웹 튜토리얼 **진입 플로우 버그 재수정** (#383 v001.994.0 의 Phase 1 rAF 수정이 미해결 — 마스터 재테스트로 두 증상 모두 잔존 확인). data-craft FE 단독.
+
+### 핫픽스 결과
+- **req7 (모달 내 튜토리얼 선택 풍선 확인 시 시나리오 모달이 안 열리고 그냥 닫힘)**: 근본 원인 = `ScenarioPickerModal`(`modal={false}`)이 가이드 모달→피커 전환 중 발생하는 스퍼리어스 외부 인터랙션(focus/pointer outside)으로 마운트 즉시 `onClose`. 1프레임 rAF 지연으로는 차단 불가. `armedRef` arming 윈도우(350ms)를 추가해 자동 닫힘 4경로(`onOpenChange`·오버레이 onClick·`onEscapeKeyDown`·`onPointerDownOutside`)를 전부 게이팅 — armed 이후에만 닫힘. 명시적 닫기(뒤로·X·다음에 할게요·시나리오 선택)는 항상 동작.
+- **req6 (헤더 가이드 버튼 안내 풍선 확인 시 화면 한 번 깜박)**: 근본 원인 = `handleGuideOpen` 이 `hint.discoverGuide` dismiss(DiscoveryHint 딤 즉시 제거) 후 가이드 모달을 한 프레임 늦게 열어(overlay opacity 0→1 페이드인) 딤 없는 밝은 프레임 발생. 순서 역전 — `setGuideStep('selection')` 먼저(모달 딤 페이드인 시작), 300ms 후 dismiss(hint 딤이 페이드인 구간을 브리지). 딤 없는 프레임 제거.
+
+### ⚠️ 후속 단서
+- req6 의 300ms dismiss 지연은 `fs_data_viewer` 패키지의 GuideDialogShell overlay 페이드 길이에 종속된 매직 넘버 — 패키지 업그레이드로 페이드 길이가 바뀌면 깜박임 재발 가능. req6 회귀 시 300ms 재튜닝 전에 `fs_data_viewer` overlay fade duration 부터 확인.
+- 정적 분석 2회차 수정(Phase 1 + 본 핫픽스). 여전히 재현되면 다음은 화면 디버그 프로브로 어떤 dismiss 경로/이벤트가 발화하는지 1차증거 확보(추가 timing/guard 튜닝 금지).
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/ui/ScenarioPickerModal.tsx
+- src/widgets/header/ui/useHeaderDialogs.ts
