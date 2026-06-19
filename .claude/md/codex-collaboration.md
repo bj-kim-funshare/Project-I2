@@ -1,6 +1,6 @@
 # Codex Collaboration
 
-Codex collaboration lets `plan-enterprise` and `plan-enterprise-os` route phase execution to Codex (GPT-5.5) while Claude remains the planner, verifier, and final authority. The purpose is cost leverage from README §E-3: use GPT-5.5 for bounded mechanical implementation work when that is cheaper or stronger for the task, while preserving Opus 4.7 / advisor-based judgment for plan quality, completion decisions, and harness integrity.
+Codex collaboration lets `plan-enterprise` and `plan-enterprise-os` route phase execution to Codex (GPT-5.5) while Claude remains the planner, verifier, and final authority. The purpose is cost leverage from README §E-3: use GPT-5.5 for bounded mechanical implementation work when that is cheaper or stronger for the task, while preserving Opus 4.8 / advisor-based judgment for plan quality, completion decisions, and harness integrity.
 
 ## Responsibility split
 

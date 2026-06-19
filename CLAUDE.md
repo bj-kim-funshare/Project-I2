@@ -34,14 +34,14 @@ When master prompts the main session **without** invoking a skill: main session 
 | Layer | Model | Where declared |
 |---|---|---|
 | Main session | Master's choice via `/model` | Not pinned in `settings.json` — master sets at runtime |
-| `advisor()` tool | `claude-opus-4-7` | `.claude/settings.json` → `advisorModel` |
-| 7 read-only reviewers (planning agents) | `claude-opus-4-7` (200k, not 1M) | Agent frontmatter `model:` field |
+| `advisor()` tool | `claude-opus-4-8` | `.claude/settings.json` → `advisorModel` |
+| 7 read-only reviewers (planning agents) | `claude-opus-4-8` (200k, not 1M) | Agent frontmatter `model:` field |
 | 4 write-capable executors (work agents) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
 | 1 gate-runner (mechanical executor) | `claude-haiku-4-5` | Agent frontmatter `model:` field |
 | 1 completion-reporter (read-only, sonnet) | `claude-sonnet-4-6` | Agent frontmatter `model:` field |
-| 1 advisor-fallback (systemic-failure stand-in) | `claude-opus-4-7` | Agent frontmatter `model:` field |
+| 1 advisor-fallback (systemic-failure stand-in) | `claude-opus-4-8` | Agent frontmatter `model:` field |
 
-**Planning agents** (`bug-detector`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`): receive complex code/diff/scope inputs, produce reasoning-heavy findings. Opus 4.7 for quality of judgment.
+**Planning agents** (`bug-detector`, `claude-md-compliance-reviewer`, `code-inspector`, `security-reviewer`, `db-security-reviewer`, `refactoring-analyzer`, `deploy-validator`): receive complex code/diff/scope inputs, produce reasoning-heavy findings. Opus 4.8 for quality of judgment.
 
 **Work agents** (`code-fixer`, `phase-executor`, `db-migration-author`, `db-data-author`): take a defined task description, execute mechanically (write code / SQL files, commit). Sonnet 4.6 for cost efficiency. **Always split into phases or smaller units** — never hand a Sonnet sub-agent the whole task at once (its context window is too small).
 
@@ -96,7 +96,7 @@ Strict-universal default: all 18 skills enforce entry verification (read-only ut
 
 ### 8. Token budget (§F-1)
 
-Goal on Opus 4.7: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md`; specialized content goes in `.claude/md/*` loaded on-demand by the skills and agents that reference them. If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.
+Goal on Opus 4.8: system prompt + system tools + custom agents + memory files + skills **under 50k combined** (≥75% context free at boot). Universal content goes in `CLAUDE.md`; specialized content goes in `.claude/md/*` loaded on-demand by the skills and agents that reference them. If you find yourself wanting to add a section here "so it is always loaded," that is the wrong instinct.
 
 Sub-agent dispatch prompt bodies are governed by `.claude/md/sub-agent-prompt-budget.md` — recommended 5–15k tokens, absolute hard cap 100k tokens. Do not inline pre-assembled context (PR diffs, policy files, prior-phase summaries, scope object collections, advisor output); save it to a permanent document (issue body, plan.md, audit md) and pass only the path or identifier so the sub-agent reads it itself.
 

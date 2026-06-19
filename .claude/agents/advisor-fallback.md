@@ -1,6 +1,6 @@
 ---
 name: advisor-fallback
-model: claude-opus-4-7
+model: claude-opus-4-8
 effort: high
 description: Read-only reviewer that stands in for the built-in advisor() tool when advisor() fails systemically (tool/API error after 2 retries). Receives a rubric/perspective list and durable-artifact paths or identifiers; reads those artifacts itself, applies the supplied rubric, and returns PASS or BLOCK: <reason> — the identical verdict contract as advisor(). Dispatched by skills following the procedure in .claude/md/advisor-fallback-protocol.md. effort: high is a deliberate exception to the CLAUDE.md §4 uniform-medium policy, providing deeper reasoning as a compensating control for the loss of the built-in advisor's curated context.
 tools: Read, Grep, Glob, Bash
