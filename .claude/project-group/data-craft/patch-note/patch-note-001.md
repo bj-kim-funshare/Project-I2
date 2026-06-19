@@ -30800,3 +30800,20 @@ data-craft:
 - src/features/subscription/{model/types.ts, api/billingApi.ts, api/seatChange.api.ts, api/promotionApi.ts, ui/UpgradeStepPayment.tsx, ui/UpgradeDialog.tsx, ui/SeatManageDialog.tsx, ui/PromotionPurchaseDialog.tsx}
 - src/pages/billing-callback/ui/BillingSuccessPage.tsx
 - src/shared/i18n/locales/{ko,en}.ts
+
+## v001.1004.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #389 (핫픽스1 — v001.1001.0 후속)
+
+카드(결제수단) 등록 직후 "결제 수단 없음"으로 표시되고 **새로고침해야 카드가 나타나던** 문제 수정. 원인: `/api/subscription/status` 는 결제 비밀번호 미설정 시 카드를 마스킹(`hasBillingKey:false`/`cardInfo:null`)하는데, 카드 발급(`issueBillingKey`/`changeCard`)이 비번 설정 **전에** status 를 refetch(마스킹된 빈 카드 캐시)하고, 이후 `setPaymentPassword` 성공 시 status 를 무효화하지 않아 마스킹된 캐시가 새로고침 전까지 잔존. 특히 후속 결제가 없는 독립 "카드 등록"(card-change) 흐름에서 그대로 노출됨.
+
+### 수정
+- `PaymentPasswordSetupStep` 의 비밀번호 저장 성공 직후 `queryClient.invalidateQueries({ queryKey: subscriptionKeys.status() })` 호출 → 비번 설정으로 마스킹이 풀린 카드가 새로고침 없이 즉시 노출. 마스킹 분기는 `subscription.controller.ts` status 엔드포인트 단독임을 확인(다른 비번-결합 응답 없음)하여 status 단일 키 무효화로 완결.
+
+### ⚠️ 배포 주의
+- FE 핫픽스 — data-craft prod 빌드 후 gh-pages 재배포 필요(미재배포 시 prod 미반영).
+
+### 영향 파일
+data-craft:
+- src/features/subscription/ui/PaymentPasswordSetupStep.tsx
