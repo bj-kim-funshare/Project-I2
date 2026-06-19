@@ -30880,3 +30880,20 @@ data-craft:
 - src/pages/billing-callback/ui/BillingSuccessPage.tsx
 - src/features/subscription/model/subscriptionQueries.ts
 - src/features/subscription/ui/SeatManageDialog.tsx
+
+## v001.1008.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #388 (핫픽스1)
+
+관리자 콘솔(data-craft-admin) 좌측 사이드바 항목명을 정리하고 전 항목에 아이콘을 추가했다.
+
+### 핫픽스 결과
+- **핫픽스1** (`e577c9e`): `RootLayout.tsx` 의 `NAV_ITEMS` 라벨 변경(프로모션→프로모션 관리, 쿠폰→쿠폰 관리, 분석→데이터 분석 및 통계, 기업 ID 관리→격리 기업 ID 관리; 대시보드·기업 플랜 관리 유지) + lucide-react 6개 아이콘(LayoutDashboard/Megaphone/Ticket/BarChart3/Building2/ClipboardList) 추가. NavLink 에 `<Icon size={18}/>` 와 `flex items-center gap-2` 적용, `to` 경로·항목 순서는 불변. typecheck+eslint 통과.
+
+### ⚠️ 배포 주의
+- 관리자 콘솔(data-craft-admin)은 배포 제외·`pnpm dev` 전용 — 운영자 로컬에서 dev 재기동 시 반영.
+
+### 영향 파일
+data-craft-admin:
+- src/app/router/RootLayout.tsx
