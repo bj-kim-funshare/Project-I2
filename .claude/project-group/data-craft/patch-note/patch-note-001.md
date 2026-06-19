@@ -30817,3 +30817,20 @@ data-craft:
 ### 영향 파일
 data-craft:
 - src/features/subscription/ui/PaymentPasswordSetupStep.tsx
+
+## v001.1005.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #394
+
+구독이 **free 로 전환되는 경로**에서 `client_seat_change_requests` 의 `status='pending'` 좌석 변경 예약이 정리되지 않아, free 플랜 기업에 고아 좌석 예약이 영구 잔존하던 결함 수정. 관리자 콘솔 #388 표기 개편 과정에서 1석 기업에 "-32석 감소 예약"이 드러나 발견된 후속 BE 수정.
+
+### 근본 원인
+pending 좌석 행을 정리하는 곳이 프로모션 만료 경로(`promotion.model.ts` `expireClientPromotionInTx`) 단 한 곳뿐이었고, free 전환 단일 funnel 인 `resetExpiredPlan`(`client.model.ts`)에는 그 정리가 빠져 있었다. 구독취소→만료·카드삭제→만료·자동결제 3회 실패가 모두 `resetExpiredPlan` 을 경유하는데, 갱신 cron 은 `plan_type != 'free'` 기업만 처리하므로 free 로 떨어진 기업의 pending 행은 적용도 정리도 안 돼 영구 고아가 됐다. (좌석 예약 생성 자체는 per-user 플랜/활성 협업 프로모션 한정 — 순수 free 는 생성 불가이므로, 본 수정 + 프로모션 만료 정리로 영구 고아 경로 완전 차단.)
+
+### 페이즈 결과
+- **Phase 1** (`59d8024`): `resetExpiredPlan` 의 기존 UPDATE 직후 `DELETE FROM client_seat_change_requests WHERE company_id=? AND status='pending'` 를 동일 `db.query` 패턴으로 추가. 두 호출부(`processExpiredPlans`·`billingRenewal` 3-fail)는 풀 직접 호출이라 무수정 자동 반영. 프로모션 만료 경로의 기존 DELETE 와 대칭. lint(eslint)+build(tsc) 통과. (비원자성은 cron 이 free 기업 미방문이라 회복가치 없어 의도적 단순 유지 — 회귀 없음.)
+
+### 영향 파일
+data-craft-server:
+- src/models/client.model.ts
