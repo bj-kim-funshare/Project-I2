@@ -30665,3 +30665,22 @@ data-craft-admin-server:
 data-craft:
 - src/widgets/viewer-widget/ui/Viewer.widget.tsx
 - src/widgets/viewer-widget/ui/syncViewerSettings.ts
+
+## v001.1000.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #388
+
+관리자 콘솔(data-craft-admin) "기업 플랜 관리" 페이지의 **"보류중" 컬럼**을, 의미 전달이 안 되던 raw 값 나열(`좌석Δ: -32`, `플랜: basic`, `주기: monthly`)에서 → **예약 내용 2분류 from→to 표기**로 개편. 데이터크래프트 결제의 비용 기준 원칙(추가 청구 발생=즉시 결제 / 미발생=다음 결제일 예약)에 따라 예약은 ① 다운그레이드(플랜 다운 + 좌석 감소) ② 월↔연 결제주기 전환 두 갈래로 발생하며, 이를 운영자가 읽을 수 있게 분류·정리했다.
+
+### 스코프 확정 (탐색 결과)
+원 명령은 BE(data-craft-admin-server)를 주 작업으로 명시했으나, 탐색 결과 BE `listCompanies`가 표기 필요 전 필드(현재 플랜/좌석/주기/만료일 + pending 3종)를 **이미 반환**하고 data-craft-server 예약 백엔드 3종(`scheduleDowngrade`/`scheduleBillingCycleChange`/좌석감소 next-cycle)도 모두 라이브임을 확인 → **BE/server 무변경**. 실작업은 FE(data-craft-admin) 단일.
+
+### 페이즈 결과
+- **Phase 1** (`d0556d5`): data-craft-admin 에 `src/entities/companies/labels.ts` 신규 — `planTypeLabel`/`billingCycleLabel` 순수 함수(무료/베이직/스탠다드/프리미엄/엔터프라이즈, 월간/연간). 미지 키 raw 폴백, null/undefined 빈 문자열. lint 통과.
+- **Phase 2** (`4b9c1a0`): `CompaniesPage.tsx` 보류중 셀을 2분류 그룹으로 교체 — (A) 다운그레이드 예약(주황): 플랜 from→to + 좌석 from→to(`seats+delta≤0`이면 "좌석 감소 예약: −N석" 단독 표기로 cron `max(.,1)` floor 오독 방지), (B) 결제주기 전환 예약(중립색): 결제주기 from→to. 예약 존재 시 `plan_expires_at` 기반 적용일 1회 하단 표기, 예약 0건은 "없음" 유지. 기존 `좌석Δ` 단일 표기 제거. lint(typecheck+eslint) 통과.
+
+### 영향 파일
+data-craft-admin:
+- src/entities/companies/labels.ts (신규)
+- src/pages/companies/CompaniesPage.tsx
