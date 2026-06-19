@@ -31248,3 +31248,30 @@ data-craft:
 ### 영향 파일
 data-craft:
 - src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
+
+## v001.1025.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #403
+
+관리자 콘솔에 "혜택 관리" 페이지를 신설해 프로모션·쿠폰 관리를 탭으로 통합하고, "크레딧 관리" 탭으로 추천 시스템 크레딧·자동결제 쿠폰을 조회+수동 부여/취소/조정(B)할 수 있게 했다. 전제 DDL(admin_referral_audit + referral_credit.source_payment_id nullable)은 dev 선행 적용(task-db-structure). 서비스 추천 BE는 재구축 없이 읽기·정합 참조만.
+
+### 페이즈 결과
+- **Phase 1** (`933ad8f`+`d988ef8`, data-craft-admin-server): GET /api/admin/config/referral/:companyId 신설 — 크레딧 원장(deducted/remaining/balance)·자동결제 쿠폰(active/consumed/expired)·referral_relation 요약 dataPool(mode) 조회.
+- **Phase 2** (`4373bcf`, data-craft-admin-server): write 6종 + admin_referral_audit + 정합 가드(FOR UPDATE) — grant_credit(평생한도 **각 측 독립 ≤3**·source_payment_id=NULL·earn_type='full_phase'·expires +24mo·granted_months 증분)·revoke_credit(만료처리)·adjust_months(0~3)·grant_coupon(source_referral_id FK·+24mo)·revoke_coupon(consumed 거부·consumed_at 마커)·set_benefits_revoked(일방향). CALL_ID.admin.referral 6종.
+- **Phase 3** (`42b11aa`, data-craft-admin): 사이드바 "혜택 관리"(/benefits) 단일 항목, shared/ui/Tabs 3탭(프로모션·쿠폰·크레딧). 기존 PromotionsPage·CouponsPage 탭 콘텐츠 재사용.
+- **Phase 4** (`91ba364`, data-craft-admin): entities/credit·entities/referral-coupon API + CreditsTab read+write UI(조회·부여·취소·조정·혜택 해지, useConfirm·BE 거부 toast).
+
+### 핵심 불변식(#401 교훈): 평생한도 각 측 독립≤3 / amount_krw>0 / expires_at 필수 / 쿠폰 consumed_at 불변 / benefits_revoked 일방향. (advisor-fallback #1 BLOCK "합산→독립캡" 정정 반영.)
+
+### ⚠️ 후속/주의
+- **dev 한정**: prod referral_credit nullable 미적용 + prod admin 크레딧 부여는 후속(추천 prod 배포 이후 별도 인가). prod 모드 grant_credit 시 NOT NULL FK 위반 거부 — dev에서만 안전 사용.
+- 서비스 referralEarning.service.ts L121 referrer 증분 refereeCompanyId 전달 의심 버그(서비스 repo, 별건 보고 권장).
+- 관리자 콘솔 배포 제외·pnpm dev 전용. 라우트 7:7 정합 확인.
+
+### 영향 파일
+data-craft-admin-server:
+- src/services/adminReferral.service.ts (신규) · src/controllers/adminReferral.controller.ts (신규) · src/routes/adminReferral.routes.ts (신규) · src/config/constant.ts · src/app.ts
+
+data-craft-admin:
+- src/pages/benefits/BenefitsPage.tsx (신규) · src/pages/benefits/CreditsTab.tsx (신규) · src/entities/credit/* (신규) · src/entities/referral-coupon/* (신규) · src/app/router/RootLayout.tsx · src/app/router/index.tsx · src/pages/promotions/PromotionsPage.tsx · src/pages/coupons/CouponsPage.tsx
