@@ -30934,3 +30934,39 @@ data-craft-admin:
 ### 영향 파일
 data-craft:
 - src/widgets/viewer-widget/ui/Viewer.widget.tsx
+
+## v001.1011.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #391 (데이터 뷰어 선택지 드롭다운 동일 규격 통합 Tier 3 — 루트 앱 🟢)
+
+#374(자매 뷰어 셀)·#381(기준 패키지 잔여)에 이어 통일 선택 드롭다운 규격 `ViewModeDropdownPanel`을 루트 앱(src/)의 🟢 세로 텍스트 선택 리스트에 적용(Tier 3). 그리드·탭형 picker(아이콘/테마)·색상·달력·액션메뉴·속성 enum·모달 카드형은 제외. 원칙 "동일 규격·타입별 변형". 패널 barrel export는 #374에서 완료, 루트 앱은 fs_data_viewer src alias(dev)/dist(prod)로 import.
+
+### 페이즈 결과
+- **Phase 1** (chore) `57dbf04`: 루트 앱 react-i18next(ko/en)에 패널 label 누락 키(viewModeDropdown.more/clear/noMatch/selectedCount) additive.
+- **Phase 2** (feat) `89fbf85`: ViewModeDropdownPanel creatable 모드 additive 확장(optional props 5개, no-match 영역 "+ 새로 만들기" 행, ViewModeExpandModal 미러). 기존 single/multi 분기 제거 0줄 → #374/#381 backward-compat.
+- **Phase 3** (refactor) `1b4a2bf`: A1 viewer-editor 7 selects(데이터 그룹·뷰 타입·그룹화/라벨 컬럼·외부필터) 패널 single. __none__→"선택 안함".
+- **Phase 4** (refactor) `88da8f2`: A2 WidgetTypeSelector·WidgetNavigatorDropdown·SelectorGeneral/DataSection. ⚠️WidgetTypeSelector 리치 그룹카드→평면·OnboardingHint 제거·Navigator location 서브라인 제거(마스터 시각 검토).
+- **Phase 5** (refactor) `6740c1a`: A3 버튼 위젯 selects(disabled+trailing '출시 예정' 보존) + 탭/대상 picker는 구조 보존·트리거 styling만(중첩 포지셔닝 한계, 마스터 검토).
+- **Phase 6** (refactor) `04492d9`: CreatableCombobox→패널 creatable(외부 API 동일·소비처 무수정, 생성/로딩/에러/중복검증 보존).
+- **Phase 7** (refactor) `16f6798`: B 런타임 위젯(SingleDropdown·MultiSelectDropdown.widget multi·Dropdown.widget native→패널, SelectorDropdown 라우터).
+- **Phase 8** (refactor) `8bcb7a8`: C 폼 빌더(Selection 단/다중·Condition·Connection·ConnectionConfig 캐스케이딩). Radio는 유지.
+- **Phase 9** (refactor) `855ff76`: D1 CreatePageForm/EditPageForm selects. ⚠️사이드바 네비 2파일은 트리 구조라 의도적 미변경(🟢 부적합, 마스터 검토).
+- **Phase 10** (refactor) `cf4a60b`: D2 RoleSelect·PageAccessList·AppTabContent·ThemeSwitcher·LanguageSwitcher 패널 single.
+
+### 영향 파일
+**data-craft** (i-dev) — 머지 커밋 `9f1d100`
+- `src/shared/i18n/locales/{ko,en}.ts`
+- `packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/{ViewModeDropdownPanel,ViewModeExpandModal,types}.tsx` (creatable 확장)
+- `src/widgets/property-drawer/ui/` : viewer-editor 7 + WidgetTypeSelector·WidgetNavigatorDropdown·SelectorGeneral/DataSection·button-editor(ButtonGeneral/Action/TargetPopover)·TabContentSelector·CreatableCombobox
+- `src/widgets/selector-widget/ui/SingleDropdown.tsx`, `src/shared/ui/widgets/{Dropdown,MultiSelectDropdown}.widget.tsx`
+- `src/features/form-builder/ui/{SelectionFieldRenderer,ConditionItem,ConnectionFieldRenderer,ConnectionConfigEditor}.tsx`
+- `src/features/page-management/ui/{CreatePageForm,EditPageForm}.tsx`
+- `src/widgets/settings-dialog/ui/{RoleSelect,PageAccessList,AppTabContent}.tsx`, `src/features/theme-switcher/ui/ThemeSwitcher.tsx`, `src/shared/ui/LanguageSwitcher.tsx`
+
+### 비고
+- 게이트: build:packages 9/9, typecheck:all 8/8, lint 0 errors(머지 후 i-dev 재실측 포함). advisor 계획·완료 2회 PASS. P2 backward-compat은 git diff 자체검증(제거 2줄=import 확장·noMatch 재구성, 선택 로직 0줄 제거).
+- 머지 충돌 1건: ThemeSwitcher.tsx import — i-dev의 #390(로그인 테마/언어 계측)이 추가한 getResolvedTheme와 본 작업 패널 import 양측 보존으로 해소(본문은 계측 track('theme_change')+패널 재작성 결합).
+- **마스터 시각 검토 대상(시각/구조 deviation)**: ①P4 WidgetTypeSelector 그룹카드→평면·OnboardingHint 제거 ②P5 탭/대상 picker 트리거 styling만 ③P9 사이드바 네비 미변경(트리). 필요시 hotfix(slot 활용·hint 재배선) 또는 해당 컴포넌트 제외 결정.
+- **Tier 1+2+3 누적 통일 ~50표면 → 한 번에 통합 시각 확인 권장**. 런타임 미검증(메인 세션 블라인드). 루트 앱은 dev=fs_data_viewer src alias라 하드 리프레시로 반영.
+- 후속(별도 트랙): 🟡 속성 enum·모달 카드형 등 — 마스터 판단.
