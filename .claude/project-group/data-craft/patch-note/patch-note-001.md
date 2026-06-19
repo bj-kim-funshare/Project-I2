@@ -30515,3 +30515,38 @@ data-craft-server:
 - src/services/billingSubscription.service.ts, src/controllers/billing.controller.ts
 - src/services/seatChange.service.ts, src/controllers/seatChange.controller.ts
 - src/services/promotion.service.ts, src/routes/promotion.routes.ts
+
+## v001.994.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #383
+
+웹 **가이드 튜토리얼(코치마크/풍선) 시스템** 개선 7건 — 가독성·UX·시인성 향상 + 진입 플로우 버그 2건 수정. data-craft FE 단독.
+
+### 페이즈 결과
+- **Phase 1 (fix, req6·7)**: 진입 플로우 버그 2건. `useHeaderDialogs.ts` 의 `handleGuideOpen`·`handleGuideSelectTutorial` 에 `requestAnimationFrame` 1프레임 지연 적용 — req6(가이드 버튼 풍선 확인 시 깜박임): hint dismiss 후 다음 프레임에 모달 오픈으로 두 dim 오버레이 공존 제거. req7(모달 내 튜토리얼 선택 풍선 확인 시 시나리오 모달 미오픈): 피커(ScenarioPickerModal, modal=false)가 확인 클릭을 onPointerDownOutside 로 잡아 즉시 닫히던 현상을 마운트 1프레임 지연으로 해소. fs_data_viewer 패키지 미수정(루트 소비처 시퀀싱만 조정).
+- **Phase 2 (feat, req1)**: 키워드 굵게+다채로운 색. `src/features/onboarding/lib/renderHintBody.ts` 신설 — `colorizeBoldHtml` 가 본문 `<b>` 태그마다 등장 순서대로 5색 팔레트(blue→violet→emerald→amber→rose) 순환 주입. TutorialOverlay·DiscoveryHint 양쪽 적용. i18n 로케일 무수정(렌더측 처리).
+- **Phase 3 (feat, req5)**: 영역 집중 애니메이션. cutout 동일 좌표에 `tutorial-spotlight-ring` div + `@keyframes tutorial-spotlight-pulse`(파란 #3B82F6 glow, 1.6s 무한 펄스) 추가. 양쪽 풍선 적용, `pointerEvents:none`, `prefers-reduced-motion` 대응.
+- **Phase 4 (feat, req2)**: 건너뛰기 제거 → 우상단 연한 종료 버튼. TutorialOverlay 카드 푸터 건너뛰기 삭제, 카드 우상단(연한 #9AA2B1) "종료" 버튼 배치(클릭=stop). i18n `onboarding.exit` ko/en 추가. 진행 도트·카운트 유지.
+- **Phase 5 (feat, req4)**: 데이터 뷰어 선택 드롭다운 열린 뒤 안내. sectionCustom 시나리오 `widgetTextToViewer` 를 2단계 분리(목록 열기 → 열린 목록의 '데이터 뷰어' SelectItem 선택). WidgetTypeSelector controlled-open + `tutorialStore.widgetTypeDropdownOpen` 플래그 연동. 신규 스텝 `widgetSelectViewerOption` + i18n ko/en.
+- **Phase 6 (refactor, req3)**: 큰 영역 지시 풍선 세분화. audit 으로 확정한 3개 large 앵커 OnboardingHint 재타겟(anchorId 불변) — areaControlBar(컨트롤바 전체→추가 버튼), widgetTitleItems(Collapsible 전체→스위치 3개 묶음), userFormSaveForm(편집영역 전체→폼 편집 패널). 나머지 6개는 이미 작아 미변경.
+
+### 검증·후속 (마스터 확인 권장)
+- req6/7 은 정적 가설 기반 수정 — rAF 지연이 Radix focus-scope 정리 타이밍에 충분한지 런타임 확인 필요. 미해결 시 console 프로브로 1차증거 확보(추가 defer 튜닝 금지).
+- Phase 5 `onboarding.widgetTextToViewer.body` 가 hintRegistry 단발 discovery 힌트와 공유 → 해당 힌트 목적지 문구 약화. 별도 키 분리(`onboarding.widgetOpenTypeDropdown.body`) 핫픽스 후보.
+- Phase 5 뷰어 SelectItem 래핑의 실제 선택 동작·코치마크 표시는 렌더 검증 불가 → 수동 확인.
+- 시각 항목(색 팔레트·펄스 링·종료 버튼·세분화 앵커)은 메인 세션 렌더 불가 → dev 확인.
+
+### 영향 파일
+data-craft:
+- src/features/onboarding/lib/renderHintBody.ts (신설)
+- src/features/onboarding/ui/TutorialOverlay.tsx, src/features/onboarding/ui/DiscoveryHint.tsx
+- src/features/onboarding/model/scenarioRegistry.ts, src/features/onboarding/model/hintRegistry.ts, src/features/onboarding/model/tutorialStore.ts
+- src/features/onboarding/lib/useActiveOnboardingHint.ts
+- src/widgets/header/ui/useHeaderDialogs.ts
+- src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
+- src/widgets/property-drawer/ui/property-editors/TextPropertiesEditor.tsx
+- src/widgets/layout-canvas/ui/AreaControls.tsx
+- src/features/form-builder/ui/FormBuilderDialog.tsx
+- src/app/styles/index.css
+- src/shared/i18n/locales/ko.ts, src/shared/i18n/locales/en.ts
