@@ -30482,3 +30482,36 @@ data-craft 모바일 앱(data-craft-mobile) 바텀 메뉴 "페이지" 섹션 전
 - **런타임/시각 검증 미실시**(메인 세션 블라인드) → dev 재기동 후 마스터 화면 확인 필요. **#374(Tier 1)와 합쳐 한 번에 확인 권장** — 통일 패널 사용처가 자매 셀 6×2 + ext 2 + RowLink + 대시보드 2 + AggType×3 + DateTime 시·분×3 + Time×6으로 다수. 특히 시·분이 캘린더와 분리 동작·부모 위 표시되는지, 대시보드/집계가 모달 위에 뜨는지 확인.
 - 배포 안전: 본 작업은 배포 일시정지 사이에 WIP 브랜치에서만 진행, 머지는 배포 후 i-dev behind=0 확인 후 수행(외부 commit 충돌 없음).
 - 후속(별도 트랙): Tier 3(빌더/앱 ~50표면). 본 플랜 완료 시점 마스터 재안내.
+
+## v001.993.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #382
+
+코드 쿠폰 시스템 **서비스 BE**(data-craft-server) 구현. 추천 시스템(자동결제 전용·적립형)과 정반대 축의 **수동결제 전용·변동 할인률 단일·완전 독립** 시스템. 사용자가 보관함에 쿠폰 코드를 사전 등록하고, 수동결제 시점에 현재 조건에 맞는 쿠폰을 선택해 최종 결제액에 곱셈식 할인(min(floor(최종×%/100), 캡))을 적용받는다. Roadmap-13 ②번. ①dev DDL(4테이블) 선행 완료.
+
+### 페이즈 결과
+- **Phase 1**: 데이터 접근 계층 — `coupon.model.ts`(조회·등록·예약/확정/복원 connection-scoped + FOR UPDATE 락 + COUNT 재검증), `coupon.types.ts`, `constant.ts` CALL_ID.coupon.
+- **Phase 2**: 보관함 등록(POST /api/coupon/register)·조회(GET /api/coupon/wallet) API — 5단계 게이트(없음/비활성/만료/중복등록/소진) + 트랜잭션, PG UNIQUE(23505)→ALREADY_REGISTERED. owner-only.
+- **Phase 3**: 카테고리 판정(`couponCategory.service.ts` resolveTransactionCategory — 견적 재사용 plan/seat 분해, 플랜과금0+좌석만→seat_add) + 자격평가 API(POST /api/coupon/evaluate, 전체 보관함 쿠폰 usable 플래그+불가 사유+할인 미리보기). read-only.
+- **Phase 4**: 결제 적용 공통 헬퍼(`couponDeduction.service.ts`) — 낙관적 사전 예약 3단계(reserve: FOR UPDATE→재검증→affectedRows=1 원자 예약→COUNT(used)≤max 캡; confirm; restore[conn+self-txn 2변형]).
+- **Phase 5**: first-payment·upgrade 배선 — 서버 카테고리 재계산(FE 신뢰 금지), first-payment는 별도 pre-charge 트랜잭션 예약+self-txn restore, upgrade는 in-txn(rollback 자동복원).
+- **Phase 6**: seat-change(→executeUpgradeWithDiff 위임, seat_add)·promotion-purchase(3-phase: A 예약 / B charge / C confirm, 양 실패경로 restore) 배선.
+
+### 핵심 설계
+- 쿠폰↔결제 연결 = `coupon_wallet.used_payment_id`+status='used'. payment_history 스키마 무변경.
+- 동시성: coupon_code FOR UPDATE 직렬화 + 낙관적 예약으로 max_redemptions 캡·1인1회 원자 보호.
+- 추천 파이프라인(computeDeductionPlan)·auto-renewal·프로모션 스냅샷 청구 경로 **무변경**(grep 확인). 추천 적립 base는 코드쿠폰 할인 전 원액 유지(독립성 보존).
+
+### ⚠️ 운영 단서 (후속 검토)
+- **first-payment 고아 예약**: charge()가 트랜잭션 외부라 pre-charge 예약 커밋 후 charge 중 프로세스 사망 시 wallet이 'used'+used_payment_id=NULL로 고아 잔존 가능(upgrade/promotion은 in-txn 안전). → `used_payment_id IS NULL AND used_at < NOW()-TTL` wallet을 'registered' 복원하는 sweeper(scheduled job) 후속 권장 또는 운영 수동 복원.
+- **추천 적립 base 결정**: 코드 쿠폰이 추천 적립 base를 줄이지 않음(할인 전 원액). "완전 독립" 설계와 부합 — 의도 결정으로 기록.
+
+### 영향 파일
+data-craft-server:
+- src/models/coupon.model.ts, src/types/coupon.types.ts, src/config/constant.ts
+- src/services/coupon.service.ts, src/services/couponCategory.service.ts, src/services/couponDeduction.service.ts
+- src/controllers/coupon.controller.ts, src/routes/coupon.ts, src/routes/index.ts
+- src/services/billingSubscription.service.ts, src/controllers/billing.controller.ts
+- src/services/seatChange.service.ts, src/controllers/seatChange.controller.ts
+- src/services/promotion.service.ts, src/routes/promotion.routes.ts
