@@ -31114,3 +31114,31 @@ data-craft (FE):
 - src/shared/hooks/useEmailVerificationFlow.ts
 - src/widgets/settings-dialog/ui/WithdrawDialog.tsx
 - src/widgets/settings-dialog/ui/SettingsFooter.tsx
+
+## v001.1018.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #399
+
+관리자 콘솔 "기업 플랜 관리" 편집 모달을 동시 수정 방지를 위한 단일-액션 편집형으로 재설계하고, 결제 주기 미결제 표기 및 사용자수/한도 보조정보를 추가했다.
+
+### 페이즈 결과
+- **Phase 1** (`811ca23`, data-craft-admin-server): 모달 보조정보용 `GET /api/admin/config/companies/:companyId/usage` 엔드포인트 신설. plan_type 기준 PLAN_LIMITS(핵심 3종, constant.ts) 한도 + 사용자수(`"user"` is_approved=1·is_deleted=0)·페이지(page_list+settings_form)·데이터그룹(data_group)·저장용량(file SUM(size)+data_values 행수×1KB)을 dataPool(mode) 병렬 조회. 반환 `{ currentUserCount, limits:{pages,dataGroups,storage} 각 {current,limit} }`, enterprise limit=-1(무제한). lint+build 통과.
+- **Phase 2** (`cba001d`, data-craft-admin): CompanyEditModal 을 액션 선택(picker) → 단일 필드 그룹 편집/제출 구조로 재설계(플랜 변경/결제 주기 변경/만료일 변경/좌석 수 변경, 각 폼 ← 뒤로). 플랜 변경 액션에 프로모션 부여/해제(기존 핸들러 재사용)+한도 3종(−1→∞, byte→MB/GB) 보조표기, 좌석 액션에 현재 사용자 수 보조표기. 결제 주기 null → "미결제" 표기(모달 현재값 + CompaniesPage 목록 셀, 드롭다운 옵션은 월간/연간 유지). 모달 오픈 시 usage 1회 fetch(오류 시 보조정보만 숨김). typecheck+eslint 통과.
+
+### ⚠️ 운영 주의
+- 관리자 콘솔(data-craft-admin/-server)은 배포 제외·`pnpm dev` 전용. admin BE 는 nodemon 자동 재기동, FE 는 vite HMR 로 반영.
+- usage 조회는 dataPool(mode) 읽기 only — admin 테이블 prod 적재 규칙 무위반.
+
+### 영향 파일
+data-craft-admin-server:
+- src/config/constant.ts
+- src/services/adminCompanies.service.ts
+- src/controllers/adminCompanies.controller.ts
+- src/routes/adminCompanies.routes.ts
+
+data-craft-admin:
+- src/entities/companies/api.ts
+- src/entities/companies/types.ts
+- src/pages/companies/CompanyEditModal.tsx
+- src/pages/companies/CompaniesPage.tsx
