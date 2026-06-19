@@ -31158,3 +31158,26 @@ data-craft:
 - src/app/router/TabContextHost.tsx
 - src/widgets/settings-dialog/model/settingsTabStore.ts
 - src/widgets/settings-dialog/ui/SettingsSidebar.tsx
+
+## v001.1020.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #396 (핫픽스3)
+
+로그인 후 비밀번호 재설정 화면(`PasswordChangeDialog`, 설정 → 계정 정보 → 비밀번호 재설정) QA 후속 6건. 전부 FE(BE 무변경 — 기존 `/api/user/verify-password` 재사용).
+
+### 핫픽스 결과
+- **① 문구 "변경"→"재설정"** (`e245029`): ko/en locale 5개 키(모달 타이틀·진입 버튼·제출 버튼·진행 중·성공·실패 메시지) 교체. 비번 필드 라벨은 유지.
+- **② 발송 게이팅(3칸)**: 현재/새/새 확인 3칸 모두 입력 전 인증 코드 발송 버튼 비활성(`canSend`).
+- **③ 발송 게이팅(일치)**: 새 비밀번호 2개 불일치 시 발송 비활성.
+- **④ 발송 전 현재 비밀번호 BE 검증**: `useVerifyPassword`로 검증, `INVALID_PASSWORD`면 발송 중단 + "현재 비밀번호가 올바르지 않습니다." 토스트(rate-limit도 "N초 후 재시도" 토스트로 통일).
+- **⑤ 재전송 버튼 디자인**: 최초 전송 버튼과 동일(secondary·w-full)로 통일.
+- **⑥ 만료 타이머 위치**: "이메일 인증" 라벨 행 우측 끝으로 이동.
+
+### 영향 파일
+data-craft (FE):
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+- src/widgets/settings-dialog/ui/PasswordChangeDialog.tsx
+- src/widgets/settings-dialog/ui/PasswordEmailVerificationSection.tsx
+- src/widgets/settings-dialog/hooks/usePasswordEmailVerification.ts
