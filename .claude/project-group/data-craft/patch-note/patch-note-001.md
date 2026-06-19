@@ -30684,3 +30684,40 @@ data-craft:
 data-craft-admin:
 - src/entities/companies/labels.ts (신규)
 - src/pages/companies/CompaniesPage.tsx
+
+## v001.1001.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #389
+
+웹 결제 흐름의 3가지 증상(① 결제수단 제거 후 프로모션 구독 시 결제 비밀번호 설정 구간 없음 ② 그 과정 후 결제수단 빈칸 ③ 수동 "카드 등록" 시 "결제 처리 중 오류")을 단일 근본원인으로 수렴해 수정. 시스템 불변식 **카드 등록 ⟺ 결제 비밀번호 설정**(status 가 비밀번호 미설정 시 카드를 마스킹)을 위반하던 두 흐름을 교정.
+
+### 근본 원인
+- `/billing/change-card` 가 `requirePaymentPassword()` 게이트를 요구(#271, 6/09 머지)하나, Toss 리다이렉트 복귀 흐름(`/billing/success`)은 비밀번호를 운반할 수 없어 FE 가 항상 비밀번호 없이 호출 → 모든 카드 등록/변경 실패(증상 3).
+- `BillingSuccessPage` 의 promotion-purchase fallback 이 비밀번호 설정 전에 `purchasePromotion` 을 호출 → `/promotion/purchase` 게이트(#91) 에서 거부, 비번 설정 모달 도달 불가. 카드는 등록됐으나 비번 미설정 → status 마스킹(#126h7)으로 빈칸(증상 1·2).
+
+### 페이즈 결과
+- **Phase 1** (data-craft-server `f5a2757`): `/billing/change-card` 에서 `requirePaymentPassword()` 미들웨어 제거 → `/billing/issue` 와 동일하게 owner 인증만. 카드 보호는 status 마스킹 + delete-card 게이트로 유지(근거 주석 추가). pnpm lint + tsc build PASS.
+- **Phase 2** (data-craft `4878192` + lint 핫픽스 `5278110`): `BillingSuccessPage` promotion-purchase 분기를 new-subscription 패턴으로 재배열 — `issueBillingKey` → 세마포어 해제 → `gate({forceSetup:true, onSuccess:(pw)=>purchasePromotion(...,paymentPassword:pw)})`. 카드 등록 직후 비밀번호 설정 단계가 결제 전에 삽입. (lint 핫픽스: gate 비동기 클로저 내 `promotionId` 내로잉 const 캡처, TS2322 해소.)
+- **Phase 3** (data-craft `b50583f`): 미사용·동종 결함(비밀번호 필드 누락) seat-change 죽은 코드 제거 — `useChangeSeats`/`billingApi.changeSeats`/`SeatChangeRequest`/`SeatChangeResponse`/배럴 재익스포트. 실사용 `changeSeatsWithPassword` 보존.
+
+### ⚠️ 배포 주의 (필수)
+- 본 수정은 i-dev 머지만으로는 prod 에 반영되지 않음.
+- **data-craft-server**: prod EC2 직접 `git pull` + 빌드 + `pm2` 재시작 필요(`aws-deploy` 푸시만으론 미반영).
+- **data-craft (FE)**: prod 빌드 후 gh-pages 재배포 필요.
+- 참고: 이번 증상이 "어제 배포 후 갑자기" 나타난 것은 누적된 결제 비밀번호 게이트(#91/#126/#271)가 prod 재시작 시점에 한꺼번에 활성화된 패턴으로 추정됨 — 재배포 누락 시 동일 활성화 갭 재발 가능.
+
+### 잔존 (범위 밖)
+- `/promotion/purchase` BE 컨트롤러가 FE 전달 `paymentSchedule` 미사용(latent dead field).
+- `BillingSuccessPage` 의 promotion 실패 토스트는 기존과 동일하게 generic(`paymentFailedWithContact`) — 거부 사유(reason) 매핑은 PromotionPurchaseDialog 경로에만 존재(파리티 유지, 회귀 아님).
+
+### 영향 파일
+data-craft-server:
+- src/routes/subscription.ts
+
+data-craft:
+- src/pages/billing-callback/ui/BillingSuccessPage.tsx
+- src/features/subscription/model/subscriptionQueries.ts
+- src/features/subscription/api/billingApi.ts
+- src/features/subscription/model/types.ts
+- src/features/subscription/index.ts
