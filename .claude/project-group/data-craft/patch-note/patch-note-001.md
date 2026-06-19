@@ -30897,3 +30897,26 @@ data-craft:
 ### 영향 파일
 data-craft-admin:
 - src/app/router/RootLayout.tsx
+
+## v001.1009.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #388 (핫픽스2)
+
+관리자 콘솔(data-craft-admin) 6개 페이지 전부에 "새로고침" 버튼을 추가했다.
+
+### 핫픽스 결과
+- **핫픽스2** (`d6787ee`): 공통 `RefreshButton` 컴포넌트(`src/shared/ui/RefreshButton.tsx` 신규 — lucide `RefreshCw` + Button secondary, 로딩 시 회전) 도입. Analytics 는 기존 새로고침 버튼을 RefreshButton 으로 교체(외형 일관화), Promotions/Coupons/InternalCompany/Companies 는 기존 `refresh` 콜백에 연결해 헤더 우측 배치, Dashboard 는 `refreshTick`+`refresh` 인프라를 신설(데이터 페치 deps `[mode, refreshTick]`)해 추가. 페이지별 loading 상태 연결(Companies=loading, Coupons/InternalCompany=listLoading, Promotions=statusLoading||listLoading, Analytics/Dashboard=loading). typecheck+eslint 통과.
+
+### ⚠️ 배포 주의
+- 관리자 콘솔(data-craft-admin)은 배포 제외·`pnpm dev` 전용 — 운영자 로컬에서 dev 재기동 시 반영.
+
+### 영향 파일
+data-craft-admin:
+- src/shared/ui/RefreshButton.tsx (신규)
+- src/pages/dashboard/DashboardPage.tsx
+- src/pages/promotions/PromotionsPage.tsx
+- src/pages/coupons/CouponsPage.tsx
+- src/pages/internal-company/InternalCompanyPage.tsx
+- src/pages/companies/CompaniesPage.tsx
+- src/pages/analytics/AnalyticsPage.tsx
