@@ -30857,3 +30857,26 @@ data-craft-admin:
 - src/features/coupon-form/CouponForm.tsx
 - src/pages/coupons/CouponsPage.tsx
 - src/app/router/index.tsx, src/app/router/RootLayout.tsx
+
+## v001.1007.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #389 (핫픽스2 — v001.1001.0/v001.1004.0 후속)
+
+결제 관련 동작 후 발생하던 "새로고침해야 보임" 류 + "결제 직후 플랜 관리창이 닫히고 메인으로 떨어짐" 문제를 전수 감사 후 일괄 수정(핫픽스1과 동일 결함 클래스).
+
+### 수정 (5건)
+- **#1 플랜 관리창 복귀 (UX 규칙)**: Toss 리다이렉트 결제 흐름의 **성공** 경로가 `navigate('/')`(메인)로 떨어지던 것을 `'/?openSettings=plan'`(플랜 관리창 복귀)로 교정. 신규구독·프로모션 결제 양쪽. (실패/잘못된 콜백 경로는 기존 유지.) 인플레이스 모달(인원수/업그레이드)은 이미 설정창 위에서 닫혀 플랜 관리로 복귀하므로 무변경.
+- **#2 promotionKeys 무효화**: `useExecutePayment` 가 첫 결제 시 활성 프로모션을 종료할 수 있는데 `promotionKeys` 를 무효화하지 않던 누락 보강(자매 `useUpgrade` 와 정합).
+- **#3 plan 배지 갱신**: 신규 구독 성공 후 auth store `planType`/`planExpiresAt` 미갱신으로 재진입한 플랜 탭이 옛 플랜/기능을 보이던 문제를, 성공 핸들러에서 `updateAccount({planType, planExpiresAt})` 호출로 즉시 반영.
+- **#4 쿠폰 지갑 무효화**: 결제 4종(첫결제·업그레이드·프로모션·즉시 좌석변경)이 사용한 쿠폰 지갑(`couponKeys.wallet()`)을 무효화하지 않아 사용한 쿠폰이 보관함에 "사용 가능"으로 남던 문제 보강.
+- **#5 결제 내역 무효화**: 동일 4종이 `payment-history` 쿼리를 무효화하지 않아 설정창 내 결제 후 내역이 새로고침 전까지 안 보이던 문제 보강.
+
+### ⚠️ 배포 주의
+- FE 핫픽스 — data-craft prod 빌드 후 gh-pages 재배포 필요.
+
+### 영향 파일
+data-craft:
+- src/pages/billing-callback/ui/BillingSuccessPage.tsx
+- src/features/subscription/model/subscriptionQueries.ts
+- src/features/subscription/ui/SeatManageDialog.tsx
