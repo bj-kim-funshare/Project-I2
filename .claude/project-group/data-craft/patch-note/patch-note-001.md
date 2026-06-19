@@ -30550,3 +30550,31 @@ data-craft:
 - src/features/form-builder/ui/FormBuilderDialog.tsx
 - src/app/styles/index.css
 - src/shared/i18n/locales/ko.ts, src/shared/i18n/locales/en.ts
+
+## v001.995.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #384
+
+**열 본문 스타일의 밑줄(underline)이 실제 셀에 적용되지 않던 버그를 모든 텍스트 표시 열 타입에 대해 전수 수정하고, 테마 색상 3종(보라/청록/회색)을 3개 뷰어 패키지에 일관 추가.** 밑줄 미적용 원인은 `isUnderline` → `textDecoration` 값이 `cellRendererChildModel` 로 모든 렌더러에 정상 전달되나 일부 셀 렌더러가 자기 스타일 객체에서 그 값을 누락(color/fontWeight 는 적용)한 데 있었다. 단일선택 상자는 그 누락 렌더러 중 하나였다.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `0e2afbd`: fs-data-viewer 의 밑줄 누락 텍스트 렌더러 전수 수정 — SingleSelect·MultiSelect·Tag·Nation·Document·RowLink(델리게이트 dispatcher 포함)·ConnectionMulti 의 표시 span 스타일 객체에 `textDecoration` 적용. 값은 `cellRendererChildModel.textDecoration`(RowLink 는 resolvedStyle 경유). 이미 정상이던 Text·Number·Link·LongText·User 등은 미변경.
+- **Phase 1 addendum (fix)** `471be84`: ConnectionMulti 칩 span 이 동일 클래스로 `fontWeight` 도 누락하고 있어("비슷한 문제 한번에 수정") `fontWeight: cellRendererChildModel.fontWeight` 추가 — 본문 스타일의 굵게도 연결 셀에 적용.
+- **Phase 2 (feat)** `1dd69c6`: fs-data-viewer 에 테마 색 3종 추가 — `purple`(id6, 보라, #7C4DFF)·`cyan`(id7, 청록, #26C6DA)·`grey`(id8, 회색, #9E9E9E). cellThemeColors·FsGridCellThemeTypes·i18n(types.ts + ko/en/zh/ja 4언어 parity). StyleSettingWidget 이 자동으로 8색 버튼 렌더(fs-data-viewer fontWeight=normal).
+- **Phase 3 (feat)** `8e62a0a`: 동일 3색을 fs-sub-data-viewer·fs-external-data-viewer 에 미러링. `themeType` 이 키 문자열로 직렬화 후 패키지별 로컬 테이블에서 재해석되므로, 자매/외부 뷰어에 같은 키가 없으면 새 색이 normal 로 폴백한다 — 이를 막아 뷰어 간 일관 해석 확보. fontWeight 는 두 패키지 기존 reference/safe 컨벤션대로 `bold`(fs-data-viewer 의 normal 과 다른 기존 드리프트 그대로, 의도적 parity).
+
+### 동작 변경 / 비고
+- 밑줄 기능 자체는 fs-data-viewer 에만 존재(모델·다이얼로그 토글). fs-sub/fs-external 은 구 모델이라 밑줄을 켤 수단이 없어 밑줄 수정은 fs-data-viewer 한정(의도적 경계). 색상은 재해석 일관성을 위해 3패키지 모두.
+- 신규 색의 fontWeight 비대칭(fs-data-viewer=normal vs 자매/외부=bold)은 기존 reference/safe/caution/warning 과 동일한 기존 드리프트를 따른 것 — 누락 아님.
+
+### 검증·후속 (마스터 확인 권장)
+- 각 페이즈 lint 게이트(`pnpm typecheck:all && pnpm lint`, i18n 4언어 parity 포함) exit 0.
+- 시각 항목(셀 밑줄·굵게·신규 3색 표시)은 메인 세션 렌더 불가 → dev 수동 확인 권장: 단일선택·멀티선택·태그·국가·문서·행링크·연결 열에 밑줄+신규 색 적용 후 셀 표시, 자매/외부 뷰어에서 동일 그룹 열어 새 색 정상 표시.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/{FsGridSingleSelectCellRenderer,FsGridMultiSelectCellRenderer,tag-cell,FsGridNationCellRenderer,FsGridDocumentCellRenderer,FsGridConnectionMultiCellRenderer,row-link} 셀 렌더러 (밑줄/굵게)
+- packages/fs-data-viewer/src/entities/cell-theme.types.ts, .../shared/config/theme/componentColors/gridColors.ts, .../shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}
+- packages/fs-sub-data-viewer/src/{entities/cell-theme.types.ts, shared/config/theme/componentColors/gridColors.ts, shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}}
+- packages/fs-external-data-viewer/src/{entities/cell-theme.types.ts, shared/config/theme/componentColors/gridColors.ts, shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}}
