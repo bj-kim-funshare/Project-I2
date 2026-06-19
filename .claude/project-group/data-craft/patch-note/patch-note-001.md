@@ -30623,3 +30623,27 @@ data-craft-mobile:
 data-craft:
 - src/features/onboarding/ui/ScenarioPickerModal.tsx
 - src/widgets/header/ui/useHeaderDialogs.ts
+
+## v001.998.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #386
+
+코드 쿠폰 시스템 **관리 BE**(data-craft-admin-server) 구현. 관리자 콘솔에서 서비스 DB의 `coupon_code`를 CRUD하는 API를 promotion CRUD 선례(Roadmap-7)를 미러해 구축. Roadmap-13 ③번. ②서비스 BE(#382)·①DDL 선행 완료.
+
+### 페이즈 결과
+- **Phase 1**: `adminCoupon.service.ts` — listCoupons(deleted=false + target_categories array_agg 집계), createCoupon(withDataClient: coupon_code+coupon_code_target INSERT, 23505→COUPON_CODE_DUPLICATE), updateCoupon(FOR UPDATE before/after + target replace), toggleCoupon(NOT is_active), deleteCoupon(deleted=true 소프트삭제). writeAuditDev→authPool admin_coupon_audit(action create|update|delete, best-effort). 입력 검증(discount_percent 1~100·max_discount_krw≥0·max_redemptions>0). CALL_ID.admin.coupon.
+- **Phase 2**: `adminCoupon.controller.ts`(5 컨트롤러, req.admin.email·req.dbMode·sendResponse·errorCatch) + `adminCoupon.routes.ts`(GET /·POST /·POST /:id/update·POST /:id/toggle·POST /:id/delete, dbMode 미들웨어) + app.ts `app.use('/api/admin/coupons', verifyAdminToken, adminCouponRoutes)`.
+
+### 핵심 설계
+- coupon CRUD = promotion CRUD 미러. coupon_code/coupon_code_target는 dataPool(mode) 토글, admin_coupon_audit 자기기록은 authPool=dev 고정(메모리 admin_meta_not_in_prod 충족 — prod 토글에서도 audit는 dev).
+- DB 실측: DB_NAME_AUTH==DB_NAME_DATA==data_craft_dev, admin_coupon_audit·admin_promotion_audit 둘 다 data_craft_dev 실재. promotion CRUD 무변경.
+
+### ⚠️ 운영 단서 (후속)
+- **valid_until 미래 검증 미구현**: 관리자가 이미 만료된 코드 생성 가능(보관함 등록 시 즉시 거부되니 실해 없음, UX 누수) → FE(⑦) 검증 또는 후속 핫픽스.
+- **prod 단계(⑥)**: admin_coupon_audit는 prod 제외(어드민 prod 금지). coupon_code/coupon_code_target/coupon_wallet만 prod 반영.
+
+### 영향 파일
+data-craft-admin-server:
+- src/services/adminCoupon.service.ts, src/config/constant.ts
+- src/controllers/adminCoupon.controller.ts, src/routes/adminCoupon.routes.ts, src/app.ts
