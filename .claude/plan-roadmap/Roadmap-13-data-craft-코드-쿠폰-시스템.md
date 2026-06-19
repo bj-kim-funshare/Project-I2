@@ -10,7 +10,7 @@
 
 1️⃣ 🟢 /plan-enterprise data-craft — 코드 쿠폰 관리 BE (data-craft-admin-server, DDL 선행 필수). coupon_code CRUD(생성·수정·소프트삭제) via 토글 데이터 풀(서비스 DB coupon_code 거주), 각 쓰기 후 admin_coupon_audit 자기기록, verifyAdminToken+dbMode 보호. dev/prod 토글 준수. **[완료 2026-06-19 (plan-enterprise #386, closed): 2 페이즈 — adminCoupon.service(CRUD 5종+coupon_code_target replace+소프트삭제+writeAuditDev→authPool admin_coupon_audit)·controller·routes(/api/admin/coupons). promotion CRUD 미러·무변경. DB 실측 DB_NAME_AUTH==DB_NAME_DATA==data_craft_dev(audit는 authPool=dev 고정, prod 토글에도 dev — admin_meta_not_in_prod 충족). data-craft-admin-server i-dev 머지(로컬), patch-note v001.998.0. advisor 계획·완료 PASS. ⚠️ valid_until 미래 검증 미구현(만료코드 생성 가능, 등록서 즉시 거부되어 실해 없음 — FE/핫픽스 후속). 메모리 갱신.]**
 
-2️⃣ 🔴 /plan-enterprise data-craft — 코드 쿠폰 서비스 FE (data-craft, 서비스 BE 의존). ①보관함(AccountTab ReferralInfoDialog 위치) 코드 등록 + 등록목록 조회 ②결제화면 "쿠폰 선택"(서버 자격평가→전체목록 활성/비활성, 견적 스냅샷 종속 자동취소, 할인 미리보기).
+2️⃣ 🟢 /plan-enterprise data-craft — 코드 쿠폰 서비스 FE (data-craft, 서비스 BE 의존). ①보관함(AccountTab ReferralInfoDialog 위치) 코드 등록 + 등록목록 조회 ②결제화면 "쿠폰 선택"(서버 자격평가→전체목록 활성/비활성, 견적 스냅샷 종속 자동취소, 할인 미리보기). **[완료 2026-06-19 (plan-enterprise #392, closed): 5 페이즈 — 신규 src/features/coupon 모듈(referral 미러) + 보관함(ReferralInfoDialog 섹션) + 결제 4경로(upgrade·first-payment·seat-change·promotion) 쿠폰선택·미리보기·옵션변경 자동취소+다이얼로그닫기. first-payment=sessionStorage TTL30분+finally clear. data-craft i-dev 머지(#389/#390 전진분과 3-way 자동병합, #389 프로모션 결제 fix 보존+쿠폰 결합, typecheck:all exit 0 회귀없음), patch-note v001.1003.0. advisor 계획·완료 PASS. ⚠️ FE 렌더 블라인드 — dev 재기동+마스터 화면 확인 필요(보관함·결제 쿠폰UI·프로모션 결제·first-payment toss). 메모리 갱신.]**
 
 2️⃣ 🔴 /plan-enterprise data-craft — 코드 쿠폰 관리 FE (data-craft-admin, 관리 BE 의존). 쿠폰 목록·생성·수정·삭제(할인률·할인한도·유효기간·최대사용수·카테고리 OR·무조건 토글, 사용이력 있으면 소프트삭제만).
 
