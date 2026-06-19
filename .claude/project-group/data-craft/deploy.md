@@ -61,6 +61,15 @@ projects:
 - 모바일 GitHub owner 는 개인 계정 `bj-kim-funshare` (나머지는 조직 `funshare-inc`).
 - `data-craft-server` — AWS EC2 (또는 유사). Docker 미사용. **부분 자동 타겟**. `pre-deploy` 가 자동 수행: (1) main 기준 검증, (2) `pnpm build`, (3) `main` → `aws-deploy` 브랜치 fast-forward push. 이후 마스터가 EC2 인스턴스에 SSH 접속하여 `git pull && pnpm build && pm2 restart` 수동 실행 (AWS 측이 `aws-deploy` 브랜치를 pull).
 
+### APK 다운로드 호스팅 (A안 — 2026-06-19 명문화)
+
+모바일 안내 화면(`MobileNotSupportedScreen`)의 APK 다운로드 출처를 별도 호스트가 아닌 `data-craft` 웹 자체에 둔다 (A안 — 웹 동봉 self-host).
+
+- **번들 동봉**: `data-craft` gh-pages 배포 시 `data-craft-mobile` repo `apk-deploy` 브랜치의 `app-release.apk` + `MANIFEST` 를 빌드 산출 `dist/` 에 동봉하여 `https://datacraft.ai.kr/app-release.apk` 루트 경로로 서빙한다 (커스텀 도메인 루트 배포). `MANIFEST` 로 APK 버전·소스 커밋·빌드 시각을 확인.
+- **배포 순서 의존**: `data-craft-mobile-apk` 타겟 배포(`apk-deploy` push, `.claude/scripts/apk-deploy.sh`)가 `data-craft` 웹 배포보다 **선행**해야 최신 APK 가 `dist` 에 번들된다. 이 순서는 §배포 우선순위의 server-first 축과 독립적인 mobile→leader 의존이다.
+- **비용**: ~73MB 바이너리가 매 배포 gh-pages `dist` 에 재업로드된다 (GitHub Pages 파일 100MB 한도 내, repo·Pages 산출물 비대화 감수). 장기적으로 retention(최근 N개 유지) 또는 GitHub Releases 전환은 후속 검토 — 상기 §배포 전략 요약 `data-craft-mobile-apk` 의 orphan `apk-deploy` 브랜치 비대 메모와 **동일 과제 축**(중복 아닌 교차 참조).
+- **구현 의존 (미확정 — 2026-06-19 시점)**: `dist` 동봉 메커니즘(빌드 postbuild 훅으로 APK 복사 vs `deploy_command` 의 fetch 단계)과 `MobileNotSupportedScreen` 내 `/app-release.apk` 다운로드 링크 배선은 모두 `data-craft` 웹 구현(병행 진행 중)의 결과로 확정된다 — 현재 미구현이므로 본 항목은 기존 코드가 아닌 목표 상태 서술이다. 확정 전까지 frontmatter `deploy_command` 는 현행(`git checkout main && npx gh-pages -d dist`)을 유지하며, 구현 착지 후 실제 형태(fetch/copy 단계 포함 여부)에 맞춰 본 항목과 `deploy_command`/`build_command` 를 후속 `group-policy` 로 갱신한다.
+
 ## 배포 우선순위
 
 - **서버 (`data-craft-server`) 가 항상 우선**. FE 의존 변경(API 스키마 변경 등) 이 있을 시 server 먼저 배포 후 FE 배포.
