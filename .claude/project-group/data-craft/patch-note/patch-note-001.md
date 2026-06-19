@@ -30647,3 +30647,21 @@ data-craft:
 data-craft-admin-server:
 - src/services/adminCoupon.service.ts, src/config/constant.ts
 - src/controllers/adminCoupon.controller.ts, src/routes/adminCoupon.routes.ts, src/app.ts
+
+## v001.999.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #387
+
+디자인 모드에서 데이터 뷰어를 **그리드 뷰 + 행 그룹**으로 설정한 페이지가, 편집 없이 **접속만 해도** 상단 "저장"에 가짜 미저장 상태(녹색 점)가 켜지던 버그 수정. 일반(행 그룹 미사용) 그리드 뷰는 정상이었음.
+
+### 근본 원인
+`rowGroupingColumnField`(그룹화 기준 열 ID)의 number↔string 계약 위반. 뷰어 모델은 `String()` 정규화(`useViewerMetaLoader`)하는데 위젯 스토어는 raw 복사(`syncViewerSettings`·콜드 로드 `mapServerWidget`)로 number를 보존 → 마운트 sync 가드 `"5" !== 5`가 항상 true → `setRowGroupingColumnField` → `conditionalSave` → 디자인 모드 `markAsChanged()` → 가짜 미저장 상태. 행 그룹 미사용 시 effect가 빈 문자열로 early-return 하여 무사.
+
+### 페이즈 결과
+- **Phase 1** (`976f8791a`): `Viewer.widget.tsx`의 rowGroupingColumnField / defaultExpandedGroupValue 강제 sync 가드를 `String(a ?? '') !== String(b ?? '')` 비교로 교체하고 setter 인자도 `String(...)`로 정규화(주 수정). `syncViewerSettings.ts`의 SYNC_FIELDS 루프에서 `rowGroupingColumnField` 키만 `String()` 정규화하여 스토어 진입 시점에 불일치 근원 차단(보조). 칸반 sync effect·드로어 사용자 변경 경로·saveCallbacks markAsChanged 분기는 무수정(정상 동작 보존). lint(typecheck:all && lint) 통과.
+
+### 영향 파일
+data-craft:
+- src/widgets/viewer-widget/ui/Viewer.widget.tsx
+- src/widgets/viewer-widget/ui/syncViewerSettings.ts
