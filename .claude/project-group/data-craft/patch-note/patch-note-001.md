@@ -31220,3 +31220,17 @@ data-craft-admin-server:
 ### 영향 파일
 data-craft:
 - src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
+
+## v001.1023.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #402 (핫픽스1)
+
+복원된 그룹 카드형 위젯 타입 선택 드롭다운(WidgetTypeSelector)이 열린 상태에서 바깥(다른 화면)을 클릭하면 자동으로 닫히던 동작을 방지. 항목 선택·Esc·트리거 토글로 닫는 경로는 그대로 유지.
+
+### 페이즈 결과
+- **Phase 2(핫픽스1)** (`cd4b4d5`): `SelectContent` 에 `onPointerDownOutside={(e) => e.preventDefault()}` 단일 prop 추가 — Radix DismissableLayer 의 바깥 포인터다운 dismiss 를 취소. 제어형 Select(`open={selectOpen}`)의 onOpenChange(false) 호출이 차단되어 바깥 클릭으로 닫히지 않음. 1줄 교체, 린트 게이트(typecheck:all && lint) exit 0.
+
+### 영향 파일
+data-craft:
+- src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
