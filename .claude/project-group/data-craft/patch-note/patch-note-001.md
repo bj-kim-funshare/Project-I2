@@ -30920,3 +30920,17 @@ data-craft-admin:
 - src/pages/internal-company/InternalCompanyPage.tsx
 - src/pages/companies/CompaniesPage.tsx
 - src/pages/analytics/AnalyticsPage.tsx
+
+## v001.1010.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #395
+
+데이터 뷰어가 있는 페이지에 접속하자마자 새로고침 버튼에 변경 뱃지(빨간 dot)가 떠 있던 문제를 해결했다. 페이지 접속 직후에는 항상 최신 데이터가 로드되므로 뱃지는 꺼져 있어야 정상이다.
+
+### 페이즈 결과
+- **Phase 1** (`bf4ebc50a`): 근본 원인 = SSE `data:changed` 가 다른 멤버의 변경 시 인메모리 스토어(`viewerBadges`)에 뱃지를 set 하는데, 내가 해당 그룹을 보지 않던 동안 쌓인 stale 뱃지를 뷰어 진입(초기 로드) 시 정리하는 로직이 없었음. 기존엔 수동 새로고침 버튼 클릭(`onBadgeClear`)에서만 해제. 해결 = `Viewer.widget.tsx` 에 useEffect 추가 — 뷰어 마운트/그룹 전환 시점에 `clearViewerBadge(dataViewerField)` 호출로 stale 뱃지 해제. 마운트 시점 해제이므로 이후 비동기로 도착하는 정당한 변경 이벤트는 보존된다(회귀 없음). FE-only, BE 무수정.
+
+### 영향 파일
+data-craft:
+- src/widgets/viewer-widget/ui/Viewer.widget.tsx
