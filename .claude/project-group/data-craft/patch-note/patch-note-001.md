@@ -31092,3 +31092,25 @@ data-craft (FE):
 
 data-craft-server (BE):
 - src/services/auth.service.ts
+
+## v001.1017.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #396 (핫픽스2)
+
+회원 탈퇴 본인확인 모달(`WithdrawDialog`) QA 후속 4건. 전부 FE(공유 컴포넌트/훅 포함, BE 무변경 — 기존 `/api/user/verify-password` 재사용).
+
+### 핫픽스 결과
+- **① 발송 버튼 게이팅** (`e30fa24`): `EmailVerificationSection`에 `canSend`(기본 true) prop 추가 → 비밀번호 미입력 시 인증 코드 발송 버튼 비활성. WithdrawDialog→SettingsFooter에서 `canSend={!!withdrawPassword}` 전달.
+- **② 발송 전 비밀번호 검증** (`e30fa24`): `useVerifyPassword`로 발송 직전 BE 검증, `INVALID_PASSWORD`면 발송 중단 + "비밀번호가 올바르지 않습니다." 토스트.
+- **③ 만료 타이머 위치** (`e30fa24`): 타이머를 "이메일 인증" 라벨 행 우측 끝으로 이동(인증 코드 행에서 제거).
+- **④ rate-limit 토스트** (`e30fa24`): `useEmailVerificationFlow` 발송 catch에서 `RATE_LIMIT_EXCEEDED:N` 파싱 → "N초 후에 다시 시도해 주세요." 토스트(비밀번호 재설정 페이지와 통일).
+
+⚠️ ③·④의 공유 컴포넌트(`EmailVerificationSection`)·훅(`useEmailVerificationFlow`)은 계정 재활성화 화면도 사용 — 일관 적용(① `canSend` 기본 true라 무영향).
+
+### 영향 파일
+data-craft (FE):
+- src/shared/ui/EmailVerificationSection.tsx
+- src/shared/hooks/useEmailVerificationFlow.ts
+- src/widgets/settings-dialog/ui/WithdrawDialog.tsx
+- src/widgets/settings-dialog/ui/SettingsFooter.tsx
