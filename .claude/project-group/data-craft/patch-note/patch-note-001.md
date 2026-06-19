@@ -31070,3 +31070,25 @@ data-craft-admin-server:
 data-craft-admin:
 - src/entities/internalCompany/types.ts
 - src/pages/internal-company/InternalCompanyPage.tsx
+
+## v001.1016.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #396 (핫픽스1)
+
+로그아웃용 비밀번호 재설정 화면(`ResetPasswordRequestPage`, 로그인 → 비밀번호 재설정) QA 후속 3건.
+
+### 핫픽스 결과
+- **① 미가입 이메일 거부** (`0ad51ae` BE / `aab0cbd` FE): BE `sendVerificationCode`에 `purpose==='password-reset' && !existsUserByEmail` → `EMAIL_NOT_REGISTERED` 거부(rate-limit 체크 이전 배치, password-reset 한정). FE는 이 코드를 "가입되지 않은 이메일입니다." 토스트로 매핑.
+- **② rate-limit 대기 안내** (`aab0cbd`): BE가 던지는 `RATE_LIMIT_EXCEEDED:N`(N=대기 초)을 FE가 정규식 파싱해 "N초 후에 다시 시도해 주세요." 토스트로 안내(기존엔 날것 코드 노출).
+- **③ 이메일 입력 필터** (`aab0cbd`): 로그인 화면(`SigninForm`)과 동일하게 `filterEmailInput`(ASCII 0x21~0x7E만 허용) + `onCompositionEnd` + `onBeforeInput` non-ASCII 차단, 발송 전 형식 정규식 검증.
+
+### ⚠️ 배포 주의
+- data-craft-server(BE)는 i-dev 머지만으로 prod 미반영 — EC2 git pull + pm2 재시작 필요. FE(data-craft)는 gh-pages 경로.
+
+### 영향 파일
+data-craft (FE):
+- src/pages/auth/reset-password/ResetPasswordRequestPage.tsx
+
+data-craft-server (BE):
+- src/services/auth.service.ts
