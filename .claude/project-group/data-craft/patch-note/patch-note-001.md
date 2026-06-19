@@ -30721,3 +30721,56 @@ data-craft:
 - src/features/subscription/api/billingApi.ts
 - src/features/subscription/model/types.ts
 - src/features/subscription/index.ts
+
+## v001.1002.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #390
+
+관리자 콘솔 분석(공용/기업 인증 + 테마/언어) 집계가 출시 전 prod 에서 "예상 범주 밖"으로 잡히던 5종 결함을 전수 재검증 후 재정비. 분류 코드 골격은 정상이었고, 원인은 수집·집계 정의(IP 사내판정·자동로그인 계측 누락·properties 롤아웃 함정·분포 쿼리 전이벤트 집계)에 집중.
+
+### 마스터 제품 결정
+- 사내(internal) 판정에서 IP 방식 완전 제거 → 지정 기업 ID(admin_internal_company_id is_active=1)만. 인증탭은 익명(company_id 없음)이라 사내/외부 분해 표기 제거(총수치만), 메인 대시보드는 company_id 기반 사내 유지.
+- 자동로그인 재정의 = 리프레시 토큰으로 access token 재발급 시. 전용 `auto_login` 이벤트, 공용 단일 지표, 페이지/라우팅 무시. 기업 자동로그인 지표 제거, rememberMe 기반 폐기.
+- 테마/언어 = 공용 로그인(/signin)·기업 로그인(/login) 두 페이지 한정. 접속 시 현재값(테마 system은 prefers-color-scheme로 dark/light 변환) + 수동 변경 from→to. 분포는 방문자(anon_id/user_id)별 마지막 상태.
+
+### 페이즈 결과
+- **Phase 1** (data-craft-server `9914abf` + lint `130a414`): analytics 수집에서 INTERNAL_IPS·src_internal 주입 제거(properties 그대로 통과). `ANALYTICS_PROPERTIES_ENABLED` config-bomb 폐기 → properties 항상 INSERT(기본 false 플래그가 꺼지면 모든 properties 가 NULL 로 드롭되던 사일런트 회귀 클래스 제거). eslint PASS.
+- **Phase 2** (data-craft `a5aacfe`): 리프레시 재발급 시 전용 `auto_login` 이벤트 발화. fs-api `TokenRefreshConfig.onReissue?` + `setReissueCallback`(setAuthUpdateCallback 패턴 미러) 체인으로 mid-session 401 인터셉터 경로 커버, AuthProvider 자체 refreshAccessToken 성공에 직접 track 으로 콜드 리로드 커버(두 경로 상호 배타). useSignin 의 rememberMe 기반 auto_login 속성 제거. build:packages·typecheck:all·lint PASS.
+- **Phase 3** (data-craft `e41ea65`): 로그인 2페이지 테마/언어 계측. context.ts getAnalyticsTheme 를 getResolvedTheme 경유로 항상 dark/light 반환(원시 'system' 제거). AuthPage 마운트 시 /signin·/login 한정 theme_view·language_view(page 명시), ThemeSwitcher/LanguageSwitcher 변경 핸들러에 두 페이지 가드 + theme_change/language_change(from→to). typecheck:all·lint PASS.
+- **Phase 4** (data-craft-admin-server `adeefd0`): 집계 재정비. internal 필터 company_id 단독화(src_internal 제거, 메인 대시보드 internal 유지). getAuthMetrics 인증 지표/분포/퍼널 internal 산출 전면 제거(총수치만). MetricDef pageless 추가 → auto_login event 기반 페이지 무관 카운트, 기업 auto_login 제거. 테마/언어 분포를 두 로그인 페이지 방문자별 마지막 상태(DISTINCT ON CTE)로 재작성. eslint·tsc·dev psql 실측 PASS.
+- **Phase 5** (data-craft-admin `2a704a5`): 관리 콘솔 FE 정합. analytics 타입에서 internal 필드 제거, AuthMetricsCharts·DistributionCharts·AuthFunnelChart 의 "(사내 N)" 표시 제거. typecheck·lint PASS.
+
+### 후속 (범위 밖)
+- **데이터 초기화**: dev·prod `user_events` 전체 삭제는 본 코드 배포 후 별건 `/task-db-data` 로 수행(코드≠데이터 분리). 신규 수집 모델로 깨끗이 재적재.
+- **배포 주의**: data-craft-server 는 prod EC2 직접 pull + 빌드 + pm2 재시작, FE 2종은 prod 빌드 후 재배포 필요(머지≠prod 반영).
+- **watch-item (advisor #2)**: `auto_login` 은 정상 흐름에서 재발급당 1회지만, 콜드 리로드 직후 init 호출이 즉시 토큰 만료를 만나는 병리적 경우 이론상 2회 발화 가능(정상 흐름 미발생). prod 첫 데이터로 측정 후 필요 시 dedup 가드.
+- 자동로그인은 마스터 정의상 새로고침뿐 아니라 세션 중 토큰 만료 갱신마다 카운트됨.
+
+### 영향 파일
+data-craft-server:
+- src/services/analytics.service.ts
+- src/config/constant.ts
+- src/models/analytics.model.ts
+
+data-craft:
+- packages/fs-api/src/core/tokenRefresh.ts
+- packages/fs-api/src/core/client.auth.ts
+- packages/fs-api/src/core/client.ts
+- packages/fs-api/src/index.ts
+- src/shared/lib/apiClient.ts
+- src/app/providers/AuthProvider.tsx
+- src/features/auth/lib/useSignin.ts
+- src/shared/lib/analytics/context.ts
+- src/shared/ui/auth/AuthPage.tsx
+- src/features/theme-switcher/ui/ThemeSwitcher.tsx
+- src/shared/ui/LanguageSwitcher.tsx
+
+data-craft-admin-server:
+- src/services/adminAnalytics.service.ts
+
+data-craft-admin:
+- src/entities/analytics/types.ts
+- src/features/analytics-auth/AuthMetricsCharts.tsx
+- src/features/analytics-auth/DistributionCharts.tsx
+- src/features/analytics-auth/AuthFunnelChart.tsx
