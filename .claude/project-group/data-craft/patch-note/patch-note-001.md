@@ -30578,3 +30578,28 @@ data-craft:
 - packages/fs-data-viewer/src/entities/cell-theme.types.ts, .../shared/config/theme/componentColors/gridColors.ts, .../shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}
 - packages/fs-sub-data-viewer/src/{entities/cell-theme.types.ts, shared/config/theme/componentColors/gridColors.ts, shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}}
 - packages/fs-external-data-viewer/src/{entities/cell-theme.types.ts, shared/config/theme/componentColors/gridColors.ts, shared/config/i18n/{types.ts,translations/{ko,en,zh,ja}.ts}}
+
+## v001.996.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #385
+
+### 페이즈 결과
+- **Phase 1 (fix)** `7e9b2cd`: 모바일 APK 인증 유지 복구 — 네이티브 Dio 레이어에 영속 쿠키 자(`PersistCookieJar`) 도입. 기존 `web_credentials_stub/web` 조건부 import 세트를 `platform_auth_io/web` 세트로 교체하고, 네이티브에서 main Dio 와 refreshDio 가 동일 쿠키 자 싱글톤을 공유하도록 `CookieManager` 를 부착했다. `main()` 에서 `initPlatformAuth()` 를 await 한 뒤 `dioClient`(`late final`)를 생성해 초기화 순서를 보장. 웹의 `withCredentials=true` 동작은 1:1 보존. `dio_cookie_manager`·`cookie_jar`·`path_provider` 의존성 추가.
+
+### 동작 변경 / 비고
+- **근본 원인**: 모바일 인증 갱신이 브라우저 쿠키 자 전용 설계였다 — `refreshAccessToken()` 이 `POST /api/auth/refresh` 를 빈 body 로 보내고 브라우저가 HttpOnly refresh 쿠키를 자동 동봉해 주길 기대했으나, 네이티브엔 쿠키 자가 없어(`web_credentials_stub` no-op) 쿠키가 저장·재전송되지 않았다. access token 은 인메모리 전용이라 콜드스타트 시 null → 부팅 복원 refresh 실패 → `clearTokens()` → 전 화면 인증 cascade 붕괴(페이지·권한관리·플랜관리·채팅 동시 실패).
+- **해결**: 네이티브 쿠키 자가 `Set-Cookie`(HttpOnly·Secure·SameSite=None, Path=/api/auth)를 저장·재전송한다(HttpOnly·SameSite 는 브라우저 전용 개념이라 무시, Secure 는 prod HTTPS 충족). BE·보안정책 무수정, 웹 경로 무영향(A안).
+
+### 검증·후속 (마스터 확인 권장)
+- lint 게이트 `flutter analyze` exit 0.
+- 실기기 검증 필수(메인 세션 렌더 불가): APK 재빌드 → 로그인 → 앱 프로세스 강제 종료 후 재실행 시 세션 유지(로그인 화면 안 뜸) 확인 → 페이지·권한관리·플랜관리·채팅 화면 재로드 확인.
+- 잔존 가능성(인증 복구 후에도 남으면 별건 HOTFIX): 플랜관리 400(`/api/subscription/plans` 는 공개 엔드포인트), 채팅 채널생성 실패(Sendbird 초기화 순서 함정 후보).
+
+### 영향 파일
+data-craft-mobile:
+- pubspec.yaml, pubspec.lock
+- lib/main.dart
+- lib/api/dio_client.dart
+- lib/api/platform_auth_io.dart (신규), lib/api/platform_auth_web.dart (신규)
+- lib/api/web_credentials_stub.dart (삭제), lib/api/web_credentials_web.dart (삭제)
