@@ -31017,3 +31017,31 @@ data-craft (FE):
 data-craft-server (BE):
 - src/services/email.service.ts
 - src/services/auth.service.ts
+
+## v001.1014.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #397
+
+**모바일/소형 화면에서 data-craft 웹 접속 시 뜨는 "태블릿 또는 PC 전용" 안내 화면에 Android APK 다운로드 영역 추가.** APK(data-craft-mobile)를 웹과 같은 origin 에서 호스팅(A안) — 배포 시 `public/` 에 동봉해 `https://datacraft.ai.kr/app-release.apk` 로 서빙하고, 안내 화면이 Android UA + 가용성 확인 시 다운로드 버튼을 노출한다.
+
+### 페이즈 결과
+- **Phase 1** (chore, data-craft) `34a48b8`: `scripts/fetch-apk.mjs` 신설 — gh api raw 로 private `apk-deploy` 브랜치의 `app-release.apk`(~70MB) + `MANIFEST` 를 `public/` 로 받아 `public/apk-manifest.json`(available/url/optional version) 생성. gh 미인증·파일 부재 시 경고 후 `available:false` 기록(exit 0, 빌드 계속). `package.json` 의 `build`/`build:firebase` 선두에 `pnpm fetch:apk &&` 명시적 체이닝(pnpm 10 prebuild 훅 무실행 회피). `.gitignore` 에 산출물 2건 추가.
+- **Phase 2** (feat, data-craft) `8cf3451`: UA-only `getMobileOs()`(`src/shared/lib/mobileOs.ts`, 화면크기 게이트 없음) 신설. `MobileNotSupportedScreen` 이 마운트 시 `/apk-manifest.json` fetch → `android && available` 일 때만 파란 다운로드 카드(`<a download>`, ServerUnreachableFallback 스타일) + 설치 안내 + (version 존재 시) 버전 표기, 그 외(iOS/other/unavailable)는 "iOS 추후 제공" 안내. ko/en i18n 키 5종 parity.
+
+### 동작 변경 / 비고
+- 안내 화면 감지/마운트 로직 무변경(다운로드 영역만 추가). PC/태블릿 진입 회귀 없음.
+- `deploy_command` 무변경 — APK fetch 는 build_command(`pnpm build`) 체이닝으로 흡수. deploy.md A안 명문화는 병행 group-policy 세션이 완료.
+- MANIFEST 에 version 토큰 부재 시 버전 표기 자동 생략(graceful degrade) — data-craft-mobile MANIFEST 표준에 version 추가는 후속 과제.
+- Android UA × manifest unavailable(미배포/dev) 분기는 iosNotice 로 폴백 — 정상 배포(available:true)에선 미발생, 운영 노출 시 핫픽스 1건으로 정리 가능.
+
+### 영향 파일
+data-craft (FE):
+- scripts/fetch-apk.mjs
+- package.json
+- .gitignore
+- src/shared/lib/mobileOs.ts
+- src/shared/lib/index.ts
+- src/app/MobileNotSupportedScreen.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
