@@ -16,12 +16,6 @@
 
 🟢 /task-db-structure data-craft — 코드 쿠폰 prod DDL. dev 검증된 동일 마이그레이션을 prod data_craft_production 적용. `분리` 정책상 dev 게이트 건너뛰고 prod 게이트만. additive·비파괴(구 prod BE 무회귀). **[완료 2026-06-19 (task-db-structure): prod psql data_craft_production(211.x) 적용·검증 — 서비스 3테이블(coupon_code/coupon_code_target/coupon_wallet)+enum 2종(7/2값)+UNIQUE(code_id,company_id)+인덱스 2. admin_coupon_audit 제외(의도, db.md §26 어드민 prod 금지)·prod 부재 검증 확인. 마이그레이션 20260619000000_coupon-code-system-prod. dev/staging 건너뜀·prod 단독, dry-run exit0→실적용 exit0→검증 통과, additive·구 prod BE 무회귀. i-dev 머지. advisor PASS. prod DB 완성 — ①~⑥(DB·BE·FE) 종결. 메모리 갱신.]**
 
-🔴 /patch-confirmation data-craft — 4 repo i-dev origin push(dev-merge PR base 확보 — plan-enterprise는 표준종료점에서 push 안 함).
-
-🔴 /dev-merge data-craft — i-dev → main (4 repo: data-craft-server·data-craft-admin-server·data-craft·data-craft-admin).
-
-🔴 /pre-deploy data-craft — 4 repo 배포(서비스 BE는 main:aws-deploy push+EC2 pull+pm2, FE는 gh-pages, 관리 콘솔 포함).
-
 ---
 
 ## 로드맵 설명
@@ -32,10 +26,10 @@ data-craft 코드 쿠폰 시스템 구현. 설계 동결 2026-06-18(메모리 pr
 
 **핵심 설계**: 할인률(%) 단일, 할인액=min(최종×p, 캡), 일회성. 카테고리 OR 7종(enterprise 제외, 좌석=플랜우선·과금분해). 2단계 흐름(보관함 사전등록→결제 시 서버 자격평가 선택·견적 종속 자동취소·서버 재검증 진실원천). 3테이블+관리 감사 1테이블.
 
-**순서**: dev DDL→BE 구축→FE 구축→prod DDL→origin push→i-dev→main 머지→배포. 첫달무료(Roadmap-10)·관리콘솔(Roadmap-7) 패턴 답습. 서비스 BE∥관리 BE(다른 repo 무의존, 그룹1), 양 FE(각 BE 의존, 그룹2).
+**순서**: dev DDL→BE 구축→FE 구축→prod DDL (①~⑥, 전부 완료). 배포(origin push→i-dev→main 머지→pre-deploy)는 본 로드맵 제외 — 차기 범용 배포 일괄(아래 "배포(제외)" 참조). 첫달무료(Roadmap-10)·관리콘솔(Roadmap-7) 패턴 답습. 서비스 BE∥관리 BE(다른 repo 무의존, 그룹1), 양 FE(각 BE 의존, 그룹2).
 
 **병렬 주의**: 병렬 plan-enterprise는 patch-note를 공유 I2 main 동시 author→버전 충돌 위험. 각 그룹에서 충돌 시 author 시점 max+1·머지 직후 dup grep·내 버전 중복이면 꼬리 renumber commit --amend로 회복(memory: patchnote_version_collision_shared_main). 부담되면 순차 실행.
 
-**배포 대안**: Roadmap-10처럼 단독 배포 대신 누적 미배포분과 차기 범용 배포에 일괄 가능(그 경우 마지막 patch-confirmation→dev-merge→pre-deploy 3프롬프트는 범용 배포로 대체). 타이밍 마스터 결정.
+**배포(제외, 2026-06-19 마스터 결정)**: ⑦patch-confirmation·⑧dev-merge·⑨pre-deploy 배포 사슬은 본 로드맵에서 **제외**. 코드/DB 작업(①~⑥)은 전부 완료(prod DB 포함). 배포는 코드 쿠폰 단독이 아니라 누적 미배포분과 **차기 범용 배포**(4 repo i-dev origin push → i-dev→main 머지 → pre-deploy)에 일괄. 타이밍 마스터 결정. → 본 로드맵은 ①~⑥ 전부 🟢로 사실상 종결.
 
 **외부 전제**: prod 결제 PostgreSQL 컷오버 완료(Roadmap-6). 관리 콘솔 prod DB명=data_craft_production(메모리 admin_prod_datapool_db_name).
