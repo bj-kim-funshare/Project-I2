@@ -31203,3 +31203,20 @@ data-craft-admin-server:
 - src/services/adminCompanies.service.ts
 - src/config/constant.ts
 - src/utils/billing-date.util.ts (신규)
+
+## v001.1022.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #402
+
+디자인(빌더) 모드 → 위젯 설정 드로어 상단의 **위젯 타입 선택 드롭다운(WidgetTypeSelector)** 을 #391(선택지 드롭다운 통일 Tier 3)에서 적용된 통합 `ViewModeDropdownPanel`(평면 리스트)에서 #391 직전 그룹 카드형 디자인으로 되돌림. 이 드롭다운은 통합 선택지 디자인의 **특수 케이스(예외)** 로 통합 디자인을 적용하지 않기로 마스터가 결정(#391 시각검토 deviation #1).
+
+### 페이즈 결과
+- **Phase 1** (`53184ab`): `WidgetTypeSelector.tsx` 를 `710d33813`(#391 직전 i-dev) 기준으로 외과적 복원 — 평면 패널 → 그룹 카드/접이식 카테고리(일반·데이터·뷰어·컨테이너)·설명문구·아이콘 박스 디자인 복귀. 복원 결과는 710d33813 버전과 byte-identical, `ViewModeDropdownPanel` 잔재 0. 튜토리얼 앵커(widgetSelectViewerOption·외부 셀렉터)는 원래의 SelectItem 래핑 형태로 보존(이후 `bec409902`의 평면 패널 trailing 앵커 적응은 그룹 디자인 복원으로 자연 무의미화). 린트 게이트(typecheck:all && lint) exit 0.
+
+### 비고
+- `WidgetNavigatorDropdown`(같은 드로어의 위젯 간 이동 네비)의 #391 통합은 유지 — 이번 범위 아님.
+
+### 영향 파일
+data-craft:
+- src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
