@@ -31142,3 +31142,19 @@ data-craft-admin:
 - src/entities/companies/types.ts
 - src/pages/companies/CompanyEditModal.tsx
 - src/pages/companies/CompaniesPage.tsx
+
+## v001.1019.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #400
+
+설정 다이얼로그가 열려 있을 때 브라우저 탭 파비콘을 계정/회사 로고가 아니라 **활성 설정 탭의 아이콘**으로 표기하도록 변경했다. 기본 설정 탭(플랜 관리·계정 정보·권한 관리·사용자 관리·앱 설정)은 각 탭 아이콘이, 사용자 설정 폼 탭은 그 폼에 지정된 아이콘이 파비콘에 나타난다.
+
+### 페이즈 결과
+- **Phase 1** (`bced31500`, data-craft): 설정 탭 전역 스토어 `settingsTabStore` 에 `activeTabIcon`(Lucide 이름) 상태·`setActiveTabIcon` 액션을 추가하고 `setOpen(false)` 시 레이블과 함께 초기화. `SettingsSidebar` 의 `TabConfig` 에 `iconName` 필드를 추가해 기본 탭 5종의 Lucide 이름(`CreditCard`/`Building2`/`Shield`/`Users`/`Settings`)을 명시하고, 활성 탭 레이블 기록 효과에서 아이콘 이름도 동시에 스토어에 저장(폼 탭은 `settingsForm.icon ?? 'FileText'`). `TabContextHost` 우선순위 1(설정 다이얼로그 열림) 블록을 계정 로고(`accountLogoUrl`) 대신 `iconNameToFaviconDataUri(activeTabIcon, 테마색)` → `setFavicon` 으로 교체(우선순위 3 페이지 파비콘과 동일 경로 재사용), 아이콘 없으면 `resetFavicon()` 폴백. 미사용된 `accountInfo`/`accountLogoUrl` 바인딩 제거. `pnpm typecheck:all && pnpm lint` 통과(0 errors).
+
+### 영향 파일
+data-craft:
+- src/app/router/TabContextHost.tsx
+- src/widgets/settings-dialog/model/settingsTabStore.ts
+- src/widgets/settings-dialog/ui/SettingsSidebar.tsx
