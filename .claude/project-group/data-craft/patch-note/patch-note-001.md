@@ -31181,3 +31181,25 @@ data-craft (FE):
 - src/widgets/settings-dialog/ui/PasswordChangeDialog.tsx
 - src/widgets/settings-dialog/ui/PasswordEmailVerificationSection.tsx
 - src/widgets/settings-dialog/hooks/usePasswordEmailVerification.ts
+
+## v001.1021.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #401
+
+관리자 기업 편집(POST /companies/:id/update) 및 프로모션 주입(assignPromotion) 경로가 서비스 정식 결제 로직을 우회해 raw UPDATE 로 plan_type/billing_cycle/plan_expires_at/seats 를 덮어쓰면서 발생하던 결제·invariant 결함 15건을 "안전 오버라이드(관리자 변경은 카드 과금 없음, 단 invariant·상태 일관성 유지)" 철학으로 수정. (전수조사 결과 — CRITICAL 3·HIGH 4·MEDIUM 4·LOW 2.)
+
+### 페이즈 결과
+- **Phase 1** (`9d670e9`): updateCompany 입력 검증·invariant 가드 — plan_type/billing_cycle enum 검증(M3), SEATS_MAX 10000→1000 정식 정합(M4), seats 변경 시 트랜잭션 내 activeUsers(is_approved=1·is_deleted=0) 조회로 target<max(active,1) 거부(C3, SEATS_BELOW_ACTIVE_USERS), plan_expires_at 파싱·범위 검증(C2). VALID_PLAN_TYPES/VALID_BILLING_CYCLES constant.ts export.
+- **Phase 2** (`4f81646`): updateCompany 상태 일관성·anchor 정합 — promotion-active 가드를 billingCycle·planExpiresAt까지 확장(H3/H4), 유료 플랜 변경 시 만료일 sentinel(2999↑)/과거면 addMonthsAnchored(now,1,anchor||today)+anchor 자동·유효미래 유지·enterprise 제외(C1/b), planExpiresAt 변경 시 billing_anchor_day=새 만료일 KST day-of-month 재계산(a), seats 직접 변경 시 client_seat_change_requests pending DELETE(M1), pending 일관 정리(M2). 신규 src/utils/billing-date.util.ts(KST addMonthsAnchored/kstParts 포팅).
+- **Phase 3** (`8be262f`): assignPromotion 정합(H2) — 플랜상태 가드 4종(ALREADY_ACTIVE/ENTERPRISE/PAID_PLAN/PENDING_CHANGE), snapshot_seats 를 max_seats 상한→협업 시 실 client.seats·비협업 null 로 교정(+범위·activeUsers 체크), plan_expires_at=addMonthsAnchored(now,1,anchor||today)+billing_anchor_day 원자 세팅. 서비스 purchasePromotion 비결제 핵심과 정합.
+
+### 후속 (LOW/비차단)
+- M2 교차 필드 pending 정리는 보수적 부분 해소(잔존 충돌은 별도 핫픽스 후보), 신규 에러코드 FE 한국어 매핑, L2 감사 로그 개선은 후속.
+- 과금은 일절 추가하지 않음(안전 오버라이드) — 정식 결제 위임은 스코프 외.
+
+### 영향 파일
+data-craft-admin-server:
+- src/services/adminCompanies.service.ts
+- src/config/constant.ts
+- src/utils/billing-date.util.ts (신규)
