@@ -31234,3 +31234,17 @@ data-craft:
 ### 영향 파일
 data-craft:
 - src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
+
+## v001.1024.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #402 (핫픽스2)
+
+핫픽스1 보완. 위젯 타입 선택 드롭다운을 열어둔 채 **다른 OS 창(터미널 등)을 클릭하면 여전히 닫히던** 문제 수정 — 윈도우 blur 경로.
+
+### 페이즈 결과
+- **Phase 3(핫픽스2)** (`896cebf`): 근본 원인 = Radix Select(SelectContentImpl) 내부 하드코딩 이펙트 `window.addEventListener("blur"/"resize", () => onOpenChange(false))` 가 윈도우 blur 시 무조건 닫음(prop 비활성 불가). 제어형 `onOpenChange` 를 `handleSelectOpenChange` 로 가드 — 닫힘 요청인데 `!document.hasFocus()`(윈도우 blur)면 무시하여 유지. 항목 선택·Esc·트리거 토글(문서 포커스 보유)은 정상 닫힘. 핫픽스1 의 onPointerDownOutside(문서 내부 클릭 차단) 가드도 유지. 린트 게이트 exit 0.
+
+### 영향 파일
+data-craft:
+- src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
