@@ -30834,3 +30834,26 @@ pending 좌석 행을 정리하는 곳이 프로모션 만료 경로(`promotion.
 ### 영향 파일
 data-craft-server:
 - src/models/client.model.ts
+
+## v001.1006.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #393
+
+코드 쿠폰 시스템 **관리 FE**(data-craft-admin) 구현. 관리자 콘솔에서 ③관리 BE CRUD API(`/api/admin/coupons`)를 소비하는 쿠폰 관리 화면을 promotion 관리 화면 미러로 구축. Roadmap-13 ⑤번(병렬 그룹 2 종료). ⚠️ FE 렌더 블라인드 — dev 재기동 후 마스터 화면 확인 필요.
+
+### 페이즈 결과
+- **Phase 1**: `src/entities/coupon/{api,types,index}` — promotion 엔티티 미러. dbModeHeader(X-DB-Mode) + fetchCoupons/createCoupon/updateCoupon/toggleCoupon/deleteCoupon, Coupon·CouponInput 타입(BE adminCoupon.service listCoupons+array_agg target_categories 정합).
+- **Phase 2**: `src/features/coupon-form/CouponForm.tsx`(PromotionForm 미러) — code·name·discount_percent + nullable 3필드(max_discount_krw·valid_until·max_redemptions) "제한있음 체크박스+입력 disabled→null" 통일 패턴, applies_all 토글+7종 카테고리 체크박스 멀티선택(false일 때), is_active. COUPON_CODE_DUPLICATE 토스트.
+- **Phase 3**: `src/pages/coupons/CouponsPage.tsx`(PromotionsPage 미러) 목록 테이블+편집·활성토글·**소프트삭제(useConfirm 안내)**, refreshTick·useDbModeStore. router /coupons + RootLayout '쿠폰' 메뉴 등록.
+
+### 핵심 설계 / 운영 단서
+- coupon entities/page/form = promotion 미러 + 차이 3개(필드축소·카테고리 OR 멀티선택·소프트삭제). useState+useEffect+refreshTick(React Query 미도입 일관). promotion 화면 무변경(additive). i-dev 클린 머지(충돌 0), typecheck&&lint 통과.
+- ⚠️ 소프트삭제(deleted=true)된 같은 code 재생성 시 UNIQUE 충돌 — 부활/하드삭제 UI 없음, 드문 케이스는 운영 수동 처리. 카테고리 한글 라벨·현황 카드·페이지네이션은 후속 후보.
+
+### 영향 파일
+data-craft-admin:
+- src/entities/coupon/{api.ts, types.ts, index.ts}
+- src/features/coupon-form/CouponForm.tsx
+- src/pages/coupons/CouponsPage.tsx
+- src/app/router/index.tsx, src/app/router/RootLayout.tsx
