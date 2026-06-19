@@ -30774,3 +30774,29 @@ data-craft-admin:
 - src/features/analytics-auth/AuthMetricsCharts.tsx
 - src/features/analytics-auth/DistributionCharts.tsx
 - src/features/analytics-auth/AuthFunnelChart.tsx
+
+## v001.1003.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #392
+
+코드 쿠폰 시스템 **서비스 FE**(data-craft) 구현. ②서비스 BE API(`/api/coupon/register`·`/wallet`·`/evaluate`)를 소비해 보관함 코드 등록·조회 UI + 수동결제 4경로 "쿠폰 선택" UI를 구축. Roadmap-13 ④번. ⚠️ FE 렌더는 메인 세션 블라인드 — dev 재기동 후 마스터 화면 확인 필요.
+
+### 페이즈 결과
+- **Phase 1**: `src/features/coupon/` 모듈(referral 미러) — api(register/wallet/evaluate, apiClient→response.data), model(couponQueries: useRegisterCoupon[wallet invalidate]·useCouponWallet·useCouponEvaluation[context 쿼리키]), types(BE 계약 1:1 미러), index. ko/en i18n.
+- **Phase 2**: 보관함 UI — CouponVaultSection(코드 등록 Input+Enter, BE 에러코드 6종 i18n 토스트, 등록목록 카드) → ReferralInfoDialog 현황 섹션 직후 additive 삽입(enabled={open}).
+- **Phase 3**: CouponSelectDialog(useCouponEvaluation→usable/unusable 분리·'쿠폰 미사용'·미리보기 onSelect) + 결제 request 타입 4종에 couponWalletId?:number.
+- **Phase 4**: upgrade·first-payment 통합 — UpgradeStepPayment(쿠폰 state+다이얼로그+옵션변경 리셋·닫기 effect+미리보기+onDirectPayment 4번째 optional 하위호환), first-payment sessionStorage(TTL 30분)→BillingSuccessPage 첨부+finally clear.
+- **Phase 5**: seat-change(증가 즉시결제만)·promotion 통합 — 각 다이얼로그 쿠폰 state+context+옵션변경 리셋·닫기+couponWalletId. PromotionPurchaseDialog는 usePurchasePromotion 훅이 couponWalletId 드롭 → promotionApi.purchase 직접호출 교체(isPending+invalidate).
+
+### 핵심 설계 / 머지
+- 신규 coupon feature 모듈을 보관함·결제선택이 공통 소비. 옵션 변경 시 선택 자동취소+다이얼로그 닫기(견적 스냅샷 종속). 서버 자격평가·결제 확정 모두 서버 재검증(FE 표시·전달만). 쿠폰 미선택 시 기존 결제 흐름 무회귀.
+- ⚠️ 실행 중 로컬 i-dev가 #389(프로모션 결제 비번 순서·카드등록 복구)·#390(분석 계측)로 전진 → 머지 시 PromotionPurchaseDialog/SeatManageDialog 3-way 자동병합. #389의 password gate 흐름 보존 + 쿠폰 호출 결합, typecheck:all exit 0(TS2322 회귀 없음) 확인.
+
+### 영향 파일
+data-craft:
+- src/features/coupon/{api/couponApi.ts, model/couponQueries.ts, model/types.ts, ui/CouponVaultSection.tsx, ui/CouponSelectDialog.tsx, index.ts}
+- src/features/referral/ui/ReferralInfoDialog.tsx
+- src/features/subscription/{model/types.ts, api/billingApi.ts, api/seatChange.api.ts, api/promotionApi.ts, ui/UpgradeStepPayment.tsx, ui/UpgradeDialog.tsx, ui/SeatManageDialog.tsx, ui/PromotionPurchaseDialog.tsx}
+- src/pages/billing-callback/ui/BillingSuccessPage.tsx
+- src/shared/i18n/locales/{ko,en}.ts
