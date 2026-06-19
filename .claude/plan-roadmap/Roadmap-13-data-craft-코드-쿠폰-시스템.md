@@ -14,7 +14,7 @@
 
 2️⃣ 🟢 /plan-enterprise data-craft — 코드 쿠폰 관리 FE (data-craft-admin, 관리 BE 의존). 쿠폰 목록·생성·수정·삭제(할인률·할인한도·유효기간·최대사용수·카테고리 OR·무조건 토글, 사용이력 있으면 소프트삭제만). **[완료 2026-06-19 (plan-enterprise #393, closed): 3 페이즈 — entities/coupon(promotion 미러)+CouponForm(nullable 3필드 체크박스·카테고리 7종 OR 멀티선택·applies_all 토글)+CouponsPage(목록·편집·토글·소프트삭제)+라우트/'쿠폰' 메뉴. promotion 관리 화면 미러·무변경. data-craft-admin i-dev 클린 머지(충돌 0), patch-note v001.1006.0. advisor 계획·완료 PASS. ⚠️ FE 렌더 블라인드 — dev 재기동+마스터 화면 확인. 소프트삭제 같은 code 재생성 UNIQUE 충돌(부활 UI 없음). 메모리 갱신.] (병렬 그룹 2 종료)**
 
-🔴 /task-db-structure data-craft — 코드 쿠폰 prod DDL. dev 검증된 동일 마이그레이션을 prod data_craft_production 적용. `분리` 정책상 dev 게이트 건너뛰고 prod 게이트만. additive·비파괴(구 prod BE 무회귀).
+🟢 /task-db-structure data-craft — 코드 쿠폰 prod DDL. dev 검증된 동일 마이그레이션을 prod data_craft_production 적용. `분리` 정책상 dev 게이트 건너뛰고 prod 게이트만. additive·비파괴(구 prod BE 무회귀). **[완료 2026-06-19 (task-db-structure): prod psql data_craft_production(211.x) 적용·검증 — 서비스 3테이블(coupon_code/coupon_code_target/coupon_wallet)+enum 2종(7/2값)+UNIQUE(code_id,company_id)+인덱스 2. admin_coupon_audit 제외(의도, db.md §26 어드민 prod 금지)·prod 부재 검증 확인. 마이그레이션 20260619000000_coupon-code-system-prod. dev/staging 건너뜀·prod 단독, dry-run exit0→실적용 exit0→검증 통과, additive·구 prod BE 무회귀. i-dev 머지. advisor PASS. prod DB 완성 — ①~⑥(DB·BE·FE) 종결. 메모리 갱신.]**
 
 🔴 /patch-confirmation data-craft — 4 repo i-dev origin push(dev-merge PR base 확보 — plan-enterprise는 표준종료점에서 push 안 함).
 
