@@ -30970,3 +30970,24 @@ data-craft:
 - **마스터 시각 검토 대상(시각/구조 deviation)**: ①P4 WidgetTypeSelector 그룹카드→평면·OnboardingHint 제거 ②P5 탭/대상 picker 트리거 styling만 ③P9 사이드바 네비 미변경(트리). 필요시 hotfix(slot 활용·hint 재배선) 또는 해당 컴포넌트 제외 결정.
 - **Tier 1+2+3 누적 통일 ~50표면 → 한 번에 통합 시각 확인 권장**. 런타임 미검증(메인 세션 블라인드). 루트 앱은 dev=fs_data_viewer src alias라 하드 리프레시로 반영.
 - 후속(별도 트랙): 🟡 속성 enum·모달 카드형 등 — 마스터 판단.
+
+## v001.1012.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #388 (핫픽스3)
+
+관리자 콘솔(data-craft-admin) 각 페이지의 h1 타이틀을 사이드바 라벨과 통일했다.
+
+### 핫픽스 결과
+- **핫픽스3** (`0c90890`): 5개 페이지 h1 타이틀을 사이드바 라벨과 일치하도록 변경하고 기존 `({mode.toUpperCase()})` 접미사를 제거(DB 모드는 헤더 토글+상단 PROD 배너로 표시되어 중복). 프로모션→프로모션 관리, 쿠폰→쿠폰 관리, 분석 대시보드→데이터 분석 및 통계, 기업 ID 관리→격리 기업 ID 관리, 기업 플랜 관리(접미사만 제거). DashboardPage는 이미 "대시보드"라 무변경. `mode` 변수는 잔존 사용처(useEffect deps·confirm 메시지)에 남아 unused 미발생. typecheck+eslint 통과. (버전: 병렬 잡 #391이 v001.1011.0 선점하여 v001.1012.0으로 채번.)
+
+### ⚠️ 배포 주의
+- 관리자 콘솔(data-craft-admin)은 배포 제외·`pnpm dev` 전용 — 운영자 로컬에서 dev 재기동 시 반영.
+
+### 영향 파일
+data-craft-admin:
+- src/pages/promotions/PromotionsPage.tsx
+- src/pages/coupons/CouponsPage.tsx
+- src/pages/analytics/AnalyticsPage.tsx
+- src/pages/internal-company/InternalCompanyPage.tsx
+- src/pages/companies/CompaniesPage.tsx
