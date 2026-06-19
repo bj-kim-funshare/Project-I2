@@ -30991,3 +30991,29 @@ data-craft-admin:
 - src/pages/analytics/AnalyticsPage.tsx
 - src/pages/internal-company/InternalCompanyPage.tsx
 - src/pages/companies/CompaniesPage.tsx
+
+## v001.1013.0
+
+> 통합일: 2026-06-19
+> 플랜 이슈: #396
+
+QA팀이 보고한 인증/탈퇴/회원가입 흐름의 UX 5건(논리 검증 결과 전부 실재)을 기존 컴포넌트/패턴 재사용으로 해결.
+
+### 페이즈 결과
+- **Phase 1** (`971790d`): 비밀번호 재설정 화면 인증코드 단계에 재전송 버튼 추가 — 만료와 무관하게(`isPending`만) 활성, `handleSendCode()` 재호출로 코드 재발송+타이머 리셋. i18n 키 `auth.register.resend` 재사용. (QA 1)
+- **Phase 2** (`dd4a7c0`): 회원 탈퇴 본인확인 모달 — 비밀번호 표시/숨김 토글 추가(`PasswordVisibilityButton`), `AlertDialogAction onClick`에 `e.preventDefault()`로 Radix 기본 닫힘 차단 → 비번 불일치 시 모달·이메일 인증 상태 보존(성공 닫힘은 controlled close 유지). (QA 2+4)
+- **Phase 3** (`79b4879`): 멤버(기업) 회원가입 `UserInfoStep` 비밀번호 필드에 `PasswordStrengthIndicator` 추가 — 공용 회원가입과 보안레벨 UI 일관성 확보. (QA 5)
+- **Phase 4** (`1a4a026`): 인증 메일 목적별 라벨 분기 — `sendVerificationEmail`에 `purpose` 파라미터(기본값 signup) 추가, 5개 목적(회원가입/회원 탈퇴/비밀번호 변경/비밀번호 재설정/결제 비밀번호 설정) 라벨 매핑 후 제목·HTML·텍스트 치환. 탈퇴 메일이 더 이상 "회원가입"으로 표기되지 않음. (QA 3)
+
+### ⚠️ 배포 주의
+- data-craft-server(BE)는 i-dev 머지만으로 prod 미반영 — EC2 git pull + pm2 재시작 필요(메모리 전례). FE(data-craft)는 gh-pages 경로.
+
+### 영향 파일
+data-craft (FE):
+- src/pages/auth/reset-password/ResetPasswordRequestPage.tsx
+- src/widgets/settings-dialog/ui/WithdrawDialog.tsx
+- src/pages/auth/subdomain-register/UserInfoStep.tsx
+
+data-craft-server (BE):
+- src/services/email.service.ts
+- src/services/auth.service.ts
