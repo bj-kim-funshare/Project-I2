@@ -31612,3 +31612,29 @@ data-craft:
 - data-craft-admin:src/shared/lib/apiClient.ts
 - data-craft-admin:src/entities/companies/api.ts
 - data-craft-admin:src/entities/internalCompany/api.ts
+
+## v001.1043.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #419
+
+모바일 페이지 상세 웹뷰의 인증 토큰 전달을 URL fragment(`#dc_token=`)에서 Flutter↔웹뷰 직접 통신 채널로 교체. access token 이 URL·webview history 에 일절 노출되지 않도록 보안 강화(dev.md §보안정책 "token in URL" 위반 해소, 보안 점검 #409 W1). 비-임베드 일반 웹 인증 흐름은 완전 무변경, BE/DB 무수정.
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: 웹 측 URL fragment 토큰 수신을 제거. `seedFragmentToken()`(hash 읽기)을 `seedEmbedToken()`(임베드+`dc_token` 쿠키 동기 읽기→인메모리 시딩→쿠키 즉시 삭제)으로 교체해 네이티브 부트 동기성 유지. flutter-web(iframe) 경로는 `initializeAuth` 가 첫 쿠키 refresh 이전에 `window.parent` 로 `dc_auth_request` 를 보내고 `dc_auth_token` 응답을 최대 3초 await 하며, 수신 `event.origin` 을 Flutter 호스트 allowlist 로 엄격 검증(`'*'` 미사용). 만료 시 v1 의 조용한 비인증 낙하 대신 reload 브리지(세션당 1회 한도)를 baseline 으로 구현. 채널 유틸은 `embedAuthChannel.ts` 신규 모듈로 분리.
+- **Phase 2 (data-craft-mobile)**: 모바일 측 fragment 송신 제거 + clean URL 로드. 네이티브(`!kIsWeb`)는 웹뷰 로드 직전 `CookieManager.setCookie`(name `dc_token`, path `/m`, isHttpOnly false, isSecure=https, sameSite Lax, 60초)를 await 하여 web origin 에 토큰 pre-seed → 웹이 동기로 읽고 즉시 삭제. flutter web(`kIsWeb`)은 조건부 import 시(io 스텁/web 호스트)으로 `window.onMessage` 리스너를 등록, 요청 `event.origin` 을 웹앱 allowlist(`datacraft.ai.kr`·`localhost:5173`)로 검증한 뒤 `event.source` 로 응답(targetOrigin=event.origin). lint 게이트 핫픽스 2회(EventListener 타입·getToken nullable·info lint 정리)로 `flutter analyze` 0 issues 도달.
+
+### 범위 메모
+- 자동 토큰 재주입은 선택적 후속(만료 baseline = reload). 과스코프로 후속 이관.
+- prod flutter-web postMessage 경로는 dead-code(출시 iOS/Android 바이너리는 네이티브 WebView 쿠키 경로 사용) — dev flutter-web(localhost:5174 iframe) 전용. 향후 prod flutter-web 배포 시 Flutter 호스트 allowlist 추가 필요.
+- 네이티브 실기기/에뮬 쿠키 pre-seed 는 코드 경로 정합성으로 바운드(실기기 스모크 테스트 권장).
+- billing 임베드 추가 시 `dc_token` 쿠키 path(`/m`) 와이어 계약 재검토 필요.
+- 완료 시점 검증은 advisor() 과부하로 **advisor-fallback 경유** PASS (5관점 전부 PASS).
+
+### 영향 파일
+- data-craft:src/app/providers/AuthProvider.tsx
+- data-craft:src/app/providers/embedAuthChannel.ts (신규)
+- data-craft:src/pages/mobile/MobilePageView.tsx
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+- data-craft-mobile:lib/screens/page/embed_auth_host_io.dart (신규)
+- data-craft-mobile:lib/screens/page/embed_auth_host_web.dart (신규)
