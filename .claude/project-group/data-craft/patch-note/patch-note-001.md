@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1045.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #420 (보안 점검 #411 BLK-2 / BLK-4)
+
+**스토리지 접근 통제 재설계 — `/storage` cross-tenant 파일 IDOR(BLK-2) + company-logo 무인증 stored-XSS(BLK-4) 동시 해결.** `data-craft-server/src/app.ts` 의 raw `express.static('/storage', …)` 마운트 2개(토큰만 검사·테넌트 미결속 / 무인증 디렉터리 서빙)를 제거하고, 모든 파일 접근을 소유권·인가 검증 컨트롤러(`/api/file/*`, `/api/auth/company-logo/:companyId`)로 일원화. 웹·모바일 기존 기능(채팅 아바타·로그인 로고·파일 다운로드/이미지·비디오/오디오 미리보기) 무손상.
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `f417c34`: `getCompanyLogoController` 를 JSON `{logoUrl}` 반환에서 로고 파일 바이트 직접 스트리밍으로 전환(무인증 유지). `getCompanyLogo` 가 `companyId`+회사명→`getClientFolderName`→`storage/<folder>/files/company-logo/` 경로 해석 후 `path.resolve`+logoDir prefix 검사로 경로탐색 차단, 확장자 allowlist(.png/.jpg/.jpeg/.gif/.webp, **.svg 제외**). Content-Type/`nosniff`/`Cache-Control`/`Content-Disposition: inline`/`Cross-Origin-Resource-Policy: cross-origin` 헤더. 외부 URL 로고는 302 리다이렉트. 회사당 로고 1개·companyId 스코프.
+- **Phase 2** (fix, data-craft-server) `73a802c`: `/api/file/image` 에 `nosniff`+`Content-Disposition: inline` 추가(기존 MIME 맵 유지 → 비디오/오디오/PDF 미리보기 무손상). `/api/file/download` 에 `nosniff` 추가(임의 파일 타입 서빙 유지). company-logo 업로드를 확장자+mimetype 이중 검증 이미지 전용 allowlist 로 제한(.svg·.html·.js 차단) → BLK-4 stored-XSS 원천 차단. `validateStoragePath` 를 `basePath + path.sep` 비교로 sibling-dir 우회 차단(WRN-4).
+- **Phase 3** (fix, data-craft) `da930ff`: 웹 로고 렌더링을 raw `/storage`(CloudFront `toAbsoluteUrl`) 에서 `authApi.getCompanyLogoImageUrl(companyId)` 바이트 엔드포인트로 전환(6개 파일, `logoUrl` 은 존재 플래그로만, onError 폴백+cache-bust). 아바타 무변경(이미 `/api/file/image[s]` 경유), 잔여 raw `/storage` 로고 참조 0.
+- **Phase 4** (fix, data-craft-mobile) `aead365d`: `user_avatar.dart` 아바타를 raw `/storage` 직접 fetch 에서 `/api/file/image?uri=${Uri.encodeQueryComponent(...)}`(authed dioClient Bearer 유지)로 전환. `tenant_header.dart` 로고를 무인증 바이트 엔드포인트 `Image.network` 로 전환(404→errorBuilder 기본 아이콘). dead `getCompanyLogo`/`CompanyLogoResponseDto` 제거, companyName 은 `getTenantInfo` 유지.
+- **Phase 5** (fix, data-craft-server) `5d45697`: `app.ts` 의 raw `express.static` 마운트 2개 완전 제거 — BLK-2 IDOR + BLK-4 XSS 루트 차단. 사용처 전수 이전 확인 후 제거, `path` import 정리.
+
+### 동작 변경 / 비고
+- **company-logo 엔드포인트 의미 전환**: `GET /api/auth/company-logo/:companyId` 가 JSON→이미지 바이트 스트림으로 변경. companyName 동반 반환은 사라졌으나 웹·모바일 모두 companyName 은 tenant-info 경로로 충당(소비처 회귀 확인 완료).
+- **채팅 테넌시 = 동일 회사 전용** 판정으로 별도 아바타 멤버십 엔드포인트 불필요(`/api/file/image` 의 profile-path 소유권 분기가 동일 회사 멤버 인가).
+- **컷오버 원자성**: 5페이즈가 배포 전 i-dev 에 함께 머지되어 prod 무영향(배포는 본 플랜 범위 밖).
+- **스코프 밖 후속(advisor 권고)**: 비-logo 카테고리 일반 `.svg` 업로드는 본 플랜(BLK-2/BLK-4) 범위 밖의 기존 사안 — 향후 하드닝 티켓 후보(예: `/image` svg 에 `Content-Disposition: attachment` 또는 CSP sandbox).
+
+### 영향 파일
+- **data-craft-server**: `src/controllers/auth.controller.ts`, `src/services/auth.service.ts`, `src/routes/file.ts`, `src/app.ts`
+- **data-craft**: `packages/fs-api/src/api/auth.ts`, `src/features/logo-upload/ui/CompanyLogo.tsx`, `src/features/logo-upload/ui/LogoUploadDialog.tsx`, `src/features/page-management/ui/PageEditPreview.tsx`, `src/pages/auth/SubdomainLoginForm.tsx`, `src/pages/auth/SubdomainRegisterPage.tsx`
+- **data-craft-mobile**: `lib/chat/widgets/user_avatar.dart`, `lib/screens/auth/widgets/tenant_header.dart`, `lib/screens/auth/company_signin_screen.dart`, `lib/api/auth_api.dart`, `lib/api/dto/auth.dart`
+
 ## v001.989.0
 
 > 통합일: 2026-06-18
