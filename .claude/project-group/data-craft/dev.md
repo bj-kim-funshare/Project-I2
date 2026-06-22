@@ -12,7 +12,7 @@ targets:
     cwd: /Users/starbox/Documents/GitHub/data-craft-mobile
     role: FE
     type: project
-    dev_command: flutter run -d chrome --web-port=5174
+    dev_command: flutter run -d chrome --web-port=5174 --dart-define-from-file=dev_login.json
     port: 5174
     cache_paths: [.dart_tool, build]
     lint_command: flutter analyze
