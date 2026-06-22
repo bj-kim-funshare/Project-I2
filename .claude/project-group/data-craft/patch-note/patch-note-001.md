@@ -1,5 +1,42 @@
 # data-craft — Patch Note (001)
 
+## v001.1053.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #430
+
+**data-craft-mobile 번들ID를 `kr.ai.datacraft.funshare.mobile` 로 교체하고 런처 표시이름을 로컬라이즈(ko=데이터크래프트 / 기타=Datacraft).** FCM(Firebase) 연동 사전 작업 — Firebase 콘솔 앱 등록에 필요한 고유 번들 식별자를 옛 도메인(`funshare.co.kr`, 소개 페이지) 기반에서 실서비스 도메인 `datacraft.ai.kr` 의 역DNS(`kr.ai.datacraft`) 기반으로 전환. 앱이 어느 스토어/TestFlight 에도 미게시 상태(릴리스 서명·배포 프로파일·CI·버전범프 전부 부재)임을 확인 후 안전하게 교체. FCM 핵심(번들ID)과 부가(표시이름 로컬라이즈)를 별도 페이즈로 분리해 FCM 차단 해소가 먼저 독립 착지하도록 설계. **Firebase 설정 파일(google-services.json / GoogleService-Info.plist)·firebase_messaging 배선·APNs 키는 별도 후속(이 플랜 범위 밖).**
+
+### 페이즈 결과
+- **Phase 1** (chore, data-craft-mobile) `3ed6bc6b`: Android 번들ID — build.gradle.kts namespace+applicationId 교체, MainActivity.kt 를 새 패키지 경로(`kr/ai/datacraft/funshare/mobile`)로 git mv + package 선언 갱신, 옛 `kr/co` 디렉터리 제거.
+- **Phase 2** (chore, data-craft-mobile) `d4b5e224`: iOS 번들ID — project.pbxproj PRODUCT_BUNDLE_IDENTIFIER 6곳(메인 3 → `kr.ai.datacraft.funshare.mobile`, RunnerTests 3 → `.RunnerTests`). Info.plist CFBundleIdentifier 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수라 자동 반영.
+- **Phase 3** (chore, data-craft-mobile) `6edd1edf`: Android 표시이름 로컬라이즈 — res/values/strings.xml(app_name=Datacraft, 폴백)·res/values-ko/strings.xml(app_name=데이터크래프트) 신규, AndroidManifest android:label → `@string/app_name`.
+- **Phase 4** (chore, data-craft-mobile) `d317bb6b`: iOS 표시이름 로컬라이즈 — Info.plist CFBundleDisplayName → Datacraft(폴백), ko.lproj/en.lproj InfoPlist.strings 신규, project.pbxproj 에 PBXVariantGroup(InfoPlist.strings) 등록 + Runner Resources 빌드페이즈 연결 + knownRegions 에 ko 추가(기존 storyboard variant group 패턴 동일).
+
+### 검증
+- **Android(Phase 1·3):** `flutter analyze`(No issues) + `flutter build apk --debug` 빌드 성공 — namespace↔R클래스 정합, `@string/app_name` aapt 해석 통과.
+- **iOS(Phase 2·4):** `plutil -lint` = OK(pbxproj 구조 유효), 신규 UUID 배선 grep 검증(buildfile↔Resources, variant group↔ko/en, knownRegions ko). ⚠️ **iOS 풀빌드 다운그레이드**: 빌드 머신에 iOS 디바이스 플랫폼 SDK(26.5) 미설치로 `flutter build ios` 불가(시뮬레이터 부팅 후 재시도도 동일 — 코드 무관 환경 한계). 머지 전/스모크 시 iOS 플랫폼 설치 머신에서 마스터 빌드 확인 권장.
+- 전수 grep: ios/android 식별자 맥락에서 옛 `kr.co.funshare`/`data_craft_mobile`/`dataCraftMobile` 0건.
+
+### 범위 메모 — macos/web/windows/linux 미변경 (의도된 분리)
+이 Flutter 프로젝트에는 android·ios 외에 **macos·web·windows·linux 스캐폴딩 타깃**이 존재하며, 이들에는 여전히 옛 식별자(`kr.co.funshare.datacraft.dataCraftMobile`)·표시이름(`data_craft_mobile`)이 남아 있다. 마스터 명령("양 플랫폼" = Android+iOS, FCM=모바일)의 범위 밖이며 비-출하 타깃(web 의 `data_craft_mobile` 은 dev Chrome 탭 제목에만 노출, 실 web 제품은 별도 data-craft FE repo)이므로 의도적으로 미변경. i-dev 의 식별자 split 은 oversight 가 아니라 의도된 상태. 전 플랫폼 통일이 필요하면 별도 핫픽스/플랜으로 진행(windows/linux 는 CMake `APPLICATION_ID` 등 별도 식별자 체계 → 별도 recon 필요). `pubspec.yaml` `name: data_craft_mobile`(Dart 패키지명)·iOS Info.plist `CFBundleName` 은 변경 대상 아님(전자는 모든 `package:` import 파괴, 후자는 CFBundleDisplayName 이 런처 우선).
+
+### manual_test_scenarios (머지 후 마스터 스모크)
+- **Android**: 에뮬레이터/실기기 `flutter run` → 앱 기동(MainActivity 해석) + 런처 라벨 ko 기기 `데이터크래프트` / 그 외 `Datacraft`.
+- **iOS**: **시뮬레이터**(DEVELOPMENT_TEAM 빈값 → 실기기 서명 실패는 정상) → 기동 + 시스템 언어 ko 시 런처 `데이터크래프트` / 그 외 `Datacraft`. lproj 배선이 최우선 확인 포인트.
+
+### 영향 파일
+data-craft-mobile:
+- android/app/build.gradle.kts
+- android/app/src/main/kotlin/kr/ai/datacraft/funshare/mobile/MainActivity.kt (이동, 구 kr/co/... 삭제)
+- android/app/src/main/AndroidManifest.xml
+- android/app/src/main/res/values/strings.xml (신규)
+- android/app/src/main/res/values-ko/strings.xml (신규)
+- ios/Runner.xcodeproj/project.pbxproj
+- ios/Runner/Info.plist
+- ios/Runner/ko.lproj/InfoPlist.strings (신규)
+- ios/Runner/en.lproj/InfoPlist.strings (신규)
+
 ## v001.1052.0
 
 > 통합일: 2026-06-22
