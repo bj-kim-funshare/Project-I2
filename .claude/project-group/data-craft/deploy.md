@@ -112,7 +112,7 @@ dev/prod DB 가 분리(`dev_prod_separation: 분리`, db.md)된 상태에서 dev
 
 > **env_management 값 의미 (2026-06-15 정정 — 역할별 구분)**. 기존 전 타겟 `git-tracked` 오선언이 deploy-validator 의 FE false-block 을 유발해 바로잡음.
 
-- **`git-tracked`** (BE — `data-craft-server`, `data-craft-admin-server`): 비시크릿 런타임 `.env` 를 git 에 커밋한다. 환경별 차등 값은 `{NAME}`/`{NAME}_PROD` 페어 + `NODE_ENV` 분기 (dev.md §"env 페어 패턴"). (`data-craft-admin-server` 는 추가로 `ADMIN_JWT_SECRET` + dev/prod 토글 풀 + `.env.local` 분리 운영 — db.md 참조.)
+- **`git-tracked`** (BE — `data-craft-server`, `data-craft-admin-server`): 런타임 `.env` 를 **시크릿 값까지 포함해** git 에 커밋한다 (funshare-inc 사설 private 조직 저장소 전제 위 경영 결정, 2026-06-22 — dev.md §env 정책·§보안정책과 1:1 대응). 환경별 차등 값은 `{NAME}`/`{NAME}_PROD` 페어 + `NODE_ENV` 분기 (dev.md §"env 페어 패턴"). (`data-craft-admin-server` 는 추가로 `ADMIN_JWT_SECRET` + dev/prod 토글 풀 + `.env.local` 분리 운영 — db.md 참조.) deploy-validator / dev-security-inspection / pre-deploy 드리프트 게이트는 BE 의 시크릿 포함 git-tracked `.env` 를 결함/차단 사유로 보고하지 않는다.
 - **`code-constants`** (FE/클라이언트 — `data-craft`, `data-craft-mobile`, `data-craft-ai-preview`, `data-craft-admin`): **prod 배포 산출물이 git-tracked `.env` 를 요구하지 않는다.** 시크릿(`VITE_TOSS_CLIENT_KEY`·`VITE_DEV_*`·`VITE_ADMIN_*`)을 보유하므로 `.env` 는 gitignore 하고(dev.md §보안정책 정합), dev 값은 gitignored `.env.local`, `.env.example` 은 커밋된 키 템플릿이다. 타겟별 prod 설정 출처:
   - `data-craft`: `src/shared/config/env.ts` `resolveUrl` 이 PROD 빌드에서 localhost/`.local`/사설IP 를 `PRODUCTION_API_URL`(CloudFront)로 강제 → 빌드 env 없이 prod URL 정합.
   - `data-craft-mobile`: Flutter — `lib/config/web_config.dart` 코드 상수 구동(env 파일 없음).
