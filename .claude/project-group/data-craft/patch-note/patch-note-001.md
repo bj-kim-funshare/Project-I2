@@ -31369,3 +31369,16 @@ data-craft:
 - data-craft-mobile:lib/screens/dm/channel_settings_screen.dart
 - data-craft-server:src/services/sendbird.service.ts
 - data-craft-server:src/controllers/chat.controller.ts
+
+## v001.1030.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #415
+
+데이터 크래프트 웹 디자인 모드 새 화면 생성 시 "이미 존재하는 화면 이름입니다" 빨강 문구가 순간 깜빡이던 버그 수정.
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: 생성 성공 직후 store `pages` 에 동명 신규 페이지가 추가되며 다이얼로그가 아직 열린 상태로 리렌더 → `isDuplicatePageName` 이 자기 자신과 매칭(self-match 거짓양성)되어 빨강 문구가 1~2 프레임 깜빡이던 현상 제거. `CreatePageDialog.tsx` 에 표시 전용 플래그 `showDuplicateName = isDuplicateName && !isSubmitting && open` 신설(두 게이트가 각각 pages-갱신 프레임/닫힘-애니메이션 프레임 담당), `CreatePageForm` 의 `isDuplicateName` prop 에 전달. 생성 버튼 disabled 조건의 raw `isDuplicateName` 은 유지해 실제 중복 이름 입력 차단·실시간 피드백은 그대로 보존. 로직상 해소이며 시각 확인은 마스터 검증 요망.
+
+### 영향 파일
+- data-craft:src/features/page-management/ui/CreatePageDialog.tsx
