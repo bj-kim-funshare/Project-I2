@@ -31275,3 +31275,17 @@ data-craft-admin-server:
 
 data-craft-admin:
 - src/pages/benefits/BenefitsPage.tsx (신규) · src/pages/benefits/CreditsTab.tsx (신규) · src/entities/credit/* (신규) · src/entities/referral-coupon/* (신규) · src/app/router/RootLayout.tsx · src/app/router/index.tsx · src/pages/promotions/PromotionsPage.tsx · src/pages/coupons/CouponsPage.tsx
+
+## v001.1026.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #406
+
+디자인 모드 사이드바 페이지 트리 DnD에서 "자식없는 비-선택상자 부모를 다른 부모 하위로 nest(연한 파란 배경) 불가" 증상을 진단하기 위한 **임시 화면 디버그 프로브**를 추가했다. 정적 분석상 동작해야 하나 런타임 실패하는 정적/런타임 모순(선례 #349 동일 패턴)이라, 드래그 중 mode·over·band·좌표·target을 화면 패널에 띄워 H1(밴드 좌표 불일치)/H2(4a 자식행 단축) 판별용 런타임 1차증거를 확보한다. **실수정과 프로브 제거는 마스터 스크린샷 확인 후 후속 핫픽스에서 진행** — 본 엔트리는 핫픽스 엔트리가 대체한다.
+
+### 페이즈 결과
+- **Phase 1** (`cda5d36`, data-craft): DesignSidebarDndArea.tsx에 DebugProbe 패널 추가(드롭 후 값 고정, 다음 드래그 시 초기화). DnD 결정 로직 무변경 — 순수 관측용.
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx
