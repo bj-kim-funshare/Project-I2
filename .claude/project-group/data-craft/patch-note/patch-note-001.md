@@ -31592,3 +31592,23 @@ data-craft:
 ### 영향 파일
 - data-craft-mobile:.gitignore
 - data-craft-mobile:dev_login.example.json
+
+## v001.1042.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #421
+
+관리자 콘솔(data-craft-admin, FE)의 관리자 액세스 토큰(JWT)을 localStorage 영속 저장에서 in-memory(zustand state) 보관으로 전환. 보안 점검 WARN 'A-3' 후속 — dev.md §보안정책("access token 은 모듈 스코프 또는 인메모리 스토어에만 보관") 정합. 마스터 결정 = 순수 인메모리(A안): 새로고침/탭 재오픈 시 세션 소멸·2단계 이메일 재로그인 수용(BE 변경 없음). 실위험은 낮았으나(XSS sink 0건·콘솔 배포 제외·로컬 전용) 방어심층 차원의 최소 변경.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-admin)**: `adminAuthStore`에서 STORAGE_KEY 상수·loadToken 함수·localStorage.setItem/removeItem 호출을 모두 제거하고 초기 state를 isAuthenticated:false·token:null로 고정. 모듈 하단에 단일 인메모리 출처 게터 `getAdminToken()` export 추가. `apiClient`의 STORAGE_KEY·localStorage.getItem 제거 후 getToken()이 getAdminToken() 경유. `companies/api.ts`·`internalCompany/api.ts`의 직접 localStorage.getItem('ADMIN_JWT') 블록도 getAdminToken() 단일 호출로 교체. 헤더 Bearer 배선·401 clearAuth·로그인 setAuth 경로 무변경. grep 검증 src/ 토큰 storage 0건(범위 밖 db-mode 키 2건만 잔존), 린트(pnpm typecheck && pnpm lint) 통과.
+
+### 범위 메모
+- `src/features/db-mode/model/dbModeStore.ts`의 localStorage는 dev/prod 보기 설정 영속화(토큰 무관)로 의도적 범위 밖 유지.
+- 동일 보안 점검의 .env 항목(A-1/A-2)은 정책상(사설 저장소 git-tracked 경영 결정) 철회되어 본 플랜 범위 아님.
+
+### 영향 파일
+- data-craft-admin:src/entities/auth/model/adminAuthStore.ts
+- data-craft-admin:src/shared/lib/apiClient.ts
+- data-craft-admin:src/entities/companies/api.ts
+- data-craft-admin:src/entities/internalCompany/api.ts
