@@ -1,5 +1,35 @@
 # data-craft — Patch Note (001)
 
+## v001.1052.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #429 (보안 점검 #409 잔여 의존성)
+
+**보안 #409 잔여 의존성 3건 버전업 — react-router-dom · vite · dompurify 를 취약점 수정 버전으로 청산.** pnpm audit 의 critical/high 중 prod 미도달로 검증됐던 react-router(framework-mode RCE/DoS)·vite(fs.deny)·dompurify(IN_PLACE/hook) 권고를 dev.md §의존성 정책에 따라 수정 버전으로 상향. range floor 를 고정 버전으로 올려 추후 fresh install 의 취약 버전 회귀를 차단. 비-임베드/일반 동작 무변경, BE/DB 무수정.
+
+### 페이즈 결과
+- **Phase 1** (chore, data-craft) `faa285b9` + `5fd815a8`(확장): 전 선언처 floor 상향 — root(react-router-dom ^7.15.1·vite ^7.3.5), fs-data-link(react-router-dom ^7.15.1·vite ^7.3.5), fs-data-viewer·fs-data-viewer-explorer(vite ^7.3.5), 뷰어 3패키지(dompurify ^3.4.11). pnpm install 로 lockfile 재생성. 1차 커밋 후 audit 재실행에서 fs-data-link/뷰어 자체 선언 구버전 dup(react-router 7.14.0·vite 7.3.2) 발견 → 확장 커밋으로 전 선언처 보완. 해석 버전: react-router(-dom) **7.18.0** 단일, vite 7.3.5 단일, dompurify 3.4.11(구버전 dup 완전 제거).
+
+### 검증
+- build:packages 9/9, typecheck:all 8/8, lint 0 errors(127 warnings 기존), 풀 빌드 ✓. lockfile churn 타깃 한정, peer 경고 없음.
+- pnpm audit 재실행: **high 3→0**, react-router/vite/dompurify 권고 전부 소멸.
+- **잔존 critical 1 = `shell-quote` (by design)**: 빌드타임 devDep `concurrency` 계열(`concurrently`) 경유, prod 번들 미도달 — 본 플랜 3개 타깃 외이며 concurrently 별도 범프가 필요한 별건. 차기 audit 의 critical=1 은 회귀가 아니라 의도된 잔존.
+
+### manual_test_scenarios (머지 후 런타임 스모크 권장)
+- react-router-dom 이 **7.18.0**(7.14→7.18, 4 minor)으로 상향됨 → 앱 기동 후 페이지 이동/라우팅 1회로 회귀 확인 (빌드는 컴파일만 커버, 런타임 라우팅 미커버).
+- 데이터 뷰어 인쇄 1회로 dompurify(3.4.11) 살균 경로 확인.
+- 주요 화면 블랭크/콘솔 에러 없음 확인.
+
+### 영향 파일
+data-craft:
+- package.json
+- packages/fs-data-link/package.json
+- packages/fs-data-viewer/package.json
+- packages/fs-data-viewer-explorer/package.json
+- packages/fs-external-data-viewer/package.json
+- packages/fs-sub-data-viewer/package.json
+- pnpm-lock.yaml
+
 ## v001.1049.0
 
 > 통합일: 2026-06-22
