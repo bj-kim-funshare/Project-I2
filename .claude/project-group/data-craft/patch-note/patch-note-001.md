@@ -31382,3 +31382,16 @@ data-craft:
 
 ### 영향 파일
 - data-craft:src/features/page-management/ui/CreatePageDialog.tsx
+
+## v001.1031.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #414
+
+빌드 시 모바일 APK 를 받아 담는 `scripts/fetch-apk.mjs` 의 침묵 실패를 조건부로 치명화. 2026-06-21 "소스에 APK 가 존재하는데도 담지 못한 채" 조용히 배포되던 사고 차단.
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: `probeApkExistence()` 헬퍼 추가 — 73MB 본문 다운로드 없이 GitHub Contents API 메타데이터(`gh api ... --jq .size`, 저비용 1콜)로 소스(`bj-kim-funshare/data-craft-mobile` `apk-deploy` 브랜치 `app-release.apk`) 존재를 먼저 확인. 소스가 **private** repo 라 404 가 "파일 부재"·"토큰 접근 상실" 둘 다를 의미하는 모호성을 브랜치 도달성 재확인(`gh api .../branches/apk-deploy`)으로 구분. 본문 fetch 실패 시 — 존재 확인됨(exists:true) → 명확한 에러 메시지 + `process.exit(1)` 로 빌드 중단(빌드 체인 `pnpm fetch:apk && tsc -b && vite build` 의 `&&` 단락으로 즉시 중단), 진짜 부재(exists:false) → 본문 fetch 생략 후 기존대로 `{available:false}` + exit 0(초기/롤백 상황 보호), 접근 상실/모호(exists:null) → loud 경고 후 non-fatal exit 0. "있는데 못 담음" 만 치명화하고 "없어서 안 담음" 은 통과 — 오탐 0. 기존 `ghApiRaw`/`parseVersion`/MANIFEST 흐름 보존, 국소 수정.
+
+### 영향 파일
+- data-craft:scripts/fetch-apk.mjs
