@@ -31488,3 +31488,17 @@ data-craft:
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/dm/chat_room_screen.dart
+
+## v001.1037.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #413 (핫픽스3)
+
+데이터 크래프트 모바일 세션 만료 시 로그인 화면 전역 리다이렉트.
+
+### 페이즈 결과
+- **핫픽스3 (data-craft-mobile)**: 자동 로그인 미설정 상태에서 세션(액세스 토큰) 만료 + refresh 실패 시, 현재 화면에 in-place 오류만 뜨고 로그인 화면으로 이동하지 않던 전역 버그 수정. dio 401 인터셉터의 복구 불가 분기(refresh 실패·토큰 null)에서 전역 콜백 `onAuthExpired` 호출 → `AuthController.setExpired()`가 미인증 전환(멱등) → 라우터 refreshListenable이 `/auth/signin`으로 리다이렉트. 네트워크 오프라인/maintenance 경로와 retry 분기는 보존.
+
+### 영향 파일
+- data-craft-mobile:lib/api/dio_client.dart
+- data-craft-mobile:lib/state/auth_controller.dart
