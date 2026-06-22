@@ -31454,3 +31454,24 @@ data-craft:
 - data-craft-mobile:lib/l10n/app_ko.arb
 - data-craft-mobile:lib/l10n/app_en.arb
 - data-craft-mobile:lib/screens/dm/member_picker_screen.dart
+
+## v001.1035.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #407 (핫픽스2)
+
+핫픽스1에서 검증·머지한 `dialogMode`(Radix Popover) 패턴을 동일 구조의 always-in-dialog 표면에 복제 적용. 생성 다이얼로그(새 화면 생성)와 설정 다이얼로그 3종의 통일 드롭다운이 더 이상 본문을 밀지 않고 부유 오버레이로 동작.
+
+**진행 상황**: 모달 호스트 드롭다운 중 화면 편집(핫픽스1)+생성+설정 3종 = 전환 완료. **잔여 = 폼 빌더/렌더러(SelectionFieldRenderer·ConnectionFieldRenderer 등) — 페이지/모달 이중 맥락이라 기계적 복제 불가, 별도 검증 후 다음 핫픽스에서 처리 예정.** "전부 완료" 아님.
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: `CreatePageForm`(부모 화면+관리주기 2), `AppTabContent`(언어), `PageAccessList`(접근 레벨), `RoleSelect`(권한 그룹) 총 5개 ViewModeDropdownPanel 사용처를 `inline`→`dialogMode`(trigger+open/onOpenChange)로 전환. 핫픽스1 EditPageForm 과 동일 패턴, 불필요해진 triggerRef/anchor state·import 제거. 공유 컴포넌트 무변경(dialogMode 는 핫픽스1에서 추가됨). 게이트 build:packages+typecheck:all+lint 0err.
+
+### ⚠️ 시각 확인 요망 (메인세션 블라인드)
+- 새 화면 생성 / 설정(언어·권한) 드롭다운에서 핫픽스1과 동일 체크리스트(부유·선택후닫힘·바깥클릭닫힘·재클릭닫힘·내부스크롤·본문스크롤) 확인. dev=src alias → 하드 리프레시 필요.
+
+### 영향 파일
+- data-craft:src/features/page-management/ui/CreatePageForm.tsx
+- data-craft:src/widgets/settings-dialog/ui/AppTabContent.tsx
+- data-craft:src/widgets/settings-dialog/ui/PageAccessList.tsx
+- data-craft:src/widgets/settings-dialog/ui/RoleSelect.tsx
