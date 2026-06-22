@@ -31518,3 +31518,22 @@ data-craft:
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/auth/common_signin_screen.dart
+
+## v001.1039.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #417 (보안 #410 B)
+
+데이터 크래프트 서버 사용자 역할 변경 API 의 테넌트(회사) 격리 우회(IDOR) 결함 수정.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-server)**: `PUT /api/auth/approved-users/:userId/role` 가 `permissionCheckMiddleware('user_manage')` 만 적용해, 권한 보유자가 타 회사 직원의 역할을 변경/제거할 수 있던 IDOR 결함을 수정. 서비스 `updateUserRole` 진입부(`findUserById` 직후·기존 `isOwner` 검사보다 앞)에 단일 회사-격리 가드(`if (!targetUser || targetUser.companyId !== companyId) throw new NotFoundError('USER_NOT_FOUND')`)를 추가 — `roleId` 부여/제거 양 경로 모두 차단하고 대상 존재를 은닉. 심층방어로 모델 `updateUserRoleId` 에 `companyId` 파라미터 + `UPDATE ... WHERE id = ? AND company_id = ?` 추가. 모델 시그니처 변경으로 끌려온 두 번째 호출부(승인 후 기본 권한 자동 배정, `auth.service.ts`)에 `requestCompanyId` 전파해 tsc 빌드 정합. 형제 함수(`approveUser`/`rejectUser`/`toggleUserActive`)의 양-계층 테넌트 격리 패턴을 그대로 재사용. 게이트: `pnpm build`(tsc) · `pnpm lint`(eslint) 통과.
+
+### 범위 메모
+- 본 플랜은 #410 의 #B(역할 변경 IDOR) 단일 수정만 다룬다. #C(inputStore)·#A(인젝션)·#D~#G(builder)는 의도적으로 별건 후속으로 분리.
+- 부작용(개선): 존재하지 않는 `userId` 호출이 기존 silent 0-row no-op 에서 404(`USER_NOT_FOUND`)로 바뀜 — 검증 기준과 정합.
+
+### 영향 파일
+- data-craft-server:src/services/roles.service.ts
+- data-craft-server:src/models/roles.model.ts
+- data-craft-server:src/services/auth.service.ts
