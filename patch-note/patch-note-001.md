@@ -1,5 +1,29 @@
 # 아이OS — Patch Note (001)
 
+## v001.116.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #64
+> 대상: 아이OS
+
+### 배경
+
+`data-craft` 그룹에는 fetch 의존이 있다 — `data-craft-mobile-apk`(provider)가 `deploy_command`(`apk-deploy.sh`)로 release APK 를 `apk-deploy` 브랜치에 push 하면, `data-craft` 웹(consumer)이 `build_command`(`pnpm build` → `fetch:apk`, `gh api` 로 그 브랜치에서 APK fetch) 시 그 APK 를 `dist/` 에 번들한다. 따라서 provider 배포가 consumer 빌드/배포보다 **선행**해야 최신 APK 가 번들된다. 그러나 `pre-deploy` Branch B 는 선택 타겟을 순차 실행만 했고, `deploy.md` frontmatter 상 consumer(`data-craft`)가 provider(`data-craft-mobile-apk`)보다 먼저 선언돼 둘 동시 선택 시 기본 순서가 역순이었다. dist 번들 메커니즘은 #397(2026-06-21)에서 라이브 착지했으므로 provider-first 는 잠복이 아닌 **활성 요구**다. 본 패치는 그 순서를 `deploy.md` 선언 기반으로 강제한다.
+
+### 페이즈 결과
+
+- **Phase 1** (deploy.md 단일 진실원, `f312f5e2`): `deploy.md` 에 정규 `## 배포 순서 — fetch-의존 불변식 (단일 진실원)` 섹션 신설. 파싱 가능한 `<provider> → <consumer>` 페어 형식으로 `data-craft-mobile-apk → data-craft` 의존 선언 — pre-deploy 가 하드코딩 없이 읽는 단일 진실원. 기존 산재 "배포 순서 의존" prose(line 69)는 본 섹션 포인터 한 줄로 통합(중복 제거). §배포 우선순위의 server-first 축은 직교 축으로 보존.
+- **Phase 2** (pre-deploy 순서 정렬, `27639d09`): `pre-deploy/SKILL.md` Branch B per-target 루프 직전에 step 2 `Deploy-order alignment (fetch-의존 불변식)` 신설. `deploy.md` 선언을 읽어 한 실행에 한 페어의 provider·consumer 가 함께 선택되면 provider 를 consumer 앞으로 stable reorder. 한쪽선택·선언부재·파싱불가 시 no-op 폴백(차단·크래시 없음). 기존 build/deploy 루프는 step 3, prior-issue close→4, completion-reporter→5 로 재번호(본문 불변). CLAUDE.md §6 net-positive 3질문 통과 근거 블록 + Scope(v1) bullet 추가. deploy-validator·Branch A·합성 finding·DB 드리프트 게이트·완료 보고 구조 일절 불변.
+
+### 영향 파일
+
+- `.claude/project-group/data-craft/deploy.md`
+- `.claude/skills/pre-deploy/SKILL.md`
+
+### Treadmill Audit
+
+PASS. trade-out = 문서 통합 — `deploy.md` 의 산재 순서-의존 prose(옛 "배포 순서 의존" 불릿)를 단일 정규 선언으로 통합·폐기. 새 검증 축·훅·스킬·게이트는 추가하지 않았다 — Branch B 는 이미 타겟을 순차 소비하므로, 본 작업은 그 소비 순서를 기존 의존을 존중하도록 교정할 뿐(메커니즘 수 불변).
+
 ## v001.115.0
 
 > 통합일: 2026-06-18
