@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1048.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #424 (보안 점검 #410 #A)
+
+**컬럼명 식별자 SQL 인젝션 차단 (data-craft-server) — 보안 점검 #410 #A.** 인증된 회사 편집자가 컬럼명(`data_column.column_name`)에 큰따옴표(`"`)를 넣어 만들면 뷰어 정렬/필터/그룹/집계 쿼리가 이름을 PostgreSQL 식별자 `pv."<컬럼명>"` 위치에 미escape 보간 → `"` 로 식별자를 탈출해 ORDER BY 에 독립 스칼라 서브쿼리를 삽입, 타 회사 데이터 blind/error/timing 읽기 오라클(extended protocol 이라 stacked DDL/DML 불가). 읽기측 전 식별자 sink 에 단일 escape 헬퍼 적용 + 쓰기측 `"` 거부로 차단.
+
+### 페이즈 결과
+- **Phase 1** (fix) `cbe0c36`: `src/utils/sqlSanitizer.ts` 에 `escapeIdentifierName`(`"` 만 strip, 나머지 보존) 공용 export 신설, `pivotBuilder.escapeColumnName` 이 이를 위임(AS 별칭 escape 포함). paging 6파일(subGrid/grouped/kanban/calendar/gantt/grid)의 모든 `pv."${컬럼명}"` 보간을 헬퍼 경유로 교체, gantt 의 백틱-only 로컬 헬퍼·grid 의 백틱 strip 제거.
+- **Phase 2** (fix) `6aad44b`: `viewerPaging.whereclause.ts`·`aggregation.simple.ts`·`paging.grid.ts` 의 컬럼명 파생 식별자 sink 14곳에 헬퍼 적용. `src/` 전체 `"${`·`ORDER/GROUP/PARTITION BY ${`·`pv.${` 전수 sweep 후 분류 — 컬럼명 파생은 전부 헬퍼 경유, 잔존은 화이트리스트(safeSortBy/ALLOWED_SORT_COLUMNS, field via validateFieldName, dbColumn via COLUMN_SETTING_ALLOWED_FIELDS)·내부생성 임시테이블·비SQL 문자열로 확정. 날짜범위 `resolveColumn`(rs.created_at/updated_at) 미변경.
+- **Phase 3** (fix) `bb1dbf4`: `createColumn`(dataViewerPost.service.ts)·`updateColumnNameViaSP`(change.columnSettings.ts) 진입부에 컬럼명 `"` 포함 시 `BadRequestError` 거부(심층방어, `includes('"')` 단일 조건 — 한글·공백·괄호 보존). `sanitizeColumnName` 미사용.
+
+### 범위 메모
+- 읽기측 escape 가 저장 경로와 무관하게 인젝션을 차단(load-bearing). 쓰기측 거부는 대화형 2경로만 가드 — 추가 writer(`viewer.bulkSave.column.ts` 4곳, 서브그리드 생성)는 `"` 미검사로 남으나 읽기측이 보호하므로 악용 불가한 심층방어 갭(별건 후속 권장).
+- 런타임 cross-view 검증(따옴표 포함 컬럼명으로 칸반/캘린더/간트)은 BE 재기동 필요한 수동 시나리오 — 본 통합은 정적 분석·tsc·grep 완결성으로 검증(런타임 미실행).
+- 다른 발견(#410 #C 완료, #D~#G·LIVE-1~3 별건 후속).
+- 계획·완료 advisor() 검증 모두 PASS (5관점), 완료 시점 보충 식별자 sweep 클린.
+
+### 영향 파일
+data-craft-server:
+- src/utils/sqlSanitizer.ts, src/utils/pivotBuilder.ts
+- src/models/paging/{subGrid,grouped,kanban,calendar,gantt,grid}.ts
+- src/models/viewerPaging.whereclause.ts, src/models/aggregation/aggregation.simple.ts
+- src/services/dataViewerPost.service.ts, src/services/dataViewerChange/change.columnSettings.ts
+
 ## v001.1047.0
 
 > 통합일: 2026-06-22
