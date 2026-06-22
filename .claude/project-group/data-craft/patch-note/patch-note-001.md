@@ -31777,3 +31777,26 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/api/dio_client.dart
+
+## v001.1051.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #426
+
+데이터 크래프트 모바일 홈 탭 구축 (디자인 핸드오프 혼합형, 추가 서버 API 없이 기존 /api/user-preference 재사용).
+
+### 페이즈 결과
+- **Phase 1 (feat)**: /api/user-preference(GET 전체/PUT key-value) 모바일 클라이언트 + userPreferenceControllerProvider(AsyncNotifier, 낙관적 setKey). 즐겨찾기/최근 저장 토대.
+- **Phase 2 (feat)**: recentPages 키 기록 — 페이지 뷰어 라우트 진입(initState) hook으로 최근순 upsert(상한 15), recentPagesProvider(pageController 교집합, 삭제 드롭).
+- **Phase 3 (feat)**: favoritePages 키 즐겨찾기 — favoritePageIdsProvider/favoritePagesProvider/toggleFavorite, 페이지 트리 행에 독립 별 토글(행/트리 제스처 비간섭).
+- **Phase 4 (chore)**: 홈 l10n 키 16개(시간대 인사말 3종 포함, ko/en) + home_tokens.dart(홈-국소 다크 Primary #3B82F6/#60A5FA, app_theme 무변경).
+- **Phase 5 (feat)**: 홈 화면 코어 — 인사말 헤더·알림 요약 카드·바로가기 2x2·스켈레톤·당겨서새로고침, 섹션별 독립 async(인사말/요약/바로가기 항상 렌더). 라우터 /home→HomeScreen, home_placeholder 제거. nav inbox 뱃지 하드코딩 7→totalUnread 동적화.
+- **Phase 6 (feat)**: 홈 즐겨찾기(수평 카드, 별 해제)·최근 페이지(4건, 타입아이콘+제목+수정시각+chevron) 섹션 통합, 페이지 영역 상태 분기(로딩 스켈레톤/인라인 에러/빈 첫페이지CTA/데이터). 멤버수는 PageDto 필드 부재로 제외.
+
+### 영향 파일 (data-craft-mobile)
+- lib/api/user_preference_api.dart, lib/state/user_preference_controller.dart
+- lib/state/recent_pages_provider.dart, lib/state/favorite_pages_provider.dart
+- lib/screens/page/page_web_view_screen.dart, lib/screens/page/widgets/page_tree_item.dart
+- lib/l10n/app_ko.arb, lib/l10n/app_en.arb, lib/screens/home/home_tokens.dart
+- lib/screens/home/home_screen.dart (home_placeholder.dart 제거), lib/router/app_router.dart, lib/screens/main_shell/widgets/bottom_nav_bar.dart
+- lib/screens/home/widgets/ (home_greeting_header, home_notification_summary, home_quick_actions, home_skeleton, home_favorites_section, home_recent_pages_section).dart
