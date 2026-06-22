@@ -31475,3 +31475,16 @@ data-craft:
 - data-craft:src/widgets/settings-dialog/ui/AppTabContent.tsx
 - data-craft:src/widgets/settings-dialog/ui/PageAccessList.tsx
 - data-craft:src/widgets/settings-dialog/ui/RoleSelect.tsx
+
+## v001.1036.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #413 (핫픽스2)
+
+데이터 크래프트 모바일 채팅방 입장 시 스크롤 위치 버그 수정.
+
+### 페이즈 결과
+- **핫픽스2 (data-craft-mobile)**: 채팅방 입장 시 메시지 목록이 맨 위(가장 오래된 메시지)에서 시작되던 문제 수정. ListView 방향/정렬/상단 페이지네이션을 보존한 채, 첫 메시지 로드 시 addPostFrameCallback으로 maxScrollExtent(맨 아래=최신 메시지)로 점프하도록 `_scrollToBottom`+`_initialScrollDone` 추가.
+
+### 영향 파일
+- data-craft-mobile:lib/screens/dm/chat_room_screen.dart
