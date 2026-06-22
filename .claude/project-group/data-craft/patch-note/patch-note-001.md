@@ -31350,3 +31350,22 @@ data-craft:
 - src/widgets/tabs-widget/ui/FormDataListDialog.tsx
 - src/app/providers/WidgetRegistryProvider.tsx
 - src/shared/lib/tab-content-registry.ts
+
+## v001.1029.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #413
+
+데이터 크래프트 모바일 그룹 채팅 버그 2건 수정 (초대 미합류 + 미읽음 잔존).
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: 그룹 채팅방에 머무는 중 수신한 메시지를 즉시 읽음 처리. `chat_messages_provider.dart`의 `_onMessagesAdded`에 `unawaited(markAsRead())` 추가 — 프로바이더 autoDispose라 방에 있는 동안에만 발화하므로 포커스 무관. A·B가 같은 방에 있을 때 B가 본 메시지가 채팅 목록 미읽음 뱃지 1로 잔존하던 버그 수정.
+- **Phase 2 (data-craft-mobile)**: 방장이 멤버 초대 후 운영자 멤버 목록이 갱신되지 않던 문제 수정. `member_picker_screen.dart` 초대 성공 시 `context.pop(true)`로 결과 반환, `channel_settings_screen.dart`가 결과 true면 기존 `_loadChannel()` 재호출로 즉시 갱신.
+- **Phase 3 (data-craft-server)**: 초대 피초대자 자동수락 보장. `sendbird.service.ts`에 `setUserChannelInvitationPreference`(Platform API `PUT /v3/users/{userId}/channel_invitation_preference`) 추가, `chat.controller.ts`가 invite 직전 피초대자 전원에 자동수락(true) 설정. `Promise.allSettled` best-effort로 설정 실패가 초대 경로를 막지 않음(최악 시 pending 유지로 degrade). 글로벌 자동수락 OFF 환경에서도 신규 초대가 즉시 합류하도록 한 버그 수정.
+
+### 영향 파일
+- data-craft-mobile:lib/chat/chat_messages_provider.dart
+- data-craft-mobile:lib/screens/dm/member_picker_screen.dart
+- data-craft-mobile:lib/screens/dm/channel_settings_screen.dart
+- data-craft-server:src/services/sendbird.service.ts
+- data-craft-server:src/controllers/chat.controller.ts
