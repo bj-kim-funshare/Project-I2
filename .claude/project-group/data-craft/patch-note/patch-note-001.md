@@ -31395,3 +31395,24 @@ data-craft:
 
 ### 영향 파일
 - data-craft:scripts/fetch-apk.mjs
+
+## v001.1032.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #416
+
+데이터 뷰어의 "문서"(document) 타입 셀 모달(BlockNote 에디터)에서 업로드한 동영상이 재생되지 않던 결함을 수정. 원인: `dcSchema` 가 image/file 블록만 커스텀 교체하고 video/audio 는 BlockNote 기본 블록을 써, 기본 블록이 인증이 필요한 상대 URI 를 `<video>/<audio>` 의 src 에 직접 대입 → `Authorization` 헤더를 못 붙여 백엔드가 요청 거부 → 검은/빈 플레이어. 이미지 블록과 동일한 인증 blob(object URL) 패턴으로 video/audio 커스텀 블록을 신설해 해소. (오디오도 동일 결함이라 함께 수정.)
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: `packages/fs-api/src/api/file.ts` 에 `loadImageBlob` 미러링한 `loadVideoBlob`/`loadAudioBlob` 추가 — `/api/file/image` 로 인증 fetchBinary 후 응답 바이트를 arrayBuffer 로 읽어 확장자 기반 미디어 MIME(video 5종·audio 6종)으로 재지정한 Blob 반환. BE 가 octet-stream 으로 서빙해도 브라우저 재생 가능하도록 클라이언트 보강, 실패 시 null(동일 계약).
+- **Phase 2 (data-craft)**: `fs-data-viewer` 에 `dcVideoBlockSpec`/`dcVideoPreview`·`dcAudioBlockSpec`/`dcAudioPreview` 4파일 신설(이미지 블록 미러링) + `DocumentEditor.tsx` `dcSchema` 에 video/audio 등록. 프리뷰는 loadVideoBlob/loadAudioBlob 으로 object URL 을 받아 `<video controls>`/`<audio controls>` 렌더, 외부 URL 직접 src·언마운트 시 revokeObjectURL 정리·다운로드 버튼 포함. propSchema 는 각 기본 블록과 일치(video 7항목·audio 5항목)시켜 기존 저장 문서 역호환 보장 — 이전에 깨져있던 동영상도 재오픈 시 재생됨.
+- **Phase 3 (data-craft-server)**: `src/routes/file.ts` `/image` 핸들러 mimeTypes 맵에 동영상(.mp4/.webm/.mov/.m4v/.ogg)·오디오(.mp3/.wav/.m4a/.oga) MIME 항목 additive 추가 — octet-stream 서빙 소스단 부정합 해소(Phase 1 클라이언트 재지정과 belt-and-suspenders).
+
+### 영향 파일
+- data-craft:packages/fs-api/src/api/file.ts
+- data-craft:packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcVideoBlockSpec.tsx
+- data-craft:packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcVideoPreview.tsx
+- data-craft:packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcAudioBlockSpec.tsx
+- data-craft:packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/blocks/dcAudioPreview.tsx
+- data-craft:packages/fs-data-viewer/src/shared/ui/dialogs/document-edit/DocumentEditor.tsx
+- data-craft-server:src/routes/file.ts
