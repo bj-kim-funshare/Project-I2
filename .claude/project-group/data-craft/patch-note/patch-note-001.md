@@ -31440,7 +31440,7 @@ data-craft:
 - data-craft:packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/types.ts
 - data-craft:src/features/page-management/ui/EditPageForm.tsx
 
-## v001.1030.0
+## v001.1034.0
 
 > 통합일: 2026-06-22
 > 플랜 이슈: #413 (핫픽스1)
