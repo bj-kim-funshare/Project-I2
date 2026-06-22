@@ -31439,3 +31439,18 @@ data-craft:
 - data-craft:packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/ViewModeDropdownPanel.tsx
 - data-craft:packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/types.ts
 - data-craft:src/features/page-management/ui/EditPageForm.tsx
+
+## v001.1030.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #413 (핫픽스1)
+
+데이터 크래프트 모바일 멤버 초대 화면 버튼 라벨 버그 수정.
+
+### 페이즈 결과
+- **핫픽스1 (data-craft-mobile)**: 멤버 초대 화면(`MemberPickerScreen` invite 모드) AppBar 액션 버튼 라벨이 "만들기"(`dmPickerCreate`)로 잘못 표시되던 버그 수정. `actionLabel` 삼항의 invite 분기가 create와 동일하게 `dmPickerCreate`를 반환하던 것을 신규 l10n 키 `dmPickerInvite`("초대하기"/"Invite")로 교정. ko/en arb 추가.
+
+### 영향 파일
+- data-craft-mobile:lib/l10n/app_ko.arb
+- data-craft-mobile:lib/l10n/app_en.arb
+- data-craft-mobile:lib/screens/dm/member_picker_screen.dart
