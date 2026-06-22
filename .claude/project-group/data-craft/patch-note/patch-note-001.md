@@ -31682,3 +31682,21 @@ data-craft-server 입력 데이터 삭제 API 의 테넌트 격리(IDOR) 결함 
 
 ### 영향 파일
 - data-craft-server:src/services/inputStore.service.ts
+
+## v001.1046.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #423
+
+data-craft 관리자 콘솔(BE) 2단계 로그인 인증코드 생성을 암호학적 안전 난수로 전환(보안 점검 WARN B-1 단일 수정). 기존 `Math.random()`(예측 가능한 의사난수)을 `node:crypto` 의 `randomInt` 로 교체했다. 값 범위(100000~999999, 6자리)·반환 타입(string)·호출부 시그니처가 전부 동일해 동작 변화 없이 CSPRNG 를 보장한다.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-admin-server)** `b1bf4d5`: `src/services/adminAuth.service.ts` 상단에 `import { randomInt } from 'node:crypto';` 추가 후 `generateCode()` 를 `randomInt(100000, 1000000).toString()` 단일 표현식으로 교체. requestLogin/verifyCode 의 레이트리밋·만료·시도횟수·markConsumed·토큰 발급 로직은 무변경. BE 게이트 `pnpm lint`(eslint)·`pnpm build`(tsc) 모두 exit 0. 머지 `3eb8888`.
+
+### 범위 메모
+- 보안 점검 WARN B-1 단독 수정. 동일 점검의 B-2(prod 풀 SSL)·B-3(nodemailer 권고)·B-4(인증코드 소비 TOCTOU race)는 별건 후속.
+- BE 단독·배포 영향 없음(관리자 콘솔은 배포 제외).
+- 계획·완료 시점 advisor() 검증 모두 PASS (5관점 전부).
+
+### 영향 파일
+- data-craft-admin-server:src/services/adminAuth.service.ts
