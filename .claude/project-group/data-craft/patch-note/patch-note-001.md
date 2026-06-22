@@ -31307,3 +31307,46 @@ data-craft:
 ### 영향 파일
 data-craft-server:
 - src/middlewares/permission.middleware.ts
+
+## v001.1028.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #407
+
+최근 "서비스 내부 선택 드롭다운 전수 통일화"로 적용된 통일 컴포넌트 `ViewModeDropdownPanel`이 **Radix 모달 다이얼로그 내부**에서 열릴 때 "클릭이 뒷배경으로 통과되고 스크롤이 죽는" 버그를 전수조사해 교정한다. 원인은 패널 기본 모드의 `createPortal(..., document.body)`이 Radix 모달의 `react-remove-scroll`/`pointer-events` 격리 subtree **밖**(body)으로 떨어지는 것(메모리 #198 동일 클래스). 공유 컴포넌트는 무변경하고, 모달 내부 사용처에서만 기존 `inline` 모드로 렌더하도록 전환했다. 비모달 표면(속성 드로어=순수 div 패널, 그리드 셀/페이지 위젯, 커스텀 non-Radix 오버레이=수식 편집·외부뷰어 문서편집, 다이얼로그 내 뷰어=iframe 격리)은 버그 클래스가 아니어서 무변경.
+
+### 페이즈 결과
+- **Phase 1** (`dfe25cd`, data-craft): 보고된 버그 — 화면 편집/생성 다이얼로그(EditPageForm·CreatePageForm)의 부모 화면·관리주기 드롭다운 4곳에 `inline` 적용.
+- **Phase 2** (`e398e70`, data-craft): 설정 다이얼로그(AppTabContent·PageAccessList·RoleSelect) 3곳에 `inline` 적용.
+- **Phase 3** (`c2bfca0`, data-craft): 폼 빌더/렌더러 컨텍스트 인지 — `FormFieldRenderer`/`FormRenderer`에 `inDialog` 플래그 도입, Selection/Connection 필드 렌더러로 전파해 `inline={inDialog}` 연결. 모달 마운트(빌더 캔버스·폼 다이얼로그)는 true, 페이지 위젯은 portal 유지(회귀 방지). 빌더 전용 다이얼로그(ConnectionConfigEditor·ConditionItem)는 무조건 `inline`.
+- **Phase 4** (`fa704b9` + lint `681e88b`, data-craft): 완료 검증이 발견한 잔여 모달 폼 마운트 보완 — 설정 다이얼로그 FormRenderer 3곳(SettingsFormTabContent·SettingsFormDataDialog·SettingsFormListFirstDialog)에 `inDialog` 적용, 폼 레지스트리 팩토리(`registerFormRenderer`)가 `inDialog`를 누락 전달하던 문제 수정(pass-through, 페이지 위젯은 portal 유지). 주입형 FormRenderer 타입 3곳에 `inDialog?` 추가.
+
+### ⚠️ 시각 확인 요망 (메인세션 렌더 블라인드)
+- `inline` 모드는 부유 오버레이가 아니라 인플로우(아래 내용이 밀림)이며, 백드롭이 없어 **바깥 클릭/ESC로 닫히지 않고 항목 선택·저장으로만 닫힌다**. 다이얼로그/폼 맥락에선 수용 가능하나 마스터 육안 확인 필요. 푸시다운 룩 거부 시 대체안 = #198 "inline-absolute" 패턴.
+- 재현 검증 1순위: 디자인 모드 → 사이드바 → 화면 편집 → "부모 화면(선택)" 드롭다운(원 보고 케이스).
+
+### 영향 파일
+data-craft:
+- src/features/page-management/ui/EditPageForm.tsx
+- src/features/page-management/ui/CreatePageForm.tsx
+- src/widgets/settings-dialog/ui/AppTabContent.tsx
+- src/widgets/settings-dialog/ui/PageAccessList.tsx
+- src/widgets/settings-dialog/ui/RoleSelect.tsx
+- src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx
+- src/widgets/settings-dialog/ui/SettingsFormDataDialog.tsx
+- src/widgets/settings-dialog/ui/SettingsFormListFirstDialog.tsx
+- src/features/form-builder/ui/formFieldRenderer.types.ts
+- src/features/form-builder/ui/FormFieldRenderer.tsx
+- src/features/form-builder/ui/SelectionFieldRenderer.tsx
+- src/features/form-builder/ui/ConnectionFieldRenderer.tsx
+- src/features/form-builder/ui/ConnectionConfigEditor.tsx
+- src/features/form-builder/ui/ConditionItem.tsx
+- src/features/form-builder/ui/FormCanvas.tsx
+- src/widgets/form-widgets/ui/FormRenderer.tsx
+- src/widgets/form-widgets/ui/FormInputDialog.tsx
+- src/widgets/form-widgets/ui/FormDialogContent.tsx
+- src/widgets/form-widgets/ui/DataListDialogBody.tsx
+- src/widgets/tabs-widget/ui/FormInputDialog.tsx
+- src/widgets/tabs-widget/ui/FormDataListDialog.tsx
+- src/app/providers/WidgetRegistryProvider.tsx
+- src/shared/lib/tab-content-registry.ts
