@@ -31289,3 +31289,21 @@ data-craft-admin:
 ### 영향 파일
 data-craft:
 - src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx
+
+## v001.1027.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #412
+
+배포 환경에서 "프리미엄 → 프리미엄 프로모션" 전환 실패의 한 갈래인 쿠폰 엔드포인트 403(PLAN_NOT_ALLOWED)을 해소한다. #382 쿠폰 시스템이 추가한 라우트 3개가 permission.middleware.ts 의 PLAN_ENDPOINTS 허용목록에 미등재돼 플랜 무관 전원 403이던 것을, FREE 티어(전 티어 상속)에 등록했다. owner 권한은 컨트롤러가 OWNER_ONLY 로 내부 게이팅한다. (전수 재검증: permissionMiddleware 경유 전 라우트 대조 결과 누락은 이 3개뿐.)
+
+### 페이즈 결과
+- **Phase 1** (`6ae047a`, data-craft-server): PLAN_ENDPOINTS[FREE] 채팅 블록 직후에 `POST:/api/coupon/register`·`GET:/api/coupon/wallet`·`POST:/api/coupon/evaluate` 3개 등록. lint(pnpm lint) PASS.
+
+### ⚠️ 후속/주의
+- **실제 전환 차단 원인은 별건(본 플랜 제외)**: `POST /api/promotion/purchase` 500 — 라이브 PG FK `fk_client_active_promotion` 이 `promotion(id)` 를 잘못 참조(코드는 `client_promotion.id` 로 일관 사용). psql 컷오버(#301) 캐노니컬 DDL 포팅 결함. **task-db-structure 로 prod+dev FK 를 `client_promotion(id)` 로 재타깃 + 캐노니컬 DDL(`docs/migration/ddl/run1-tables.up.sql:903-904`) 교정 필요.** 손상 데이터 잔존 없음(매 구매 롤백).
+- 종단 성공(전환 실제 작동)은 ① 본 쿠폰 403 코드 수정 + ② FK 500 DB 교정 + ③ BE 서버 prod git pull/재시작이 **모두** 완료된 후에야 확인 가능. 한쪽만으론 여전히 실패.
+
+### 영향 파일
+data-craft-server:
+- src/middlewares/permission.middleware.ts
