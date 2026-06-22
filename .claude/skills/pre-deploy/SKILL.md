@@ -120,14 +120,21 @@ After receiving the findings array:
 ### Branch B — only `warn` findings, or empty array
 
 1. (warn findings only) Carry them through to the final report.
-2. For each selected target, **sequentially**:
+2. **Deploy-order alignment (fetch-의존 불변식)** — before the build/deploy loop, reorder the selected-target list so any declared fetch *provider* deploys before its *consumer*. The source of truth is `deploy.md` (NO hardcoded target names in this skill):
+   - Read the leader's `deploy.md` `## 배포 순서 — fetch-의존 불변식 (단일 진실원)` section. Parse each `` `<provider>` → `<consumer>` `` pair line (one pair per line under that heading, `→`-separated).
+   - For each parsed pair where **both** provider and consumer are in the selected-target list AND the consumer currently precedes the provider, move the provider to immediately before the consumer. Stable reorder — leave all unrelated targets in their existing relative order.
+   - Fallback (never block or crash): if the section is absent / empty / unparseable, or only one side of a pair is in the selection, leave the selected-target order unchanged (no-op).
+   - The reordered list is what the loop in the next step consumes. **deploy-validator, Branch A, the synthetic DB-drift finding, the DB drift gate, and all reporting structure are unchanged** — this step only reorders Branch B's own execution sequence.
+
+   > **Net-positive rationale (CLAUDE.md §6 — 통과).** Q1 (recurring): the fetch dependency is a permanent structural invariant declared in `deploy.md`; every joint provider+consumer deploy risks reversed order (the frontmatter declares the consumer before the provider, so the default order is already reversed), and the dist-bundling is live (#397), making provider-first an active requirement — not a one-off. Q2 (new edge cases, enumerated, all benign): one-side-only selection → no-op; declaration absent/unparseable → fallback to existing order; provider build failure → existing halt-on-failure stops before the consumer (safe). No master-decision card, no cross-session conflict, no new external dependency. Q3 (trade-out): the scattered ordering prose formerly in `deploy.md` (the old "배포 순서 의존" bullet) is consolidated into the single canonical declaration this step reads — and crucially **no new validation axis, hook, skill, or gate is added**: Branch B already iterates targets sequentially, so this step only corrects that iteration order to honor an existing dependency and nothing accumulates. The server-first axis (§배포 우선순위) is a separate, orthogonal axis left to master judgment — NOT enforced here.
+3. For each selected target (in the step-2 order), **sequentially**:
    - `cd <target.cwd>`.
    - Run `<target.build_command>` via Bash. Capture exit code + tail of stderr/stdout.
    - On non-zero exit → halt the loop; remaining targets are not attempted.
    - If `<target.deploy_command>` is empty or whitespace-only → skip the deploy step, record `deploy_status: "manual"` and `url: null` for this target's report row, and continue to the next target.
    - Run `<target.deploy_command>` via Bash. Capture exit code + tail + (if parseable) the deployed URL.
    - On non-zero exit → halt the loop; remaining targets are not attempted.
-3. **Prior-issue close (only if all selected targets succeeded AND `prior_issue_number` is not null)**:
+4. **Prior-issue close (only if all selected targets succeeded AND `prior_issue_number` is not null)**:
 
    Format a Korean 합격 보고서 (validator clean + per-target build/deploy success + URLs + warn findings if any). Then:
 
@@ -141,7 +148,7 @@ After receiving the findings array:
 
    If `prior_issue_number` is null (first invocation, clean validator), nothing to close — proceed to report.
 
-4. Dispatch `completion-reporter` with:
+5. Dispatch `completion-reporter` with:
    - `skill_type: "pre-deploy"`
    - `moment: "skill_finalize"`
    - `data`: assemble per `.claude/md/completion-reporter-contract.md` §6 `pre-deploy` `skill_finalize` schema. Required: `leader`, `result_summary`, `targets[]` (each: `{name, role, tool, build_status, deploy_status, url}`); optional: `warn_count`, `warn_findings[]`, `prior_issue_number`, `prior_issue_closed`, `repos_targeted[]`. Note: `deploy_status` may be `"manual"` (in addition to success/failure values) when a target's `deploy_command` was empty and the deploy step was skipped.
@@ -201,6 +208,7 @@ In scope:
 - 항상 노출되는 multiSelect 선택 UI (target args 폐기 / 자동 선택 폐기 / 단일 타겟도 UI 노출).
 - 진입 시 모든 멤버 레포를 `main` 으로 자동 체크아웃 후 빌드/배포 (branch-overridden — external context 의 i-dev 일괄 룰에서 본 스킬만 분리. 검증이 아닌 정렬 액션). i-dev → main 머지 완료 여부, i-dev 가 main 보다 앞서있는지 여부는 본 스킬 검증 범위 아님.
 - 빈 `deploy_command` 타겟은 선택 가능 — build 만 실행, deploy 스킵, `deploy_status: "manual"` 표시 + master-facing 안내.
+- fetch-의존 provider-first 배포 순서 강제 — Branch B 가 `deploy.md` §"배포 순서 — fetch-의존 불변식" 선언을 읽어, 한 실행에 한 페어의 provider·consumer 가 함께 선택되면 provider 를 consumer 보다 먼저 배포한다 (하드코딩 타겟명 없음; 한쪽선택·선언부재 시 no-op). server-first 축(배포 우선순위)은 본 스킬이 강제하지 않는다(마스터 판단 — 직교 축).
 
 Out of scope (v1):
 - Auto-fix of validation findings (handed off via the created issue to `plan-enterprise` or equivalent).

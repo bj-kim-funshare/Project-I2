@@ -66,9 +66,19 @@ projects:
 모바일 안내 화면(`MobileNotSupportedScreen`)의 APK 다운로드 출처를 별도 호스트가 아닌 `data-craft` 웹 자체에 둔다 (A안 — 웹 동봉 self-host).
 
 - **번들 동봉**: `data-craft` gh-pages 배포 시 `data-craft-mobile` repo `apk-deploy` 브랜치의 `app-release.apk` + `MANIFEST` 를 빌드 산출 `dist/` 에 동봉하여 `https://datacraft.ai.kr/app-release.apk` 루트 경로로 서빙한다 (커스텀 도메인 루트 배포). `MANIFEST` 로 APK 버전·소스 커밋·빌드 시각을 확인.
-- **배포 순서 의존**: `data-craft-mobile-apk` 타겟 배포(`apk-deploy` push, `.claude/scripts/apk-deploy.sh`)가 `data-craft` 웹 배포보다 **선행**해야 최신 APK 가 `dist` 에 번들된다. 이 순서는 §배포 우선순위의 server-first 축과 독립적인 mobile→leader 의존이다.
+- **배포 순서 의존**: provider(APK) → consumer(web) 배포 선행 규칙은 아래 §"배포 순서 — fetch-의존 불변식 (단일 진실원)"에 정규화돼 있다(pre-deploy 가 그 선언을 읽어 강제). 상세 근거는 본 §APK 다운로드 호스팅의 "번들 동봉" 항목 참조.
 - **비용**: ~73MB 바이너리가 매 배포 gh-pages `dist` 에 재업로드된다 (GitHub Pages 파일 100MB 한도 내, repo·Pages 산출물 비대화 감수). 장기적으로 retention(최근 N개 유지) 또는 GitHub Releases 전환은 후속 검토 — 상기 §배포 전략 요약 `data-craft-mobile-apk` 의 orphan `apk-deploy` 브랜치 비대 메모와 **동일 과제 축**(중복 아닌 교차 참조).
 - **구현 완료 (2026-06-21 착지 — #397)**: 위 동봉 메커니즘은 구현·라이브 검증 완료. 확정된 형태는 **`build_command` 내 fetch 단계**다 — `build_command: pnpm build` 가 `scripts/fetch-apk.mjs` 를 체이닝(`"build": "pnpm fetch:apk && tsc -b && vite build"`)하며, 이 스크립트가 `apk-deploy` 브랜치에서 `app-release.apk` 를 `gh api` 로 받아 `public/` 에 저장하고 `apk-manifest.json`(`available`/`url`)을 생성한다. Vite 가 `public/*` 를 `dist/` 로 복사하므로 `https://datacraft.ai.kr/app-release.apk` 루트 서빙이 성립한다. `MobileNotSupportedScreen` 의 다운로드 링크 배선도 동일 #397 에서 착지(`manifest.available === true` + 안드로이드일 때만 카드 노출). 이로써 line 71 이 열어둔 "fetch/copy 단계 포함 여부" 미결 질문은 **fetch 단계 (build_command 내)** 로 확정. `deploy_command` 는 현행(`git checkout main && npx gh-pages -d dist`) 유지 — fetch 가 `build_command` 단계에 있으므로 `deploy_command` 변경 불필요. ⚠️ **운영 주의**: `fetch-apk.mjs` 는 fetch 실패 시 빌드를 멈추지 않는 non-fatal 설계라, 소스에 APK 가 있어도 `gh` 미인증 등으로 fetch 가 실패하면 조용히 `available:false` 로 배포된다(2026-06-21 실제 발생). 배포는 `gh` 가 비공개 `data-craft-mobile` repo 에 인증된 환경에서 수행하고, 배포 후 `apk-manifest.json: available:true` + `/app-release.apk` 200 을 확인할 것. 침묵 실패의 코드 가드는 별도 작업(§배포 우선순위 사고 메모 참조) 예정.
+
+## 배포 순서 — fetch-의존 불변식 (단일 진실원)
+
+`pre-deploy` Branch B 배포 실행 단계는 본 섹션의 페어 선언을 읽어 provider-before-consumer 순서를 강제한다. 한 pre-deploy 실행의 선택 타겟에 한 페어의 provider 와 consumer 가 **함께** 포함될 때, provider 를 consumer 보다 먼저 배포한다. 페어의 한쪽만 선택되면 본 규칙은 무시된다(무관). 본 선언이 fetch-의존 순서의 단일 진실원이며, pre-deploy 는 타겟명을 하드코딩하지 않고 여기서 읽는다.
+
+선언 형식 = `<provider> → <consumer>` 페어 목록 (각 항목 한 줄, `→` 구분):
+
+- `data-craft-mobile-apk` → `data-craft` : APK(provider)가 `apk-deploy` 브랜치에 push 된 release APK 를 web(consumer) 배포가 `dist/` 에 fetch-번들하므로, APK 배포가 web 배포보다 선행해야 최신 APK 가 번들된다.
+
+> 본 축은 §배포 우선순위의 server-first 축과 **직교**한다(독립). server-first 는 마스터 판단으로 운영되는 별도 축이며 본 fetch-의존 자동 강제 대상이 아니다.
 
 ## 배포 우선순위
 
