@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1047.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #425 (보안 점검 #409 W2·W3)
+
+**데이터 뷰어 미사용 인쇄 훅 `usePrintExecution` 제거 — srcdoc 미살균 잠재 XSS 함정 근본 제거.** 보안 점검(#409 W2·W3)에서 `fs-external-data-viewer` / `fs-sub-data-viewer` 두 포크의 `features/print/hooks/usePrintExecution.ts` 가 `iframe.srcdoc = htmlString` 을 `sanitizePrintHtml`(DOMPurify) 없이 직접 주입하는 dead code 로 확인됨(그룹 보안정책 §srcDoc DOMPurify 필수 위반 잠재). monorepo 전수 grep(*.test.*/*.stories.*/*.spec.* 포함) 결과 실제 호출부 0건 — 살균 추가가 아니라 훅 자체를 삭제해 함정을 근본 제거. 활성 인쇄 경로(`BrowserPrintEngine`/`PrintPreview`, sanitizePrintHtml 사용) 무변경.
+
+### 페이즈 결과
+- **Phase 1** (refactor, data-craft) `1a600cea`: 두 포크의 `usePrintExecution.ts` 파일 삭제(-284줄) + 각 `features/print/index.ts` 의 `export { usePrintExecution } from './hooks/usePrintExecution';` 배럴 라인 1줄씩 제거. 사전 안전 grep 호출부 0건 실증, build:packages 9개 패키지 재빌드 성공, lint 게이트(typecheck:all && lint) 0 errors.
+
+### 영향 파일
+data-craft:
+- packages/fs-external-data-viewer/src/features/print/hooks/usePrintExecution.ts (삭제)
+- packages/fs-sub-data-viewer/src/features/print/hooks/usePrintExecution.ts (삭제)
+- packages/fs-external-data-viewer/src/features/print/index.ts (수정)
+- packages/fs-sub-data-viewer/src/features/print/index.ts (수정)
+
 ## v001.1045.0
 
 > 통합일: 2026-06-22
