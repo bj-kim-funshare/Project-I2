@@ -31638,3 +31638,22 @@ data-craft:
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
 - data-craft-mobile:lib/screens/page/embed_auth_host_io.dart (신규)
 - data-craft-mobile:lib/screens/page/embed_auth_host_web.dart (신규)
+
+## v001.1044.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #422
+
+data-craft-server 입력 데이터 삭제 API 의 테넌트 격리(IDOR) 결함 수정(보안 점검 #410 #C 단일 수정). `deleteInputData` 가 `companyId` 를 받기만 하고 쓰지 않아(죽은 파라미터) 로그인만 되면 `req.query.groupId`(공격자 제어 순차 정수)로 타 회사 입력 데이터를 삭제할 수 있었다. 뷰어 약 25개 경로의 표준 가드 `validateGroupAccess` 를 삭제 경로에도 적용해 타사 그룹 삭제를 거부한다.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-server)** `61020f1`: `inputStore.service.ts` 에 `validateGroupAccess` import 추가(`./viewer/viewer.helper`, 기존 30+ 서비스 동일 경로) 후 `deleteInputData` 의 `beginTransaction()` 직후·`findValuesByRowNum` 호출 이전에 `await validateGroupAccess(connection, groupId, companyId)` 삽입(동일 connection). 불일치 시 `ForbiddenError('GROUP_ACCESS_DENIED')`/미존재 시 `NotFoundError('GROUP_NOT_FOUND')` 가 기존 catch→rollback→rethrow 로 자연 전파 — 예외 타입/거부 방식 신설 없음. 죽은 파라미터 `companyId` 가 실제 사용된다. 선례: `dataViewerPost.service.ts:828`, `viewer.batchRowDelete.ts:175`. BE 게이트 `pnpm build`(tsc)·`pnpm lint`(eslint) 모두 exit 0.
+
+### 범위 메모
+- **범위 외 관찰 보고**: 인접 함수 `saveInputData`/`getInputData`/`getInputDataHistory` 는 모델 계층 쿼리에 `companyId` 필터를 암묵 포함하나 명시적 `validateGroupAccess` 가드는 없음. `deleteInputData` 와 달리 모델 필터로 1차 격리가 되어 즉시 악용 가능한 IDOR 은 아니나 defense-in-depth 일관성은 미흡 → 별건 후속 검토 권장(본 플랜 미수정).
+- 라우트(`DELETE /:dataSetId`) 레벨 소유권 가드 추가는 제품 결정이라 범위 제외(관찰 보고).
+- 다른 발견(#410 #A·#D~#G·LIVE-1~3)은 별건 후속.
+- 완료 시점 검증은 advisor() 과부하로 **advisor-fallback 경유** PASS (5관점 전부 PASS).
+
+### 영향 파일
+- data-craft-server:src/services/inputStore.service.ts
