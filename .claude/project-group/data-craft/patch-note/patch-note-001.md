@@ -31518,3 +31518,41 @@ data-craft:
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/auth/common_signin_screen.dart
+
+## v001.1039.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #383 (핫픽스 아크 — 이벤트-구동 재설계 및 시나리오 정련)
+
+웹 튜토리얼(코치마크/풍선) 시스템을 **상태-추정 진행 엔진에서 이벤트-구동(클릭-투-어드밴스) 모델로 전면 재설계**하고, 3개 시나리오(페이지 생성·섹션 꾸미기·입력폼)를 마스터 실측 테스트로 끝까지 정련한 누적 핫픽스 아크. #383 v001.997.0(핫픽스1, 진입 플로우) 이후 분. data-craft FE 단독(+ fs_data_viewer 패키지 일부). 진행 중 임시 화면 진단 프로브를 운용하고 완료 시 제거.
+
+### 핵심 재설계 (direction A)
+- **클릭-투-어드밴스 엔진**: 스텝에 `advanceMode: 'click'|'state'` 도입. click 모드=스포트라이트 요소 실제 클릭 시 진행(OnboardingHint 캡처 클릭 리스너→`advanceByAnchorClick`), state 모드=`completeWhen` false→true 전이 래치로 진행. 선행 prereq 스텝은 이미 충족 시 자동 skip. 상태 추정으로 인한 조기/누락 진행 제거.
+
+### 공통 인프라 수정
+- **"다시 안 보기"가 도움말 모달까지 닫던 버그**: DiscoveryHint 풍선이 FloatingPortal(가이드 모달 밖)이라 Radix DismissableLayer 가 바깥-인터랙션으로 감지→`onOpenChange(false)`. 풍선·딤에 `data-onboarding-discovery-hint` 표식 + GuideDialogShell DialogContent 의 `onPointerDownOutside`/`onFocusOutside` 가드(`e.detail.originalEvent.target` closest 검사)로 해당 인터랙션은 모달 닫힘 무시. (직전 핫픽스의 풍선-측 이벤트 차단은 레이어 오인 — Radix 측 가드가 정답.)
+- **네비게이터 드롭다운 항목 클릭이 속성 드로어를 닫던 버그**: 드롭다운 패널(ViewModeDropdownPanel)이 body portal 이라 PropertyDrawer 의 pointerdown 바깥-클릭 핸들러가 `selectWidget(null)`+드로어 닫힘→위젯 미선택. 패널에 `data-vm-panel` 표식 + 드로어 제외목록 추가로 항목 클릭이 드로어를 닫지 않게 함(섹션 시나리오 "윗 섹션 선택" 진행 불가의 근본 원인).
+- **Radix Select 항목 스포트라이트가 드롭다운 뒤로 가림**: 튜토리얼 중 index.css 가 Radix popper 를 z13902 로 강제 상승시켜 dim/링이 뒤로 감. 항목 선택 스텝에 `popperSpotlight` 모드 추가(dim/링/풍선 z13950+)로 열린 드롭다운을 어둡게 + 대상 항목만 컷아웃·링 전면.
+
+### 시나리오별 정련
+- **섹션 꾸미기**: 윗/아래 섹션 전환을 "목록 열기 + 섹션 선택" 2단계로 분리(`navigatorSelectFirstSection`/`navigatorSelectLowerSection`, 확장 섹션 항목 앵커; `NavigatorItem.sectionExpanded` 신설). 데이터 그룹 생성·뷰어 단계를 state-mode 로 전환(다이얼로그 내 클릭 조기 진행 방지). **잘못된 "첫 번째 컬럼 추가" 단계 제거**(열 추가는 열 그룹 관리가 아닌 실제 뷰어 위젯 소관).
+- **입력폼**: 위젯 유형/폼 선택을 "목록 열기 + 항목 선택" 2단계로 분리, 대상 항목(사용자 입력폼·튜토리얼에서 만든 폼)에 항목 앵커+popperSpotlight(`formSelectDropdownOpen` 플래그 신설, state-mode). "설정 편집 닫기→새 폼 확인" 순서 교정(편집 모달이 좌측 사이드바 클릭 차단). 설정 편집 다이얼로그 X 닫기 버튼이 폼 다수 시 스크롤로 사라지던 레이아웃 결함 수정(헤더·X 고정, 본문만 스크롤).
+
+### 진입/접근 게이팅
+- **플랜 사용량 초과(차단) 상태**: PlanLimitGuard 와 동일 신호(`getExceededItems(usage).length>0`)의 `useIsPlanLimitExceeded` 훅 신설. 초과 시 가이드/튜토리얼 안내 풍선·가이드 튜토리얼 옵션·시나리오 피커를 전면 비활성.
+- **페이지 한도 도달/권한 없음**: 시나리오 피커에서 세 시나리오 모두(모두 튜토리얼용 페이지 생성 필요) 비활성+사유 표기(자물쇠). 신호: `usePermission('design_mode'/'design_page_edit')`, `usePlanLimitCheck().isAtLimit('pages')`.
+- **시나리오 피커 뒤로가기**: 좌측 ‹ 버튼이 모달을 닫던 것을 도움말 모달 복귀로 수정(닫기는 X 버튼 전용).
+
+### 영향 파일 (대표)
+data-craft:
+- src/features/onboarding/: model/scenarioRegistry.ts, model/tutorialStore.ts, model/hintRegistry.ts, lib/useTutorialController.ts, lib/useActiveOnboardingHint.ts, ui/TutorialOverlay.tsx, ui/OnboardingHint.tsx, ui/DiscoveryHint.tsx, ui/ScenarioPickerModal.tsx, ui/TutorialRoot.tsx
+- src/widgets/property-drawer/: ui/WidgetTypeSelector.tsx, ui/WidgetNavigatorDropdown.tsx, ui/useWidgetNavigatorItems.ts, ui/PropertyDrawer.tsx, ui/property-editors/UserFormGeneralSettings.tsx
+- src/widgets/settings-dialog/: ui/SettingsSidebar.tsx, ui/EditSettingsFormDialog.tsx, model/settingsTabStore.ts
+- src/widgets/header/: ui/AppHeader.tsx, ui/ViewModeToolbar.tsx, ui/DesignModeToolbar.tsx, ui/useHeaderDialogs.ts
+- src/features/subscription/: model/useIsPlanLimitExceeded.ts(신규), index.ts
+- src/app/styles/index.css
+- packages/fs-data-viewer: src/widgets/guide/GuideDialogShell.tsx, src/shared/ui/view-mode-dropdown/ViewModeDropdownPanel.tsx
+- src/shared/i18n/locales/ko.ts, en.ts
+
+### ⚠️ 시각 확인 요망 (메인세션 블라인드)
+- 메인세션은 렌더를 못 보므로 스포트라이트 z-순서·컷아웃 정밀도·풍선 위치는 마스터 하드 리프레시 후 확인으로 검증됨. 진행 중 임시 화면 진단 프로브(TutorialDebugProbe, lastClick/스토어 상태 기록)로 정적-추론 실패 지점의 런타임 1차증거를 확보 후 제거(완료 머지에 잔존 0).
