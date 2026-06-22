@@ -31395,3 +31395,26 @@ data-craft:
 
 ### 영향 파일
 - data-craft:scripts/fetch-apk.mjs
+
+## v001.1032.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #407 (핫픽스1)
+
+#407 본작업이 모달 내 드롭다운 클릭통과/스크롤 버그를 패널의 기존 `inline` 모드로 막았으나, `inline`(인플로우 푸시다운·바깥클릭/재클릭 미닫힘)은 **드롭다운 UX 를 파괴**하는 잘못된 방식이었다(마스터 지적). 올바른 방식 = 코드베이스에 이미 검증된 선례(`KanbanCardConfigDialog`, Hotfix-020/enterprise-450)인 **Radix Popover** 기반으로 재구현.
+
+**⚠️ 본 핫픽스는 증명 단계 — EditPageForm(화면 편집: 부모 화면 + 데이터 관리주기) 2개만 새 방식으로 전환했다.** 나머지 통일 적용 표면(생성 다이얼로그·설정 다이얼로그 3·폼 빌더/렌더러 등 8곳)은 아직 기존 `inline`(동작은 하나 UX 가 어색한) 상태로 남아 있으며, 마스터 런타임 확인 후 다음 핫픽스에서 동일 검증된 패턴으로 일괄 전환 예정. **"전부 수정 완료"가 아님.**
+
+### 페이즈 결과
+- **Phase 1 (data-craft)**: 공유 `ViewModeDropdownPanel` 에 **`dialogMode`(Radix Popover) 추가** — `PopoverPrimitive.Root/Trigger asChild/Portal/Content`. 모달 내부 nesting·layered dismiss(바깥클릭/ESC/재클릭 토글)를 Radix 가 처리, 클릭 선택은 Radix layer 가 pointer-events 보장. Radix Dialog 의 `react-remove-scroll` 이 portaled popover 의 native wheel 을 막는 문제는 스크롤 컨테이너의 `onWheelCapture`(직접 scrollTop 조작, 선례 동일)로 우회(dialogMode 한정). 기존 portal(셀렌더러·페이지 위젯 60+)·inline 분기는 **무변경**(추가형). EditPageForm 의 두 드롭다운을 `dialogMode`(trigger+open/onOpenChange)로 전환, 불필요해진 anchor/triggerRef state 제거.
+- **보강 커밋**: `dialogMode` 에서 패널 자체 `useScrollLock` 비활성(`useScrollLock(!inline && !dialogMode)`) — 패널이 상시 마운트되며 document-level wheel preventDefault 가 다이얼로그 본문 스크롤을 막던 회귀를 차단(다중 서브에이전트 검수에서 발견).
+
+### 검증 (어드바이저 + 다중 서브에이전트 검수 적용)
+- 설계: advisor + 2 서브에이전트 검토로 A(수동 absolute, 이 repo 가 이미 폐기한 방식)/C(floating-ui 전면개편) 제치고 B-변형(Radix Popover 게이트 모드) 채택.
+- 디프: 어드버서리얼 서브에이전트 검수가 useScrollLock 회귀(치명) 1건 발견 → 수정. advisor 최종 merge 승인.
+- **런타임은 메인세션 블라인드 → 마스터 스크린샷 확인 필수.** 체크리스트: ①트리거 위로 부유(본문 안 밀림) ②항목 클릭 시 선택+닫힘 ③바깥 클릭 닫힘 ④트리거 재클릭 닫힘 ⑤목록 내부 스크롤로 가려진 항목 도달 ⑥**드롭다운 닫은 상태에서 다이얼로그 본문 스크롤 정상**.
+
+### 영향 파일
+- data-craft:packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/ViewModeDropdownPanel.tsx
+- data-craft:packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/types.ts
+- data-craft:src/features/page-management/ui/EditPageForm.tsx
