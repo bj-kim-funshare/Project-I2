@@ -31575,3 +31575,20 @@ data-craft:
 
 ### ⚠️ 시각 확인 요망 (메인세션 블라인드)
 - 메인세션은 렌더를 못 보므로 스포트라이트 z-순서·컷아웃 정밀도·풍선 위치는 마스터 하드 리프레시 후 확인으로 검증됨. 진행 중 임시 화면 진단 프로브(TutorialDebugProbe, lastClick/스토어 상태 기록)로 정적-추론 실패 지점의 런타임 1차증거를 확보 후 제거(완료 머지에 잔존 0).
+
+## v001.1041.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #418 (핫픽스1)
+
+데이터 크래프트 모바일 dev 환경 로그인 프리필 자동 복원 컨벤션 추가 (release 빈칸 유지).
+
+### 페이즈 결과
+- **핫픽스1 (data-craft-mobile)**: v001.1038.0(릴리스 빌드 게이팅) 적용 후 dev 빌드에서 `--dart-define` 미주입 시 로그인 칸이 빈칸으로 나오던 편의 회귀를 해소. `.gitignore` 에 `dev_login.json`(시크릿 비트래킹) 등록 + `dev_login.example.json`(키 이름·빈 값 템플릿) 추가. 개발자는 로컬 `dev_login.json`(실값, gitignored)을 두고 `--dart-define-from-file=dev_login.json` 로 dev 자동 프리필을 복원한다. dart-define 은 컴파일 타임 주입이라 값 변경 시 dev 서버 풀 재기동 필요(hot reload 무효). release APK 는 여전히 빈칸 + 시크릿 미포함.
+
+### 범위 메모
+- dev.md `dev_command` 에 `--dart-define-from-file=dev_login.json` 추가는 group-policy 로 별도 처리(이 플래그는 로컬 `dev_login.json` 존재에 하드 의존 — fresh 체크아웃은 example 복사 후 실값 채움).
+
+### 영향 파일
+- data-craft-mobile:.gitignore
+- data-craft-mobile:dev_login.example.json
