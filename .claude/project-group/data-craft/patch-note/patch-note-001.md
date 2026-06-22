@@ -31764,3 +31764,16 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:android/app/src/main/res/{mipmap-*,drawable-*,mipmap-anydpi-v26,values}/ (런처·적응형 아이콘)
 - data-craft-mobile:ios/Runner/Assets.xcassets/AppIcon.appiconset/*, ios/Runner.xcodeproj/project.pbxproj
 - data-craft-mobile:web/favicon.png, web/icons/Icon-*.png, web/manifest.json
+
+## v001.1050.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #428 (보안 #408 W3)
+
+데이터 크래프트 모바일 dio 인증 인터셉터의 Bearer 토큰을 우리 API 호스트 요청에만 첨부하도록 게이팅 (외부 호스트 토큰 누출 차단).
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: dio 인터셉터가 목적지 호스트를 가리지 않고 모든 요청에 `Authorization: Bearer` 를 첨부하던 문제(보안 #408 W3)를 호스트 게이팅으로 해소. 토큰 첨부 2지점(onRequest 인터셉터 + 401 retry 의 수동 헤더 설정) 모두에 헬퍼 `_isApiHost(Uri uri) => uri.host == Uri.parse(apiBaseUrl).host` 를 적용 — 우리 서버(apiBaseUrl) 호스트일 때만 토큰 첨부, 외부 절대 URL(프로필 이미지 등)에는 미첨부. 401 refresh 재시도·`_retried` 가드·NetworkUnavailableException 분기·onAuthExpired 등 기존 로직 보존. host-only 비교(단일 API origin). flutter analyze 통과.
+
+### 영향 파일
+- data-craft-mobile:lib/api/dio_client.dart
