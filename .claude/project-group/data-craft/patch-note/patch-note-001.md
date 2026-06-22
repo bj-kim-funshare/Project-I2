@@ -31502,3 +31502,19 @@ data-craft:
 ### 영향 파일
 - data-craft-mobile:lib/api/dio_client.dart
 - data-craft-mobile:lib/state/auth_controller.dart
+
+## v001.1038.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #418 (보안 #408 B1)
+
+데이터 크래프트 모바일 로그인 화면 자격증명 프리필을 릴리스 빌드에서 미포함하도록 전환.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: 로그인 화면(`common_signin_screen.dart`)에 하드코딩돼 있던 자격증명 프리필(이메일·비밀번호) 리터럴을 소스에서 완전 제거하고, `kReleaseMode` 게이팅 + `String.fromEnvironment('DEV_LOGIN_EMAIL'/'DEV_LOGIN_PASSWORD')` top-level const 로 전환. 결과: `flutter build apk --release` 배포 APK 는 입력칸이 빈 칸으로 나가며 자격증명 리터럴이 소스·바이너리에 포함되지 않음. 개발 빌드는 `--dart-define=DEV_LOGIN_EMAIL=...--dart-define=DEV_LOGIN_PASSWORD=...` 주입 시에만 프리필(미주입 시 빈 칸). lint: `flutter analyze` 통과(`kReleaseMode` 용 `package:flutter/foundation.dart` import 추가 — env.dart 선례 동일).
+
+### 범위 메모
+- 본 변경은 **향후 배포 빌드 표면**만 닫는다. 기존에 배포된 APK 와 git 이력에 잔존하는 실 자격증명 쌍은 본 플랜으로 제거되지 않으며(마스터 수용 잔존 리스크), 비밀번호 로테이션·이력 정리는 범위 밖이다. 보안 이슈 #408 의 나머지 finding(W1~W6·의존성)도 본 플랜 범위 아님.
+
+### 영향 파일
+- data-craft-mobile:lib/screens/auth/common_signin_screen.dart
