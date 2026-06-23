@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1054.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #431
+
+**채팅 파일 프록시(`/api/chat/file`)의 무인증 SSRF 차단 (보안 점검 #411 BLK-5).** `fetchSendbirdFile` 의 호스트 가드가 `*.sendbird.com` 전체를 허용하고 모든 요청에 마스터 `Api-Token` 을 첨부하며 리다이렉트를 무조건 추종해, 무인증 공격자가 `?url=https://api-{APP_ID}.sendbird.com/v3/users` 를 넘기면 서버가 마스터 토큰으로 Sendbird Platform Admin API 를 중계해 전 테넌트 데이터를 탈취할 수 있었다(`APP_ID` 는 공개 클라이언트 노출값). `fetchSendbirdFile` 한 곳만 강화 — `getBaseUrl()`/`getHeaders()` 기반 관리자 함수 14개는 무손상. **보안 목표(관리자 API 중계 SSRF)는 node 실측으로 차단 확인. 단 정상 채팅 파일 로딩 무손상 여부는 실제 Sendbird 파일 URL 호스트를 정적으로 확보하지 못해 `dev 스모크 테스트(채팅 이미지 실로드) 통과 후 확정` — 스모크 통과 전 prod 배포 금지.**
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `fa7530e8`: 광역 정규식(`*.sendbird.com`)을 `new URL()` 파싱 헬퍼 `isAllowedSendbirdFileUrl` 로 교체 — https + `.sendbird.com` 끝 + 정확한 Platform Admin 호스트(`api-${APP_ID}.sendbird.com`) 차단 + `/v3/` 경로 차단. 공격 표면(`api-*/v3/*`)을 정확히 차단하면서 파일 CDN 호스트는 무영향(파일은 `/v3/` 미사용).
+- **Phase 2** (fix, data-craft-server) `660c254`: `redirect:'manual'` 전환 — 3xx Location 이 사설/링크로컬 IP 면 거부, 외부 CDN(S3/CloudFront)이면 `Api-Token` 미전파로 1 hop 재요청, 2차 리다이렉트 거부. `isPrivateHost` 헬퍼 추가. 호스트 비교 `.toLowerCase()`(APP_ID 대문자 hex 대응). 보정 `877f08b`: `isPrivateHost` 의 IPv6(fc/fd/fe80) 검사를 리터럴(`:` 포함) 한정으로 좁힘 — `fd-cdn` 류 일반 도메인 오탐 방지.
+
+### 검증
+- node 실측(가드 로직): `api-{APP_ID}.sendbird.com/v3/*`(대/소문자 모두)·admin 호스트 비-/v3·`169.254.169.254`·http·non-sendbird·suffix/path trick → 전부 거부, 정상 file CDN URL → 허용.
+- 코드 확인: `Api-Token` 가드 통과 후에만 첨부·리다이렉트 비전파, admin 함수 14개 diff 무변경(변경은 `fetchSendbirdFile`+신규 헬퍼 2개 한정).
+- `pnpm build`(tsc) EXIT=0, `pnpm lint`(eslint) EXIT=0.
+- **잔여 게이트(배포 전 필수)**: dev 채팅에서 이미지 1장 실제 열기 → 200 정상 로드 확인. 4xx 시 파일이 admin 호스트에 있는 예외 케이스 → Phase 3(message-id 기반 서버측 URL 조회 재설계, BE+웹+모바일) 별도 플랜 전환.
+
+### 범위 메모
+- 잔여 약점(범위 밖): 무인증 cross-tenant 파일 접근(URL 추측불가 의존)·서명 URL 미도입·DNS-rebind(리다이렉트 hop 에 토큰 비전파+hop1 sendbird.com 제약으로 저위험) — 별도 후속 후보.
+
+### 영향 파일
+data-craft-server:
+- src/services/sendbird.service.ts
+
 ## v001.1053.0
 
 > 통합일: 2026-06-22
