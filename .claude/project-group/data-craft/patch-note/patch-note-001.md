@@ -32179,3 +32179,20 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-admin-server:src/models/adminEmailVerification.model.ts
 - data-craft-admin-server:src/services/adminAuth.service.ts
+
+## v001.1069.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #426 (핫픽스5)
+
+데이터 크래프트 모바일 홈 탭 — 디자인 레퍼런스 추가 정합 3건.
+
+### 페이즈 결과
+- **핫픽스5 (data-craft-mobile)**:
+  1. 인사말 이름 파란색 — `Text.rich`로 greeting을 이름 위치에서 분할, 이름~끝을 homePrimary(파랑)로 렌더(idx<0 가드).
+  2. 즐겨찾기 카드 세로 오버플로(BOTTOM OVERFLOWED 1px) 수정 — 수평 리스트 높이 120→128.
+  3. 알림 요약 카드 — 최근 알림이 없어도 구분선 + 기본 문구(homeNoRecentNoti "최근 알림이 없어요")를 항상 표시.
+
+### 영향 파일
+- data-craft-mobile:lib/l10n/app_ko.arb, lib/l10n/app_en.arb
+- data-craft-mobile:lib/screens/home/widgets/(home_greeting_header, home_notification_summary, home_favorites_section).dart
