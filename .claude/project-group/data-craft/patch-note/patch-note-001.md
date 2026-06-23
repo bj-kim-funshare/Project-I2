@@ -31982,3 +31982,16 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+
+## v001.1060.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #436 (보안 #408 W2 해소)
+
+데이터 크래프트 모바일 채팅 API 에러 로그에서 응답 본문 통째 덤프를 제거해 Sendbird 세션 토큰 로그 노출 차단.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: `chat_api.dart` 의 두 catch 블록(getSessionToken, createChannel)이 실패 시 응답 객체(`response`)와 `errorResponse` 를 통째로 debugPrint 하던 것을 제거하고, 비민감 메타(`$e (status=$statusCode)`)만 로깅하도록 변경. getSessionToken 의 200 응답 본문에는 세션 토큰이 담기므로 fromJson 파싱 예외 시 토큰이 디버그 로그로 새던 경로를 차단했다. debugPrint 전용이던 `errorResponse` 지역변수는 양쪽 제거(unused 방지), `response` 선언은 try 본문에서 사용되어 유지, rethrow·에러 전파 동작 보존. (debugPrint 는 릴리스 빌드에서 제거되므로 노출 범위는 dev/debug 빌드 한정 — 위험도 warn.) flutter analyze 통과.
+
+### 영향 파일
+- data-craft-mobile:lib/api/chat_api.dart
