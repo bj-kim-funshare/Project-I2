@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1067.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #441
+
+**인증코드(OTP) 생성을 CSPRNG로 교체 (보안 점검 #411 WRN-1 — crypto 오용).** `auth.service.ts` `generateVerificationCode` 가 6자리 인증 코드를 비-암호학적 `Math.random()`(V8 xorshift128+, 예측 가능)으로 만들어, 회원가입·비밀번호 재설정·결제비번 변경 인증 토큰이 출력 관측을 통한 상태 복원·예측에 노출될 여지가 있었다. Node `crypto.randomInt` 로 교체. (기존 완화: 5회 실패 30분 차단 + 5분 만료로 즉시 악용성은 낮았음.)
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `d4707c3`: `import crypto from 'node:crypto'` 추가 + `generateVerificationCode` 본문을 `Math.floor(100000+Math.random()*900000)` → `crypto.randomInt(100000, 1000000).toString()` 로 교체. 상한 1000000(배타) → 기존 100000~999999 6자리 범위 동등. 호출부·타 함수·타 파일 무변경(+2/-1). 파일 내 유일 chokepoint라 전 사용처(가입/재설정/결제비번) 일괄 적용.
+
+### 검증
+- 메인 세션: diff 가 auth.service.ts 한 곳, 상한 리터럴 `1000000` 확인(999999 아님), 커밋본 잔여 `Math.random` 0건, node 1000샘플 전부 6자리·100000~999999 범위 내. `pnpm build`(tsc) EXIT=0, `pnpm lint` EXIT=0.
+- 범위 밖: 타 파일/타 용도 Math.random(orderId·requestId·샘플 등 비보안), OTP 비교 타이밍 — 본 항목 무관(별도).
+
+### 영향 파일
+data-craft-server:
+- src/services/auth.service.ts
+
 ## v001.1063.0
 
 > 통합일: 2026-06-23
