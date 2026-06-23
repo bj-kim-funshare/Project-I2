@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1077.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #449
+
+**대시보드 위젯 설정 모달의 드롭다운(컬럼/집계 선택)을 portal/anchor 방식 → Radix Popover(`dialogMode`)로 전환해 모달 내 드롭다운 상호작용 3종 결함 해결.** 기존 두 드롭다운(`ColumnSelector`/`AggregationSelector`)은 공유 `ViewModeDropdownPanel` 을 portal 모드(`createPortal` + `fixed inset-0` 백드롭)로 사용했는데, 이 전체화면 백드롭이 Radix Dialog 모달의 modal pointer-events·DismissableLayer 와 충돌해 (1) 드롭다운 열림 중 모달 내 모든 클릭이 차단되고, (2) ESC 가 드롭다운에서 가로채지지 않고 Radix Dialog 로 전파돼 모달까지 닫히며, (3) 외부 클릭으로 드롭다운이 닫히지 않았다. 동일 컴포넌트에 이미 구현돼 있던(그러나 미사용이던) `dialogMode` 분기(Radix Popover)로 두 드롭다운을 전환 — Radix DismissableLayer 레이어 스택이 Popover 를 최상위 레이어로 처리하므로 ESC·외부클릭이 Popover 에만 작용하고, 전체화면 백드롭이 사라져 클릭 차단이 해소된다(세 증상 구조적 동시 해결). **`dialogMode` 첫 실사용이라 typecheck/lint(0 errors) 통과는 prop 정합만 보증 — 런타임 동작은 마스터 확인 필요(특히 `searchable` 인 ColumnSelector 의 확장 모달 경로 modal-in-popover-in-dialog).**
+
+### 페이즈 결과
+- **Phase 1** (fix) `3193190f0`: `ColumnSelector` 를 portal/anchor API(`triggerRef`+`getBoundingClientRect`+`anchor` state+`handleOpen`) 제거하고 `dialogMode` 로 전환. `open`/`setOpen` 도입, 트리거 버튼을 onClick 없는 `trigger` prop 으로 전달, `dialogMode`/`open`/`onOpenChange={setOpen}` 설정. 선택 경로(`onCommitSingle`→`setOpen(false)`)·dismiss 경로(`onClose`/`onOpenChange`→`setOpen(false)`) 이중 배선. `searchable`(확장 모달)·`zIndex` 보존. +31/-36.
+- **Phase 2** (fix) `744203873`: `AggregationSelector` 를 Phase 1 과 동일 패턴으로 전환. `searchable={false}` 유지(확장 경로 없음). +30/-35.
+
+### 검증
+- 페이즈별 lint 게이트(`pnpm typecheck:all && pnpm lint`, fresh 워크트리 install+build:packages 선행) 양 페이즈 EXIT=0(0 errors, 127 pre-existing warnings). advisor 계획·완료 2회 PASS. 런타임 UI 동작(클릭 차단 해소/ESC 드롭다운 단독 닫힘/외부클릭 닫힘)은 정적 게이트로 검증 불가 → 마스터 수동 확인 권고.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColumnSelector.tsx
+- packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/AggregationSelector.tsx
+
 ## v001.1076.0
 
 > 통합일: 2026-06-22
