@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1071.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #438 (핫픽스1)
+
+**핫픽스1 — 웹에서 `Platform.isAndroid` 크래시(흰 화면) 수정.** #438 푸시 구현이 추가한 `dart:io` `Platform.isAndroid` 가드가 Flutter 웹에서 `Unsupported operation: Platform._operatingSystem`을 던져 앱 부팅 즉시 흰 화면이 됐다(data-craft-mobile dev 실행 = `flutter run -d chrome` = 웹). 8곳의 가드를 `kIsWeb` 우선 단락 평가로 교체(긍정 진입=`!kIsWeb && Platform.isAndroid`, 조기반환=`kIsWeb || !Platform.isAndroid`)해 웹에서 `Platform.isAndroid`가 평가되지 않게 했다. `kIsWeb`은 컴파일 타임 상수라 웹에서 dart:io 접근이 결정적으로 회피된다. `flutterLocalNotificationsPlugin`은 lazy top-level final이라 웹에서 생성자 자체가 호출되지 않음을 확인.
+
+### 페이즈 결과
+- **핫픽스1** (fix, data-craft-mobile) `8e028a43`: lib/main.dart(긍정 가드 + foundation import 추가) + lib/chat/chat_push.dart·chat_notifications.dart·chat_push_navigation.dart(조기반환 가드 7곳) 웹 안전화.
+
+### 검증
+- flutter analyze(No issues) + flutter build apk --debug(Android) + flutter build web(웹 컴파일) 성공. 전수 grep: 신규 unguarded dart:io 없음(기타 dart:io는 #438 이전부터 웹 동작하던 기존 코드).
+- ⚠️ 런타임 최종 확인은 마스터 웹 하드 리프레시(dev 재기동 후) — 흰 화면→정상 첫 화면 도달.
+
+### 영향 파일
+data-craft-mobile:
+- lib/main.dart, lib/chat/chat_push.dart, lib/chat/chat_notifications.dart, lib/chat/chat_push_navigation.dart
+
 ## v001.1068.0
 
 > 통합일: 2026-06-23
