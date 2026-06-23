@@ -31928,3 +31928,19 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+
+## v001.1057.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #426 (핫픽스1)
+
+데이터 크래프트 모바일 홈 탭 — 첫 접속 시 알림/내용 로드 실패 복구.
+
+### 페이즈 결과
+- **핫픽스1 (data-craft-mobile)**: 부팅 시 인증 미해결(authControllerProvider loading) 동안 라우터가 초기 위치 /home을 렌더 → HomeScreen이 토큰 없이 notification/pages provider를 발사해 TOKEN_NOT_FOUND 에러를 캐시하고, 인증 완료 후에도 재요청하지 않던 문제 수정. main.dart DataCraftApp.build에 authControllerProvider 전환 리스너 추가 — 인증이 비인증→인증으로 전환될 때 notification/pages/userPreference provider를 invalidate해 토큰 가진 상태로 재요청(자동로그인 복귀·수동 로그인 양쪽 복구).
+
+### 알려진 이연 (의식적 deferral)
+- 본 증상은 동일 근본 클래스(라우터가 인증 loading 중 authed 화면을 렌더)의 반복 발현이다. 항구적 해법은 라우터 레벨(loading 동안 스플래시 유지, /home 미렌더)이며 앱 전역 영향이라 별도 작업으로 이연. 본 핫픽스는 타깃 복구(invalidate-on-transition).
+
+### 영향 파일
+- data-craft-mobile:lib/main.dart
