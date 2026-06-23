@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1055.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #432 (보안 점검 #410 #D·#E·#F)
+
+**빌더 위젯/레이아웃 cross-tenant IDOR 차단 (data-craft-server) — 보안 점검 #410 #D·#E·#F.** 빌더의 위젯 일괄저장·순서변경·레이아웃저장 API 3종이 부모(form/page)는 companyId 로 검증하지만 요청 body 의 위젯 UUID 를 그 부모/회사에 바인딩하지 않아, victim widget UUID 를 아는 공격자가 타 회사 위젯을 덮어쓰기/순서변경/삭제할 수 있었다(확정 cross-tenant 쓰기, UUID 선결로 P1). 세 sink 모두 검증된 부모에 바인딩해 차단.
+
+### 페이즈 결과
+- **Phase 1** (fix) `9e2454a`: `builder.model.ts` `upsertWidget` 의 `ON CONFLICT (widget_id) DO UPDATE SET ...` 에 `WHERE form_widget.form_id = EXCLUDED.form_id` 추가 — 타 form(=타 회사) widget_id 충돌은 no-op(덮어쓰기 차단), 같은 form 재저장은 정상. 모델 전용.
+- **Phase 2** (fix) `2e32a16`: `builder.model.ts` `updateWidgetOrders` 에 `formId` 파라미터 + `AND form_id = ?::uuid` 추가(page 트윈 `updatePageOrders`/BUG-P09-001 미러). `form_widget` 은 company_id 컬럼이 없어 검증된 form_id 가 정답. `builder.widget.ts` `reorderWidgets` 가 검증된 formId 전파.
+- **Phase 3** (fix) `9e96dcb`: `builder.layout.ts` `saveLayoutService` 의 무스코프 dedup DELETE 를 area→layout 조인 존재확인 + `ForbiddenError` 선제 거부로 교체. `deleteOldLayoutData` 가 현재 page 위젯을 트랜잭션 내 hard-delete 하므로 dedup 시점 잔존 widget_id 는 타 page/company 확정 → 거부. downstream PK 위반(500) 회피.
+
+### 범위 메모
+- 완료 시점 클래스 완결성 sweep(form_widget/page_layout_widget 전 쓰기): 단일 위젯 경로(`updateWidget`/`softDeleteWidget`)는 `findWidgetByIdWithConnection(widgetId, formId)` 로 이미 소유 검증됨(안전), bulk body 경로 3종(#D/#E/#F)만 누락이었고 본 플랜으로 닫힘. `updateWidgetOrder`(단수)는 dead code.
+- **#F 정상 재저장 보존**은 코드 추론(softDeleteLayoutsByPageId + 위젯 hard-delete + 페이지당 활성 layout 1개 불변식) 기반 — 라이브 런타임 미검증(reasoned-not-runtime-verified). cross-view 수동 시나리오는 BE 재기동 필요.
+- 다른 발견(#410 #G 서브그리드는 별도 검증 후 별건, LIVE-1~3, 완료된 #A/#B/#C)은 무관.
+- 계획·완료 advisor() 검증 모두 PASS (5관점).
+
+### 영향 파일
+data-craft-server:
+- src/models/builder.model.ts
+- src/services/builder/builder.widget.ts
+- src/services/builder/builder.layout.ts
+
 ## v001.1054.0
 
 > 통합일: 2026-06-22
