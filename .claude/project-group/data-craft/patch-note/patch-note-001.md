@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1076.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #447
+
+**업그레이드 차액 결제 post-charge DB 실패 시 정산 신호(critical 로그) 추가 (보안 점검 #411 WRN-3 — 결제 무결성 관측성).** `billingSubscription.service.ts` `executeUpgradeWithDiff` 는 차액을 즉시 과금(`charge`, source `upgrade-proration`)한 뒤 payment_history·플랜 갱신을 트랜잭션으로 처리하는데, 과금 성공 후 본 트랜잭션이 일시적 DB 오류로 실패하면 catch 가 `rollback + throw` 만 하고 `PAYMENT_CHARGE_DB_FAILURE` critical 로그를 남기지 않았다 → 토스에는 돈이 잡혔으나 로컬 결제기록은 롤백돼, 운영팀이 수동 정산할 신호가 없었다. 형제 경로(`first_charge`·`promotion_proration`)와 동일하게 catch 에 정산 로그를 추가. **이 수정은 관측성(수동 정산 신호) 추가일 뿐, 과금-반영 불일치(돈 묶임)를 자동 해결하지 않는다 — 정산은 기존 컨벤션대로 수동(자동 PG 환불은 양 결제경로 일괄 정책으로 별도).** 업그레이드는 쿠폰 예약이 트랜잭션 내부라 롤백 자동 복원되므로 쿠폰 복원은 불필요(BLK-8과 구분).
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `d4d0bed`(로그) + `dfea9ca`(보정): `executeUpgradeWithDiff` catch 에 `if (paymentKey != null) logger.critical({ event_type:'PAYMENT_CHARGE_DB_FAILURE', companyId, paymentKey, context:'upgrade_proration', error: err })` 추가(과금 발생 시에만). 보정: `let paymentKey` 선언이 try 블록 내부라 catch 스코프 밖(TS2304)이어서 함수 스코프로 hoist + 내부 선언 제거(assignment 무변경). 기존 rollback+throw err 유지. 누적 +5/-1.
+
+### 검증
+- 메인 세션 7c build 게이트가 1차 시도의 tsc 에러(TS2304 paymentKey 스코프)를 적발 → iter2 hoist 보정. 누적 diff = hoist + catch 로그, billingSubscription.service.ts 한 파일·executeUpgradeWithDiff 한정. `pnpm build`(tsc) EXIT=0, `pnpm lint` EXIT=0.
+
+### 후속 (별도 finding 후보)
+- `billingRenewal`(renewSingleClient/renewPromotionClient)은 cron 구동(과금 묶임 시 사용자 신고 없음)인데, BLK-8 audit 은 쿠폰 축만 클리어했고 **정산-로그 축은 미확인**. renewal 의 post-charge 실패 경로가 `PAYMENT_CHARGE_DB_FAILURE`(또는 동등 정산 신호)를 내는지 확인 필요 — 없으면 별도 finding.
+
+### 영향 파일
+data-craft-server:
+- src/services/billingSubscription.service.ts
+
 ## v001.1073.0
 
 > 통합일: 2026-06-22
