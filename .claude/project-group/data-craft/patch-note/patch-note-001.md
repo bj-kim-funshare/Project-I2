@@ -31964,3 +31964,21 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/main.dart
+
+## v001.1059.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #426 (핫픽스2)
+
+데이터 크래프트 모바일 페이지 뷰어 — 강제 refresh로 인한 "인증이 필요합니다" 오류 수정.
+
+### 페이즈 결과
+- **핫픽스2 (data-craft-mobile)**: 페이지 뷰어(PageWebViewScreen) `_initialize()`가 페이지 열 때마다 무조건 `refreshAccessToken()`을 호출 → web dev처럼 refresh 쿠키가 없는 환경에서 refresh가 400 실패 시 dio_client가 유효한 메모리 access token까지 clearTokens()로 삭제 → token==null → "인증이 필요합니다" 오류. accessToken이 없을 때만 refresh를 호출하도록 게이팅(유효 토큰 보존). web embed는 postMessage로 live 토큰을 받으므로 강제 refresh 불필요.
+
+### 알려진 이연 (누적 기술부채 — 마스터 대원칙 지시로 후속 hotfix에서 처리 예정)
+- **인증 실패→로그인 복귀 대원칙**: 인증 만료/실패 시 in-place "재로그인 안내" 대신 항상 로그인 화면으로 복귀해야 한다(마스터 2026-06-23 지시). 본 핫픽스는 토큰 파괴만 막았고, 근본 정합은 후속에서.
+- **refreshAccessToken 비파괴화**: refreshAccessToken()이 쿠키 부재(400)와 세션 거부(401)를 구분하지 않고 무조건 토큰을 wipe. 401 거부에서만 만료 처리하도록 후속 정합 필요(401 인터셉터·auth_controller.build에서도 호출되어 blast radius 큼).
+- **라우터 스플래시**: 인증 loading 중 /home 렌더로 인한 premature 토큰리스 발사(핫픽스1 근본).
+
+### 영향 파일
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
