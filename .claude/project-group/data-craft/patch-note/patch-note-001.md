@@ -32016,3 +32016,27 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-admin-server:pnpm-lock.yaml
 - data-craft-server:package.json
 - data-craft-server:pnpm-lock.yaml
+
+## v001.1062.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #426 (핫픽스3)
+
+데이터 크래프트 모바일 — 대원칙 정합: 인증 만료/실패 시 항상 로그인 화면으로 복귀(in-place 재로그인 안내 제거). 마스터 2026-06-23 지시.
+
+### 페이즈 결과
+- **핫픽스3 (data-craft-mobile)**: 전수조사 결과 위반 공통 뿌리 = 서버가 Authorization 헤더 부재 시 400 TOKEN_NOT_FOUND(401 아님)를 반환하는데 dio 인터셉터가 401만 잡아, 토큰 부재/만료 시 에러가 11개 화면에 in-place "불러오기 실패/다시 시도"로 표출되고 로그인 복귀가 안 됨. 중앙집중 4파일 수정:
+  - `dio_client.dart`: ①`_isAuthnFailure`로 400 TOKEN_NOT_FOUND/INVALID_TOKEN_PAYLOAD를 401과 동일 처리 → onAuthExpired→setExpired→라우터 `/auth/signin` 리다이렉트(11개 화면 개별 수정 없이 일괄 적용). ②`_inFlightRefresh`로 동시 refresh 합치기(부팅 시 refresh 토큰 rotation race로 유효 사용자 로그아웃되는 회귀 방지). ③retry 실패가 인증 실패면 onAuthExpired 경유.
+  - `app_router.dart` + `splash_screen.dart`(신규): 인증 해석(loading) 동안 `/home` 대신 `/splash` 유지 → 부팅 토큰리스 요청 발사 자체 차단(인증 완료 시 자동 탈출 home/signin).
+  - `page_web_view_screen.dart`: 토큰 부재 시 in-place "인증이 필요합니다. 다시 로그인해 주세요" 대신 `setExpired()`→로그인 리다이렉트.
+- 403(authZ)·네트워크(maintenance)는 종전 동작 보존.
+
+### 누적 이연 해소 (3회 이연했던 근본)
+- 라우터 스플래시 + refresh 비파괴/비레이싱화로 "인증 loading 중 authed 화면 렌더→토큰리스 발사" 클래스(#2·#413핫픽스3·#426핫픽스1)가 구조적으로 닫힘.
+- 잔여 클린업(비차단): #426핫픽스1의 인증전환 invalidate 리스너는 스플래시 도입 후 부팅 시 1회 중복 refetch 유발(무해) — 후속 정리 후보.
+
+### 영향 파일
+- data-craft-mobile:lib/api/dio_client.dart
+- data-craft-mobile:lib/router/app_router.dart
+- data-craft-mobile:lib/screens/splash_screen.dart
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
