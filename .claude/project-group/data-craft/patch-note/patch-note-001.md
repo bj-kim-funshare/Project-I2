@@ -32196,3 +32196,20 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-mobile:lib/l10n/app_ko.arb, lib/l10n/app_en.arb
 - data-craft-mobile:lib/screens/home/widgets/(home_greeting_header, home_notification_summary, home_favorites_section).dart
+
+## v001.1070.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #442 (보안 #408 W5 해소 / A2)
+
+데이터 크래프트 모바일 native 세션 쿠키를 평문 파일 대신 OS 암호화 저장(Keystore/Keychain)으로 전환.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: native 쿠키 jar 가 세션 refresh 쿠키를 평문 파일(`FileStorage('.cookies/')`)로 저장하던 것(보안 #408 W5)을, `flutter_secure_storage`(Android Keystore / iOS Keychain = OS 암호화, 기존 의존성) 백엔드 `SecureCookieStorage` 로 교체. `cookie_` 접두사 키, 전 메서드 try/catch graceful degradation(CookieManager 인터셉터가 전 요청 경로에 물려 Keystore 예외가 네트워킹 전체를 깨뜨리는 것 방지), deleteAll 은 `cookie_` 접두사 항목만 삭제(TokenStorage refresh_token 등 보존). A2 방식: `initPlatformAuth()` 가 기존 평문 `.cookies/` 디렉터리를 삭제(평문 자격증명 제거)하므로 **이 업데이트 후 기존 로그인 사용자는 최초 1회 재로그인이 필요**하며 이후 세션은 암호화 저장으로 유지된다. 새 의존성 0. flutter analyze 통과.
+
+### ⚠️ 배포/검증 메모
+- **업데이트 후 최초 1회 재로그인 필요**(배포 전체 모바일 사용자 영향, A2 마이그레이션의 의도된 결과). 지원 문의 대비 안내 권장.
+- 런타임 검증은 정적 분석/lint 로 도달 불가 → 실기기 스모크 테스트 필요: (a) 로그인 → 앱 강제종료 → 재실행 시 세션 유지, (b) 기존 설치본 업데이트 → 1회 재로그인 후 sticky.
+
+### 영향 파일
+- data-craft-mobile:lib/api/platform_auth_io.dart
