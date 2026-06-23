@@ -31891,3 +31891,16 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - lib/l10n/app_ko.arb, lib/l10n/app_en.arb, lib/screens/home/home_tokens.dart
 - lib/screens/home/home_screen.dart (home_placeholder.dart 제거), lib/router/app_router.dart, lib/screens/main_shell/widgets/bottom_nav_bar.dart
 - lib/screens/home/widgets/ (home_greeting_header, home_notification_summary, home_quick_actions, home_skeleton, home_favorites_section, home_recent_pages_section).dart
+
+## v001.1055.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #433 (보안 #408 W4 잔여 하드닝)
+
+데이터 크래프트 모바일 페이지 임베드 WebView 가 외부 호스트로 메인프레임 이동 시 앱 내 렌더 대신 시스템 브라우저로 열도록 차단.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: 페이지 임베드 InAppWebView 에 `useShouldOverrideUrlLoading: true` + `shouldOverrideUrlLoading` 콜백 추가. 외부 호스트로의 **메인프레임 링크 이동**은 앱 WebView 안에 렌더하지 않고 `launchUrl(externalApplication)` 로 시스템 브라우저에서 열고 취소(CANCEL) — 즉 페이지의 외부 링크는 시스템 브라우저로 열린다. 서브프레임(iframe)·비-http(s) 스킴·우리 사이트(webBaseUrl) 내 이동·초기 부팅은 그대로 허용해 임베드 콘텐츠와 기존 동작을 보존. 토큰 전달(쿠키/postMessage)·_initialize·_retry·에러 UI 무수정. W4 의 토큰 노출 핵심은 이전 재설계로 이미 해소됐고 본 변경은 완성도/피싱 표면 하드닝. (한계: Android 는 일부 JS `window.location`/서버 302 리다이렉트엔 콜백 미발화 — 사용자 링크 탭은 차단됨.) flutter analyze 통과.
+
+### 영향 파일
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
