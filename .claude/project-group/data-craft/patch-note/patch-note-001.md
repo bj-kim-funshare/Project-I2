@@ -32289,3 +32289,31 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-mobile:lib/storage/token_storage.dart
 - data-craft-mobile:lib/api/platform_auth_io.dart
+
+## v001.1075.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #445
+
+선택 위젯(selector)을 입력 위젯(input)으로 일원화(enterprise-023 마무리)하고, 동작하지 않던 registered-data/dataColumn 목업을 제거했다. 위젯 추가 팔레트에서 '선택' 단독 항목이 사라지고, 입력 위젯의 inputType 하나로 텍스트/숫자/날짜/드롭다운/라디오/체크박스/스위치/토글을 모두 구성한다.
+
+### 페이즈 결과
+- **Phase 1 (feat)** `2ecc40b`: 입력 위젯 inputType 드롭다운에서 버튼형 4종(radio/checkbox/switch/toggle)의 disabled·'준비중' 배지 제거 → 활성화. 런타임(SELECTOR_WIDGET_TYPE_MAP+렌더 컴포넌트)은 기존 지원이라 편집기 잠금 해제만으로 패리티.
+- **Phase 2 (chore)** `75e3463`: 위젯 추가 팔레트(AddWidgetButton)에서 selector 항목 제거 + 카운트 주석 정정. 무참조 i18n(widget.typeNameSelector/typeDescSelector) ko/en 제거. case 'selector'·WidgetType·SelectorWidget 하위호환 보존.
+- **Phase 3 (refactor)** `824f216`: SelectorDataSection 의 죽은 registered-data/dataColumn 목업 UI(-162줄)·widget-props 타입(registeredDataId/dataColumn)·무참조 i18n 10키 제거. dataType/SelectorDataType 은 하위호환·MobileSelectorWidget 소비로 보존.
+
+### 범위 메모
+- registered-data 는 런타임 소비처 0의 '추후 구현 예정' 목업이라 제거로 기능 손실 없음(실동작 데이터그룹 바인딩 inputDataGroupId 는 입력 위젯에 이미 존재).
+- 버튼형 4종은 팔레트 selector 제거 시 생성 경로가 사라지므로 Phase 1 에서 입력 위젯에 선활성화(마스터 확정).
+- **이연 후속**: src/pages/mobile/widgets/MobileSelectorWidget.tsx 의 dataType==='registered-data' dead branch — 제거 심볼 미참조, placeholder만 렌더(크래시·회귀 없음). 모바일 뷰 정리는 후속 핫픽스 후보.
+- FE-only, BE/DB·data-craft-mobile(Flutter) 무변경. i-dev 머지까지 — push·배포 별도.
+- 런타임 검증 미수행(plan-enterprise 정적 게이트만): 버튼형 4종 각각 렌더·다중값 저장/재로드, 기존 selector 위젯 정상 렌더는 마스터 수동 확인 권장.
+
+### 영향 파일
+- data-craft:src/widgets/property-drawer/ui/property-editors/InputPropertiesEditor.tsx
+- data-craft:src/features/widget-placement/ui/AddWidgetButton.tsx
+- data-craft:src/widgets/property-drawer/ui/property-editors/SelectorDataSection.tsx
+- data-craft:src/widgets/property-drawer/ui/property-editors/SelectorPropertiesEditor.tsx
+- data-craft:src/shared/types/widget-props.types.ts
+- data-craft:src/shared/i18n/locales/ko.ts
+- data-craft:src/shared/i18n/locales/en.ts
