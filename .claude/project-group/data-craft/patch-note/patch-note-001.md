@@ -31982,3 +31982,24 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+
+## v001.1060.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #434
+
+보안 점검 WARN B-3 후속 — 두 백엔드(data-craft-admin-server, data-craft-server)의 nodemailer 를 7.0.13 에서 9.0.1 로 동반 업그레이드해 high 권고(GHSA-p6gq-j5cr-w38f: raw 옵션 disableFileAccess/disableUrlAccess 우회)를 해소했다. 두 BE 모두 메일 사용부는 고정 템플릿+서버생성 코드라 실 악용 경로는 없었으나 dev.md §보안정책(의존성 high+ 정리) 충족. createTransport/sendMail/Transporter API 가 v9 에서 호환되어 호출부 코드 변경은 없었다.
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-admin-server)** `2e426cf`: nodemailer ^7.0.13 → ^9.0.1, @types/nodemailer ^8.0.0 → ^8.0.1. email.service.ts 무수정. pnpm build(tsc)·lint·audit --prod 통과, 잔존 취약점 없음.
+- **Phase 2 (chore, data-craft-server)** `2c7d03c`: nodemailer ^7.0.13 → ^9.0.1, @types/nodemailer ^8.0.0 → ^8.0.1. email.service.ts·contact.service.ts 무수정. pnpm build(tsc)·lint 통과, nodemailer high 해소.
+
+### 범위 메모
+- **서비스 BE 배포 게이트**: 본 플랜은 i-dev 머지까지만. data-craft-server 는 AWS EC2 운영본이므로 배포 전 ① prod EC2 Node ≥18 확인(nodemailer 9 요구, 로컬 빌드 통과는 prod 증명 아님), ② 실 메일 경로(가입/알림/contact) 런타임 발송 검증 필수. 배포는 별도 후속.
+- **범위 외 잔존 취약점 관찰 보고** (data-craft-server audit --prod, 본 플랜 미대상 별건 후속): high — `jws`(JWT 서명 경로, 라이브 인증 근간 → 우선 검토 권장)·`xlsx`(2건, SheetJS 레지스트리 미패치라 단순 버전업 불가)·`path-to-regexp`. moderate — path-to-regexp·qs(2)·@anthropic-ai/sdk(2)·ip-address. low — qs.
+
+### 영향 파일
+- data-craft-admin-server:package.json
+- data-craft-admin-server:pnpm-lock.yaml
+- data-craft-server:package.json
+- data-craft-server:pnpm-lock.yaml
