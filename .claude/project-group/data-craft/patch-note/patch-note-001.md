@@ -32109,3 +32109,23 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/api/auth_api.dart
 - data-craft-mobile:lib/api/dto/auth.dart
 - data-craft-mobile:lib/storage/token_storage.dart
+
+## v001.1066.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #440
+
+보안 점검 WARN B-4(마지막 코드 항목) 후속 — data-craft-admin-server 2단계 로그인 인증코드 소비를 원자적 조건부 UPDATE 로 전환해 TOCTOU race 를 제거했다. 기존 verifyCode 가 SELECT(findLatestActive) → 코드 비교 → 무조건 UPDATE(markConsumed) 를 분리 실행해, 동일 정답 코드 동시 요청 2건이 둘 다 통과하면 토큰이 2개 발급될 수 있었다. 권한 상승은 없었으나(양 요청 모두 정답 코드 필요) 상태 정합성 위생 차원에서 정리. 정상 단일 요청 로그인 동작·인터페이스·에러 의미는 무변경.
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-admin-server)** `d7ee1b4`: adminEmailVerification.model.ts 의 markConsumed(무조건 UPDATE)를 consumeIfUnused(id):boolean 로 교체 — `UPDATE admin_email_verification SET consumed=1 WHERE id=? AND consumed=0 RETURNING id` 후 rows.length>0 반환(동시 요청 중 1건만 행 매치). adminAuth.service.ts verifyCode 가 false(이미 소비) 시 BadRequestError('CODE_EXPIRED_OR_NOT_FOUND')로 토큰 발급 전 거부. 신규 에러 타입 없음, 나머지 로직 무변경. pnpm build(tsc)·lint exit 0.
+
+### 범위 메모
+- 본 건으로 보안 점검 코드 수정 대상(A-3 토큰 인메모리·B-1 crypto 난수·B-3 nodemailer 9·B-4 인증코드 원자화) 전부 종결.
+- 미수정 잔여: A-1/A-2(.env git-tracked·prod 토글)는 경영 정책상 철회, B-2(prod DB SSL)는 AWS 이전 네트워크 설계 항목으로 보류.
+- 별건 후속: data-craft-server audit 잔존 high(jws=JWT 서명 경로 우선·xlsx 레지스트리 미패치·path-to-regexp).
+- admin-server 단독·배포 제외(로컬 전용)라 배포 영향 없음.
+
+### 영향 파일
+- data-craft-admin-server:src/models/adminEmailVerification.model.ts
+- data-craft-admin-server:src/services/adminAuth.service.ts
