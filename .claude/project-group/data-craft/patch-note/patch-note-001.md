@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1082.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #449 (핫픽스2)
+
+**레이아웃 빌더 property-drawer 에서 ESC 시 드롭다운과 드로어가 함께 닫히던 잔여 문제 수정 (핫픽스1 ESC 가드 완성).** v001.1080.0(핫픽스1)은 `PropertyDrawer` 의 ESC 핸들러에 `body.style.pointerEvents === 'none'` 가드를 추가했으나, 그 keydown 리스너가 **bubble 단계**에 등록돼 있어 무력했다. 근본원인: Radix `useEscapeKeydown` 은 keydown 을 `{ capture: true }` 로 등록한다(node_modules `@radix-ui/react-use-escape-keydown` 실측). 따라서 ESC 시 Radix capture 핸들러가 **먼저** 실행돼 Select 를 닫고 `pointerEvents` 를 복원한 뒤, PropertyDrawer 의 bubble 핸들러가 돌면 가드가 통과돼 드로어까지 닫혔다. 즉 핫픽스1 의 가드는 필요했으나 capture 등록 없이는 불충분했다.
+
+### 페이즈 결과
+- **Phase 4 (핫픽스2)** (fix) `86af0a13b` (머지 `a759b2b63`): `src/widgets/property-drawer/ui/PropertyDrawer.tsx` 의 keydown 리스너를 **capture 단계**(`{ capture: true }`, add/remove 양쪽)로 등록. 드로어가 Select 보다 먼저 열려 리스너 등록도 먼저이므로 capture 순서상 PropertyDrawer 가 Radix 보다 먼저 실행 → Select 가 아직 열린 상태(`pointerEvents:none`)를 감지해 조기 반환(드로어 유지) → 뒤이어 Radix 가 Select 만 닫는다. pointerdown 리스너·핫픽스1 가드 로직 무변경. 본 수정은 이 Select 뿐 아니라 드로어 내 모든 Radix 오버레이의 ESC 경로에 일반적으로 적용된다.
+
+### 검증
+- lint 게이트(`pnpm typecheck:all && pnpm lint`, fresh 워크트리 install+build:packages 선행) EXIT=0(0 errors, 129 pre-existing warnings). advisor 핫픽스 검증 PASS(근본원인 3요소 — Radix capture 등록 실측·PropertyDrawer 선등록 구조 보장·Select pointerEvents:none 기존 주석/동작 근거 — 모두 충족). 런타임: ① 드롭다운 열고 ESC → 드롭다운만 닫히고 드로어 유지, ② 드롭다운 닫힌 상태 ESC → 드로어 정상 닫힘(회귀 없음) 마스터 확인 권고.
+
+### 영향 파일
+data-craft:
+- src/widgets/property-drawer/ui/PropertyDrawer.tsx
+
 ## v001.1081.0
 
 > 통합일: 2026-06-23
