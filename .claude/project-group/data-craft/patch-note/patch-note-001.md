@@ -32232,7 +32232,7 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-mobile:lib/api/platform_auth_io.dart
 
-## v001.1071.0
+## v001.1072.0
 
 > 통합일: 2026-06-23
 > 플랜 이슈: #443
