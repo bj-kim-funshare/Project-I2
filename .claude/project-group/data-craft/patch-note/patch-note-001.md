@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.1078.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #450
+
+**데이터 뷰어 긴 텍스트(longText) 타입 셀이 내용의 개행(`\n`)을 무시하고 한 줄로 이어 출력하던 결함 수정 — 자매 뷰어 3종(fs-data-viewer / fs-sub-data-viewer / fs-external-data-viewer) 그리드 셀 표시에 개행 보존 적용.** 결함은 그리드 셀 본문(FsGrid 렌더러)에 한정됐다: fs-data-viewer 는 `-webkit-box`+`WebkitLineClamp` 멀티라인 클램프였으나 `white-space` 기본값(`normal`)이 `\n` 을 공백으로 접었고, fs-sub/external 은 `truncate`(=`white-space:nowrap`)로 강제 한 줄이었다. 세 패키지의 shared `LongTextRenderer`(kanban/calendar/drawer)와 fs-data-viewer 툴팁은 이미 `pre-wrap` 으로 개행을 보존 중이었다. fs-data-viewer 의 적응형 클램프 패턴(`useMaxLines` 로 셀 높이÷줄높이 → 라인수 산출 후 `-webkit-box` 클램프)을 단일 진실로 삼아 세 뷰어를 정렬했다. 세 뷰어 모두 사용자 설정 `viewerModel.rowHeight`(기본 50px) 를 행 컨테이너에 적용하므로 멀티라인 행이 가능 → 행 높이 허용 범위 내에서 개행이 표시되고, 초과분은 maxLines 로 클램프된다.
+
+### 페이즈 결과
+- **Phase 1** (fix) `a33c190`: fs-data-viewer `FsGridLongTextCellRenderer` 표시 span style 에 `whiteSpace:'pre-wrap'` 1속성 추가(기존 `-webkit-box`/`WebkitLineClamp:maxLines`/`wordBreak` 유지). +1/-0.
+- **Phase 2** (fix) `67f0a14`: fs-sub-data-viewer 에 `useMaxLines` 훅 복제 신설, `FsGridLongTextCellRenderer` 의 span `truncate` 제거 후 `-webkit-box` 클램프+`pre-wrap` 적용(기존 `cellState.cellRef` 재사용), `TooltipContent` break-words div 에 `whiteSpace:'pre-wrap'` 병합(기존 maxHeight/overflow 보존). CellThemeIcon 래퍼는 미도입(이 패키지에 없음). +39/-2.
+- **Phase 3** (fix) `58b1905`: fs-external-data-viewer 에 Phase 2 와 대칭 적용(`useMaxLines` 복제 신설 + FsGrid 렌더러 truncate→clamp+pre-wrap + 툴팁 pre-wrap). useMaxLines 는 fs-data-viewer 원본과 바이트 동일. +39/-2.
+
+### 검증
+- 페이즈별 lint 게이트(`pnpm typecheck:all && pnpm lint`, fresh 워크트리 install+build:packages 선행) 3페이즈 EXIT=0(0 errors, 127~129 pre-existing warnings). advisor 계획(#1)·완료(#2) 2회 PASS — 완료 시 advisor 가 제기한 "sub/external 행 높이가 단일 라인이면 셀 내 개행 비가시" 우려는 세 뷰어가 동일한 `viewerModel.rowHeight`(기본 50px, SettingsPanel 설정) 모델을 공유함을 정적 확인하여 해소.
+- 순수 표시(CSS) 변경 — 데이터 저장/편집 경로 무변경. 런타임 시각 검증(개행 포함 셀이 줄바꿈 표시되는지, 행 높이 초과 시 클램프, 툴팁 호버 개행 보존)은 마스터 수동 확인 권고.
+
+### 영향 파일
+data-craft:
+- packages/fs-data-viewer/src/widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx
+- packages/fs-sub-data-viewer/src/features/grid/hooks/useMaxLines.ts (신규)
+- packages/fs-sub-data-viewer/src/widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx
+- packages/fs-sub-data-viewer/src/widgets/cell-renderers/long-text-cell/TooltipContent.tsx
+- packages/fs-external-data-viewer/src/features/grid/hooks/useMaxLines.ts (신규)
+- packages/fs-external-data-viewer/src/widgets/cell-renderers/long-text-cell/FsGridLongTextCellRenderer.tsx
+- packages/fs-external-data-viewer/src/widgets/cell-renderers/long-text-cell/TooltipContent.tsx
+
 ## v001.1077.0
 
 > 통합일: 2026-06-23
