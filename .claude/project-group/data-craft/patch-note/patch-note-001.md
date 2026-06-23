@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.1080.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #449 (핫픽스1)
+
+**[정정 + 핫픽스] 레이아웃 빌더 우측 property-drawer 위젯 타입 선택 드롭다운의 바깥클릭·ESC 동작 수정.** v001.1077.0 은 마스터가 지목한 화면을 **잘못 식별**(대시보드 위젯 설정)했음이 스크린샷으로 드러났다. 실제 대상은 화면 레이아웃 빌더 우측 **property-drawer(`데이터 뷰어` 패널)** 의 위젯 타입 선택 드롭다운(Radix Select, `WidgetTypeSelector`)이었다. 본 핫픽스는 (a) 올바른 컴포넌트에 수정을 적용하고 (b) **v001.1077.0 의 대시보드 변경(ColumnSelector·AggregationSelector dialogMode 전환)을 revert** 한다 — 해당 변경은 마스터가 요청하지 않았고 런타임 미검증이었으므로 플랜 직전(`fa72025c5`) 상태로 되돌렸다.
+
+### 페이즈 결과
+- **Phase 3 (핫픽스1)** (fix) `3cf0552b8` (머지 `21942671c`):
+  - `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx` — `SelectContent` 의 `onPointerDownOutside={(e) => e.preventDefault()}`(2026-06-19 `cd4b4d5b3` 추가, 바깥 클릭 dismiss 무조건 차단 = 버그)를 **온보딩 튜토리얼 4개 스텝(widgetTextToViewer/widgetSelectViewerOption/widgetTextToUserForm/widgetSelectUserFormOption)에서만 preventDefault** 하는 조건부로 변경. 그 외 일반 사용은 Radix Select 기본 동작(바깥 클릭 → 드롭다운만 닫힘) 복원. 튜토리얼은 코치마크가 드롭다운 내부 옵션을 가리켜 드롭다운이 열린 채 유지돼야 하므로 보존(scenarioRegistry `widgetTypeDropdownOpen===true` / `popperSpotlight` 의존).
+  - `src/widgets/property-drawer/ui/PropertyDrawer.tsx` — `handleKeyDown` Escape 분기에 `if (document.body.style.pointerEvents === 'none') return;` 가드 추가(이미 `handleClickOutside` 에 존재하던 동일 가드). Radix Select 열린 상태 ESC 는 드롭다운만 닫고 드로어 유지. 드로어 자체는 기존 line-123 가드로 열린 채 유지.
+  - **revert**: `packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColumnSelector.tsx` · `AggregationSelector.tsx` 를 `fa72025c5`(v001.1077.0 직전) 상태로 복원(dialogMode 제거, 원래 portal/anchor 방식).
+
+### 검증
+- lint 게이트(`pnpm typecheck:all && pnpm lint`, fresh 워크트리 install+build:packages 선행) EXIT=0(0 errors, 129 pre-existing warnings). advisor 핫픽스 검증 PASS. 본 수정은 기존 Radix Select 기본 동작 복원 + state 기반 가드라 런타임 리스크 낮음 — 단 ① 일반: 드롭다운 바깥클릭/ESC 시 드롭다운만 닫히고 드로어 유지, ② 튜토리얼: '데이터 뷰어 선택'/'사용자 입력폼 선택' 스팟라이트 스텝에서 드롭다운 열린 채 유지, 두 경로는 정적 게이트로 검증 불가 → 마스터 런타임 확인 권고.
+
+### 영향 파일
+data-craft:
+- src/widgets/property-drawer/ui/WidgetTypeSelector.tsx
+- src/widgets/property-drawer/ui/PropertyDrawer.tsx
+- packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/ColumnSelector.tsx (revert)
+- packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/AggregationSelector.tsx (revert)
+
 ## v001.1078.0
 
 > 통합일: 2026-06-23
