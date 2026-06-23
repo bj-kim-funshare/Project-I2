@@ -32382,3 +32382,23 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft:src/shared/types/widget-props.types.ts
 - data-craft:src/shared/i18n/locales/ko.ts
 - data-craft:src/shared/i18n/locales/en.ts
+
+## v001.1079.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #448
+
+보안 후속 — data-craft-server 의 express transitive 의존성 취약점 2건(#411 WRN-9 path-to-regexp high, WRN-10 qs)을 pnpm overrides 로 해소했다. 둘 다 express@5.2.1 의 하위 의존(라우트 매칭·쿼리 파싱)이며, 레지스트리에 패치 버전이 존재해 코드 변경 없이 끌어올렸다.
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-server)** `e16b117`: package.json 의 pnpm.overrides 에 `path-to-regexp: ^8.4.0`, `qs: ^6.15.2` 추가(기존 `jws: ^3.2.3` 보존, 상한 고정으로 상위 메이저 점프 회피). pnpm-lock.yaml 재해소. lockfile 확인 path-to-regexp@8.4.2·qs@6.15.2 단일 해소(제2 메이저 미유입), pnpm audit --prod 에서 path-to-regexp high + qs 항목 전부 소멸. pnpm build(tsc)·lint exit 0. express/router/코드 무변경.
+
+### 범위 메모
+- **런타임 게이트(정적 대체 불가)**: path-to-regexp(라우팅)·qs(쿼리파싱)는 express 내부 부품이라 tsc/lint 가 transitive break 를 못 봄. data-craft-server 는 AWS 운영본 → 본 플랜은 i-dev 머지까지, prod 배포 전 마스터 런타임 검증 필수(경로파라미터 라우트 매칭 + 쿼리스트링 파싱 정상).
+- **override tech-debt**: express/router 가 패치된 path-to-regexp/qs 를 자체 ship 하면 본 핀 재검토/제거.
+- **#411 동기화**: 본 플랜으로 WRN-9/WRN-10 해소. 같은 #411 의 WRN-8(jws)=#443·WRN-11(nodemailer)=#434 도 기해소. 잔존 BLK-9 xlsx(레지스트리 패치 부재)·기타는 별건.
+- **범위 외 잔존**(audit, 사실 보고): xlsx high ×2 · @anthropic-ai/sdk moderate ×2 · ip-address moderate ×1.
+
+### 영향 파일
+- data-craft-server:package.json
+- data-craft-server:pnpm-lock.yaml
