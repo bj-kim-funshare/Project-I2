@@ -32067,3 +32067,29 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/router/app_router.dart
 - data-craft-mobile:lib/screens/splash_screen.dart
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+
+## v001.1064.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #426 (핫픽스4)
+
+데이터 크래프트 모바일 홈 탭 — 디자인팀 레퍼런스 정합(시각 불일치 10건).
+
+### 페이즈 결과
+- **핫픽스4 (data-craft-mobile)**: 마스터가 디자인 레퍼런스 대비 10개 불일치 지적 → 홈 위젯 전반 재스타일:
+  1. 인사말 날짜에 요일 표기(intl DateFormat locale 분기, main에서 initializeDateFormatting 초기화).
+  2. 프로필 폴백 아바타 = 파란 배경+흰 이니셜(UserAvatar에 fallback 색 additive prop 추가 재사용, 인증 게이트 이미지 경로 보존).
+  3. 알림 요약 카드 좌측 아이콘 + 우측 chevron.
+  4. 요약 카드 미읽음 수 아래 구분선 + 최근 알림 1건 내용.
+  5. "바로가기" 섹션 제목 굵게.
+  6. 바로가기 아이콘박스 연파랑 배경 + 파란 아이콘.
+  7. 바로가기 항목 보조텍스트(페이지트리/미읽음N/프로필·설정).
+  8. 즐겨찾기 아이콘박스 연파랑+파란 아이콘.
+  9. 즐겨찾기 제목 굵게 + 보조텍스트(상대시간).
+  10. 최근 페이지 빈 상태에서도 영역+안내(homeRecentEmpty) 유지(기존엔 숨김).
+  - l10n 키 추가(보조텍스트·상대시간·빈상태) + home_format.dart 상대시간 헬퍼. DateTime.parse는 try/catch 가드.
+
+### 영향 파일
+- data-craft-mobile:lib/main.dart, lib/chat/widgets/user_avatar.dart
+- data-craft-mobile:lib/l10n/app_ko.arb, lib/l10n/app_en.arb, lib/screens/home/home_format.dart
+- data-craft-mobile:lib/screens/home/widgets/(home_greeting_header, home_notification_summary, home_quick_actions, home_favorites_section, home_recent_pages_section).dart
