@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1058.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #435
+
+**첫 결제 중 DB 오류 시 쿠폰 영구 소실 차단 (보안 점검 #411 BLK-8 — 결제 무결성).** `billingSubscription.service.ts` `_executeFirstPaymentImpl` 은 쿠폰을 별도 트랜잭션으로 `status='used'` 커밋한 뒤 카드를 과금하고 본 트랜잭션(payment_history·플랜 갱신)을 도는데, 과금 성공 후 본 트랜잭션이 일시적 DB 오류로 실패하면 catch 가 롤백·critical 로그·throw 만 하고 별도 커밋된 쿠폰 예약을 복원하지 않아, 쿠폰이 `used`·`used_payment_id=NULL` 유령 상태로 **영구 박제**(재사용 불가)됐다. sibling `promotion.service.ts`(391-399) 와 동일하게 catch 에서 쿠폰을 복원하도록 교정. **범위 주의: 본 수정은 쿠폰 영구 소실만 제거한다 — 과금됐는데 플랜이 안 부여되는 금전 불일치는 기존 `PAYMENT_CHARGE_DB_FAILURE` critical 로그 기반 수동 정산을 그대로 유지(자동 PG 환불은 양 결제경로 일괄 정책이라 범위 밖).**
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `d5d4189`: `_executeFirstPaymentImpl` post-charge DB 실패 catch 에서 `throw dbError` 전에 `if (reserveWalletId != null) { try { restoreCouponReservation(reserveWalletId) } catch { COUPON_RESTORE_FAILURE critical } }` 삽입. 기존 rollback·`PAYMENT_CHARGE_DB_FAILURE` 로그·throw 순서 무변경, +7/-0 단일 catch.
+
+### 검증
+- 전수 audit(Step2): 동일 "별도 커밋 예약 + post-charge 실패" 갭은 이 함수 하나뿐. `executeUpgradeWithDiff`=예약이 트랜잭션 내부라 rollback 자동 복원(안전), `purchasePromotion`=양 catch 정상, `billingRenewal`=쿠폰 미예약(N/A).
+- `restoreCouponReservation`(couponDeduction.service.ts:148)은 자체 새 커넥션 사용 → 롤백된 connection 과 무관, catch 에서 안전.
+- 코드경로 추적 + `pnpm build`(tsc) EXIT=0 + `pnpm lint` EXIT=0. (라이브 transient-DB-failure 재현은 미실행 — 정적 추적으로 검증.)
+- known-negligible: 본 catch 는 try 내 모든 throw 에 발화하므로 이론상 `connection.commit()`(304) 이후 throw 시 정상 소비된 쿠폰을 복원할 수 있으나, commit 이후 구간은 이미 계산된 값으로 반환 객체만 구성해 throw 가 사실상 불가 — 기존 구조이며 본 수정이 도입/악화하지 않음(리스트럭처 안 함).
+
+### 영향 파일
+data-craft-server:
+- src/services/billingSubscription.service.ts
+
 ## v001.1055.0
 
 > 통합일: 2026-06-23
