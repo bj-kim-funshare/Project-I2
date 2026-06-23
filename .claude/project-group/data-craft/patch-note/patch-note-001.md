@@ -32275,3 +32275,17 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-server:package.json
 - data-craft-server:pnpm-lock.yaml
+
+## v001.1074.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #446 (보안 #408 D1)
+
+데이터 크래프트 모바일 Android secure storage 를 모던 EncryptedSharedPreferences(AES256)로 강화.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: 두 `FlutterSecureStorage` 인스턴스(`token_storage.dart` TokenStorage, `platform_auth_io.dart` SecureCookieStorage)에 `AndroidOptions(encryptedSharedPreferences: true)` 를 추가해, Android 저장이 레거시 RSA-Keystore 스킴 대신 AndroidX EncryptedSharedPreferences(AES256-GCM/SIV)를 쓰도록 강화. 두 인스턴스 동일 옵션 적용(backing store 분기 방지). 플러그인이 SDK<23 자동 레거시 폴백·초기화 실패 폴백·기존값 마이그레이션을 내장하므로 구형기기 크래시·데이터유실 없음. 본 앱은 마이그레이션 대상이 사실상 없음(refresh_token 은 v001.1065.0/W1 이후 미사용, 쿠키는 v001.1070.0/W5 와 동일 배치 동시 배포라 처음부터 신규 저장). **따라서 W5(v001.1070.0)가 안내한 "업데이트 후 최초 1회 재로그인" 외에 추가 재로그인은 발생하지 않는다**(같은 i-dev 배치). flutter analyze 통과. (보안 #408 D1 의 알맹이는 버전 업그레이드가 아니라 본 설정 — 버전 업글 D2~D4 는 CVE 없어 별도 유지보수로 분리.)
+
+### 영향 파일
+- data-craft-mobile:lib/storage/token_storage.dart
+- data-craft-mobile:lib/api/platform_auth_io.dart
