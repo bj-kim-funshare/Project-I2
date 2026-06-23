@@ -1,5 +1,37 @@
 # data-craft — Patch Note (001)
 
+## v001.1068.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #438
+
+**data-craft-mobile에 Sendbird 채팅 푸시 알림(FCM, Android 전용) 구현.** 채팅 메시지 발생 시 기기에 푸시 알림이 표시되고 탭하면 해당 채팅방이 열린다. 번들ID 교체(#430)로 마련된 Firebase 기반 위에서, 대시보드 측 세팅(dev/prod FCM v1 서비스 계정 키 등록 + Push ON, 마스터 완료)을 받아 앱 코드를 배선했다. iOS 푸시는 애플 계정 부재로 비범위 — 모든 Firebase 호출을 `Platform.isAndroid`로 가드해 iOS 빌드는 무손상.
+
+### 페이즈 결과
+- **Phase 1** (chore) `888570e0` (+`2a1032f8`): firebase_core ^4.11.0 / firebase_messaging ^16.4.1 / flutter_local_notifications ^20.1.0 추가, google-services.json(프로젝트 datacraft-ai-c1ecc) android/app/ 배치, google-services 플러그인 + core library desugaring 적용. 데스크톱 플러그인 등록 파일 동기화.
+- **Phase 2** (feat) `ca32c0df`: main.dart Android 가드 Firebase.initializeApp. 신규 `lib/chat/chat_push.dart`(ChatPush): getToken→registerPushToken(fcm), onTokenRefresh 재등록(구독 누수 방지), unregisterPushToken. chat_service.connect 직후 등록 / disconnect 전 해제. 기존 notification_controller(인앱 알림)와 도메인 분리.
+- **Phase 3** (feat) `5c7b1926` (+빌드수정 `4b596122` fln 20.1.0 named 인자, +`2b5f6ffd` 권한호출): POST_NOTIFICATIONS 권한 + 런타임 요청(main 시작 시), 최상위 `@pragma('vm:entry-point')` 백그라운드 핸들러가 Sendbird FCM 페이로드(`data['sendbird']`) 파싱→flutter_local_notifications 표시(채널 sendbird_chat, payload=channel_url). 포그라운드는 미표시(대시보드 offline-only + 중복 방지).
+- **Phase 4** (feat) `2b5f6ffd`: go_router rootNavigatorKey 부여, 알림 탭(onDidReceiveNotificationResponse)/콜드스타트(getNotificationAppLaunchDetails)→`/dm/{channelUrl}` 네비게이트. 콜드스타트는 chatConnectedProvider(인증+Sendbird 연결) 완료 후 pending 소비.
+
+### 검증
+- 각 페이즈 `flutter analyze`(No issues) + `flutter build apk --debug` 빌드 성공. (Phase 3은 fln 20.1.0 API 빌드실패 1회→수정.)
+- advisor 계획/완료 PASS. 완료 시 권한 런타임 호출 누락 의심 점검 → main.dart:31에 호출 존재 확인.
+
+### 알려진 한계 / 머지 후 확인
+- **iOS 빌드 무손상은 다운그레이드 검증**: 이 빌드 머신에 iOS 디바이스 플랫폼 SDK 미설치라 iOS 빌드 미검증 — iOS 가능 머신에서 마스터가 "빌드만 안 깨짐" 1회 확인 권장(Podfile platform :ios 13.0 상향 필요할 수 있음).
+- **실기기 스모크(Android)**: Google Play Services 기기 로그인→타 계정 채팅→백그라운드 푸시 표시+탭 채팅방 열림 확인. dev 먼저, prod 후. 알림 안 오면 대시보드 "multi-device users" 설정 확인.
+- 알림 small-icon이 `@mipmap/ic_launcher`라 흰 실루엣으로 보일 수 있음(시각, 버그 아님 — v1).
+- 콜드스타트 connect 무음 실패 시 pending 딥링크 소실(앱은 열리되 방 미이동, 크래시 아님) — degradation 경계.
+
+### 영향 파일
+data-craft-mobile:
+- pubspec.yaml, pubspec.lock
+- android/app/google-services.json (신규), android/app/build.gradle.kts, android/settings.gradle.kts
+- android/app/src/main/AndroidManifest.xml
+- macos/Flutter/GeneratedPluginRegistrant.swift, windows/flutter/generated_plugin_registrant.cc, windows/flutter/generated_plugins.cmake (pub get 산출물)
+- lib/main.dart, lib/router/app_router.dart
+- lib/chat/chat_service.dart, lib/chat/chat_push.dart (신규), lib/chat/chat_notifications.dart (신규), lib/chat/chat_push_navigation.dart (신규)
+
 ## v001.1067.0
 
 > 통합일: 2026-06-22
