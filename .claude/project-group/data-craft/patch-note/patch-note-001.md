@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1084.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #453
+
+**data-craft-server HTTP 진입 표면(미들웨어 파이프라인 / 미들웨어 사용 / 엔드포인트 명세) 3뷰를 소스에서 자동 추출·렌더하는 read-only 라이브 대시보드(`spec-dashboard/`) 신설.** 아이OS 토큰 모니터(`monitoring/`)와 동일 패턴 — ts-morph TS-AST 추출기가 src/ 를 읽기 전용 파싱해 spec.json 생성, 파이썬 serve.py + vanilla JS 정적 프론트로 렌더, `새로고침`(POST /api/refresh)이 추출기를 재실행(AI·네트워크 0, 스크립트만). 관측 전용 — 제품 코드·HTTP 계약 무접촉, 리팩토링 없음. 추출 결과: 엔드포인트 225·미들웨어 13·진입 체인 23단계, 해소 불가 항목은 미지정/미해소 배지로 가시화(무날조).
+
+### 페이즈 결과
+- **Phase 1** (chore) `996e177`: spec-dashboard/ 스캐폴딩 + ts-morph ^24 devDependency + serve.py 셸(monitoring 복제, /api/refresh→node extract.mjs, 포트 7799) + .gitignore 산출물 제외.
+- **Phase 2** (feat) `3ae940c`: extract.mjs 코어 — app.ts 진입 체인 23단계(public/route-custom-auth/global-auth 3분류) + 미들웨어 13 인벤토리(팩토리 감지·역조회) + 엔드포인트 225 인벤토리.
+- **Phase 3** (feat) `d05c94b`: 엔드포인트 요청/응답 세부(path_params·query·request_body[cast-type 83·zod-정의미적용 3·manual 17·미지정 122]·headers·response 봉투) + dynamic 세맨틱 정정(path_params vs unresolved 분리, unresolved 0).
+- **Phase 4** (feat) `5b7ff01`: vanilla JS 정적 프론트 3뷰(검색 표/트리, 차트·외부의존 0) + 가시 배지 + serve wiring.
+- **Phase 5** (docs) `e8089e2`: README(스크립트-온리 자동반영 경계·무날조 보장) + 자동반영 동작 검증.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/scripts/extract.mjs` (신규)
+- `spec-dashboard/scripts/serve.py` (신규)
+- `spec-dashboard/index.html` · `styles.css` · `app.js` (신규)
+- `spec-dashboard/README.md` · `data/.gitkeep` (신규)
+- `package.json` · `pnpm-lock.yaml` (ts-morph devDependency)
+- `.gitignore` (spec.json 산출물 제외)
+
+> advisor: 계획 PASS · 완료 PASS (advisor-fallback 경유 — built-in advisor() 과부하)
+
 ## v001.1083.0
 
 > 통합일: 2026-06-23
