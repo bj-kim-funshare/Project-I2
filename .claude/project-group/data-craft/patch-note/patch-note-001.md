@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1083.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #454
+
+**페이지 트리 드래그·튜토리얼 디버깅용으로 남아있던 임시 진단 코드를 제거 (화면에 노출되던 [DND-PROBE] 박스 + DIAG 콘솔 로그).** 페이지 트리를 드래그하면 화면 우하단에 검은 monospace 진단 박스(`[DND-PROBE] #406`)가 노출됐는데, dev 플래그 게이팅이 없어 프로덕션 포함 항상 보였다(코드 주석에도 "핫픽스에서 제거할 것" 명시). #406 작업 당시 드롭 위치 계산을 진단하려 추가한 임시 프로브였다. 자매 프로브 `TutorialDebugProbe`(#383)는 #383 핫픽스38 에서 이미 제거됐고, 별개로 `SettingsFormTabContent` 의 `[SettingsFormTabContent] DIAG` 콘솔 로그도 잔존해 함께 정리했다. 드래그 동작 로직 자체는 무변경.
+
+### 페이즈 결과
+- **Phase 1** (chore) `0616e0e` (머지 i-dev): `src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx` 에서 #406 진단 프로브 기계 일체(DebugProbe 인터페이스, debugProbe useState, buildProbe 헬퍼, setDebugProbe 호출 4개소, 화면 하단 고정 `[DND-PROBE]` 렌더 블록)를 제거. `src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx` 의 `convertHistoryToFormRecords` 내 DIAG `console.log` 블록(7줄)을 제거. 드래그 로직(`setDropTarget`/`setActiveDragId`/`resolveTargetFromEvent`)·153행에서 여전히 쓰이는 `computeBand` import·필드 불일치 `console.warn` 은 모두 보존. 순수 삭제 -83줄, 추가 0줄.
+
+### 검증
+- 잔여 참조(debugProbe/DebugProbe/buildProbe/DND-PROBE/DIAG) grep 0건. lint 게이트(`pnpm typecheck:all && pnpm lint`, fresh 워크트리 install+build:packages 선행) — typecheck:all EXIT=0, root tsc EXIT=0, lint EXIT=0(0 errors, 129 pre-existing warnings). advisor(과부하 → advisor-fallback 동급 opus) 계획·완료 검증 양쪽 5관점 전부 PASS. 런타임: 페이지 트리 드래그 시 우하단 검은 박스 비노출 + 드래그/드롭(divider·nest·root 이동) 정상 동작 마스터 확인 권고.
+
+### 영향 파일
+data-craft:
+- src/widgets/page-navigation/ui/DesignSidebarDndArea.tsx
+- src/widgets/settings-dialog/ui/SettingsFormTabContent.tsx
+
 ## v001.1082.0
 
 > 통합일: 2026-06-23
