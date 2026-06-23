@@ -1,5 +1,50 @@
 # data-craft — Patch Note (001)
 
+## v001.1085.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #452
+
+**데이터 뷰어 그리드 뷰 디자인 모드 열 메뉴(표시·동작)에 "셀 합병" 토글 신설.** 토글이 켜진 열에서 세로로 직접 인접한 셀의 값이 100% 일치하는 연속 구간을 스프레드시트 rowspan처럼 하나의 셀(가로 구분선 없이·값 중앙 표기)로 표시한다. 예: 숫자 열 `1,1,1,2,3,4,4,4,2,2` → `1`(3행)·`2`(1행)·`3`(1행)·`4`(3행)·`2`(2행). 18개 타입(긴텍스트·코드·스위치·체크박스·로그·마지막업데이트·버튼·수식·간단한수식·고유ID·이미지·파일·투표·평점·진행률·연결·행연결·듀얼위젯) 제외. 일반/디자인 두 모드 모두 합병 표시. 합병 셀 클릭 시 구간 전체가 독립화되며 최상단 셀이 포커싱(편집 가능), 포커스가 구간을 벗어나면 자동 재합병. 빈 값(공란/null)은 합병하지 않음. 영속성을 위해 BE+DB(신규 `enable_cell_merge` 컬럼) 동반.
+
+### 페이즈 결과
+- **Phase 1** (feat) `01393da` (data-craft-server): `data_viewer_column_setting` 에 `enable_cell_merge smallint NOT NULL DEFAULT 0` 컬럼 추가 DDL 마이그레이션(run5 up/down) + 서버 전 경로(화이트리스트·SELECT·INSERT·toBooleanFields·타입)에 기존 `is_hidden` 패턴 미러링. 쓰기는 generic-UPDATE+화이트리스트만으로 처리(SP 무변경).
+- **Phase 2** (feat) `d5df7231`+`9c87089` (data-craft): 그리드 열 메뉴 표시·동작 섹션에 셀 합병 토글 추가 — `FsGridColumnModel.enableCellMerge`, 신규 `DISABLE_CELL_MERGE_TYPES`(18종), `cellMerge` role, 메뉴 아이템 게이팅+저장(isHidden 패턴), 서브그리드 메뉴 게이팅 드리프트 차단, 4언어 i18n.
+- **Phase 3** (feat) `1c83e4c8`+`16029dc` (data-craft): `cellMergeHelpers.computeCellMergeRuns` 순수 함수 + `useTableView` 메모 — 표시 순서 기준 동일·비공란 연속 구간 산출(그룹 헤더 경계 분절·공란 제외·길이1 제외).
+- **Phase 4** (feat) `69c86275` (data-craft): 가상화 하 rowspan 시각을 인-플로우 불투명 박스로 구현(`MergedCellBox`) — 현재 render 패스 첫 등장 행 호스팅, 음수 top 오프셋, host 셀 `overflow-visible`+`relative`, z-index:1(frozen sticky 아래), 박스 배경이 행간 구분선 덮음.
+- **Phase 5** (fix) `81544a69` (data-craft): 포커스=합병 해제 인터랙션 — `activeMergeRunKey` 상태, 합병 셀 클릭→구간 독립화+최상단 셀 포커스, focus 이탈 시 자동 재합병. 마지막 행 구분선 보존(박스 높이 -1px), 서브그리드 펼침 구간 억제(`suppressedRunKeys`).
+
+### 후속 필요 (사실 보고)
+- **DB DDL 실적용**: run5 마이그레이션은 파일 작성까지 — live dev psql 적용 및 배포 시 prod 적용은 본 플랜 범위 밖(마스터 수동 또는 task-db-structure 후속). 셀 합병 동작 검증 전 dev DB에 run5.up.sql 적용 필요.
+- **시각·인터랙션 최종 검증**: 순수 시각 기능이라 정적 통과만으로 완료 단정 불가 — 마스터 dev 기동 + 스크린샷 검증 필요(z-index/스태킹·배경 정합·포커스 흐름).
+- **배경 상태추적 보류**: 합병 박스가 행 선택/hover/줄무늬/드래그오버 배경을 미추적(frozen=bg-muted, 비frozen=bg-background 고정). 다행 박스가 어느 행 상태를 따를지 단일 정답 부재 — 별도 폴리시 권장.
+
+### 영향 파일
+data-craft-server:
+- `docs/migration/ddl/run5-data-viewer-column-setting-enable-cell-merge.up.sql` (신규)
+- `docs/migration/ddl/run5-data-viewer-column-setting-enable-cell-merge.down.sql` (신규)
+- `src/utils/sqlFieldWhitelist.ts`
+- `src/models/viewer.model.ts`
+- `src/services/viewer/viewer.query.ts`
+- `src/services/viewer/viewer.service.ts`
+- `src/types/viewer.types.ts`
+
+data-craft (packages/fs-data-viewer):
+- `src/entities/column-model.types.ts`
+- `src/features/grid/lib/helpers/column-restrictions.ts`
+- `src/features/grid/lib/gridMenuTypes.ts`
+- `src/features/grid/hooks/column-menu/menuItems.ts`
+- `src/widgets/fs_grid_sub/hooks/useSubGridColumnMenu.ts`
+- `src/shared/config/i18n/types.ts`
+- `src/shared/config/i18n/translations/{ko,en,ja,zh}.ts`
+- `src/widgets/grid-table/lib/cellMergeHelpers.ts` (신규)
+- `src/widgets/grid-table/hooks/useTableView.ts`
+- `src/widgets/grid-table/components/grid-body/MergedCellBox.tsx` (신규)
+- `src/widgets/grid-table/components/grid-body/{DataCell,DataRow,BodyRowList}.tsx`
+- `src/widgets/grid-table/components/grid-body/types.ts`
+- `src/widgets/grid-table/components/GridBody.tsx`
+- `src/widgets/grid-table/FsGridTableView.tsx`
+
 ## v001.1084.0
 
 > 통합일: 2026-06-23
