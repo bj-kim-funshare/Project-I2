@@ -1,5 +1,32 @@
 # data-craft — Patch Note (001)
 
+## v001.1063.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #437 (보안 점검 #410 #G)
+
+**서브그리드 parent_row_num cross-tenant IDOR 차단 (data-craft-server) — 보안 점검 #410 #G.** 서브그리드 생성 시 body `parentRowNum`(순차 정수)을 호출자 회사에 바인딩하지 않아, 공격자가 자기 소유 `dataViewerField`로 생성 검증을 통과하면서 `parentRowNum`에 타 회사 행을 심으면 이후 설정 저장 경로들이 그 parent_row_num을 회사 술어 없이 따라가 타 회사 `data_viewer_setting.sub_grid_shared_config`를 덮어썼다(적대 검증 confirmed-block conf 90). 생성 시점 테넌트 바인딩 + 모든 설정-쓰기 경로 company 스코프로 차단.
+
+### 페이즈 결과
+- **Phase 1** (fix) `d17c1d1`: 생성 시점 fresh-body parent_row_num 소스 2곳 바인딩 — `viewer.subGrid.ts` `postSubGridViewer`(parentRow.groupId에 `validateGroupAccess`)와 `dataViewerPost.service.ts` `createSubGridRow`(진입부 parentRowField 검증, 3 하위경로 커버). `group.parentRowNum` 재전파 writer는 미수정(원 생성서 바인딩됨).
+- **Phase 2** (fix) `29a2982`: PUT-config/생성-config 경로 company 스코프 — `subGridData.model.ts` `updateParentSubGridConfig`(companyId required, Step1/3/4에 `AND company_id=?`)·`viewer.model.ts` `updateSubGridSharedConfig`. **스키마 확인: `data_viewer_setting`에 `company_id NOT NULL` 컬럼 실재** → 조인 불필요, 직접 술어.
+- **Phase 3** (fix) `c4bd1bf`: saveChanges 경로 2함수(`change.subGridSettings.ts` `processSubGridViewerSettings`/`processSubGridSettings`) company 스코프 + `dataViewerChange/index.ts` companyId 전파.
+
+### 범위 메모
+- **load-bearing 검증**: 완료 시점 싱크 sweep — `UPDATE data_viewer_setting SET sub_grid_shared_config` writer 4개(viewer.model:1533·subGridData.model:221·change.subGridSettings:50·:118) **전부 `AND company_id=?`** 보유, 5번째 무스코프 없음. parent_row_num이 어떻게 심어졌든 cross-tenant `sub_grid_shared_config` write 불가. (본 보장은 `sub_grid_shared_config` writer 한정 — 타 컬럼은 별개.)
+- 정상 보존: `createSubGridRow`는 기존에도 parentRowField 필수(`PARENT_ROW_FIELD_REQUIRED`)라 null 회귀 없음. 같은 회사 생성·설정저장·saveChanges 정상.
+- 다른 발견(#410 #A~#F 완료, LIVE-1~3)은 무관. 런타임 cross-tenant 수동 시나리오는 BE 재기동 필요.
+- 계획·완료 advisor() 검증 모두 PASS (5관점).
+
+### 영향 파일
+data-craft-server:
+- src/services/viewer/viewer.subGrid.ts
+- src/services/dataViewerPost.service.ts
+- src/models/subGridData.model.ts
+- src/models/viewer.model.ts
+- src/services/dataViewerChange/change.subGridSettings.ts
+- src/services/dataViewerChange/index.ts
+
 ## v001.1058.0
 
 > 통합일: 2026-06-22
