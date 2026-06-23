@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1081.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #451 (보안 점검 #410 W3·W4)
+
+**data-craft-admin-server 견고화 2건 (보안 점검 #410 W3·W4).** 관리자 콘솔 BE의 prod DB명 사일런트 폴백(fail-open)과 토큰 클레임 미검사를 수정. 둘 다 warn·심층방어(admin-server는 배포 제외 운영자 로컬 콘솔).
+
+### 페이즈 결과
+- **Phase 1 (fix, W3)** `8945059`: prod 데이터풀 DB명 fail-closed 전환(belt+suspenders). `envValidator.ts` 의 ADMIN_PROD_TOGGLE_ENABLED 필수 배열에 `DB_NAME_DATA_PROD` 추가(토글 ON+미설정 시 부팅 차단), `constant.ts:37` `|| 'postgres'` 폴백 제거, `database.ts` getDataPool prod 분기에 `DB_NAME_DATA_PROD_NOT_CONFIGURED` throw-at-use 가드 + `dataDbName: string` narrow(tsc 정합). getDataPool('prod')는 dbMode.middleware가 토글 ON에서만 허용 → 모든 경로 fail-closed·named. #370(빈 maintenance DB 'postgres' 오접속) 클래스 재발 차단.
+- **Phase 2 (fix, W4)** `a24d3c6`: `verifyAdminToken.middleware.ts` jwt.verify 직후 `payload.sub==='admin' && payload.email===ADMIN.EMAIL` 단언 추가(불일치 401). 발급부와 동일 클레임이라 정상 토큰 통과.
+
+### 범위 메모
+- **W4 정직 프레이밍**: 이 단언은 ADMIN_JWT_SECRET 으로 유효 서명됐으나 sub/email 이 다른 토큰만 차단 — 그런 토큰을 만들 수 있는 자는 이미 시크릿 보유. 즉 **claim-confusion/시크릿 재사용 대비 견고화**이지 auth bypass 수정 아님(현실 악용성 거의 0). W3 는 실제 fail-open/가용성 수정(#370 클래스).
+- 원 발견의 W4 "ADMIN_JWT_SECRET 서비스 공유" 주장은 재검증으로 거짓 확인(별도 env). ADMIN_EMAIL 은 envValidator 필수라 빈값 엣지 없음.
+- 본 2건으로 #410 코드 표면 종결(IDOR/인젝션 7건 #A~#G + LIVE-5 감사로깅 + W3·W4). 잔여=보류 인프라 LIVE-1/2/3/6(AWS 이전 묶음). 완료분 전부 미푸시·독립검증 권장.
+- 계획·완료 advisor() 검증 모두 PASS (5관점).
+
+### 영향 파일
+data-craft-admin-server:
+- src/config/envValidator.ts, src/config/constant.ts, src/config/database.ts
+- src/middlewares/verifyAdminToken.middleware.ts
+
 ## v001.1080.0
 
 > 통합일: 2026-06-23
