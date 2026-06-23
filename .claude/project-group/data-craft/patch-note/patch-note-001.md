@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1073.0
+
+> 통합일: 2026-06-22
+> 플랜 이슈: #444
+
+**결제 PIN 검증 라우트에 무차별 대입 완화 rate limiter 적용 (보안 점검 #411 WRN-2).** 6자리 결제 PIN 을 client-supplied 값으로 검증(`verifyPaymentPassword`)하는 경로에 전용 rate limit 이 없어, 인증 세션(또는 탈취 세션)이 전역 limiter(60s/300) 한도 내에서 10^6 PIN 을 ~2일에 전수 대입할 수 있었다. PIN 검증은 `/payment-password/verify` 컨트롤러뿐 아니라 **`requirePaymentPassword` 미들웨어(결제 액션 8개 라우트)** 에서도 과금 전에 일어나 총 9개 라우트가 표면이었다. userId 기준 strict limiter(60s/5, 단일 공유 인스턴스)를 9개 전부에 적용. (옵션②=rate limiter; 계정별 영구/30분 잠금=옵션① 후속 후보.)
+
+### 페이즈 결과
+- **Phase 1** (fix, data-craft-server) `08c8133`: `rateLimiter.middleware.ts` 에 `paymentVerifyLimiter`(60s/limit 5, `getUserIdFromToken`→`user:${userId}` 키, IP 폴백, `skipSuccessfulRequests` 미적용) 신설 + `index.ts` export. PIN 검증 9개 라우트(user `/payment-password/verify`, subscription 7개 `requirePaymentPassword` 라우트, promotion `/purchase`)의 PIN 검증 직전에 삽입. 단일 인스턴스 공유 store → 계정당 합산 5/min(엔드포인트 분산 우회 차단). 기존 limiter·체인순서·`requirePaymentPassword` 내부 무변경(+28/-10, 5파일).
+
+### 검증
+- `verifyPaymentPassword`/`findUserPaymentPasswordHashById` sink grep 으로 PIN 실검증 표면이 9개뿐임을 확정(나머지 호출처는 exists/billingMasked 존재여부 체크). grep 으로 9개 라우트 전부 limiter 적용 확인. `pnpm build`(tsc) EXIT=0, `pnpm lint` EXIT=0.
+
+### 알려진 동작 (의도된 트레이드오프)
+- **count-all 의도적**: `/payment-password/verify` 는 PIN 오답에도 200(`{valid:false}`)을 반환하므로 `skipSuccessfulRequests` 를 켜면 무차별 대입이 카운트되지 않아 무력화된다. 따라서 기본 count-all 을 영구 유지(절대 `skipSuccessfulRequests` 추가 금지).
+- 정상 오너가 60초 안에 5회 초과로 PIN-게이트 결제 액션을 시도하면(예: `/billing/payment` 카드 거절 재시도 루프) 60초 `TOO_MANY_REQUESTS` 를 받는다 — 복구 가능(대기)하며 데이터 손실 없음. 의도된 동작이며 버그 아님.
+
+### 영향 파일
+data-craft-server:
+- src/middlewares/rateLimiter.middleware.ts
+- src/middlewares/index.ts
+- src/routes/user.ts
+- src/routes/subscription.ts
+- src/routes/promotion.routes.ts
+
 ## v001.1071.0
 
 > 통합일: 2026-06-23
