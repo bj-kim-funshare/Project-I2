@@ -32093,3 +32093,19 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/main.dart, lib/chat/widgets/user_avatar.dart
 - data-craft-mobile:lib/l10n/app_ko.arb, lib/l10n/app_en.arb, lib/screens/home/home_format.dart
 - data-craft-mobile:lib/screens/home/widgets/(home_greeting_header, home_notification_summary, home_quick_actions, home_favorites_section, home_recent_pages_section).dart
+
+## v001.1065.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #439 (보안 #408 W1 해소)
+
+데이터 크래프트 모바일 refresh 토큰 write-only dead channel 제거 — refresh 를 HttpOnly 쿠키 단일 채널로 일원화.
+
+### 페이즈 결과
+- **Phase 1 (data-craft-mobile)**: 로그인 응답 body 에서 refresh 토큰을 파싱해 secure storage 에 저장하지만 어디서도 읽지 않던(getRefreshToken 호출처 0) write-only 경로를 4파일에서 순수 제거(-17줄). 제거 대상: `SigninResponseDto.refreshToken` 필드, `_parseSigninEnvelope` 의 body 파싱+생성자 인자, `_applyTokens` 의 setRefreshToken 저장 블록, `TokenStorage.get/setRefreshToken` 메서드. 실제 액세스 갱신은 `refreshAccessToken()` 이 `/api/auth/refresh` 빈 body POST + HttpOnly 쿠키로 수행하며 저장 refresh 토큰을 쓰지 않으므로 만료 처리·세션 복원 동작은 변화 없음(setAccessToken·쿠키 흐름 무수정). `_kRefreshTokenKey` 상수와 `clearTokens()` 의 delete 는 유지 — 기존 설치 기기에 이미 저장된 레거시 refresh_token 값은 **다음 로그아웃/세션 만료 시 정리**된다(즉시 일괄 정리 아님, best-effort). flutter analyze 0 errors.
+
+### 영향 파일
+- data-craft-mobile:lib/state/auth_controller.dart
+- data-craft-mobile:lib/api/auth_api.dart
+- data-craft-mobile:lib/api/dto/auth.dart
+- data-craft-mobile:lib/storage/token_storage.dart
