@@ -32231,3 +32231,22 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 
 ### 영향 파일
 - data-craft-mobile:lib/api/platform_auth_io.dart
+
+## v001.1071.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #443
+
+보안 후속 — data-craft-server 의 jws high 권고(GHSA-869p-cjfg-cm3x "Improperly Verifies HMAC Signature", 영향 <3.2.3)를 해소했다. JWT 서명 검증 핵심 라이브러리 jws 가 jsonwebtoken@9.0.2 의 transitive 의존(jws@3.2.2)으로 잠겨 있었고, pnpm overrides 로 패치 버전을 끌어올려 코드 변경 없이 해소했다.
+
+### 페이즈 결과
+- **Phase 1 (chore, data-craft-server)** `75923e4`: package.json 에 `"pnpm": { "overrides": { "jws": "^3.2.3" } }` 신설(상한 고정 — `>=3.2.3` 은 jws 4.0.x 를 끌어올 위험이 있어 회피, jsonwebtoken@9 는 jws 3.x 대상). pnpm-lock.yaml 재해소. pnpm why jws 결과 prod(jsonwebtoken@9.0.2)·dev(jsonwebtoken@8.5.1) 경로 전부 jws 3.2.3 해소 확인(4.x 없음). jws high 사라짐. pnpm build(tsc)·lint exit 0. 인증/토큰 코드 무변경.
+
+### 범위 메모
+- **런타임 인증 게이트**: jsonwebtoken→jws 는 패키지 경계 런타임 호출이라 tsc/lint 가 transitive break 를 못 잡음. data-craft-server 는 AWS 운영본 → 본 플랜은 i-dev 머지까지만, prod 배포 전 마스터 런타임 검증 필수(로그인→토큰 발급→보호 API Bearer 검증). 배포는 별도 후속(서버 pull+빌드+pm2 재시작).
+- **override tech-debt**: 본 override 는 영구 — 향후 jsonwebtoken 이 패치된 jws 를 번들하거나 jws 4.x 를 정식 요구할 때 이 핀(`^3.2.3`)이 업그레이드를 가릴 수 있음. jsonwebtoken 자체가 패치 jws 를 ship 하면 override 재검토/제거 필요.
+- **범위 외 잔존 취약점** (audit --prod, 별건 후속, 본 시점 기준 재산정 권장): xlsx@0.18.5 high(SheetJS Prototype Pollution — npm 레지스트리에 패치버전 미존재 → 단순 버전업 불가, CDN 빌드 이전 또는 마스터 수용 결정 필요) · qs moderate(express transitive — express 버전업으로 해소 가능성).
+
+### 영향 파일
+- data-craft-server:package.json
+- data-craft-server:pnpm-lock.yaml
