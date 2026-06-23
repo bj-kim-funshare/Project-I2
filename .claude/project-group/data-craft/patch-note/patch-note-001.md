@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1086.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #452 (핫픽스1)
+
+**셀 합병(#452) 영속 결함 수정 — 토글 ON 저장 후 새로고침 시 꺼지던 버그(BUG 1) 해소.** 근본 원인: FE 가 서버 응답을 그리드 열모델로 변환하는 read 매퍼(`serverToColumnRow.ts` `serverToColumnModel`)가 `enableCellMerge` 를 누락(드롭)해, DB·쓰기 경로는 정상이었으나 조회 시 항상 false 로 복원됐다. 메인 그리드 매퍼 + 서브그리드 매퍼(FE `buildSubGridModel`, BE 서브그리드 응답·타입)에 `enableCellMerge` 를 기존 `isHidden` 패턴 그대로 추가.
+
+### 페이즈 결과
+- **Phase 6 (핫픽스1, fix)** `025aaaa` (data-craft): `serverToColumnModel` 에 `enableCellMerge` 추가(메인 그리드 — BUG 1 핵심 수정) + `buildSubGridModel` 서브그리드 매퍼에 추가.
+- **Phase 6 (핫픽스1, fix)** `049d2dc`+`44b0791` (data-craft-server): 서브그리드 공유설정 응답(`viewer.service.ts`)·`SubGridColumnModelResponse` 타입·생성부(`viewer.subGrid.ts`)에 `enableCellMerge` 추가.
+
+### BUG 2 (켜도 합병 안 됨) — 미해소·조사 결과
+- **데이터 원인 배제 확인**: singleSelect 셀의 `cellValue` 는 옵션 라벨 문자열로 정상 적재되어 인접 동일 선택 시 동일·비공란 → 합병 계산(`computeCellMergeRuns`)의 비교 대상은 정상. 즉 BUG 2 는 값 비교 문제가 아님.
+- **잔여 후보(런타임 확인 필요, 정적 판별 불가)**: ① 합병 박스가 계산은 되나 화면에 안 그려짐(Phase 4 의 z-index/overflow 스태킹 — 계획 시점 명시된 리스크, 브라우저 미검증), ② 인-session 토글 시 합병 메모 재계산 미트리거(집계 토글에는 있는 `requestAggregationRefresh` 류 직접 콜백이 셀 합병엔 없음). **BUG 1 수정 적용 후 하드 새로고침 시 합병 표시 여부**로 ①/② 판별 가능(새로고침 후 표시되면 ②, 그래도 안 보이면 ①).
+
+### 영향 파일
+data-craft:
+- `src/features/viewer/lib/serverToColumnRow.ts`
+- `src/features/viewer/lib/buildSubGridModel.ts`
+
+data-craft-server:
+- `src/services/viewer/viewer.service.ts`
+- `src/services/viewer/viewer.subGrid.ts`
+- `src/types/viewer.types.ts`
+
 ## v001.1085.0
 
 > 통합일: 2026-06-23
