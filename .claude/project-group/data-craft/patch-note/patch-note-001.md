@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1095.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #452 (핫픽스11)
+
+**합병 셀 "열 본문 스타일"(cellRenderer 배경색) 누락 회귀 수정.** 합병 셀이 값(배지/텍스트)만 표시하고 셀 본문 스타일(전체 셀 배경색)을 잃던 문제. 원인: `MergedCellBox` 가 불투명 `bg-background`/`bg-muted` 를 칠해 cellRendererModelList 기반 본문 배경색을 가렸고 비-host 셀은 비워져 색이 사라졌다.
+
+### 수정 (`f506105`)
+- `getCellBodyBackgroundColor(columnModel, value)` 공용 헬퍼 신설(`fs_grid_renderer/utils.ts`) — `FsGridRenderer` 의 배경 도출 로직(`getTargetCellRendererByValue` + `normalizeCellRendererModel` + `isColorSwapped`) 재사용.
+- `customColumnGenerator` 가 각 열에 `bodyBackgroundColor(value)` 접근자 첨부(CustomColumn / FsGridInternalColumn 타입에 선택 필드 추가).
+- `MergedCellBox` 가 run 값의 본문 배경색을 계산해 박스를 그 색으로 채움(투명이면 기존 bg-background 폴백). 값 텍스트는 기존 sticky wrapper + column.renderer 유지.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/fs_grid_renderer/utils.ts`
+- `packages/fs-data-viewer/src/widgets/fs_grid_util/customColumnGenerator.ts`
+- `packages/fs-data-viewer/src/entities/internal-grid-column.types.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/types.ts`
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/MergedCellBox.tsx`
+
 ## v001.1094.0
 
 > 통합일: 2026-06-24
