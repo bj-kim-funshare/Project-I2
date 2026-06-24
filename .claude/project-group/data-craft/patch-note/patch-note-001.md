@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1089.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #452 (핫픽스3)
+
+**셀 합병(#452) BUG 2 수정 — 토글은 켜지나 실제 합병이 안 되던 결함 해소.** 근본 원인: `enable_cell_merge` 는 DB `smallint`(값 `1`)인데 FE 로드 매퍼가 실제 boolean 으로 강제 변환하지 않아(`?? false`·`as boolean` 캐스트는 런타임 no-op) 컬럼 모델에 숫자 `1` 이 그대로 들어갔다. 메뉴 토글은 truthy 검사(`enableCellMerge ?? false`)라 ON 으로 보였지만, 합병 엔진 `computeCellMergeRuns` 는 **strict `=== true`** 로 적격을 판정해 `1 === true` 가 false → 해당 열이 계산 대상에서 탈락 → 구간 0 → 합병 미발생(모든 셀 정상 렌더). 화면상 "옵션 켜짐 + 셀 안 합쳐짐" 이 정확히 이 증상.
+
+### 수정 (`9e73f25` data-craft)
+- **엔진 적격 판정 완화**: `cellMergeHelpers.ts` `computeCellMergeRuns` 의 `col.enableCellMerge === true` → `Boolean(col.enableCellMerge)` (토글의 truthy 기준과 일치).
+- **로드 매퍼 boolean 강제(근본)**: `useViewerMetaLoader.ts`(뷰어 로드 핵심)·`serverToColumnRow.ts`·`serverToViewerMetaResult.ts`·`buildSubGridModel.ts`·`column-json.types.ts` 5곳의 enableCellMerge 읽기를 `Boolean(... ?? false)` 로 강제 → 모델 필드가 항상 실제 boolean(토글·엔진·시그니처·JSON 전부 동일 기준).
+
+### 비고
+- 타입 무관 결함이었음(특정 열 타입 문제 아님) — singleSelect 로 재현됐을 뿐, 모든 비제외 타입 공통. DB 실측(column 8356)으로 동일 인접값 다수 적재 확인(값 비교는 정상) + 키 스레딩 정상 확인 후 적격 판정으로 원인 좁힘.
+- BUG 1(영속, v001.1086~1087)·BUG 2(합병, 본 항목) 모두 해소. 잔여(별도): 합병 박스 배경의 행 선택/hover/줄무늬/드래그오버 상태 추적 미구현.
+- 검증: dev(Vite)+data-craft-server 재기동 후 토글 ON → 인접 동일값 합병 표시 확인.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/lib/cellMergeHelpers.ts`
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+- `packages/fs-data-viewer/src/entities/column-json.types.ts`
+- `src/features/viewer/lib/serverToColumnRow.ts`
+- `src/features/viewer/lib/serverToViewerMetaResult.ts`
+- `src/features/viewer/lib/buildSubGridModel.ts`
+
 ## v001.1088.0
 
 > 통합일: 2026-06-24
