@@ -32725,3 +32725,25 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 ### 영향 파일
 - data-craft-server:package.json
 - data-craft-server:pnpm-lock.yaml
+
+## v001.1094.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #455
+
+방금 실기기 설치한 data-craft-mobile(Android)에서 보고된 버그 4건 해소 — 페이지 임베드 웹뷰 인증 소실 + 알림 구독/승인 오라우팅 + 알림 필터 탭 권한 미게이팅. 전부 모바일 FE-only(웹앱·백엔드 무변경).
+
+### 페이즈 결과
+- **Phase 1 (fix, data-craft-mobile)** `3652961a`: 페이지 웹뷰가 자체 리프레시 불가로 로그인 화면을 띄우던 문제 — DIO PersistCookieJar 의 API 오리진(CloudFront) 쿠키를 InAppWebView CookieManager 에 미러링(SameSite=None; Secure)하는 `loadApiOriginCookies()` 를 io/web 양 변형에 추가, `_initialize()` 에서 `dc_token` 주입 전 미러링. `thirdPartyCookiesEnabled: true`(Android 서드파티 쿠키 차단 해제 — 미설정 시 미러 쿠키 미첨부=사일런트 실패), `dc_token` 만료 60초→5분.
+- **Phase 2 (fix, data-craft-mobile)** `c6aa4f1b`: 알림 탭 라우팅 — `_onCellTap` 을 type prefix 분기로 교체, `subscription:*`→`/me/settings/plan`(플랜 관리), `approval:*`→`/me/settings/employee`(직원/사용자 관리), `data:changed`·기타→`/me`.
+- **Phase 3 (fix, data-craft-mobile)** `61bcb669`: 알림 필터 탭 권한 게이팅 — `FilterChipBar` 를 ConsumerWidget 화, `authControllerProvider` 권한으로 동적 구성(all·data 항상, subscription=`isOwner`, approval=`user_manage||isOwner`). null user=무권한, 스테일 active 필터 `all` 보정. 술어는 `me_menu_list.dart` 캐논 재사용.
+
+### 범위 메모
+- **온디바이스 검증 필수**: lint(`flutter analyze`)는 웹뷰 인증·라우팅·탭 가시성 런타임을 못 봄. 버그1 근본원인은 코드 실독 기반 추론 — 실기기에서 자동 로그인→페이지 항목 탭→웹뷰 인증 유지 확인 필요. 실패 시 `adb logcat` 으로 쿠키 미첨부(서드파티 차단) vs 첨부-후-401 판별.
+
+### 영향 파일
+- data-craft-mobile:lib/api/platform_auth_io.dart
+- data-craft-mobile:lib/api/platform_auth_web.dart
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+- data-craft-mobile:lib/screens/inbox/inbox_screen.dart
+- data-craft-mobile:lib/screens/inbox/widgets/filter_chip_bar.dart
