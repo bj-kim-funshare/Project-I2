@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1093.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #452 (핫픽스10)
+
+**합병 셀 콘텐츠 세로 스크롤 가시성 개선.** 긴 합병 셀(여러 행 span)의 중앙 콘텐츠가 세로 스크롤로 화면 밖으로 잘리던 문제(계획 시 한계로 표시했던 항목)를 개선. `MergedCellBox` 의 렌더 콘텐츠를 `position: sticky`(top:0·bottom:0) inner wrapper 로 감싸, 박스 전체가 뷰포트에 있으면 중앙 정렬, 박스 상단이 위로 벗어나면 상단 고정·하단이 아래로 벗어나면 하단 고정되어 콘텐츠가 항상 가시 영역에 머문다(스프레드시트 동결 라벨 방식, JS 스크롤 리스너 없는 순수 CSS).
+
+### 페이즈 결과
+- **Phase 15 (핫픽스10, fix)** `8ed9a7bb` (data-craft): MergedCellBox 콘텐츠 sticky wrapper 추가 (박스 기하·z-index·배경·pointer-events 무변경).
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/components/grid-body/MergedCellBox.tsx`
+
 ## v001.1092.0
 
 > 통합일: 2026-06-24
