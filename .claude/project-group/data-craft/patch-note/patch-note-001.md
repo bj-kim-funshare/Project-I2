@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1088.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스1)
+
+**spec-dashboard UI를 다크 테마에서 화이트(라이트) 테마로 전환.** 아이OS 토큰 모니터에서 복제해온 다크 테마(`--bg:#0b0d12` 등)를 라이트 팔레트(`--bg:#f5f6f8` · `--surface:#ffffff` · `--text:#1a1d23` · `color-scheme:light`)로 교체. 상태 배지(auth_class public/route-custom-auth/global-auth, 가시-갭 미지정/미해소/zod-정의·미적용)는 밝은 배경 대비 가독성을 위해 짙은 전경색으로 조정(예 `badge-public #6ee7b7→#065f46`), 하드코딩 다크 rgba 오버레이는 중립 오버레이로 대체. 동작·구조·콘텐츠 무변경(순수 시각 테마).
+
+### 페이즈 결과
+- **핫픽스1 Phase 6** (fix) `c3ec83c`: `spec-dashboard/styles.css` 단독 변경(+52/−50). app.js는 인라인 색 없이 CSS 변수/클래스만 참조하여 무수정.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/styles.css` (다크→라이트 테마)
+
+> advisor: 완료 PASS (built-in advisor)
+
 ## v001.1087.0
 
 > 통합일: 2026-06-23
