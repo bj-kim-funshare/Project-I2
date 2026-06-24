@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1090.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스2)
+
+**spec-dashboard 진입 파이프라인 역할 주석을 소스(app.ts)에 co-locate하고 대시보드가 표기하도록 구조화.** `src/app.ts`의 진입 파이프라인 23개 구문 각 끝에 역할·실제 동작을 설명하는 trailing `//` 한국어 주석을 상세히 추가(주석만 추가 — 실행 코드·옵션·순서 무변경, diff 프로그래밍 검증으로 코드 토큰 변경 0 확인). `extract.mjs`는 각 파이프라인 노드의 trailing comment를 읽어 `role_comment` 필드로 spec.json에 포함(미존재 시 null+warnings, 추정 금지). `app.js` 진입 파이프라인 뷰가 role_comment를 카드 하단에 렌더, null이면 '미지정' 배지. 역할 설명의 진실원천이 코드 주석이 되어, 코드 수정 시 새로고침만으로 대시보드에 자동 반영됨. 커버리지 23/23.
+
+### 페이즈 결과
+- **핫픽스2 Phase 7** (feat) `ee26735`: `src/app.ts`(주석 23개, 코드 무변경) + `spec-dashboard/scripts/extract.mjs`(role_comment 파싱) + `spec-dashboard/app.js`(파이프라인 뷰 표기). +45/−23.
+
+### 영향 파일
+data-craft-server:
+- `src/app.ts` (진입 파이프라인 trailing 역할 주석 23개 — 주석 전용, 동작·HTTP 계약 무변경)
+- `spec-dashboard/scripts/extract.mjs` (role_comment 파싱)
+- `spec-dashboard/app.js` (파이프라인 뷰 역할 주석 표기)
+
+> 비고: 본 작업은 기존 "src/ 무접촉" 원칙을 마스터 명시 지시로 의도적으로 넘었으나, app.ts 변경은 순수 주석 추가(동작·HTTP 계약 영향 0)로 한정.
+> advisor: 완료 PASS (built-in advisor)
+
 ## v001.1089.0
 
 > 통합일: 2026-06-23
