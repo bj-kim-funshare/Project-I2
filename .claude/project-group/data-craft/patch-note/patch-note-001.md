@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.1092.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #452 (핫픽스4~9 — BUG2 최종 해결)
+
+**셀 합병(#452) BUG2 "옵션 켜도 합병 안 됨" 최종 해결.** 화면 우하단 임시 디버그 오버레이로 런타임 상태를 추적해 진짜 원인을 데이터로 확정했다(추측 수정 중단).
+
+### 근본 원인 (오버레이 덤프로 증명)
+오버레이가 `합병ON 열: 8356=true(boolean)` (적격 정상) 인데 `groupedRows.length=0` 을 보여줬다. 이 뷰어는 **서버 페이징(비그룹핑)** 모드라 행이 `groupedRows` 배열이 아니라 `serverPaging.getRowAtIndex(index)` 로 **인덱스별 지연 렌더**된다. 합병 엔진 `computeCellMergeRuns(groupedRows, …)` 는 항상 빈 배열을 받아 0 runs → 합병 미발생. (앞선 적격/값/columnField 보정은 모두 이 빈 배열 하류라 효과가 없었다.)
+
+### 최종 수정 (`476d0a2a`, `75d7a4c6` 등)
+- **`useTableView`**: 합병 계산 입력을 렌더와 동일한 인덱스 공간의 **실제 표시행**으로 공급 — `groupedRows` 가 비면 `getRowAtIndex(0..loadedRowCount-1)` 로 행 시퀀스 구성(grouping/비페이징은 기존 `groupedRows` 유지). 포커스/클릭 startIndex 조회도 동일 소스 정렬.
+- **방어적 보정(부수 확정 수정, 유지)**: ① 엔진 적격 판정 `=== true` → truthy + 로드 매퍼 `enableCellMerge` boolean 강제(smallint 1 대응), ② 셀 매칭 `columnField` String 정규화(number↔string).
+- **진단 도구 추가→제거**: 콘솔 프로브(핫픽스4)→화면 오버레이(핫픽스5,7)로 근본 원인 확정 후 제거(핫픽스9). 제품 코드에 잔존 없음.
+
+### 결과
+일반/디자인 두 모드 모두에서 비제외 타입(singleSelect 등) 열의 인접 동일값이 정상 합병(가로 구분선 없이 중앙 표기) — 마스터 화면 확인 완료(`runs map size: 1`, 합병 표시).
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/widgets/grid-table/hooks/useTableView.ts` (실제행 공급 — 핵심)
+- `packages/fs-data-viewer/src/widgets/grid-table/lib/cellMergeHelpers.ts` (truthy 적격 + columnField String 정규화)
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts` 외 로드 매퍼 (enableCellMerge boolean 강제)
+- `packages/fs-data-viewer/src/widgets/grid-table/FsGridTableView.tsx` (디버그 오버레이 마운트 추가→제거)
+- `packages/fs-data-viewer/src/widgets/grid-table/components/CellMergeDebugOverlay.tsx` (임시 추가 후 삭제)
+
 ## v001.1091.0
 
 > 통합일: 2026-06-24
