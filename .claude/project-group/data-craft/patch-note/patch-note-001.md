@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.1087.0
+
+> 통합일: 2026-06-23
+> 플랜 이슈: #452 (핫픽스2)
+
+**셀 합병(#452) 영속 결함 전수 수정 — 뷰어 로드(meta) 경로 누락 포함, `enableCellMerge` 를 모든 컬럼설정 직렬화 경로에 추가.** 핫픽스1 은 `serverToColumnModel`/`getViewerData` 만 고쳤으나, **뷰어 초기 로드는 meta 엔드포인트**(`viewer.meta.ts` + FE `useViewerMetaLoader`)를 쓰는데 그 경로가 `enableCellMerge` 를 드롭해 토글이 새로고침 시 계속 꺼졌다. `isHidden` 을 트레이서로 양 repo 전수 grep → `isHidden` 을 다루는 모든 컬럼설정 직렬화/매핑/타입/SELECT 지점에 `enableCellMerge` 를 나란히 추가(whack-a-mole 종결).
+
+### 페이즈 결과
+- **Phase 7 (핫픽스2, fix)** `126f60a` (data-craft FE): `serverToViewerMetaResult.ts`·`useViewerMetaLoader.ts`(뷰어 로드 핵심)·`column-json.types.ts`(from/to JSON) 에 enableCellMerge 추가.
+- **Phase 7 (핫픽스2, fix)** `4d64be7` (data-craft-server BE): `viewer.meta.ts` 3곳(메인 응답·미설정 기본값·서브그리드 빌더)·`dataViewerPost.service.ts`(SELECT+기본값+매핑)·`viewer.bulkSave.column.ts`(저장 propertyMap)·`dataViewer.types.ts`(ColumnSettingResponse 타입) 에 추가.
+
+### 효과 / 검증 가이드
+- BUG 1(새로고침 시 토글 꺼짐): 뷰어 로드 meta 경로가 이제 enableCellMerge 를 전달 → 영속. **devtools Network 에서 컬럼설정 응답에 `enableCellMerge` 포함 확인** 가능.
+- BUG 2(켜도 합병 안 됨): onRefresh 가 meta 재로드 시 토글값을 즉시 덮어쓰던 부작용도 본 수정으로 해소될 가능성. **토글 ON → 하드 새로고침 → 합병 표시 여부**로 최종 확인: 표시되면 해결, 그래도 안 보이면 잔여 원인은 렌더 가시성(Phase 4 z-index/overflow, 브라우저 검증 필요).
+- ⚠️ **신규 파일·패키지 변경 반영 위해 dev(Vite) + data-craft-server 재기동 권장**(하드리프레시만으론 부족할 수 있음).
+
+### 영향 파일
+data-craft:
+- `src/features/viewer/lib/serverToViewerMetaResult.ts`
+- `packages/fs-data-viewer/src/app/hooks/useViewerMetaLoader.ts`
+- `packages/fs-data-viewer/src/entities/column-json.types.ts`
+
+data-craft-server:
+- `src/services/viewer/viewer.meta.ts`
+- `src/services/dataViewerPost.service.ts`
+- `src/services/viewer/viewer.bulkSave.column.ts`
+- `src/types/dataViewer.types.ts`
+
 ## v001.1086.0
 
 > 통합일: 2026-06-23
