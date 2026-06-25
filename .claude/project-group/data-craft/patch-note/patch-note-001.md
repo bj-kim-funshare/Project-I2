@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1135.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #485 (funshare-inc/data-craft)
+
+BE 콜사이트 cutover — 직전 task-db-structure 단위가 dev psql 에 적용한 ① SP 비-삼킴 + ② `client→company` 리네임으로 열린 **dev BE 깨짐 창**을 닫는다(라이브 발현: `POST /api/auth/signin` → `relation "client" does not exist` 500). data-craft-server 단일 repo, dev 전용(prod·배포 범위 밖). R15 트랙(앵커 #457). value_data→data·페이지권한 강제는 의존성으로 보류(후속).
+
+### 페이즈 결과
+- **Phase 1** (fix) `2613d68`: SQL 문자열 리터럴 내 bare `client` 테이블 토큰을 `company` 로 정렬(12파일·60건). `client` 3중 의미 중 테이블만 교체 — `PoolClient` 변수(`this.client`/`const client =`)·`client_promotion`/`client_seat_change_requests`(유지)·함수명/주석 무접촉(diff 가드 확인). 라이브 signin 500(`findClientDeletionStatus`) 직접 해소. dev psql 스모크: signin·JOIN 쿼리가 `company` 로 정상 resolve.
+- **Phase 2** (fix) `e0042ee`: SP 비-삼킴 계약 적응. ①로 3종 SP 가 `{status:'FAILED'}` 대신 RAISE(검증오류 SQLSTATE=`P0001`) → 중앙 `errorMiddleware` 에 P0001→**400** 분기 추가(HttpError 와 generic 500 사이, 로깅 미러). 죽은 `result.status==='FAILED'` 체크 4건 제거(viewer.model 3·externalData 1). ★`{status:'FAILED'}` 재구성 금지(앱계층 재-삼킴 방지·① 무효화 방지) — `ALL_FAILED`(bulk 정상 반환) 4 호출부 전부 보존, catch 의 rollback→rethrow 유지.
+- 게이트: 양 페이즈 eslint + tsc(build) PASS. advisor #1·#2 PASS. 단위끝 검증: src 내 bare `client`-테이블 ref 0(comma-join/USING/UPDATE-FROM 포함 광역 sweep clean) + dev psql 런타임 스모크로 signin 500 해소 실증. ⚠️ SP검증오류→HTTP 400 전 구간(live BE) 스모크는 미수행(코드 레벨 검증) — 머지·재기동 후 권장.
+
+### 영향 파일
+data-craft-server:
+- Phase 1: `src/models/client.model.ts`, `src/models/promotion.model.ts`, `src/models/referral.model.ts`, `src/models/storage.model.ts`, `src/services/billingSubscription.service.ts`, `src/services/billingScheduler.service.ts`, `src/services/billingRenewal.service.ts`, `src/services/billingCleanup.service.ts`, `src/services/promotion.service.ts`, `src/services/auth.service.ts`, `src/middlewares/auth.middleware.ts`, `src/middlewares/tenant.middleware.ts`
+- Phase 2: `src/middlewares/error.middleware.ts`, `src/models/viewer.model.ts`, `src/models/externalData.model.ts`, `src/services/dataViewerPost.service.ts`, `src/services/dataViewerBulkRowCreate.service.ts`
+
 ## v001.1133.0
 
 > 통합일: 2026-06-25
