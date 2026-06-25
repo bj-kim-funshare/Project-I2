@@ -33243,3 +33243,24 @@ data-craft-admin-server:
 
 ### advisor 검증
 - 계획 advisor #1: PASS (5관점). 완료 advisor #2: PASS (5관점, C2/C1 공존·B2a 정합 확인).
+
+## v001.1121.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #474 (funshare-inc/data-craft)
+
+Roadmap-18(라우터 레이어 감사 리팩토링) P6 — 라우터 명명 규칙 전수 통일. data-craft-server 단일 repo, FE 호출 없음. 순수 리팩토링으로 HTTP 경로·동작·마운트 순서 무변경(골든 8 PASS/0 FAIL + 추출기 225 엔드포인트 튜플집합 완전 동일로 라우팅 표면 100% 보존 실증).
+
+### 페이즈 결과
+- **Phase 1** (refactor) `44887b2`: 추출기 `spec-dashboard/scripts/extract.mjs`를 라우터 컨벤션-불가지로 일반화 — `resolveRouterVarToFile`에 named import 해석 추가(B1), `parseRouteFile`을 파일별 `Router()` 할당 식별자 동적 감지로 일반화(B3). 구 트리 추출이 S_old(225)와 동일 유지 자가검증. (advisor #1이 추출기 3중 파손 적발 → BLOCK 후 본 페이즈로 선제 해소.)
+- **Phase 2~4** (refactor) `7c0e445`·`610e2e9`·`0ee5b67`: 배럴 라우터 18개를 도메인별 6개씩 3배치로 `{name}.router.ts` 파일명 + `export const {name}Router = Router()` 통일(내부 `router.`→`{name}Router.` 전수 치환, `export default` 제거). `src/routes/index.ts`의 18개 import를 default→named+`.router`로 동기화(배럴 자체 내부 `const router`/`router.use`/`export default router`는 보존).
+- **Phase 5** (refactor) `9834dd0`: app.ts 직접 마운트 5개(auth·subscription·sse·promotion·analytics) 동일 변환(.routes.ts 2개 포함). `src/app.ts` 5개 import/mount 변수참조 동기화(★경로·미들웨어·app.use 순서·L7 배럴 import·전역 `/api` 보호 마운트 무변경). extract.mjs `publicMounts[]` 5개 file 경로 `.router.ts` 갱신.
+- 최종 검증: nodemon 콜드 부팅 /health 200 + 골든 8 PASS/0 FAIL + 일반화 추출기 재실행 → `{(method,full_path,controller)}` 225 튜플집합이 S_old와 완전 동일(route_file만 23/23 `.router.ts`로 갱신, unresolved 0). build(tsc)·lint 매 페이즈 PASS.
+- advisor #1(계획) BLOCK→개정 후 PASS · #2(완료) PASS — advisor() 컨텍스트 초과로 정책상 advisor-fallback 경유(동일 권위).
+
+### 영향 파일
+data-craft-server:
+- `src/routes/*.router.ts` (23개: 기존 `*.ts`/`*.routes.ts` → `{name}.router.ts` rename + `export const {name}Router` 통일)
+- `src/routes/index.ts` (18개 leaf import default→named+`.router` 동기화, 배럴 내부 무변경)
+- `src/app.ts` (직접 5개 import/mount 변수참조 동기화)
+- `spec-dashboard/scripts/extract.mjs` (컨벤션-불가지 일반화 + publicMounts 5경로 갱신)
