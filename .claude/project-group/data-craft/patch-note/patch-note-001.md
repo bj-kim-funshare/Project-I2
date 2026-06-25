@@ -33423,3 +33423,32 @@ data-craft-server:
 - `src/routes/{auth,files,file,sse}.router.ts` (위임 전용 전환)
 - `src/controllers/auth.controller.ts` (validateBusinessNumberController 추가)
 - `src/controllers/{files,file,sse}.controller.ts` (신규)
+
+## v001.1129.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #480 (funshare-inc/data-craft)
+
+관리자 콘솔 2건 — ① 혜택 관리→크레딧 관리 컨트롤을 기업 미조회 시에도 비활성 상태로 항상 노출, ② 사이드바 "알림 관리" 메뉴 신설 + 특정 기업 전체/특정 사용자 인앱 알림 발송(+최근 발송 내역). 코드-only(스키마 무변경), 기존 `notification` 테이블 재사용. work repo 2개(data-craft-admin-server, data-craft-admin).
+
+### 페이즈 결과
+- **Phase 1** (feat, data-craft-admin-server `0b8efb41`): 관리자 알림 API 신설 — `GET /api/admin/notifications/users?companyId=`(수신자 picker), `POST /api/admin/notifications`(기업 존재·사용자 소속·메시지≤500 검증, type 서버고정 `admin:announcement`, `withDataClient` 단일 TX로 `notification` INSERT, userId null=기업 전체, payload `{source:'admin'}`만·actor 이메일은 logger.info — 사용자 read에 payload 노출되므로 PII 차단), `GET /api/admin/notifications`(최근 발송 `type LIKE 'admin:%'` 50건). verifyAdminToken 보호·기존 promotion 패턴 미러.
+- **Phase 2** (fix, data-craft-admin `d5f6d6fc`): `CreditsTab.tsx`의 `{data && …}` 아우터 게이팅 제거 → 폼(크레딧 부여·개월 조정·쿠폰 부여) 항상 렌더 + `disabled={!data || loading}`, 데이터 의존 표시부(잔액·크레딧·쿠폰·추천관계)는 `!data` 시 "기업 조회 후 표시" 플레이스홀더로 null-guard(크래시 0). 조회 흐름·핸들러 무변경.
+- **Phase 3** (feat, data-craft-admin `fa50a775`): 사이드바 `알림 관리`(Bell) 메뉴 + `/notifications` route + `entities/notification`(credit 패턴 미러) + `NotificationsPage`(수신자 조회 → 전체/특정 사용자 picker[오너 표시] · 500자 카운터 · useConfirm[대상·기업·DB모드] · sonner toast · 최근 발송 내역 테이블).
+
+### 알려진 제약
+- 실시간 SSE 푸시 없음(마스터 결정: DB 직접 기록) → 수신자는 다음 알림 조회 시 확인.
+- 알림 벨 UI는 `planType==='free'`일 때만 숨겨짐(`BuilderHeader.tsx:32`) → **free 플랜 기업 구성원은 벨에서 미수신**(basic/standard/premium/enterprise는 정상). free 대상 발송은 사실상 미도달.
+- prod 모드 발송 = 실제 사용자 알림(`notification`은 코어 사용자 테이블, prod 기록 정당). FE confirm 다이얼로그가 오발송 방지.
+
+### advisor 검증
+- 계획 advisor #1: PASS(picker 엔드포인트 신설·null-safety 분리·payload PII 제거·repo-연속 정렬 보완 반영). 완료 advisor #2: PASS(3페이즈 실측 diff 검증, 응답 봉투 언랩은 credit 엔티티 미러로 보장).
+
+### 영향 파일
+data-craft-admin-server:
+- `src/routes/adminNotification.routes.ts`(신규), `src/controllers/adminNotification.controller.ts`(신규), `src/services/adminNotification.service.ts`(신규), `src/app.ts`(라우트 등록)
+
+data-craft-admin:
+- `src/pages/benefits/CreditsTab.tsx`(비활성 노출)
+- `src/app/router/RootLayout.tsx`, `src/app/router/index.tsx`(메뉴+route)
+- `src/entities/notification/api.ts`(신규), `src/entities/notification/index.ts`(신규), `src/pages/notifications/NotificationsPage.tsx`(신규)
