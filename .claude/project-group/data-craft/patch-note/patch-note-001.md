@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1130.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스3
+
+**모바일 debug 빌드 cleartext(HTTP) 허용 — dev 서버 WebView 로드 차단 해소.** debug APK가 로컬 dev 서버(HTTP)를 바라볼 때 페이지 본문 WebView(`http://<lan-ip>:5173/m/:id`)가 `ERR_CLEARTEXT_NOT_PERMITTED`로 로드 실패하던 문제 수정. 네이티브 Android WebView는 앱의 cleartext 정책(targetSdk 36 기본 차단)을 강제하지만 Dart/Dio는 이를 우회하므로, 페이지 목록 API는 되는데 페이지 본문만 안 뜨는 증상이었다(서버 로그 무에러 = 요청이 기기에서 차단). data-craft-mobile 단일 repo, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 6** (fix, data-craft-mobile) `2171954b`: `android/app/src/debug/AndroidManifest.xml`(debug 소스셋 전용)에 `<application android:usesCleartextTraffic="true" />` 오버레이 추가. debug 빌드에서만 cleartext 허용 → dev 서버 HTTP WebView 로드 가능. main 매니페스트·release(HTTPS prod) 빌드는 무영향(오버레이가 debug 한정). 빌드 산출물 병합 매니페스트에 `usesCleartextTraffic=true` 적용 실측 확인.
+
+### 영향 파일
+data-craft-mobile:
+- `android/app/src/debug/AndroidManifest.xml` (debug 전용 cleartext 허용 오버레이)
+
 ## v001.1128.0
 
 > 통합일: 2026-06-25
