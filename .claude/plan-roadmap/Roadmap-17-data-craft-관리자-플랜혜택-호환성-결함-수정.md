@@ -8,7 +8,7 @@
 
 🟢 /plan-enterprise data-craft [R1b·CRITICAL·완료] E3 — 평생 3개월 추천 적립 캡 우회 차단. adminReferral.adjustMonths 에 no-lowering 가드(FOR UPDATE 현재값보다 낮은 SET 거부) 추가 → granted_months monotonic → adjustMonths(0) 리셋 재적립 우회 봉쇄(Option A 코드-only, 스키마 무변경). 이슈 #465, commit 00ae5905, patch-note v001.1110.0, advisor 계획·완료 PASS. **E1(task-db-structure)과 함께 R1 두 CRITICAL 완결.**
 
-🔴 /plan-enterprise data-craft [R2 쿠폰] 할인쿠폰 결함 3건. (D4) data-craft-server reserveCouponWithConnection·lockCouponCodeForUpdate에 coupon_code.deleted=false 검사 추가(soft-delete 무력화 차단). (D2) updateCoupon LIVE 소급(발급 wallet 즉변) 정책 결정 후 가드(활성 발급분 보유 시 경제필드 변경 차단 또는 wallet 스냅샷). (D1) createCoupon applies_all=false+target0 영구사용불가 서버검증.
+🟢 /plan-enterprise data-craft [R2·완료] 할인쿠폰 결함 3건 — (D4) reserveCouponWithConnection에 code.deleted 가드(soft-delete 발급분 누수 차단, server). (D1) createCoupon+updateCoupon 빈-target 검증 COUPON_TARGETS_REQUIRED(영구사용불가 차단, admin). (D2) updateCoupon registered-wallet 보유 시 경제·적용 6필드 소급 변경 차단 COUPON_HAS_ACTIVE_WALLETS(block 정책, used 제외, admin). 코드-only, 이슈 #468, patch-note v001.1113.0, advisor 양 PASS. ※알려진 한계: 유리한 변경도 차단(비활성화+재생성 워크플로우).
 
 🔴 /plan-enterprise data-craft [R3 플랜/빌링] 기업 플랜 직접변경 결함 5건 + 투명성 보완. (A2) 주기 직접변경 시 plan_expires_at·billing_anchor_day 재계산(과청구 차단). (A3) enterprise/sentinel 만료일 실날짜→free 강등 가드 + (A1a) 카드 없는 유료부여 차단/경고. (A-COMBO) updateCompany planType+planExpiresAt 동시전송 시 plan_expires_at SET 중복→PG 42601 제거. (A4c) seats 변경 시 pending 좌석요청 삭제와 함께 pending_billing_cycle 짝 정리. (A1b/A2b 투명성 보완) 플랜·주기 직접변경으로 사용자 예약(다운그레이드/주기) 무음 취소 시 사용자 통지/감사 강화.
 
