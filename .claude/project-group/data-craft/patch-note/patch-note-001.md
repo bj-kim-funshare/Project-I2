@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1096.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스5)
+
+**spec-dashboard 진입 파이프라인 코드의 VSCode식 토큰 색상화 + 카드 여백 조정.** 그동안 파이프라인 코드(`app.use('/api/sse', sseRoutes);` 등)가 전부 검정으로 보이던 근본 원인 2개를 수정: ① `TOKEN_RE` 식별자 패턴이 `.`을 포함해 `app.use`를 한 토큰(near-black hl-default)으로 잡던 것 → `.` 분리 + 식별자 분류 로직(뒤에 `(` 있으면 메서드=hl-function, 직전이 `.`이면 속성=hl-property, 그 외 변수=hl-variable) 추가. ② 팔레트가 near-black(#1f2328)·짙은 남색(#0a3069)이라 색이 안 보이던 것 → VSCode Light 명확 구분색(변수 `#0070c1` 파랑·메서드 `#9a6700` 골드·문자열 `#c2410c` 주황·키워드 `#cf222e` 빨강·숫자 `#116329` 녹색·속성 `#0e7490` 청록·구두점 `#57606a`). 메인세션 독립 실행 검증: `app.use('/api/sse', sseRoutes);`→app=변수·use=메서드·'/api/sse'=문자열·sseRoutes=변수로 정확 분류. 추가로 카드 여백: 코드↔역할설명 사이 +10px, 번호↔코드 사이 축소(min-width 24→14px).
+
+### 페이즈 결과
+- **핫픽스5 Phase** (fix) `93b82ad`: `spec-dashboard/app.js`(토크나이저 점 분리·변수/메서드/속성 분류) + `spec-dashboard/styles.css`(VSCode Light 팔레트·여백). +25/−14.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/app.js` (highlightCode 토큰 분류 + 카드 마크업)
+- `spec-dashboard/styles.css` (hl-* 라이트 팔레트 + 파이프라인 카드 여백)
+
+> advisor: 핫픽스5는 시각 토큰 색상화 — highlightCode 실제 실행 출력으로 토큰별 클래스 정합 메인세션 검증.
+
 ## v001.1095.0
 
 > 통합일: 2026-06-24
