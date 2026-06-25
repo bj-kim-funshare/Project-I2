@@ -32957,3 +32957,15 @@ data-craft:
 - `packages/fs-viewer-core/package.json`
 - `packages/fs-data-viewer/src/features/print/{types,engines/types,pagination/types,batch/types,history/types,qrcode/types,templates/types,watermark/types,toc/types}.ts` (shim)
 - `packages/fs-data-viewer/src/features/print/optimization/ImageQualityController.ts` (ImageQuality re-export)
+
+## v001.1104.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #459 (funshare-inc/data-craft) — 핫픽스1
+
+### 페이즈 결과
+- **Phase 2 (핫픽스, fix)**: dev 서버 복구 — Phase 1의 `fs_viewer_core/*` 서브패스 shim이 vite dev에서 resolve 실패(`Failed to resolve import "fs_viewer_core/entities"`). 루트 `vite.config.ts`에 `fs_viewer_core` src-alias 2개(서브패스 regex + 베어) 추가 → `packages/fs-viewer-core/src` 직접 resolve(dist 불요, staleness 회피, `fs_data_viewer` 패턴과 일관). 빌드게이트 green + 라이브 vite dev resolution 실측 통과. 원인=이전 #458 phase들의 dev-alias 누락 부채(빌드게이트가 dev-only break 미검출).
+
+### 영향 파일
+data-craft:
+- `vite.config.ts`
