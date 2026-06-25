@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1101.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스9)
+
+**spec-dashboard 탭 너비 확대 + 전역 auth 라벨 정확화.** (1) 각 탭 콘텐츠 총 너비 확대: `.layout` 1480→1840px, `.pipeline-chain` 840→1160px, `.footer` 동반 1840px(중앙정렬 유지). (2) **전역 auth 라벨 추가 정확화**: hotfix8의 "전역 (/api 보호 마운트)"가 "미포함 52개도 모두 /api/* 경로"라는 점에서 부정확 → **"전역 (/api 공통(catch-all) 마운트)"** 로 교정하고, 미포함 사유를 **Express 마운트 등록 순서**로 정확히 설명: authMiddleware는 `app.use('/api', …)` 공통 마운트에 걸리며, 그 앞에 개별 등록된 마운트(`/api/auth`·`/api/subscription`·`/api/sse`·`/api/promotion`·`/api/analytics`·`/api/chat/file`)가 먼저 처리해 미포함 52개(같은 /api/* 경로지만)는 이 가드를 거치지 않음. 라벨·패널 노트·범례 3곳 일관 교정.
+
+### 페이즈 결과
+- **핫픽스9 Phase(누적 2커밋)** (fix) `269c601`(너비)→`3b2b723`(라벨 정확화): `spec-dashboard/styles.css`·`app.js`. +6/−6.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/styles.css` (.layout·.pipeline-chain·.footer 너비)
+- `spec-dashboard/app.js` (globalScopeLabel·scopeNote·legend 전역 auth 표현)
+
 ## v001.1100.0
 
 > 통합일: 2026-06-24
