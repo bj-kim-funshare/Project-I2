@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1127.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스1
+
+**모바일 즐겨찾기 별 후속 핫픽스 3건 (선택상자 즐겨찾기 차단 · 스플래시 문장 겹침 · 빈 페이지 안내).** 마스터 추가 요청을 핫픽스1로 처리 — 모바일 2건(data-craft-mobile) + 웹 1건(data-craft). 모바일/웹 각 i-dev 머지, flutter analyze 0 / typecheck:all+lint 0 errors, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 2** (feat, data-craft-mobile) `9116944a`: "선택 상자로 사용"(`PageDto.isSelectorBox`) 페이지 즐겨찾기 차단. 페이지 트리 아이템에서 별 아이콘 미표시(`if (!isSelectorBox)` 게이트 → else `SizedBox.shrink()`), 홈 즐겨찾기 섹션에서 `.where((p) => !p.isSelectorBox)` 필터로 기등록 선택상자 페이지도 카드 미노출(접근 불가 페이지 진입 방지).
+- **Phase 3** (fix, data-craft-mobile) `e42794f7`: 스플래시 로딩 문장 겹침 제거. `AnimatedSwitcher` 기본 layoutBuilder가 옛/새 문장을 Stack으로 겹쳐 그리던 것을 `layoutBuilder: (cur, prev) => cur ?? SizedBox.shrink()`로 현재 문장만 렌더(페이드인 유지).
+- **Phase 4** (feat, data-craft 웹) `4ff71bcf` + 린트수정 `329dce55`: 모바일 임베드(`/m/:id` `MobilePageView`) 빈 페이지 안내. `!layout`만 처리하던 것을 layout 존재·위젯 0개 경우도 감지(`hasAnyWidget` 재사용)해 아이콘+제목+설명 안내 상태 렌더. i18n `mobileEmptyPage.title/description`(ko/en) 추가. react-refresh 린트 해소 위해 `hasAnyWidget`을 `layoutContent.ts` 별도 모듈로 추출.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/page/widgets/page_tree_item.dart` (선택상자 페이지 별 아이콘 게이트)
+- `lib/screens/home/widgets/home_favorites_section.dart` (선택상자 페이지 즐겨찾기 카드 필터)
+- `lib/screens/splash_screen.dart` (AnimatedSwitcher layoutBuilder 겹침 제거)
+
+data-craft (웹):
+- `src/pages/mobile/MobilePageView.tsx` (빈 페이지 감지 + 안내 상태 렌더)
+- `src/pages/mobile/MobileLayoutRenderer.tsx` (`hasAnyWidget` 추출 모듈 import로 전환)
+- `src/pages/mobile/layoutContent.ts` (신규 — `hasAnyWidget` 분리 모듈)
+- `src/shared/i18n/locales/ko.ts` · `src/shared/i18n/locales/en.ts` (`mobileEmptyPage` 키)
+
 ## v001.1124.0
 
 > 통합일: 2026-06-25
