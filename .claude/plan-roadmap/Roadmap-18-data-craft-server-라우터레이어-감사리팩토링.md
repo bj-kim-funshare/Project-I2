@@ -20,7 +20,12 @@
 
 🟢 /plan-enterprise data-craft [P8·컨벤션 인증형태 ★최고위험] 인증 미들웨어를 router.use(authMiddleware) 게이트 형태로 통일. ★혼합 라우터 주의 — auth.ts(공개 15 + 보호 9)·subscription.ts(공개 /plans·/webhook/toss + 보호)에 일괄 router.use 를 걸면 공개 엔드포인트까지 보호돼 로그인·토스웹훅이 깨진다. 따라서 혼합 라우터는 공개/보호 서브라우터로 분리(예: auth-public.router.ts vs auth-admin.router.ts) 하거나 명시 예외 목록으로 처리(실행 시 master 와 분리 vs 예외 택일). 균일-보호 라우터만 router.use 적용. sse 전용 인증·/api 전역마운트 적용범위 보존, inputStore·user-preference 이중적용 정리, error-handling idiom(errorCatch/next/try-catch) 통일 포함. ★인증 적용범위 절대 무변경 — 골든 재생 + 전/후 인증분류(공개16·route-custom-auth·global-auth173) 대조로 공개=토큰없이 200·보호=401 단언. [완료: #482, master 결정=혼합 예외유지(per-route)·error-idiom 보수(검토 후 0 전환). promotion router.use 게이트화 + inputStore/user-preference 중복 제거. 토큰부재 per-endpoint(보호 400·공개 200)·auth_class(16/36/175) 기준선 동일로 적용범위 불변 실증. golden은 병렬 R15 client→company dev-DB 리네임 signin 500으로 차단(P8 무관). patch-note v001.1131.0]
 
-🔴 /dev-build data-craft
+🟢 /dev-build data-craft [완료: data-craft-server(i-dev) `pnpm build`(tsc) exit 0 + `pnpm lint`(eslint) exit 0 — P1~P8 리팩토링 코드 무결성 최종 확인. ※golden 런타임 재생은 병렬 R15 client→company dev-DB 리네임 signin 500으로 별도 차단(P8 무관, R15 코드 cutover 후 재생).]
+
+---
+
+## ✅ Roadmap-18 완료 (2026-06-25)
+P1~P9 전 단계 🟢. 라우터 레이어 감사 6축 결함(명명·비즈로직·import·TS2742·인증형태·기타)을 순수 리팩토링으로 전부 해소. 매 단계 골든/추출기/토큰부재 게이트로 #1 원칙(기존 기능 무파손)을 실증. **잔여 인지사항**: dev 환경이 병렬 R15 client→company 컷오버 중간상태(테이블 리네임 적용·코드 미컷오버)라 dev signin 500 — R15 자동 goal 세션 후속(코드 cutover) 필요(Roadmap-18과 독립 트랙).
 
 ---
 
