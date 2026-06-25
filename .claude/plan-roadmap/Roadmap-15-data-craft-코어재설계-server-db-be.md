@@ -1,16 +1,18 @@
 # Roadmap 15: data-craft 코어 재설계 ① 계약동결 + server (DB+BE)
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
+>
+> **현황(2026-06-25)**: 🟢2 · 🟡2 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive)·데이터변환 dev완료. BE cutover·리네임/DROP·prod 미착수. 상세 ↓ 진척 현황 섹션.
 
 ## 프롬프트
 
-🔴 (ad-hoc) Roadmap-5(data-craft-view-removal-cud-policy) 완료/흡수 확인 — §3 data_viewer_setting/_column_setting 제거·폼 폐지가 Roadmap-5와 직접 중첩. 진입 전 5의 완료/흡수 여부 확인(중복작업·트랙 충돌 방지). Roadmap-12(monorepo refactor)는 FE라 16에서 점검.
+🟢 (ad-hoc) Roadmap-5(data-craft-view-removal-cud-policy) 완료/흡수 확인 — §3 data_viewer_setting/_column_setting 제거·폼 폐지가 Roadmap-5와 직접 중첩. 진입 전 5의 완료/흡수 여부 확인(중복작업·트랙 충돌 방지). Roadmap-12(monorepo refactor)는 FE라 16에서 점검.
 
 **— Phase 0 : 계약 동결 (★Roadmap 16 진입 게이트) —**
 
-🔴 /task-db-structure data-craft — 신 스키마 DDL 설계 + dev/staging 적용(prod는 최종 컷오버 보류): `client→company` 전 스키마 리네임(data-craft-admin-server FK 포함)·컬럼추가(seq·is_required·parent_group_id·parent_row_id 등)·신규 4테이블(permission / company_setting / widget_preset / data_row) + SP·트리거 재작성(비-삼킴 계약 · created_at 정정 · JSON·5타입 검증). REDESIGN-SPEC §3·§8·§9·§11 + REDESIGN-VERIFICATION 보강권고(다형성 owner FK 분해·form-type 강제수단) 반영.
+🟡 /task-db-structure data-craft — 신 스키마 DDL 설계 + dev/staging 적용(prod는 최종 컷오버 보류): `client→company` 전 스키마 리네임(data-craft-admin-server FK 포함)·컬럼추가(seq·is_required·parent_group_id·parent_row_id 등)·신규 4테이블(permission / company_setting / widget_preset / data_row) + SP·트리거 재작성(비-삼킴 계약 · created_at 정정 · JSON·5타입 검증). REDESIGN-SPEC §3·§8·§9·§11 + REDESIGN-VERIFICATION 보강권고(다형성 owner FK 분해·form-type 강제수단) 반영.
 
-🔴 /plan-enterprise data-craft — fs-api 계약 타입 동결(work_repo=data-craft, packages/fs-api, **타입-only·구현 전·i-dev 머지**): columnType 5번째 enum(JSON) · rowField(row_num→row_id) · cells 값 JSON 직렬화 형태 · widget_preset/permission/company_setting 응답 타입. FE↔BE 공유 계약의 단일 소스 → 이 동결이 Roadmap 16 진입 게이트.
+🟢 /plan-enterprise data-craft — fs-api 계약 타입 동결(work_repo=data-craft, packages/fs-api, **타입-only·구현 전·i-dev 머지**): columnType 5번째 enum(JSON) · rowField(row_num→row_id) · cells 값 JSON 직렬화 형태 · widget_preset/permission/company_setting 응답 타입. FE↔BE 공유 계약의 단일 소스 → 이 동결이 Roadmap 16 진입 게이트.
 
 **— 구현 (코드 = i-dev 머지 / prod DB·배포만 컷오버 보류) —**
 
@@ -18,11 +20,23 @@
 
 🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환 · option-id 발급 · area→정수격자 도출을 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트, dev=합성시드). 통과 = prod 적용 인가. (db.md pre-deploy 읽기전용 psql 인가 패턴 재활용)
 
-🔴 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod는 컷오버 보류): data_row 전수발급(group_id+row_num distinct = 첫 도미노) → text→JSON 셀 변환(타입충실) → option-id 발급·라벨 박제 제거 → 캘린더/간트 색 전역화·dangling-ref drop → 폼 인스턴스(라이브 170행)→widget_preset 흡수. capture+rollback 동반.
+🟡 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod는 컷오버 보류): data_row 전수발급(group_id+row_num distinct = 첫 도미노) → text→JSON 셀 변환(타입충실) → option-id 발급·라벨 박제 제거 → 캘린더/간트 색 전역화·dangling-ref drop → 폼 인스턴스(라이브 170행)→widget_preset 흡수. capture+rollback 동반.
 
 **— 조율 컷오버 (prod 단일 유지보수 창) —**
 
 🔴 (조율 컷오버) prod 대상 순서대로 (재)실행: `/task-db-structure data-craft`(prod DDL 적용) → `/task-db-data data-craft`(prod 데이터 마이그) → `/pre-deploy data-craft`(BE prod 배포·서버 git pull). **단일 창에서 일괄·조각내기 금지.** FE(Roadmap 16)는 본 컷오버 창에 합류 배포(DB→BE→FE 순).
+
+## 진척 현황 (2026-06-25 검증 — dev 전용 goal 범위)
+
+> 11에이전트 포렌식 + 3에이전트 게이트 재검증 기준. dev psql(data_craft_dev)·i-dev·문서 대조.
+
+- 🟢 **선행 Roadmap-5 흡수** — R5(closed 2026-06-11)와 §3 객체 DISJOINT(R5=SQL VIEW/릴레이션3테이블, R15 §3=뷰어세팅+폼 테이블), 충돌 0. 조치 불필요.
+- 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·created_at SP정정(P0a~P0d) dev적용·i-dev머지 ✅. 미착수: SP 비-삼킴(P0c-ii, sp_manage_data_group 여전히 사일런트 삼킴)·client→company 전스키마 리네임·레거시 DROP.
+- 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED, DataType 5종·CellData·CellFormulaSpec(재귀AST)·RowId·permission/company_setting/widget_preset 타입 전부 동결·export·additive.
+- 🔴 **BE 콜사이트 cutover** — src/ 무변경(옛 테이블 활성: value_data 205·row_num 541·role 78…), advisor BLOCK(#4 리네임과 얽힘·강제완료 금지).
+- 🔴 **prod 형태 재인코딩 게이트** — prod 대상이라 현 dev-only goal 범위 밖.
+- 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. 미착수: option-id 발급·라벨박제 제거·색 전역화·폼→widget_preset 흡수·permission/company_setting/widget_preset 적재(현 0행).
+- 🔴 **조율 컷오버(prod)** — prod 대상, 범위 밖.
 
 ---
 
