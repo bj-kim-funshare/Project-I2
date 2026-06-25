@@ -32987,3 +32987,17 @@ data-craft:
 ### 영향 파일
 data-craft:
 - `vite.config.ts`
+
+## v001.1107.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #462 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1** (refactor): R16① fs-viewer-core — print 저장/캐시 레이어 5파일(TemplateManager·TemplateStorage·defaults·PrintCache·PrintHistoryManager) fs-data-viewer→fs-viewer-core 이동. PrintCache의 `E.FsDataViewerModel`→core entities 직접 named import. fork 5파일=core re-export shim(심볼명 보존·배럴/소비처 무수정). build-green(`build:packages && typecheck:all && lint` exit 0) + vite dev 라이브 resolution 실측 통과. e-namespace·런타임 엔진/UI 무수정.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/features/print/{templates/TemplateManager,templates/TemplateStorage,templates/defaults,cache/PrintCache,history/PrintHistoryManager}.ts` (신규 5)
+- `packages/fs-viewer-core/src/features/index.ts`
+- `packages/fs-data-viewer/src/features/print/{동일 5}.ts` (shim)
