@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1108.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #464 (Roadmap-18 P2)
+
+**Roadmap-18 P2 — rateLimiter export 명시 타입으로 TS2742 포터빌리티 해소(순수 타입·런타임 무변경).** `src/middlewares/rateLimiter.middleware.ts` 의 5개 rate-limit export(authLimiter·strictLimiter·analyticsLimiter·paymentVerifyLimiter·apiLimiter)에 `import type { RateLimitRequestHandler }` + `: RateLimitRequestHandler` 명시 타입 부여. diff = import 1줄 + 5 타입주석만(rateLimit 옵션·keyGenerator 0 변경). 선언방출(`tsc --declaration --emitDeclarationOnly`) exit 0 으로 TS2742 재현→해소 확인(`--noEmit` 으론 미재현), pnpm build 통과. HTTP 계약·런타임 무변경.
+
+> ⚠️ baseline 골든 캡처(권장 선행)는 **유효 dev 자격증명 차단으로 미완** — 알려진 dev 계정이 dev DB 에서 401. P2 는 순수 타입이라 독립 완료. **다음 단계 P3(첫 행위 변경) 착수 전 master 의 유효 dev 자격으로 현재 i-dev baseline 캡처가 필요**(지금이 pre-refactor baseline 의 마지막 시점).
+
+### 페이즈 결과
+- **Phase 1** (fix) `53c9784`: rateLimiter 5 export RateLimitRequestHandler 명시 타입(TS2742 해소).
+
+### 영향 파일
+data-craft-server:
+- `src/middlewares/rateLimiter.middleware.ts` (import type + 5 타입주석)
+
 ## v001.1106.0
 
 > 통합일: 2026-06-25
