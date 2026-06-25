@@ -32958,7 +32958,7 @@ data-craft:
 - `packages/fs-data-viewer/src/features/print/{types,engines/types,pagination/types,batch/types,history/types,qrcode/types,templates/types,watermark/types,toc/types}.ts` (shim)
 - `packages/fs-data-viewer/src/features/print/optimization/ImageQualityController.ts` (ImageQuality re-export)
 
-## v001.1104.0
+## v001.1105.0
 
 > 통합일: 2026-06-25
 > 플랜 이슈: #459 (funshare-inc/data-craft) — 핫픽스1
