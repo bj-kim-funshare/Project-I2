@@ -12,7 +12,7 @@
 
 🟢 /plan-enterprise data-craft [P4·정리] 죽은/임시 코드 제거 — src/routes/v2/ DEPRECATED 빈 스텁 디렉토리 전체 + debug-chain 임시 디버그 라우터(app.ts 조건부 마운트 + routes 등록 + 잔존 FE 호출 포함). 미마운트/prod-비활성 코드라 동작 무변경. 골든 재생으로 무영향 확인. [완료: #469 `c64d7d2`, −92줄, 골든 8 PASS/0 FAIL, patch-note v001.1116.0]
 
-🔴 /plan-enterprise data-craft [P5·정리] src/routes/auth.ts 중간(line 162)에 끼어있는 initController import 를 파일 최상단 import 블록으로 이동 + promotion.routes.ts 미들웨어 import 출처 혼재(배럴 ../middlewares vs 직접 ../middlewares/auth.middleware) 통일. 순수 정리, 동작 무변경.
+🟢 /plan-enterprise data-craft [P5·정리] src/routes/auth.ts 중간(line 162)에 끼어있는 initController import 를 파일 최상단 import 블록으로 이동 + promotion.routes.ts 미들웨어 import 출처 혼재(배럴 ../middlewares vs 직접 ../middlewares/auth.middleware) 통일. 순수 정리, 동작 무변경. [완료: #471 `16a2cab`, +2/−3, 직접경로 통일(11 vs 4), 골든 8 PASS/0 FAIL, patch-note v001.1117.0]
 
 🔴 /plan-enterprise data-craft [P6·컨벤션 명명] 라우터 명명 규칙 전수 통일 — src/routes/ 라우터 25개를 {고유명칭}.router.ts 파일명 + `export const {고유명칭}Router = Router()` 명명 export 로 통일(.routes.ts 2개 포함; index.ts barrel 은 집약기라 별도 판단). ★rename 전 각 라우터 모듈을 import 하는 전 지점을 repo 전역 grep(routes/index.ts·app.ts·테스트·배럴·spec-dashboard 추출기·교차 import)해 빠짐없이 동기화 — 누락 1건이면 부팅 크래시. ★HTTP 경로·메서드·동작·마운트 순서 절대 무변경(rename+import 동기화만). pnpm build(tsc) + 서버 부팅 + 골든 재생 + 엔드포인트 수(225) 대조로 회귀 0 검증.
 
