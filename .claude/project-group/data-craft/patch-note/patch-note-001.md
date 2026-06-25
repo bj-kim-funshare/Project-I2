@@ -33159,3 +33159,19 @@ data-craft-server:
 - `src/routes/v2/{index,social/index,social/ping,social/health}.ts` (삭제)
 - `src/routes/debug-chain.ts` (삭제)
 - `src/app.ts` (debug-chain 마운트/import 제거)
+
+## v001.1117.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #471 (funshare-inc/data-craft)
+
+Roadmap-18(라우터 레이어 감사 리팩토링) P5 — import 위치·출처 정리. data-craft-server 단일 repo, FE 호출 없음. 순수 import 위생 정리로 런타임 동작·HTTP 계약 무변경(골든 8 엔드포인트 회귀 0).
+
+### 페이즈 결과
+- **Phase 1** (chore) `16a2cab`: (1) `src/routes/auth.ts` 모듈 중간(L162)에 끼어 있던 `initController` import를 상단 import 블록(컨트롤러 군집)으로 이동 — `router.post('/init', initController)` 라우트 등록은 그대로. (2) `src/routes/promotion.routes.ts`의 미들웨어 import 출처 혼재를 우세 관례인 직접 경로로 통일 — 유일한 배럴 import(L17 `AuthRequest·authMiddleware·buildAuthResponse` ← `../middlewares`)를 `../middlewares/auth.middleware` 직접 경로로 바꾸고 동일 출처의 `forceIncludeAuth`(L18)와 한 import 문으로 병합(2줄→1줄). +2/−3, 2파일. ★diff가 import 라인만 — `router.*`·핸들러·미들웨어 체인·경로 무변경, 가져오는 심볼 집합 불변. 네 심볼 모두 `auth.middleware.ts` 직접 export 원산지(L43/54/239/265) 실측 확인 후 병합. build(tsc)·lint PASS, nodemon 콜드 재시작 /health 200 + 골든 재생 8 PASS/0 FAIL로 무영향 실증.
+- advisor #1(계획)·#2(완료) 모두 PASS — advisor() 컨텍스트 초과로 정책상 advisor-fallback 경유(동일 권위).
+
+### 영향 파일
+data-craft-server:
+- `src/routes/auth.ts` (중간 import 상단 이동)
+- `src/routes/promotion.routes.ts` (미들웨어 import 직접경로 통일·병합)
