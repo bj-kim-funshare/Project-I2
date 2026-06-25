@@ -33175,3 +33175,31 @@ Roadmap-18(라우터 레이어 감사 리팩토링) P5 — import 위치·출처
 data-craft-server:
 - `src/routes/auth.ts` (중간 import 상단 이동)
 - `src/routes/promotion.routes.ts` (미들웨어 import 직접경로 통일·병합)
+
+## v001.1118.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #472 (funshare-inc/data-craft)
+
+Roadmap-17 R3 — 관리자 콘솔 "기업 플랜 관리" 직접변경(`updateCompany`)이 실사용 빌링/갱신 파이프라인과 호환되도록 하드 가드 추가. data-craft-admin-server 단일 repo, 코드-only(스키마 무변경).
+
+### 페이즈 결과
+- **Phase 1 (`c1560f1`)**: `updateCompany` 검증 섹션(SET 조립 직전)에 입력 하드 가드 3종 추가.
+  - `NO_BILLING_METHOD` (400): `input.planType`이 유료(basic/standard/premium)인데 회사에 active `billing_info`(is_active=1) 없으면 거부 — 카드 없는 유료 부여 시 갱신 스케줄러(INNER JOIN billing_info) 미선택 → 만료 시 silent free 강등을 차단 [A1a].
+  - `ENTERPRISE_EXPIRY_FORBIDDEN` (400): effective plan(=`input.planType ?? current`)=enterprise인데 유한 실날짜 만료일 입력 시 거부 — enterprise는 sentinel(2999) 유지가 정상, 계약 종료는 `plan_type` 변경 경로 사용 [A3].
+  - `PAID_PLAN_REQUIRES_EXPIRY` (400): effective plan이 유료인데 만료일=null 입력 시 거부 — 갱신(`plan_expires_at<=NOW+1d`)·만료(`plan_expires_at<NOW`) 쿼리 양쪽에서 NULL 비교로 미선택되어 영구 정체되는 것 방지 [A-COMBO null-edge].
+- **Phase 2 (`d00fb4c`)**: A-COMBO 결합편집 하드실패 정상화 — (b) 유료 plan_type 자동 만료/anchor 정합 블록 조건에 `&& input.planExpiresAt === undefined` 추가. 관리자가 `planType`(유료) + `planExpiresAt`를 한 요청에 동시 전송하고 현재 만료가 sentinel/past일 때 `plan_expires_at`·`billing_anchor_day`가 두 분기에서 중복 SET 되어 PostgreSQL `42601 (column appears more than once)`로 전체 트랜잭션이 롤백되던 것을 제거. 명시 `planExpiresAt` 값 우선, (b) 내부 로직 불변.
+
+### 범위 제외 (ground-truth 검증 + 마스터 확정)
+- **A2** (결제주기 직접변경): 무수정 — 갱신(billingRenewal)이 charge·연장을 둘 다 `billing_cycle`로 계산하여 총액 과청구/이중청구 없음(빌링 수학 정합). 의도된 admin 오버라이드로 확정. (감사의 "1년치 과청구/11개월 무료" 정량은 현행 코드로 재현되지 않음.)
+- **A1b/A2b** (예약 무음취소 투명성): 코드 무변경 — 기존 `writeClientAuditDev`가 `admin_client_audit`에 before/after 전체 행(JSONB)을 기록하므로 취소된 예약(`pending_plan_type`/`pending_billing_cycle` value→NULL)이 이미 캡처됨. 마스터 결정 = 감사로그만(고객 in-app 통지 없음).
+- **A4c** (좌석변경 시 pending_billing_cycle 정리): 드롭 — `client_seat_change_requests`={company_id,delta,apply_at,status}에 cycle 필드 없고, `billingSubscription.service.ts`가 `pending_billing_cycle`을 인원변경 시 의도적으로 보존(이미 닫은 버그)하므로 좌석 변경 시 정리하면 회귀.
+- **A3 후반부** (미래 만료 푸시 → 큐 크레딧/쿠폰): note-and-defer — 능동 소멸 아님(`processReferralExpiryAudit`는 로그만), 저심각.
+
+### 영향 파일
+data-craft-admin-server:
+- `src/services/adminCompanies.service.ts`
+
+### advisor 검증
+- 계획 advisor #1: PASS (5관점 — Intent/Logic/Group Policy/Evidence/Command Fulfillment).
+- 완료 advisor #2: PASS (5관점 — Phase 1+2 합성·null-edge 봉쇄·A1a input기준/A3 effective기준 정합 확인).
