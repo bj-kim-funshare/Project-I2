@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1113.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #468
+
+**R2 — 할인쿠폰 결함 3건(D4·D1·D2) 코드 수정.** (D4) soft-delete(`deleted=true`, is_active 유지)된 쿠폰이 기발급 `coupon_wallet`에서 계속 reserve/할인되던 누수를 `reserveCouponWithConnection`의 `code.deleted` 가드로 차단. (D1) `createCoupon`+`updateCoupon`이 `applies_all=false`+빈 `target_categories`로 영구사용불가 쿠폰을 만들던 것을 `COUPON_TARGETS_REQUIRED` 서버검증으로 차단(create·update 양면). (D2) `updateCoupon`이 LIVE `coupon_code`를 수정해 이미 발급된 등록(registered) wallet에 소급되던 것을, `coupon_wallet WHERE status='registered'` 카운트>0 시 경제/적용 필드(discount_percent·max_discount_krw·valid_until·max_redemptions·applies_all·target_categories) 변경을 `COUPON_HAS_ACTIVE_WALLETS`로 차단(used wallet은 payment_history 소비완료라 제외). 전부 코드-only(스키마 무변경), 각 페이즈 tsc·eslint·diff 검증.
+
+> ⚠️ **알려진 한계(의도)**: ① D2 차단은 유리한 변경(max_redemptions↑·valid_until 연장)도 막음 → "발급분 있는 쿠폰 수정"은 비활성화+재생성 워크플로우. ② pre-D1 빈-target 쿠폰이 등록된 경우 D2로 수정도 막힘 → 비활성화+재생성(D1로 신규는 차단, self-limiting).
+
+### 페이즈 결과
+- **Phase 1** (`cdbe0a7`, data-craft-server): D4 — reserveCouponWithConnection에 code.deleted 가드.
+- **Phase 2** (`f8dbf14`, data-craft-admin-server): D1 — createCoupon 빈-target 검증.
+- **Phase 3** (`0dbecb96`, data-craft-admin-server): D2 — updateCoupon registered-wallet 소급 변경 차단 + updateCoupon 빈-target 검증.
+
+### 영향 파일
+- data-craft-server: `src/services/couponDeduction.service.ts`
+- data-craft-admin-server: `src/services/adminCoupon.service.ts`
+
 ## v001.1112.0
 
 > 통합일: 2026-06-25
