@@ -1,5 +1,30 @@
 # data-craft — Patch Note (001)
 
+## v001.1137.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #487 (funshare-inc/data-craft)
+
+**뷰어 코어 통합 R16① 끝구조 — sub/external을 통일 뷰어로 흡수하고 fs-sub-data-viewer·fs-external-data-viewer(+각 explorer) 4패키지 삭제.** 단일 패키지화(#486) 위에, sub/external 뷰어·explorer를 `FsDataViewer`/`FsDataViewerExplorer`의 게이팅 prop으로 흡수. sub/external은 독립 near-copy였으나 차이가 판별자 구동(이미 공유코드 존재)이라 prop 게이팅으로 충실 reproduce(façade 아닌 실 통합). 진짜 중복제거 이득 = 4패키지 제거. dev 전용(prod 무접촉), build:packages·typecheck:all·lint 0 errors. ⚠️ 컴파일 불가시 동작(제한 메뉴·external 4타입·form/general 필터·subGridConfig·design-mode Setting)은 시각 검증 권장.
+
+### 페이즈 결과
+- **Phase 1** (feat) `c099f79de`+`061f19bea`: FsDataViewer 게이팅 prop 4종 additive(gridOnly·subGridConfig·columnMenuMode·externalMode), 기존 판별자(column-menu viewerType·listTargetTypes(externalMode)·라우터 view-page) 재사용. ViewerGatingContext 별도 채널. sub validator는 fs-data-viewer에 이미 존재(skip). externalMode 완전 배선(FsGridTableView→ColumnTypeChangeDialog).
+- **Phase 2** (refactor) `26741f180`: 루트앱 sub/external 뷰어 위젯 재지정(sub=gridOnly+subGridConfig+limited, external=gridOnly+externalMode+none). ref union→FsDataViewerRef. behavior gap 0.
+- **Phase 3** (refactor) `5f748116c`: explorer 위젯 2종→FsDataViewerExplorer 재지정 + **4패키지 삭제** + 루트 package.json 6 dep·vite.config.ts 8 ref 삭제.
+- **Phase 4** (fix) `c7086955e`: P3 회귀 복구 1 — dataTypeFilter(form/general) FsDataViewerExplorer 이식(isFormGroup 필터+form탭 생성버튼 숨김).
+- **Phase 5** (fix) `536d5aaff`: P3 회귀 복구 2 — explorer 위젯 mode(useModeStore→setting/write)·externalStyle 기본값·external 4타입 화이트리스트(externalMode 체인) 위젯레이어 복구.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/**` (게이팅 prop·ViewerGatingContext·columnTypeMapping)
+- `packages/fs-data-viewer-explorer/src/**` (dataTypeFilter·mode·externalStyle·externalMode 게이팅)
+- `src/widgets/{sub,external}-viewer-widget/**` · `{sub,external}-viewer-explorer-widget/**` · `entities/widget/model/columnControlRefRegistry.ts` (재지정)
+- `package.json`·`vite.config.ts` (4패키지 참조 제거)
+- `packages/{fs-sub-data-viewer,fs-external-data-viewer,fs-sub-data-viewer-explorer,fs-external-data-viewer-explorer}/**` (삭제)
+
+### 비고
+- advisor 적대검증이 P3 dataTypeFilter 회귀·P4/P5 미완 배선을 단계적 적발(BLOCK 2회)→정정. R16① 뷰어통합 사가(#458) 완결: 단일 뷰어·단일 explorer가 own/sub/external 전 역할 수행.
+
 ## v001.1136.0
 
 > 통합일: 2026-06-25
