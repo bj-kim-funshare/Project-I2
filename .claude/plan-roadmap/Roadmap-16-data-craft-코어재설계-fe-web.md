@@ -21,7 +21,7 @@
 > #458 i-dev git log + dev 대조. 진입게이트 3에이전트 재검증 PASS.
 
 - 🟢 **진입 게이트** — R15 Phase0(계약동결+신스키마 additive) ✅ + R12/#342 격리(i-dev 미머지, #458이 추월) ✅. 양 서브체크 PASS → R16 진입 가능. (가드레일: #342 절대 i-dev 머지 금지.)
-- 🟡 **뷰어 3포크 통합(#458)** — phase 1~4c i-dev 머지. **#459(6/25): print 타입 leaf base→core + vite dev-alias 핫픽스 i-dev 머지(build+dev green·advisor PASS)**. 깨진 phase4d 캡처 폐기(origin ae85a2608 참조). 잔여: E-namespace 의존모듈 본격이동(이전 난관)·런타임 엔진/어댑터·widgets·sub/external(phase5/6, 런타임 검증 필요).
+- 🟡 **뷰어 3포크 통합(#458)** — phase 1~4c i-dev 머지. **#459: print 타입 leaf + vite dev-alias 핫픽스 · #462: print 저장/캐시 레이어** base→core 머지(매 증분 build+dev green·advisor PASS). 깨진 phase4d 캡처 폐기(origin ae85a2608). 잔여: print lib 순수유틸 → E-namespace 본격이동(난관) → 런타임 엔진/어댑터·widgets·sub/external(phase5/6, 런타임 검증 필요).
 - 🔴 **view-mode 팬아웃** — 미착수.
 - 🔴 **프리셋·즐겨찾기** — 미착수.
 - 🔴 **FE prod 배포** — prod 대상, 범위 밖.
