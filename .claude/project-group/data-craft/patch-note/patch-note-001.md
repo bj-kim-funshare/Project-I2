@@ -32917,3 +32917,19 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/api/platform_auth_io.dart
 - data-craft-mobile:lib/api/platform_auth_web.dart
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+
+## v001.1103.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #459 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1** (refactor): R16① fs-viewer-core — print 순수 타입 leaf 9개(+`ImageQuality` 추출)를 `fs-data-viewer`→`fs-viewer-core` base→core 이동. fork 9개 파일은 core re-export shim으로 전환(런타임 엔진/어댑터·외부 consumer 무영향). 이동 파일의 `E.Xxx`를 core entities 직접 named import로 재작성, `engines/types`↔`types` 순환의존 해소(PrintEngineType 인라인). `fs-viewer-core`에 `jspdf ^4.0.0` devDep 추가, 신규 `features/print/`를 export 표면 배선. 빌드-green(`build:packages && typecheck:all && lint` exit 0, 독립 gate-runner 확인). 이전 broken phase4d(폐기, origin `plan-enterprise-458-phase4d-Edeps-작업`/ae85a2608 참조)의 e-namespace gutting 실수 회피한 클린 재시작.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/features/print/**` (신규 10: 9 type leaf + image-quality.types.ts)
+- `packages/fs-viewer-core/src/features/index.ts`
+- `packages/fs-viewer-core/package.json`
+- `packages/fs-data-viewer/src/features/print/{types,engines/types,pagination/types,batch/types,history/types,qrcode/types,templates/types,watermark/types,toc/types}.ts` (shim)
+- `packages/fs-data-viewer/src/features/print/optimization/ImageQualityController.ts` (ImageQuality re-export)
