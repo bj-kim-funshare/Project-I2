@@ -33017,3 +33017,17 @@ data-craft:
 - `packages/fs-viewer-core/src/features/print/{templates/TemplateManager,templates/TemplateStorage,templates/defaults,cache/PrintCache,history/PrintHistoryManager}.ts` (신규 5)
 - `packages/fs-viewer-core/src/features/index.ts`
 - `packages/fs-data-viewer/src/features/print/{동일 5}.ts` (shim)
+
+## v001.1109.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #463 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1** (refactor): R16① fs-viewer-core — print lib 순수유틸 3파일(BlobUrlManager·fontUtils·cellValueFormatter) fs-data-viewer→fs-viewer-core 이동. cellValueFormatter의 `E.Xxx` type alias 4개→core entities 직접 named type import, i18n translations→core dir-barrel. fork 3파일=core re-export shim(심볼명 보존). FontManager(jspdf 런타임)·printHtmlBuilder류·e-namespace·UI 무수정. build-green + vite dev 라이브 resolution 실측 통과.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/features/print/lib/{BlobUrlManager,fontUtils,cellValueFormatter}.ts` (신규 3)
+- `packages/fs-viewer-core/src/features/index.ts`
+- `packages/fs-data-viewer/src/features/print/lib/{동일 3}.ts` (shim)
