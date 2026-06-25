@@ -4,7 +4,7 @@
 
 ## 프롬프트
 
-🔴 /plan-enterprise data-craft [P1·안전망 선행] 회귀 골든 스냅샷 하니스 구축 — dev 서버 대상 대표 엔드포인트(공개 signin/health, 보호 대표 GET 1~2개+토큰, route-custom-auth subscription /plans·/webhook/toss, sse)의 요청→응답(상태코드+바디 형태)을 골든으로 캡처하고 재생·diff 스크립트를 만든다. 이후 모든 단계가 이 골든을 재생해 회귀 0 을 파서 독립적으로 확인(spec-dashboard 추출기는 보조 미터). 코드 동작 무변경, 테스트 자산 추가만.
+🟢 /plan-enterprise data-craft [P1·안전망 선행] 회귀 골든 스냅샷 하니스 구축 — dev 서버 대상 대표 엔드포인트(공개 signin/health, 보호 대표 GET 1~2개+토큰, route-custom-auth subscription /plans·/webhook/toss, sse)의 요청→응답(상태코드+바디 형태)을 골든으로 캡처하고 재생·diff 스크립트를 만든다. 이후 모든 단계가 이 골든을 재생해 회귀 0 을 파서 독립적으로 확인(spec-dashboard 추출기는 보조 미터). 코드 동작 무변경, 테스트 자산 추가만.
 
 🔴 /plan-enterprise data-craft [P2·버그] rateLimiter.middleware.ts 의 rate-limit export(authLimiter·strictLimiter·apiLimiter·paymentVerifyLimiter·analyticsLimiter)에 express-rate-limit 의 RateLimitRequestHandler 명시 타입 주석 부여 → 선언(.d.ts) 방출 시 TS2742 포터빌리티 오류 해소. 순수 타입 주석, 런타임 무변경. pnpm build(tsc) 검증.
 
