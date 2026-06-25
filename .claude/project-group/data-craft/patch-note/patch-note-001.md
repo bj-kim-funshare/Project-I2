@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1133.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #483 (funshare-inc/data-craft)
+
+**뷰어 코어 통합 R16① — cell-keyboard + cellKeyboardUtils를 fs-viewer-core로 이동(런타임 tier 진입).** E-namespace 본격이동(#481) 완료 후 첫 런타임 leaf 추출. fs-data-viewer의 그리드 키보드 핸들러 모듈(셀 입력/컨테이너/토글 키보드)을 코어로 옮겨 포크는 재수출 shim으로 전환. 코어가 키보드 핸들러의 단일 출처가 된다. 의존은 react(코어 peerDep)·E.FsViewerMode(타입, 코어 직접 import로 재작성)뿐으로 클린 이동. dev 전용(prod 무접촉), build:packages·typecheck:all·lint 0 errors 게이트 통과.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `ec132bc72`: `features/grid/lib/cell-keyboard/`(5파일: index·keyboardTypes·container/input/toggleKeyboardHandler) + `cellKeyboardUtils.ts`를 base→core 이동. keyboardTypes의 `E.FsViewerMode`(타입)를 `entities/grid-mode.types` 직접 type import로 재작성(e-namespace 무편집). cellKeyboardUtils는 `import { F }`→`import type { F }`. 포크 6파일은 shim 전환(cellKeyboardUtils shim은 useBaseCellRendererHandlers가 소비하는 값 export createInput/Container/ToggleKeyboardHandler 보존). +282/-259, 13파일.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/features/grid/lib/cell-keyboard/**` (5파일 코어 신규)
+- `packages/fs-viewer-core/src/features/grid/lib/cellKeyboardUtils.ts` (코어 신규)
+- `packages/fs-viewer-core/src/features/grid/lib/index.ts` (코어 배럴 export)
+- `packages/fs-data-viewer/src/features/grid/lib/cell-keyboard/**` + `cellKeyboardUtils.ts` (포크 → 재수출 shim)
+
+### 비고
+- row-menu(lucide-react 값 peerDep 코어 미보유)는 별도 스코프로 보류. sub/external은 자체 독립 cell-keyboard 사본 유지(추후 패키지 삭제로 정리).
+
 ## v001.1132.0
 
 > 통합일: 2026-06-25
