@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1128.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스2
+
+**선택 상자 페이지 탭 동작 수정 — 진입 차단, 접기/펼치기.** 페이지 목록에서 "선택 상자로 사용"(`isSelectorBox`) 페이지를 누르면 페이지 본문으로 진입하던 것을, 진입하지 않고 (자식이 있으면) 접기/펼치기만 토글하도록 수정. 선택상자 페이지는 접근 불가 페이지이므로 진입을 막는 것이 정상 동작. data-craft-mobile 단일 repo, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 5** (fix, data-craft-mobile) `57f3b0ef`: `page_tree_item.dart`의 행 `InkWell.onTap`을 분기 처리 — `isSelectorBox`이면 `context.push('/page/:id')` 네비게이션 대신, `hasChildren`일 때만 `_expanded` 토글 후 return(자식 없으면 무동작), 일반 페이지는 기존 진입 유지. 쉐브론 토글·즐겨찾기 게이트·재귀 렌더링 무변경.
+
+> ⚠️ 알려진 한계(트리 평탄화 기존 구조): 트리 자식이 `children: const []`로 전달되는 중첩/리프 위치의 선택상자 페이지는 `hasChildren==false`라 탭이 무동작(진입은 차단되나 펼침 없음). 최상위+자식보유 선택상자 페이지는 정상 펼침. 또한 홈 "최근 본 페이지" 등 다른 진입점은 본 범위(페이지 목록) 밖 — 필요 시 후속 핫픽스.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/page/widgets/page_tree_item.dart` (행 탭 분기: 선택상자=접기/펼치기, 일반=진입)
+
 ## v001.1127.0
 
 > 통합일: 2026-06-25
