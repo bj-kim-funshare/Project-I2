@@ -33466,3 +33466,22 @@ data-craft-admin:
 - `src/pages/benefits/CreditsTab.tsx`(비활성 노출)
 - `src/app/router/RootLayout.tsx`, `src/app/router/index.tsx`(메뉴+route)
 - `src/entities/notification/api.ts`(신규), `src/entities/notification/index.ts`(신규), `src/pages/notifications/NotificationsPage.tsx`(신규)
+
+## v001.1131.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #482 (funshare-inc/data-craft)
+
+Roadmap-18(라우터 레이어 감사 리팩토링) P8 — 인증형태 통일(로드맵 전체 최고위험). data-craft-server 단일 repo. ★#1 원칙: 인증 적용범위(공개/보호) 단 한 건도 무변경. master 결정으로 혼합 라우터(auth·subscription)는 예외 유지(per-route), error-idiom은 보수적(응답 동일 시에만 전환→검토 결과 0건 전환).
+
+### 페이즈 결과
+- **Phase 1** (refactor) `2c92da1`: `src/routes/promotion.router.ts`(UNIFORM-PROTECTED 4/4)의 per-route 공통 `forceIncludeAuth, authMiddleware`를 `promotionRouter.use(forceIncludeAuth, authMiddleware)` 라우터 게이트 1회로 승격, 각 라우트 그 쌍 제거(extra 미들웨어 ownerOnly/paymentVerify/requirePaymentPassword 순서 유지). 실행순서·적용범위 불변(게이트가 per-route 이전 실행).
+- **Phase 2** (refactor) `b8977a2`: 배럴 라우터 중복 인증 제거 — `inputStore.router.ts`의 `use(authMiddleware)`, `user-preference.router.ts`의 `use(authMiddleware)`+`use(permissionMiddleware)` 삭제(+미사용 import). 두 라우터는 배럴(전역 `/api` 마운트 하위)이라 authMiddleware·permissionMiddleware가 전역에서 계속 적용 → 적용범위·권한검사 불변(중복 2회 실행만 1회로).
+- 무변경(master 결정): auth·subscription(혼합, 예외 유지)·error-idiom(errorMiddleware 응답이 callData 의존이라 next(error)↔errorCatch 전환 시 callId/message 변경 → 보수적 기준상 전환 0). app.ts 전역 게이트·routes/index.ts·sse·analytics 무변경.
+- 검증: 콜드부팅 /health 200 + 추출기 auth_class **public16·route-custom-auth36·global-auth175 기준선 동일** + ★토큰부재 per-endpoint status 기준선 완전 동일(보호 promotion/user/input-store/user-preference=400[TOKEN_NOT_FOUND]·공개 plans/health=200) → **인증 적용범위 불변 실증**. per-phase build(tsc)·lint PASS. advisor #1·#2 PASS(advisor-fallback 경유).
+- ⚠️ golden 8 재생은 **병렬 task-db-structure R15 P0 `client→company` dev DB 리네임**(b6abfde, P7 이후 i-dev 유입·dev 적용)으로 signin이 구 `client` 테이블 조회 실패(500) → 부트스트랩 차단. **P8 무관**(P8은 promotion/inputStore/user-preference 3파일, signin/DB 무접촉) — R15 컷오버 중 dev 환경 이슈. 토큰부재·auth_class 게이트로 P8 무회귀 대체 실증.
+
+### 영향 파일
+data-craft-server:
+- `src/routes/promotion.router.ts` (인증 router.use 게이트화)
+- `src/routes/inputStore.router.ts`, `src/routes/user-preference.router.ts` (배럴 중복 인증 제거)
