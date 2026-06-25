@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
 >
-> **현황(2026-06-25)**: 🟢2 · 🟡2 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive)·데이터변환 dev완료. BE cutover·리네임/DROP·prod 미착수. 상세 ↓ 진척 현황 섹션.
+> **현황(2026-06-25)**: 🟢2 · 🟡2 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료. 잔여: 레거시 DROP(흡수+cutover 후 보류)·BE cutover(리네임 잠금 해제됨)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
 
 ## 프롬프트
 
@@ -31,9 +31,9 @@
 > 11에이전트 포렌식 + 3에이전트 게이트 재검증 기준. dev psql(data_craft_dev)·i-dev·문서 대조.
 
 - 🟢 **선행 Roadmap-5 흡수** — R5(closed 2026-06-11)와 §3 객체 DISJOINT(R5=SQL VIEW/릴레이션3테이블, R15 §3=뷰어세팅+폼 테이블), 충돌 0. 조치 불필요.
-- 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·created_at SP정정(P0a~P0d) dev적용·i-dev머지 ✅. 미착수: SP 비-삼킴(P0c-ii, sp_manage_data_group 여전히 사일런트 삼킴)·client→company 전스키마 리네임·레거시 DROP.
+- 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·created_at SP정정(P0a~P0d) dev적용·i-dev머지 ✅. **SP 비-삼킴(3종 sp_manage_data_group/value/bulk: EXCEPTION WHEN OTHERS→FAILED 삼킴 제거→RAISE LOG+RAISE 전파, 행동검증 통과)·client→company 리네임(19 FK 자동추종·제약/인덱스/트리거 cosmetic·잔존 client객체 0) dev적용·i-dev머지 ✅ (2026-06-25, task-db-structure, server i-dev 머지 b6abfde)**. 미착수: **레거시 DROP만 잔존** — 흡수 미완(widget_preset/permission/company_setting 0행·task-db-data 폼흡수 미착수→데이터손실) AND BE cutover BLOCKED 의존 → 흡수+cutover 후 최종단계 의도적 보류. (admin-server=그룹 비소속·DB FK 0건 → `FROM client` 쿼리는 BE cutover 핸드오프.)
 - 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED, DataType 5종·CellData·CellFormulaSpec(재귀AST)·RowId·permission/company_setting/widget_preset 타입 전부 동결·export·additive.
-- 🔴 **BE 콜사이트 cutover** — src/ 무변경(옛 테이블 활성: value_data 205·row_num 541·role 78…), advisor BLOCK(#4 리네임과 얽힘·강제완료 금지).
+- 🔴 **BE 콜사이트 cutover** — src/ 무변경(옛 테이블 활성: value_data 205·row_num 541·role 78…). **리네임 얽힘 잠금 해제됨**(client→company dev 적용 완료 2026-06-25 → 이제 cutover 가 `company` 기준으로 정렬 가능). dev BE 는 리네임 후 `client` 참조 raw SQL(708)·`{status:FAILED}` 의존 호출자가 깨진 상태(합성 시드 dev, BE cutover 가 복구) → 이 단위가 cutover 의 선결조건이었음.
 - 🔴 **prod 형태 재인코딩 게이트** — prod 대상이라 현 dev-only goal 범위 밖.
 - 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. 미착수: option-id 발급·라벨박제 제거·색 전역화·폼→widget_preset 흡수·permission/company_setting/widget_preset 적재(현 0행).
 - 🔴 **조율 컷오버(prod)** — prod 대상, 범위 밖.
