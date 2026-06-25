@@ -33203,3 +33203,18 @@ data-craft-admin-server:
 ### advisor 검증
 - 계획 advisor #1: PASS (5관점 — Intent/Logic/Group Policy/Evidence/Command Fulfillment).
 - 완료 advisor #2: PASS (5관점 — Phase 1+2 합성·null-edge 봉쇄·A1a input기준/A3 effective기준 정합 확인).
+
+## v001.1119.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #470 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1** (refactor): grid/lib foundation 29파일(direct 13·helpers 6·grid-calculations 5·cell-management 5) fs-data-viewer→fs-viewer-core. gridTypes fix(a)(gridViewTypes 재수출 제거). E-값 FsGridColumnTypes→entities/column-types/composition 직접 import. partial dir index fork 유지·완전이동 dir index shim.
+- **Phase 2** (refactor): grid/lib row-management 11파일 →core. E-값 동일 처리. fork=shim.
+- 제외(prerequisites 필요·후속): button-actions·column-management·cellSave*·gridViewTypes·cellKeyboardUtils·row-menu(data-viewer/types·column-type.utils·deadlineUtils·F배럴·lucide). gridStateTypes=이미 core.
+- 부수: `src/pages/mobile/MobilePageView.tsx`의 pre-existing 미사용 import(Loader2·TS6133, #455 모바일 작업 잔존) 1줄 제거 — 전체repo typecheck:all green화 목적, 동작 무변경.
+- 양 페이즈 build+dev green(독립 gate-runner exit 0) + advisor #1·#2(fallback) PASS.
+
+### 영향 파일
+data-craft: `packages/fs-viewer-core/src/features/grid/lib/**`(신규 40)·`features/index.ts`·`grid/lib/index.ts` 배럴, `packages/fs-data-viewer/src/features/grid/lib/**`(shim 40·partial index 혼합), `src/pages/mobile/MobilePageView.tsx`(미사용 import 제거)
