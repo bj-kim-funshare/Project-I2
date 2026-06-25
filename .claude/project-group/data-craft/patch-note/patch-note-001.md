@@ -33108,3 +33108,34 @@ data-craft:
 
 ### 영향 파일
 data-craft: `packages/fs-viewer-core/src/shared/{config,lib}/**`(신규 53) + `shared/index.ts` 배럴, `packages/fs-data-viewer/src/shared/{config,lib}/**`(shim 53)
+
+## v001.1115.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #455 (핫픽스3~8 일괄)
+
+#455 온디바이스 반복 검증 과정에서 나온 핫픽스 6건을 일괄 기록(핫픽스1·2는 v001.1099.0·v001.1102.0). 전부 data-craft-mobile FE-only.
+
+### 핫픽스 결과
+- **핫픽스3 (fix)** `d84d8fbb`: `page_web_view_screen` `_initialize` 의 강제 refresh 제거 — access token 이 null 일 때만 refresh. 핫픽스2가 무조건 refresh 로 바꿔 자동로그인 OFF(=refresh 쿠키 없음) 시 400→유효 토큰 삭제→페이지 진입 로그인 바운스를 유발하던 회귀 수정(원본 주석이 경고하던 바로 그 동작).
+- **핫픽스4 (fix)** `ce7b88cf`: 로그인 실패(401 INVALID_CREDENTIALS)를 dio 인터셉터가 세션만료로 오인해 refresh+setExpired 하던 문제 수정 — `/api/auth/signin`·signup 401 은 인터셉터 우회. `authErrorMessage` 가 401 → 로컬라이즈 문구(`authErrorInvalidCredentials` ko/en) 반환.
+- **핫픽스5 (UX)** `be99fc8b`: 로그인 에러를 SnackBar→**필드 아래 인라인 빨강문구**(입력 보존). 브랜드 스플래시 런치배경 + `requestNotificationPermission()` non-blocking(첫 프레임 안 막음).
+- **핫픽스6 (fix)** `77ae325c`: 핵심 — signin 중 `AsyncLoading` 이 라우터 `loading→/splash` 리다이렉트를 유발해 **로그인 폼이 dispose**(입력·인라인에러 소멸)되던 근본 원인. redirect `loading` 분기를 `(isAuthPath || location=='/splash')` 로 가드 → auth 경로에선 로딩 중 /splash 안 감(폼 보존). + 스플래시 강화(로고+Datacraft 텍스트+하단 로딩바+동적 텍스트).
+- **핫픽스7 (fix)** `96722521`: 부팅 `AuthController.build()` 에 로컬 refresh 토큰 선확인(`hasRefreshTokenLocally`, 네이티브=쿠키잼 / 웹 stub=true) — 토큰 없으면 서버호출 없이 즉시 로그인. 오프라인-로그아웃 점검화면 오진입 버그 해소.
+- **핫픽스8 (UX)** `88d95bbc`: 페이지 웹뷰 `cacheEnabled: true` + 로딩 표시를 파란 스피너→**콘텐츠 스켈레톤**(진입 즉시감).
+
+### 범위 메모 (미해결/후속)
+- **페이지 진입 슬로우(출시 블로커)**: 매 진입 새 웹뷰 생성→웹앱 풀 재부팅 구조. 근본해결=네이티브 전용(`kIsWeb` 가드) keepAlive+SPA 전환(#372 전례=웹 가드 누락으로 실패, revert 직접 확인 필요). **단 dev 는 비대표(비압축·no-cache), prod 도 쿠키 임베드 인증 미배포(i-dev only)라 진짜 측정 불가** → prod 배포 후 측정 우선, keepAlive 는 최후.
+- **핫픽스6/7/스플래시/핫픽스8 온디바이스 미확정** — dev APK(192.168.0.154 대상) 검증 대기.
+
+### 영향 파일
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+- data-craft-mobile:lib/state/auth_controller.dart
+- data-craft-mobile:lib/api/dio_client.dart
+- data-craft-mobile:lib/api/auth_api.dart
+- data-craft-mobile:lib/api/platform_auth_io.dart · platform_auth_web.dart
+- data-craft-mobile:lib/screens/auth/common_signin_screen.dart
+- data-craft-mobile:lib/router/app_router.dart
+- data-craft-mobile:lib/screens/splash_screen.dart
+- data-craft-mobile:lib/main.dart · android/app/src/main/res/drawable/launch_background.xml(+v21)
+- data-craft-mobile:lib/l10n/app_ko.arb · app_en.arb
