@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
 >
-> **현황(2026-06-25)**: 🟢2 · 🟡3 · 🔴2 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**. 잔여: 레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
+> **현황(2026-06-25)**: 🟢2 · 🟡3 · 🔴2 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**흡수 M1+M2 완료(widget_preset/company_setting/permission 적재·색 전역화·dangling drop, 2026-06-25)**·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**. 잔여: 레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
 
 ## 프롬프트
 
@@ -20,7 +20,7 @@
 
 🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환 · option-id 발급 · area→정수격자 도출을 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트, dev=합성시드). 통과 = prod 적용 인가. (db.md pre-deploy 읽기전용 psql 인가 패턴 재활용)
 
-🟡 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod는 컷오버 보류): data_row 전수발급(group_id+row_num distinct = 첫 도미노) → text→JSON 셀 변환(타입충실) → option-id 발급·라벨 박제 제거 → 캘린더/간트 색 전역화·dangling-ref drop → 폼 인스턴스(라이브 170행)→widget_preset 흡수. capture+rollback 동반.
+🟡 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod는 컷오버 보류): data_row 전수발급(group_id+row_num distinct = 첫 도미노) → text→JSON 셀 변환(타입충실) → option-id 발급·라벨 박제 제거 → 캘린더/간트 색 전역화·dangling-ref drop → 폼 인스턴스(라이브 170행)→widget_preset 흡수. capture+rollback 동반. **부분완료(M1·M2 dev머지, 2026-06-25): 흡수 trio(widget_preset/company_setting/permission 적재)+색 전역화+dangling drop ✅. 잔여 = option-id 발급·라벨박제 제거(task-db-structure DDL 선행 보류).**
 
 **— 조율 컷오버 (prod 단일 유지보수 창) —**
 
@@ -35,7 +35,7 @@
 - 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED, DataType 5종·CellData·CellFormulaSpec(재귀AST)·RowId·permission/company_setting/widget_preset 타입 전부 동결·export·additive.
 - 🟡 **BE 콜사이트 cutover** — **부분완료(#485 CLOSED, plan-enterprise, 2026-06-25)**: ① client→company SQL 정렬(12파일·60건, PoolClient/client_promotion 무접촉) ② SP 비-삼킴 호출자 적응(errorMiddleware P0001→400 중앙매핑·죽은 FAILED 체크 제거·ALL_FAILED 보존·재구성 금지) dev 완료·i-dev 머지(e79dbfe). 깨짐 창 폐쇄 — dev psql 런타임 스모크로 signin 500 해소 실증. eslint+tsc·advisor #1·#2 PASS. **잔여(후속 단위)**: value_data→data·row_num→row_id(data/row_id 가 generated 아님·트리거 동기화 없음 실측 → SP 바디 재작성[task-db-structure DDL] 선행 필요로 보류) · 서버계산 집계 캐싱/무효화(Phase3 분리) · 페이지 read/write 권한(신 permission 0행→task-db-data 흡수 후, role/page_role 레거시 유지). ⚠️ SP검증오류→HTTP400 전구간 live 스모크는 코드레벨만 검증.
 - 🔴 **prod 형태 재인코딩 게이트** — prod 대상이라 현 dev-only goal 범위 밖.
-- 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. 미착수: option-id 발급·라벨박제 제거·색 전역화·폼→widget_preset 흡수·permission/company_setting/widget_preset 적재(현 0행).
+- 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. **M1 흡수 trio(widget_preset 29[폼 form_list→form-type 프리셋 흡수]·company_setting 5·permission 8 적재 + user.permission_id 11 재연결) dev머지 c240ff2 · M2(캘린더/간트 색 전역화 71,248·dangling-ref drop 50,060·살아있는 subgrid 부모 dvrs 2행 보존) dev머지 30ad0b1** ✅(2026-06-25, 대사 통과·advisor PASS·§12 provisional). permission 적재로 #485 페이지권한 강제 데이터 선결조건 해금. 미착수: **option-id 발급·라벨박제 제거**만 잔존(target option 구조 부재 → task-db-structure DDL 선행 필요로 보류).
 - 🔴 **조율 컷오버(prod)** — prod 대상, 범위 밖.
 
 ---
