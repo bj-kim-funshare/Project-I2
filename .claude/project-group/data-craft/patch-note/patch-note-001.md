@@ -33095,3 +33095,16 @@ data-craft:
 - `packages/fs-viewer-core/src/features/print/lib/{BlobUrlManager,fontUtils,cellValueFormatter}.ts` (신규 3)
 - `packages/fs-viewer-core/src/features/index.ts`
 - `packages/fs-data-viewer/src/features/print/lib/{동일 3}.ts` (shim)
+
+## v001.1114.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #466 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1** (refactor): shared/config fork-only 순수 25파일(루트5·guide2·page-icons18) fs-data-viewer→fs-viewer-core. 이미 core인 i18n/theme/gridDimensions 등 제외. fork=shim.
+- **Phase 2** (refactor): shared/lib 순수 28파일(직접24+file-batch4) →core. E.* type-only→직접 import; FsGridColumnTypes(E값)는 entities/column-types/composition 직접 import로 회피(e-namespace 무편집). 제외: column-type.utils(E값)·aggregation/(widgets 런타임 누수). fork=shim.
+- 양 페이즈 build+dev green(독립 gate-runner exit 0) + advisor #1·#2(fallback) PASS. core 배럴 충돌은 named 재수출로 dedup.
+
+### 영향 파일
+data-craft: `packages/fs-viewer-core/src/shared/{config,lib}/**`(신규 53) + `shared/index.ts` 배럴, `packages/fs-data-viewer/src/shared/{config,lib}/**`(shim 53)
