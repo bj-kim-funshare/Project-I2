@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1111.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #461 (Roadmap-18 P1 하니스 핫픽스 — baseline 활성화)
+
+**Roadmap-18 회귀 골든 하니스를 라이브 baseline 캡처로 활성화하며 발견된 하니스 버그 2건 수정(테스트 자산만, 제품 코드 무변경).** P1 하니스가 그동안 `--list`/타입체크로만 검증돼 값 경로가 미실행이었는데, dev 서버 대상 첫 캡처에서 2버그 노출·수정:
+- **핫픽스1** `a1c7733`: 부트스트랩 토큰 경로 오류 — signin 응답 봉투가 `{auth:{...accessToken}}`인데 하니스가 `data.auth.accessToken`만 봐서 FATAL. 양 봉투(`data.auth` ?? `auth`) 수용으로 수정.
+- **핫픽스2** `2fa5b7d`: SSE 비교를 status-only 로 단순화 — `/api/sse/connect` 이벤트 스트림이 청크 타이밍 + 서버측 연결수 상태로 비결정적(`connected`/null/timeout 혼재)이라 거짓 회귀 30% 유발. 이벤트/데이터 페이로드는 골든 비교 제외(connectionCount 휘발 포함), SSE 회귀 신호=HTTP status 200 만. P7 sse.ts 리팩토링 시 connected 이벤트는 수동 스모크 필요.
+
+**baseline 활성화 결과**: dev 서버(i-dev) 대상 캡처 8 + SKIP 3(viewer_meta=계정에 viewer 그룹 없음·files_batch=POST 형태만·toss=시크릿 없음), 재생 다회 0 회귀로 **결정적 안전망 확정**. golden/*.json 은 gitignore 로 메인 체크아웃 로컬 baseline — P2~P8 은 메인 체크아웃에서 `pnpm test:regression` 재생으로 회귀 0 확인.
+
+> ⚠️ 잔여: viewer_meta 는 dev 계정에 viewer 그룹이 없어 SKIP — P7 viewer 관련 검증엔 그룹 시드 후 재캡처 권장.
+
+### 영향 파일
+data-craft-server:
+- `test/regression/harness.ts` (부트스트랩 토큰 경로 + SSE status-only)
+
 ## v001.1110.0
 
 > 통합일: 2026-06-25
