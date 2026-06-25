@@ -10,7 +10,7 @@
 
 🟢 /plan-enterprise data-craft [P3·버그] src/routes/test.ts 의 /notification 테스트 핸들러 catch 에 잘못 복붙된 CALL_ID.test.token 을 알림 전용 CALL_ID 로 교정(+동일 복붙 추가 점검). 에러 로그 오분류 수정, 동작 무변경.
 
-🔴 /plan-enterprise data-craft [P4·정리] 죽은/임시 코드 제거 — src/routes/v2/ DEPRECATED 빈 스텁 디렉토리 전체 + debug-chain 임시 디버그 라우터(app.ts 조건부 마운트 + routes 등록 + 잔존 FE 호출 포함). 미마운트/prod-비활성 코드라 동작 무변경. 골든 재생으로 무영향 확인.
+🟢 /plan-enterprise data-craft [P4·정리] 죽은/임시 코드 제거 — src/routes/v2/ DEPRECATED 빈 스텁 디렉토리 전체 + debug-chain 임시 디버그 라우터(app.ts 조건부 마운트 + routes 등록 + 잔존 FE 호출 포함). 미마운트/prod-비활성 코드라 동작 무변경. 골든 재생으로 무영향 확인. [완료: #469 `c64d7d2`, −92줄, 골든 8 PASS/0 FAIL, patch-note v001.1116.0]
 
 🔴 /plan-enterprise data-craft [P5·정리] src/routes/auth.ts 중간(line 162)에 끼어있는 initController import 를 파일 최상단 import 블록으로 이동 + promotion.routes.ts 미들웨어 import 출처 혼재(배럴 ../middlewares vs 직접 ../middlewares/auth.middleware) 통일. 순수 정리, 동작 무변경.
 
