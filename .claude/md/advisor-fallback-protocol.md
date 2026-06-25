@@ -13,7 +13,9 @@ This protocol applies to **every** `advisor()` call-site in the harness — all 
 
 ## 1. Failure-signal definition
 
-A **failure signal** is **ANY** error, rejection, overload, or non-response from `advisor()` — this explicitly includes **API errors**, `temporarily overloaded`, safety/permission-classifier rejections, tool-unavailable, and timeouts. The main session treats **any** such signal as the fallback trigger. (Master directive 2026-06-24, **expanded 2026-06-25: any error or rejection, API included → immediate fallback, no retry**.)
+A **failure signal** is **ANY** error, rejection, overload, non-response, **or the advisor being disabled/off** from `advisor()` — this explicitly includes **API errors**, `temporarily overloaded`, safety/permission-classifier rejections, tool-unavailable, timeouts, **and the case where the built-in advisor is turned off / unavailable by configuration**. The main session treats **any** such signal as the fallback trigger. (Master directive 2026-06-24, **expanded 2026-06-25: any error or rejection — API included — → immediate fallback, no retry; and even when the advisor is OFF, NEVER skip the advisor step — always run the fallback advisor**.)
+
+**The advisor gate is NEVER skipped.** Under all conditions it resolves to exactly one of: (a) built-in `advisor()` returns a verdict (PASS / `BLOCK:`), or (b) any failure signal — including the advisor being off/disabled — → `advisor-fallback`. There is no path where a skill bypasses the advisor gate because advisor is unavailable or off.
 
 A `BLOCK:` verdict is a **valid response** from advisor and must never trigger fallback. A `BLOCK:` means the reviewer found a substantive concern — that is exactly the intended outcome. (A `BLOCK:` is the one advisor reply that is NOT a failure signal.)
 
