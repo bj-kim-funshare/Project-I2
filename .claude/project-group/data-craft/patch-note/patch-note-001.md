@@ -33279,3 +33279,23 @@ data-craft-server:
 - `src/routes/index.ts` (18개 leaf import default→named+`.router` 동기화, 배럴 내부 무변경)
 - `src/app.ts` (직접 5개 import/mount 변수참조 동기화)
 - `spec-dashboard/scripts/extract.mjs` (컨벤션-불가지 일반화 + publicMounts 5경로 갱신)
+
+## v001.1123.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #478 (funshare-inc/data-craft)
+
+Roadmap-17 R5(마지막) — 추천 쿠폰 charge 창 race를 관측가능화(E5)하고, 혜택 해지 시 추천인 10% tail 적립을 중단(E6-tail). data-craft-server 단일 repo, 코드-only(스키마 무변경). **이로써 Roadmap-17 전 14건 완결.**
+
+### 페이즈 결과
+- **Phase 1 (`af77ec9`, referralDeduction.service.ts)** [E5]: `applyDeductionWithConnection`의 `consumeCouponWithConnection` 0행 분기를 **구조적 reconciliation record**로 격상. `logger.error` 레벨 유지(빌링 불일치 — 수동 clawback 알림 대상), 메시지 "coupon consumption 0 rows — consumed or revoked during charge window; consumption record incomplete, manual reconciliation required", 구조적 컨텍스트 `{couponId, paymentHistoryId, grossAmount, postCouponAmount, finalCharge}`.
+  - **정직한 프레이밍**: charge()가 트랜잭션 외부라 race(쿠폰 선택→charge→소비 윈도우에서 admin revokeCoupon 발화)는 **prevent 불가** → 이 fix는 race를 *기록*(관측가능화)할 뿐 막지 않는다. 빈 소비기록(`consumed_payment_id=NULL`)은 **올바른 revoke 상태**(referral_coupon에 revoked_at/status 없어 이게 유일 판별자이며 admin이 read함)이므로 backfill하지 않고 보존. 멱등은 기존 코드가 이미 충족(revoke `consumed_at!=NULL` throw + consume `WHERE consumed_at IS NULL`).
+- **Phase 2 (`72b17a3`, referralEarning.service.ts)** [E6-tail, 마스터 결정 Option B]: `accrueReferralCredits` tail 적립 조건 `(referrerGrantedMonths >= 3 || benefitsRevoked)` → `(referrerGrantedMonths >= 3 && !benefitsRevoked)`. 혜택 해지(benefits_revoked=true) 후 추천인 10% tail 즉시 중단('전체 해지' 취지 정합). 해지 전 cap 도달분은 불변, full_phase 분기 무영향.
+
+### 영향 파일
+data-craft-server:
+- `src/services/referralDeduction.service.ts` (E5)
+- `src/services/referralEarning.service.ts` (E6-tail)
+
+### advisor 검증
+- 계획 advisor #1: BLOCK(초안 E5 backfill — revoke 시그니처 오염 지적) → 관측가능화로 리워크 후 PASS. 완료 advisor #2: PASS (E6-tail 진리표 전수 검증, E5 시그니처 보존 확인).
