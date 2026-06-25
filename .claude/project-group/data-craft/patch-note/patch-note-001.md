@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1122.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #477 (funshare-inc/data-craft)
+
+**모바일 즐겨찾기 별 아이콘 둥근 변형 교체 + 크기 확대.** data-craft-mobile 의 즐겨찾기 "별" 아이콘을 각진 Material `Icons.star`/`Icons.star_border` 에서 둥근 모서리 변형 `Icons.star_rounded`/`Icons.star_border_rounded` 로 교체하고, 홈·페이지 두 곳 모두 크기를 18→24 로 확대. 색상(앰버/슬레이트)·즐겨찾기 토글 분기·GestureDetector·패딩 등 주변 로직 무변경, flutter analyze 0 errors. (마스터 요청에 따라 i-dev 머지 후 release APK 재빌드 → 연결 기기 R3CXA0ARA0F 재설치까지 수행.)
+
+### 페이즈 결과
+- **Phase 1** (feat) `5ba73db`: 홈 즐겨찾기 섹션(`home_favorites_section.dart`, 항상 filled)의 `Icons.star`→`Icons.star_rounded`, 페이지 트리(`page_tree_item.dart`, filled/outlined 토글)의 `Icons.star`/`Icons.star_border`→`Icons.star_rounded`/`Icons.star_border_rounded` 변환. 양쪽 size 18→24. +4/-4, 2파일.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/home/widgets/home_favorites_section.dart` (홈 즐겨찾기 별 아이콘 둥근 변형 + 크기 24)
+- `lib/screens/page/widgets/page_tree_item.dart` (페이지 트리 즐겨찾기 별 아이콘 둥근 변형 토글 + 크기 24)
+
 ## v001.1113.0
 
 > 통합일: 2026-06-25
