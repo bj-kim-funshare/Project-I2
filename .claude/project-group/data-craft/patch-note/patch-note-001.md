@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1097.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스6)
+
+**spec-dashboard 진입 파이프라인 노드 태그 설명 추가.** 노드에 붙는 태그(`public`·`route-custom-auth`·`global-auth`·`dev-only`)가 무슨 의미인지 알 수 없던 문제 해소 — 태그 있는 노드는 **역할 설명 바로 아래에 그 태그의 설명**을 표기. 태그 설명은 페이지 고정 규칙(`TAG_DESCRIPTIONS`): public=인증 미들웨어 미경유 공개, route-custom-auth=전역 /api 마운트 앞에서 라우트 자체 인증, global-auth=authMiddleware+permissionMiddleware 보호, dev-only=NODE_ENV!=='production'에서만 마운트. 태그 없는 노드는 섹션 미출력.
+
+### 페이즈 결과
+- **핫픽스6 Phase** (feat) `27fa102`: `spec-dashboard/app.js`(TAG_DESCRIPTIONS 4종 + 역할 아래 태그 설명 블록, 태그 보유 노드만) + `spec-dashboard/styles.css`(태그 블록 레이아웃). +67/−0.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/app.js` (TAG_DESCRIPTIONS + 파이프라인 태그 설명 렌더)
+- `spec-dashboard/styles.css` (.pipeline-tag-block 등 레이아웃)
+
 ## v001.1096.0
 
 > 통합일: 2026-06-24
