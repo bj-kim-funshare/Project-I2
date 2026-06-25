@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 재설계 FE 트랙 (data-craft monorepo) — Roadmap 15(server)와 repo-격리 병렬, 15 Phase0 이후 진입
 >
-> **현황(2026-06-25)**: 🟢1 · 🟡1 · 🔴3 — 진입게이트 통과·#458 fs-viewer-core 추출 #475까지(선결 의존성+grid/lib 잔여 완료). 다음=E-namespace 본격이동(난관). view-mode/프리셋/prod 미착수. 상세 ↓ 진척 현황 섹션. **R15(server)는 2026-06-25부터 별도 세션 병렬 위임 — 본(R16) 세션이 양 트랙 검증·종합·감독.**
+> **현황(2026-06-25)**: 🟢1 · 🟡1 · 🔴3 — 진입게이트 통과·#458 fs-viewer-core 추출 #481까지(**E-namespace 본격이동 난관 완료**). entities/lib/grid-lib/shared/print 전반 core 단일출처화. 다음=런타임 엔진/widgets. view-mode/프리셋/prod 미착수. 상세 ↓ 진척 현황 섹션. **R15(server)는 2026-06-25부터 별도 세션 병렬 위임 — 본(R16) 세션이 양 트랙 검증·종합·감독.**
 
 ## 프롬프트
 
@@ -21,7 +21,7 @@
 > #458 i-dev git log + dev 대조. 진입게이트 3에이전트 재검증 PASS.
 
 - 🟢 **진입 게이트** — R15 Phase0(계약동결+신스키마 additive) ✅ + R12/#342 격리(i-dev 미머지, #458이 추월) ✅. 양 서브체크 PASS → R16 진입 가능. (가드레일: #342 절대 i-dev 머지 금지.)
-- 🟡 **뷰어 3포크 통합(#458)** — phase 1~4c + 증분 6건 머지. **#459/#462/#463 print 비런타임 · #466 shared 레이어 · #470 grid/lib 부분집합(40) · #475 prerequisites(data-viewer/types·column-type.utils·deadlineUtils) + grid/lib 잔여(cellSave*·gridViewTypes·column-management·button-actions)** base→core(매 증분 build+dev green·advisor PASS). 깨진 phase4d 폐기(origin ae85a2608). **prerequisites 추출 완료 → grid/lib leaf 사실상 종료**(제외 잔여: cellKeyboardUtils[./cell-keyboard 런타임]·row-menu[lucide]). 다음: **E-namespace 본격이동(난관)** → 런타임/widgets. **sub/external은 '마이그레이션'이 아닌 '삭제'로 재정의(2026-06-25 검증·확정)** — 통일 뷰어 모드화 후 패키지 제거(천장이던 별도 마이그·3뷰어 런타임검증이 제거됨).
+- 🟡 **뷰어 3포크 통합(#458)** — phase 1~4c + 증분 7건 머지. **#459/#462/#463 print 비런타임 · #466 shared · #470 grid/lib 부분집합(40) · #475 prerequisites + grid/lib 잔여 · #481 E-namespace 본격이동(난관)** base→core(매 증분 build+dev green·advisor PASS). 깨진 phase4d 폐기(origin ae85a2608). **E-namespace 완료**: fork E 배럴(423줄)→core 단일출처, fork는 3줄 재집계. 핵심 교훈=cross-package 사전집계 E는 tsup DTS TS2724(phase4d 모드)→**E는 소비측(fork) 조립**이 정답. entities/lib/grid-lib/shared/print 전반 core화. 제외 잔여: cellKeyboardUtils[./cell-keyboard 런타임]·row-menu[lucide]. 다음: **런타임 엔진/widgets**(통일 뷰어로). **sub/external은 '마이그레이션'이 아닌 '삭제'로 재정의(2026-06-25 검증·확정)** — 통일 뷰어 모드화 후 패키지 제거(천장이던 별도 마이그·3뷰어 런타임검증이 제거됨).
 - 🔴 **view-mode 팬아웃** — 미착수.
 - 🔴 **프리셋·즐겨찾기** — 미착수.
 - 🔴 **FE prod 배포** — prod 대상, 범위 밖.
