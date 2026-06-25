@@ -32833,3 +32833,28 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
 - data-craft-mobile:lib/screens/inbox/inbox_screen.dart
 - data-craft-mobile:lib/screens/inbox/widgets/filter_chip_bar.dart
+
+## v001.1099.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #455 (핫픽스1)
+
+#455 온디바이스 테스트에서 드러난 3건 핫픽스 — (1) 웹뷰 인증이 여전히 실패(로그인 화면), (2) 페이지 진입 시 흰 화면 구간이 길고 로더가 늦게 출력, (3) 홈 "최근 페이지" 버튼이 텍스트 정확히 눌러야만 동작. 전부 data-craft-mobile FE-only.
+
+### 근본 원인 (서버 로그로 확정)
+웹뷰 `POST /api/auth/refresh` 가 **400 MISSING_REQUIRED_FIELDS** 반환(401 아님 = cross-site 쿠키 plumbing 자체는 정상). 서버 `refreshController` 는 `req.cookies?.refreshToken` 를 읽고, 이 쿠키는 **path `/api/auth`** 로 스코프됨(`utils/cookie.ts`). #455 Phase 1 은 `loadForRequest(apiBaseUrl)`(path `/`)로 로드해 `/api/auth` 스코프 쿠키가 RFC6265 prefix 매칭에서 제외 → **0개 미러링** → 웹뷰에 refreshToken 없음 → 400.
+
+### 핫픽스 결과
+- **Phase 4 (fix)** `b348602c` + `63c83ba0`: (a) `loadApiOriginCookies` 로드 URI 를 `$apiBaseUrl/api/auth/refresh` 로 변경 → path-scoped refreshToken 포함. (b) `saveApiOriginRefreshCookie` 추가 — 웹뷰 dispose 시 웹뷰 store 의 회전된 refreshToken 을 DIO PersistCookieJar 로 역동기화(서버가 refresh 마다 구토큰 revoke 회전 → 미동기 시 앱 전역 로그아웃 회귀 방지). (c) `onUpdateVisitedHistory` 로 웹앱의 클라이언트 라우팅 로그인 리다이렉트 감지 → 웹뷰 로그인 대신 `setExpired()` + pop 으로 앱 로그인 전환(마스터 원칙). `/m/` 임베드 하위 슬러그 오탐 가드. (d) 흰 ColoredBox → `surfaceContainerLowest` 배경 + `CircularProgressIndicator` 오버레이, `onLoadStop`/`onProgressChanged`/`onReceivedError` 로 해제(흰 화면 구간 제거).
+- **Phase 5 (fix)** `57d18be2`: `home_recent_pages_section.dart` `_RecentRow` `GestureDetector` 에 `HitTestBehavior.opaque` — 패딩 포함 행 전체 탭 영역화.
+
+### 범위 메모 (온디바이스 게이트 필수)
+- **버그1 합격 기준 = 서버 로그의 `/api/auth/refresh` 400 → 200**. "페이지가 뜸" 은 seeded `dc_token`(5분)만으로 충족돼 refresh 를 안 거치므로 불충분 — access token 수명 이후까지 페이지를 열어 refresh 강제 후 200 확인.
+- **회전 디싱크 회귀 검증**: 페이지 열어 refresh 발생 → 뒤로 → 앱 계속 사용 시 로그아웃 없어야 함(dispose 역동기화 확인).
+- `getCookies` 경로 필터 동작은 inappwebview 버전 의존 — 역동기화 무효 시 서버 grace 가 backstop.
+
+### 영향 파일
+- data-craft-mobile:lib/api/platform_auth_io.dart
+- data-craft-mobile:lib/api/platform_auth_web.dart
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
+- data-craft-mobile:lib/screens/home/widgets/home_recent_pages_section.dart
