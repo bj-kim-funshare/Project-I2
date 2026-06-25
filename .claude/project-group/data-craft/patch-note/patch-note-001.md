@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1132.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #481 (funshare-inc/data-craft)
+
+**뷰어 코어 통합 R16① — E-namespace를 fs-viewer-core로 본격이동(최대 난관).** 3개 뷰어 포크 통합의 핵심 단계. fs-data-viewer가 보유하던 423줄 `E` 엔티티 배럴(타입 137+·값 50+)을 fs-viewer-core로 옮겨, 포크는 코어의 평면(flat) export를 재집계해 `E` 네임스페이스를 구성한다. 코어가 모든 E 멤버의 단일 출처가 되고, 포크 배럴은 3줄로 축소(423→3). 과거 동일 영역을 무너뜨린 phase4d 실패(선언병합 `namespace E`의 tsup DTS 평탄화 → cross-package TS2724)를 회피: E 사전집계를 코어에서 cross-package 소비하는 대신 **소비측(포크)에서 조립**하는 형태로 확정. dev 전용(prod 무접촉), build:packages(tsup DTS)·typecheck:all(루트앱 포함 135+ E.* 전수)·lint 0 errors 게이트 + type-assertion probe 통과.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `452f5119a`: fs-viewer-core가 E 배럴 호스팅 — `entities/e-namespace.ts`(423줄 신규, 직접 named re-export) + `entities/index.ts`에 `export * as E`. print/engines 1라인만 코어 구조(moduleResolution:bundler)에 맞게 분할. 포크 무변경(additive) → 코어 단독 빌드·DTS emit 격리 검증. +425, 2파일(코어 전용).
+- **Phase 2** (refactor) `b6e86b79f`: fs-data-viewer가 코어의 E 소비 — 포크 `e-namespace.ts`를 3줄 재집계(`export * from 'fs_viewer_core/entities'` + 코어 배럴 미노출 3종 보완: getInitialEnableSorting·getInitialEnableAggregation·rowLink), `cell-theme.types.ts`는 순수 shim화(코어 value-identical). 계획의 `export { E }` 직접 재수출은 TS2724로 불가 → 소비측 조립으로 피벗. +3/-490, 2파일.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/entities/e-namespace.ts` (정식 E 배럴 코어 신규)
+- `packages/fs-viewer-core/src/entities/index.ts` (`export * as E` 추가)
+- `packages/fs-data-viewer/src/entities/e-namespace.ts` (423→3줄 재집계 배럴)
+- `packages/fs-data-viewer/src/entities/cell-theme.types.ts` (순수 shim)
+
+### 비고
+- 별칭 중첩 네임스페이스(E.cell/E.grid 등)는 소비처 0이라 포크 평면 재집계에서 자연 드롭(E.rowLink만 실사용→명시 보완). 코어 정식 배럴에는 `E.E.<alias>`로 보존. 잔여 `E.E` 중첩은 무해 cruft(소비처 0). sub/external은 자체 독립 E 유지(추후 패키지 삭제로 정리).
+
 ## v001.1130.0
 
 > 통합일: 2026-06-25
