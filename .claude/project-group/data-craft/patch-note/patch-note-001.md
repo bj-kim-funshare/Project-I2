@@ -33320,7 +33320,7 @@ data-craft-server:
 ### advisor 검증
 - 계획 advisor #1: BLOCK(초안 E5 backfill — revoke 시그니처 오염 지적) → 관측가능화로 리워크 후 PASS. 완료 advisor #2: PASS (E6-tail 진리표 전수 검증, E5 시그니처 보존 확인).
 
-## v001.1124.0
+## v001.1125.0
 
 > 통합일: 2026-06-25
 > 플랜 이슈: #476 (funshare-inc/data-craft)
