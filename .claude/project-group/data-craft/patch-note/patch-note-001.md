@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1104.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #460
+
+**앱 설정의 개발용 "시스템 테스트" 섹션 + 전용 plumbing 제거.** 데이터 크래프트 웹 설정 다이얼로그 → 앱 설정 탭 하단에 오너 전용으로 노출되던 "시스템 테스트" 섹션(DB 연결 / 토큰 검증 / SSE 알림 테스트 3종 개발용 버튼)을 UI부터 하위 plumbing까지 데드코드 없이 전면 제거했다. UI 섹션·i18n 키 17개(ko/en) → 전용 FE 훅 3종·feature/shared 중복 타입 → fs-api 클라이언트 메서드·`TEST` 엔드포인트·타입·re-export 체인 순으로 상향식 제거. `userInfo`는 `DefaultProfileImageSection` 오너 게이팅에 계속 쓰여 보존. BE `/api/test/*` 라우트는 "웹 앱 설정" 범위 밖으로 미포함. 매 페이즈 lint gate(typecheck:all && lint) 통과, fs-api dist 재생성으로 Test* 타입 소멸 확인, src+packages 전반 잔존 참조 0.
+
+### 페이즈 결과
+- **Phase 1** (chore) `223d596`: 앱 설정 UI `SystemTestSection.tsx` 삭제 + `AppTabContent.tsx` import/렌더 정리 + ko/en i18n 17키 제거. +1/−201, 4 files.
+- **Phase 2** (refactor) `a232589`: 전용 FE 훅 3종(`useTestDb/useTestToken/useTestNotification`) 삭제 + `features/auth` 배럴·타입 + `shared/types` 고아 중복 타입 정리. −112, 7 files.
+- **Phase 3** (refactor) `9bca0bb`: fs-api `auth.ts` 메서드·타입 import + `endpoints.ts` `TEST` 블록 + `types/requests/misc.ts`(파일째) + re-export 체인 제거. −59, 6 files.
+
+### 영향 파일
+data-craft:
+- `src/widgets/settings-dialog/ui/SystemTestSection.tsx` (삭제)
+- `src/widgets/settings-dialog/ui/AppTabContent.tsx`
+- `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+- `src/features/auth/lib/useTestDb.ts`, `useTestToken.ts`, `useTestNotification.ts` (삭제)
+- `src/features/auth/lib/index.ts`, `src/features/auth/lib/types.ts`, `src/features/auth/index.ts`
+- `src/shared/types/auth.types.ts`
+- `packages/fs-api/src/api/auth.ts`, `packages/fs-api/src/constants/endpoints.ts`
+- `packages/fs-api/src/types/requests/misc.ts` (삭제), `packages/fs-api/src/types/requests/index.ts`
+- `packages/fs-api/src/types/index.ts`, `packages/fs-api/src/index.ts`
+
 ## v001.1101.0
 
 > 통합일: 2026-06-24
