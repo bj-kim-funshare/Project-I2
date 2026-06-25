@@ -33359,3 +33359,27 @@ data-craft-mobile:
 
 ### advisor 검증
 - 계획 advisor #1: PASS(5관점) — lazy 연결 + 서버 푸시(Option B) 채택. 완료 advisor #2: PASS — 단방향→순환 연결 전환의 미변경 소비자 3종을 정적 재검증(`chat_channels_provider` 매 연결마다 `_init()` 재생성, `chat_messages_provider` autoDispose+재init, `chat_list_screen` 연결 전 빈상태 렌더 무크래시), 딥링크 라우터-준비 no-op 가드·룸 라우트가 셸 밖 root navigator라 오프탭 점유 불가 확인.
+
+## v001.1126.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #479 (funshare-inc/data-craft)
+
+Roadmap-18(라우터 레이어 감사 리팩토링) P7 — 라우터 인라인 비즈니스 로직을 컨트롤러로 추출(라우터=위임 전용). data-craft-server 단일 repo. ★실제 로직 이동이라 P6(식별자 rename)보다 위험 한 단계 높음 → "표준화 없이 본문 verbatim 이동"으로 동작 100% 보존. HTTP 경로·응답봉투(비표준 포함)·상태코드·부작용(DB/FS/NTS/SSE)·미들웨어·마운트순서 무변경.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `6652a8f`: auth `/validate-business-number` 인라인 핸들러 → `auth.controller.ts:validateBusinessNumberController` 추출. ★비표준 봉투(`{success,error}`/`{success,data}`)·NTS outage 5분기·status '01' DB중복체크·`logger.error` **verbatim 보존**(표준봉투/errorCatch 변환 금지=FE 계약 보존). 라우터 위임+미사용 import 정리.
+- **Phase 2** (refactor) `4d70313`: files.router.ts POST / → 신규 `files.controller.ts:listFilesByGroupsController`. 다중그룹 매핑/집계·봉투·`errorCatch(CALL_ID.file.listMultiple)` 그대로.
+- **Phase 3** (refactor) `0534505`: file.router.ts 저위험 3(GET 목록·GET /groups·POST /groups) → 신규 `file.controller.ts`(listFiles/getFileGroups/createFileGroupController). 모델호출·봉투·CALL_ID 그대로.
+- **Phase 4** (refactor) `e54feff`: file.router.ts 고위험 6(업로드 TX+file.mv·download res.download·image setHeader×4+send·images Promise.all·DELETE TX+unlink·DELETE/groups 루프) → file.controller.ts. 사설 헬퍼/타입(`validateStoragePath`·`getOrCreateFileGroupWithConn`·`FileGroupRow`·`FileRow`) 동반이동. ★골든 미커버라 본문 등가성 정밀 diff-review=**ALL VERBATIM**(TX경계·file.mv-in-TX·setHeader 순서·res.download 콜백·Promise.all null-fill·unlink best-effort·CASCADE 순서·잠재버그 전부 보존). 라우터 인라인 0.
+- **Phase 5** (refactor) `187bb43`: sse.router.ts /connect → 신규 `sse.controller.ts:sseConnectController`. SSE 프로토콜 시퀀스(헤더→flushHeaders→retry→addConnection→한도분기→connected→startHeartbeat→headersSent 분기) byte-identical. ★sseManager(레지스트리·heartbeat) 무수정.
+- 유일 허용 적응: 컨트롤러 `Promise<void>` 시그니처 + `return res.x()`→`res.x(); return;`(Express5 unknown반환→TS2322 회피, 런타임 동일).
+- 최종 검증: nodemon 콜드부팅 /health 200 + 골든 8 PASS/0 FAIL(auth_validate_business_number·sse_connect·file_groups 직접 커버) + 추출기 (method,full_path) **225 동일**(P7 라우팅 표면 델타 0; controller 필드는 12 타깃 inline→명명으로 의도 변경) + per-phase build(tsc)·lint PASS.
+- advisor #1(계획) BLOCK(verbatim+Promise<void>→return res.x() TS2322; plan 본문에 해소책 명시 요구)→개정 후 PASS · #2(완료) PASS — advisor() 컨텍스트 초과로 advisor-fallback 경유(동일 권위).
+- 후속 후보: P4 보존된 업로드/삭제 catch의 조기 rollback 잠재버그(리팩토링 중 수정 금지로 보존, 별도 티켓 권장).
+
+### 영향 파일
+data-craft-server:
+- `src/routes/{auth,files,file,sse}.router.ts` (위임 전용 전환)
+- `src/controllers/auth.controller.ts` (validateBusinessNumberController 추가)
+- `src/controllers/{files,file,sse}.controller.ts` (신규)
