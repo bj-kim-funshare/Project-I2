@@ -32889,3 +32889,31 @@ data-craft 모바일 앱(`data-craft-mobile`)의 기본 플러터 런처/앱 아
 - data-craft-mobile:lib/api/platform_auth_web.dart
 - data-craft-mobile:lib/screens/page/page_web_view_screen.dart
 - data-craft-mobile:lib/screens/home/widgets/home_recent_pages_section.dart
+
+## v001.1102.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #455 (핫픽스2)
+
+핫픽스1(웹뷰 refresh 쿠키 미러)이 온디바이스에서 실패해 웹뷰 인증을 **근본 재설계**. 서버 로그 분석으로 실원인 확정: 웹앱 임베드 경로(`AuthProvider.initializeAuth`)는 **설계상 refresh 쿠키를 쓰지 않고**, 네이티브가 매 로드마다 fresh 액세스 토큰(`dc_token`)을 주입해 주길 기대한다("임베드 경로: refresh cookie 없음 — 쿠키 기반 refreshAccessToken 건너뜀"). 핫픽스1의 cross-site 쿠키 미러는 이 계약과 충돌해 무효였고, `setExpired()` 폴백이 멀쩡한 앱 세션을 로그아웃시켜 증상을 악화시켰다(증상3·4: 페이지 진입 시 앱 로그인 팅김 + 재로그인 즉시 재팅김).
+
+### 핫픽스2 결과 (Phase 6)
+- `8c43d573` + `d45dba3e` (data-craft-mobile):
+  - **쿠키 미러 전면 제거**: `loadApiOriginCookies`(io/web), `saveApiOriginRefreshCookie`(io/web), dispose 시 `_resyncRefreshCookieToJar` 삭제.
+  - **fresh 토큰 강제 주입**: `_initialize`가 항상 `refreshAccessToken()` 후 `dc_token`만 주입(이전엔 null일 때만 refresh → 스테일 토큰 주입이 즉시 실패 유발). cold-start 자동로그인이 정상이므로 DIO 잼 refresh가 작동함이 안전 보증.
+  - **비파괴 복구 폴백**: `onUpdateVisitedHistory`가 로그인 라우트(`/m/` 임베드 외부) 감지 시 앱을 로그아웃하지 않고 **네이티브 refresh→fresh dc_token 재시드→`/m/` 리로드**로 복구. 1회 재시도 후에도 로그인 이탈 시에만 `setExpired()`(진짜 만료). → 증상3·4는 설계상 무조건 해소.
+  - 버그2(로딩 오버레이)·버그3(최근페이지 탭영역)은 핫픽스1 그대로 유지.
+
+### 검증 (서버 로그가 합격 기준)
+- **버그1 합격 = 페이지 진입 시 `POST /api/auth/refresh 400` 소멸**(fresh dc_token → init 200 → refresh 미발생). 화면만으론 불충분(5분 dc_token이 가림).
+- 400 지속 시 판별: refresh 400 **직전**에 인증 API 401이 있으면 dc_token 거부(토큰 포맷/audience), 없으면 dc_token 미전달(경로/타이밍). ⚠️주의: `!kIsWeb` dc_token 주입 경로는 실기기에서 처음 실행됨(dev=chrome=kIsWeb→postMessage 경로).
+- 증상3·4(앱 로그아웃/재로그인 잠김)는 설계상 즉시 해소.
+
+### 별개 운영 이슈 (코드 무관)
+- Sendbird `403100 disabled` = data-craft-prod 앱이 무료(Developer) 플랜 동시접속 10캡 도달로 비활성 → 유료 플랜 업그레이드 필요(결제 영역).
+- 동시접속 10/10 = **코드 누수 아님**(전수 조사: 웹앱 Sendbird 미사용·Flutter 유저당 1연결 싱글톤·disconnect 견고). force-kill 좀비(~1분 keepalive) + 디버깅 churn에 의한 Peak high-water mark. 단 무료 10캡 자체가 prod엔 부족.
+
+### 영향 파일
+- data-craft-mobile:lib/api/platform_auth_io.dart
+- data-craft-mobile:lib/api/platform_auth_web.dart
+- data-craft-mobile:lib/screens/page/page_web_view_screen.dart
