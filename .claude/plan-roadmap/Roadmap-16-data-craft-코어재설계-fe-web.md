@@ -2,13 +2,13 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 재설계 FE 트랙 (data-craft monorepo) — Roadmap 15(server)와 repo-격리 병렬, 15 Phase0 이후 진입
 >
-> **현황(2026-06-25)**: 🟢1 · 🟡1 · 🔴3 — 진입게이트 통과·#458 추출 #483 후 **방향 반전→#486 collapse 완료(fs-viewer-core를 fs-data-viewer로 흡수·core 패키지 삭제·단일 패키지화)**. 내부경계 소멸로 E-namespace류 cross-package DTS 문제 **구조적 제거**. 다음=**sub/external 삭제**(루트앱 sub/external 사용처를 통일 뷰어 모드로 재지정·패키지 제거). view-mode/프리셋/prod 미착수. 상세 ↓ 진척 현황+아키텍처 결정 섹션. **R15(server)는 별도 세션 병렬 위임 — 본(R16) 세션이 양 트랙 검증·종합·감독.**
+> **현황(2026-06-25)**: 🟢2 · 🔴3 — 진입게이트 통과 + **R16① 뷰어 통합 완결**(#458): 추출 8증분→#486 collapse(단일 패키지)→**#487 sub/external 통일·4패키지 삭제**. 단일 FsDataViewer/FsDataViewerExplorer가 own/sub/external 전 역할(게이팅 prop). E-namespace cross-package DTS 문제 구조적 제거. 다음=**R16② view-mode 팬아웃**. 프리셋/prod 미착수. 상세 ↓ 진척 현황+아키텍처 결정 섹션. **R15(server)는 별도 세션 병렬 위임 — 본(R16) 세션이 양 트랙 검증·종합·감독.** ⚠️#487 컴파일 불가시 동작은 시각 검증 권장.
 
 ## 프롬프트
 
 🟢 (진입 게이트) Roadmap 15 Phase 0 완료 확인 — 스키마 DDL + fs-api 계약타입(columnType 5번째 enum·row_id·cells JSON 형태·widget_preset/permission/company_setting 응답) 동결. + Roadmap-12(monorepo refactor) FE repo 점유 충돌 점검(완료/격리 후 진입).
 
-🟡 /plan-enterprise data-craft — 뷰어 통합(work_repo=data-craft): fs-data-viewer + fs-sub-data-viewer + fs-external-data-viewer → **단일 뷰어**. **끝 구조 = 뷰어 1개 + sub/external 패키지 삭제**(검증 2026-06-25: 셋은 동일 엔진·동일 데이터모델, 차이는 *지원 타입/뷰모드*뿐 — sub/external은 그리드-전용 서브셋). sub/external 사용처 = 통일 뷰어를 **모드/바인딩 설정**으로 호출. fs-viewer-core 추출은 그 통합의 토대. ★FE 최대 선결.
+🟢 /plan-enterprise data-craft — 뷰어 통합(work_repo=data-craft): fs-data-viewer + fs-sub-data-viewer + fs-external-data-viewer → **단일 뷰어** ✅ **완결(#458, #459~#487)**. 끝구조 달성: fs-viewer-core 추출→collapse(단일 패키지·#486)→sub/external 4패키지 삭제(#487). 단일 FsDataViewer/FsDataViewerExplorer가 own/sub/external 전 역할을 게이팅 prop(gridOnly·subGridConfig·columnMenuMode·externalMode·dataTypeFilter)으로 수행. ★FE 최대 선결 — 완료.
 
 🔴 /plan-enterprise data-craft — view-mode 팬아웃: 통합 1모델 → 단일목적 위젯 분할(grid/kanban/gantt/calendar/card/chart…). 통일 렌더링타입 체계(=데이터 렌더타입) + 3-프로퍼티(properties/column_properties/row_properties) 위젯 렌더. **이 통일로 단일 뷰어가 전 뷰모드/타입 위젯 보유 → sub/external의 '위젯 부재' 차이 소멸(패키지 삭제 가능).**
 
@@ -21,7 +21,7 @@
 > #458 i-dev git log + dev 대조. 진입게이트 3에이전트 재검증 PASS.
 
 - 🟢 **진입 게이트** — R15 Phase0(계약동결+신스키마 additive) ✅ + R12/#342 격리(i-dev 미머지, #458이 추월) ✅. 양 서브체크 PASS → R16 진입 가능. (가드레일: #342 절대 i-dev 머지 금지.)
-- 🟡 **뷰어 통합(#458)** — 추출 증분 8건(#459~#483) 후 **방향 반전·collapse 완료**. 추출: #459/#462/#463 print·#466 shared·#470 grid/lib(40)·#475 prerequisites+grid/lib 잔여·#481 E-namespace(난관)·#483 cell-keyboard. **#486 collapse**: 소비자그래프 검증(core 소비자=fs-data-viewer 단 하나)→1-소비자 core 군더더기 판명→**fs-viewer-core 325파일 fs-data-viewer 흡수·core 패키지 삭제·단일 패키지화**(shim 294 대체·배럴 6 병합[entities=USE CORE·features/shared/grid-lib=flat+F/S/lib MERGE]·import 0 잔존·vite alias+dep 삭제). 독립 gate 0 errors·advisor #1 BLOCK(배럴 flat표면 소실)→정정→#2 PASS. **내부경계 소멸로 E-namespace cross-package DTS(TS2724·phase4d 모드) 문제 구조적 제거**. **핵심 교훈**=[[project_data_craft_enamespace_consumer_assembly]] + 1-소비자 추출은 끝구조서 역행. 다음: **sub/external 삭제**(루트앱 사용처 6+5를 통일 뷰어 모드로 재지정·패키지 제거 — 진짜 중복제거 이득). **sub/external='마이그레이션' 아닌 '삭제'**(2026-06-25 확정).
+- 🟢 **뷰어 통합(#458) — 완결**. ① 추출 8증분(#459~#483: print·shared·grid/lib·prerequisites·E-namespace 난관·cell-keyboard). ② **#486 collapse**: 소비자그래프 검증(core 소비자=fs-data-viewer 단 하나)→1-소비자 core 군더더기→fs-viewer-core 325파일 fs-data-viewer 흡수·core 삭제·단일 패키지화(배럴 6 병합·E-namespace DTS 문제 구조적 제거). ③ **#487 sub/external 통일·삭제**: FsDataViewer/FsDataViewerExplorer 게이팅 prop(gridOnly·subGridConfig·columnMenuMode·externalMode·dataTypeFilter)으로 sub/external 흡수→루트앱 재지정→**4패키지 삭제**(advisor BLOCK 2회[배럴 flat표면·explorer 회귀]→정정→PASS). 매 증분 독립 gate 0 errors. **핵심 교훈**=[[project_data_craft_enamespace_consumer_assembly]] + 1-소비자 추출은 끝구조서 역행(collapse로 정정). ⚠️ 컴파일 불가시 동작(sub 제한메뉴·external 4타입·form/general 필터·subGridConfig·design-mode Setting)은 시각 검증 권장. 다음 R16=view-mode 팬아웃.
 - 🔴 **view-mode 팬아웃** — 미착수.
 - 🔴 **프리셋·즐겨찾기** — 미착수.
 - 🔴 **FE prod 배포** — prod 대상, 범위 밖.
