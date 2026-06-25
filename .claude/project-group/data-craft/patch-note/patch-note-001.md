@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1138.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #488 (funshare-inc/data-craft)
+
+**뷰어 코어 재설계 R16② P1a — 통일 렌더링타입 레지스트리 토대(additive).** R16①(단일 뷰어) 완결 위에 R16② view-mode 팬아웃 착수. 현재 렌더링은 3개 시스템(grid 강결합·universal 무결합·kanban compact)으로 분산돼 있어, 39 렌더링타입(ViewerType)을 단일 소스로 모으는 레지스트리 + 모드별 어댑터 구조의 **토대**를 마련. 본 증분은 순수 additive — 신규 레지스트리 디렉터리만 생성하고 기존 3 시스템·dispatch는 무변경, 레지스트리는 아직 미소비(P1b 어댑터·P1c dispatch 이행에서 활성)이라 런타임 동작 0 변화. dev 전용, build:packages·typecheck:all·lint 0 errors.
+
+### 페이즈 결과
+- **Phase 1** (feat) `c865f7c7`: `packages/fs-data-viewer/src/shared/ui/rendering/registry/` 신규 — `RenderContext`(mode-agnostic 코어 + 3-프로퍼티 future-proof `columnProperties?`/`rowProperties?`)·`RegistryEntry`(typeId·render·adapters 슬롯)·모드 context 스텁 4종 + low-risk simple 23엔트리(기존 universal 렌더러 wrap, onChange→saveChange via createCellChange). extended/risky 17타입은 P1c. 기존 0 수정(provably additive). +356/-0, 4 신규파일.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/shared/ui/rendering/registry/{types,ViewerTypeRegistry.tsx,index}.ts` (신규)
+- `packages/fs-data-viewer/src/shared/ui/rendering/index.ts` (신규)
+
+### 비고
+- P1b(어댑터 4종 grid/kanban/calendar/gantt + dispatcher 훅)·P1c(dispatch 6곳 이행 + extended 엔트리)는 후속. 레지스트리+어댑터 통일 수준은 마스터 확정(레지스트리+모드별 어댑터). advisor #1/#2 PASS(타입 future-proof·grid 결합 단일객체 확장 수용·wrap 정합·additive).
+
 ## v001.1137.0
 
 > 통합일: 2026-06-25
