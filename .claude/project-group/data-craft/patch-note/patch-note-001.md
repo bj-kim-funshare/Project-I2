@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1098.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스7)
+
+**spec-dashboard 미들웨어 뷰 이해도 개선.** (1) 미들웨어 **역할(role)**이 영어·단선이던 것을 13개 전부 **충실한 한국어 설명**으로 교체(extract.mjs roleMap). (2) 미들웨어 테이블의 **팩토리·전역·마운트 프리픽스·엔드포인트수 열 의미를 설명하는 범례**를 테이블 상단에 추가. (3) **팩토리 감지 정정**: `cachePrivate(maxAge)`·`requirePaymentPassword(options)`가 `(args)=>(req,res,next)=>{}` concise arrow라 반환문이 없어 누락되던 것을 detectIsFactory가 화살표 본체까지 검사하도록 보강 → is_factory 5종(permission·plan-limit·validate·cacheControl·requirePaymentPassword) 정확.
+
+### 페이즈 결과
+- **핫픽스7 Phase** (feat) `c3bde4b`: `spec-dashboard/scripts/extract.mjs`(한국어 roleMap + 팩토리 감지 보강) + `spec-dashboard/app.js`(열 범례) + `spec-dashboard/styles.css`(범례 스타일). +114/−16.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/scripts/extract.mjs` (미들웨어 한국어 roleMap, detectIsFactory concise-arrow 보강)
+- `spec-dashboard/app.js` (미들웨어 열 설명 범례)
+- `spec-dashboard/styles.css` (범례 레이아웃)
+
 ## v001.1097.0
 
 > 통합일: 2026-06-24
