@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1124.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #475 (funshare-inc/data-craft)
+
+**뷰어 코어 통합 R16① — 선결 의존성 + grid/lib 잔여를 fs-viewer-core 로 추출.** 3개 뷰어 포크(fs-data-viewer/sub/external)의 단일 뷰어 통합을 위한 공유 코어(fs-viewer-core) 추출의 후속 증분. 선결 리프(data-viewer/types·column-type.utils·deadlineUtils)를 코어로 옮긴 뒤, 그에 묶여 있던 grid/lib 잔여(셀 저장·그리드 뷰 타입·컬럼 관리·행 액션 버튼)를 코어로 이동. 원본 포크 파일은 전부 코어 재수출 심(shim)으로 전환되어 기존 사용처는 무변경. 런타임/위젯/E-namespace 본체는 범위 밖(후속), dev 전용(prod 무접촉). build:packages+typecheck:all+lint 0 errors 게이트 통과.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `dc09b485f`: 선결 의존성 base→core — features/data-viewer/types(3) · shared/lib/column-type.utils · shared/ui/.../deadline/deadlineUtils. E-값(FsGridColumnTypes)을 entities/column-types/composition 직접 import 로 재작성(e-namespace 무편집). 포크 5파일 심 전환. +225/-220, 12파일.
+- **Phase 2** (refactor) `28f037fb7`: grid/lib 잔여 base→core — cellSave*(3) · gridViewTypes · column-management(4) · button-actions(7). 제외(후속): cellKeyboardUtils(./cell-keyboard 런타임)·row-menu(lucide)·gridStateTypes(이미 코어). +1712/-1739, 31파일.
+
+### 영향 파일
+data-craft:
+- `packages/fs-viewer-core/src/features/data-viewer/types/**` (선결 타입 코어 신규)
+- `packages/fs-viewer-core/src/shared/lib/column-type.utils.ts` (E-값 직접 import 재작성)
+- `packages/fs-viewer-core/src/shared/ui/cell-renderers/renderers/deadline/deadlineUtils.ts` (순수 util 코어 이동)
+- `packages/fs-viewer-core/src/features/grid/lib/{cellSave*,gridViewTypes,column-management,button-actions}` (grid/lib 잔여 코어 이동)
+- `packages/fs-viewer-core/src/features/{index,shared/index,grid/lib/index}.ts` (코어 배럴 export)
+- `packages/fs-data-viewer/src/**` (원본 포크 → 코어 재수출 심 전환)
+
 ## v001.1122.0
 
 > 통합일: 2026-06-25
