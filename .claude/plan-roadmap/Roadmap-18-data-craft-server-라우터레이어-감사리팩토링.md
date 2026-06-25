@@ -14,7 +14,7 @@
 
 🟢 /plan-enterprise data-craft [P5·정리] src/routes/auth.ts 중간(line 162)에 끼어있는 initController import 를 파일 최상단 import 블록으로 이동 + promotion.routes.ts 미들웨어 import 출처 혼재(배럴 ../middlewares vs 직접 ../middlewares/auth.middleware) 통일. 순수 정리, 동작 무변경. [완료: #471 `16a2cab`, +2/−3, 직접경로 통일(11 vs 4), 골든 8 PASS/0 FAIL, patch-note v001.1117.0]
 
-🔴 /plan-enterprise data-craft [P6·컨벤션 명명] 라우터 명명 규칙 전수 통일 — src/routes/ 라우터 25개를 {고유명칭}.router.ts 파일명 + `export const {고유명칭}Router = Router()` 명명 export 로 통일(.routes.ts 2개 포함; index.ts barrel 은 집약기라 별도 판단). ★rename 전 각 라우터 모듈을 import 하는 전 지점을 repo 전역 grep(routes/index.ts·app.ts·테스트·배럴·spec-dashboard 추출기·교차 import)해 빠짐없이 동기화 — 누락 1건이면 부팅 크래시. ★HTTP 경로·메서드·동작·마운트 순서 절대 무변경(rename+import 동기화만). pnpm build(tsc) + 서버 부팅 + 골든 재생 + 엔드포인트 수(225) 대조로 회귀 0 검증.
+🟢 /plan-enterprise data-craft [P6·컨벤션 명명] 라우터 명명 규칙 전수 통일 — src/routes/ 라우터 25개를 {고유명칭}.router.ts 파일명 + `export const {고유명칭}Router = Router()` 명명 export 로 통일(.routes.ts 2개 포함; index.ts barrel 은 집약기라 별도 판단). ★rename 전 각 라우터 모듈을 import 하는 전 지점을 repo 전역 grep(routes/index.ts·app.ts·테스트·배럴·spec-dashboard 추출기·교차 import)해 빠짐없이 동기화 — 누락 1건이면 부팅 크래시. ★HTTP 경로·메서드·동작·마운트 순서 절대 무변경(rename+import 동기화만). pnpm build(tsc) + 서버 부팅 + 골든 재생 + 엔드포인트 수(225) 대조로 회귀 0 검증. [완료: #474, 라우터 23개(=routes/ 실측, index 제외)→.router.ts/export const, 5페이즈, advisor BLOCK(추출기 3중 파손)→개정 해소, 3중 게이트(콜드부팅 200·골든 8 PASS·추출기 225 튜플집합 S_old 동일)로 라우팅 표면 100% 보존, patch-note v001.1121.0]
 
 🔴 /plan-enterprise data-craft [P7·컨벤션 비즈로직] 라우터 인라인 비즈니스 로직을 컨트롤러(필요 시 서비스)로 추출 — file.ts(SQL/트랜잭션/FS)·sse.ts(/connect 오케스트레이션)·auth.ts(/validate-business-number NTS 분기)·files.ts(그룹 매핑/집계). 라우터는 위임만 남김. ★요청/응답/상태코드/부작용 절대 무변경(로직 위치 이동만). 골든 재생 검증.
 
