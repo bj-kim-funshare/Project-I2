@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1106.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #461 (Roadmap-18 P1)
+
+**Roadmap-18 라우터 리팩토링 회귀 안전망 — 골든 스냅샷 HTTP 하니스 신설(제품 코드 무변경).** `test/regression/` 에 standalone ts-node 하니스(harness.ts 3모드 --capture/재생-diff/--list + endpoints.ts 레지스트리 + normalize.ts 휘발필드 마스킹·스키마 추출 + compare.ts 구조 diff) + README + package.json `test:regression`·`test:regression:capture`. **비교=계약(status·키셋·타입·에러코드·봉투) 우선, 값-동등은 정적 엔드포인트(/health·/plans·signin account)만** → DB 변동 거짓회귀 차단. 레지스트리 11개를 P6/P7/P8 리팩토링 대상에 정렬(validate-business-number·file/groups·viewer/meta·user·subscription/status·sse 등, callable 9·SKIPPED 2). SSE=AbortController 첫 connected만, SKIPPED 별도 가시상태, 시크릿 env/CLI 주입(하드코딩 0). src/ 무변경.
+
+> ⚠️ 기능 미검증(plan 승인 deferral): 값 경로(signin→capture→compare)는 dev 서버+DB 필요로 미실행 — **P2 착수 전 라이브 캡처+재생 스모크 1회가 필수 전제**(README 절차). golden replay 는 baseline 캡처한 영속 메인 체크아웃에서 수행.
+
+### 페이즈 결과
+- **Phase 1** (test) `5ee2ee3`: 하니스 엔진 + 레지스트리(+타입 정리, 풀 타입체크 통과).
+- **Phase 2** (docs) `423900d`: README + 사용법 9섹션.
+
+### 영향 파일
+data-craft-server:
+- `test/regression/harness.ts`·`endpoints.ts`·`normalize.ts`·`compare.ts`·`README.md`·`.gitignore`·`golden/.gitkeep` (신규)
+- `package.json` (test:regression 스크립트)
+
 ## v001.1104.0
 
 > 통합일: 2026-06-25
