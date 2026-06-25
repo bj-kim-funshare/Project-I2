@@ -11,27 +11,23 @@ This protocol applies to **every** `advisor()` call-site in the harness — all 
 
 ---
 
-## 1. System-failure definition
+## 1. Failure-signal definition
 
-A **system failure** is a catchable tool error or exception returned by `advisor()` — the observable signal is a thrown/returned error from the tool invocation itself (e.g., API error, timeout with an error surface, tool unavailable). The main session keys exclusively on this positive error signal.
+A **failure signal** is **ANY** error, rejection, overload, or non-response from `advisor()` — this explicitly includes **API errors**, `temporarily overloaded`, safety/permission-classifier rejections, tool-unavailable, and timeouts. The main session treats **any** such signal as the fallback trigger. (Master directive 2026-06-24, **expanded 2026-06-25: any error or rejection, API included → immediate fallback, no retry**.)
 
-A `BLOCK:` verdict is a **valid response** from advisor and must never trigger fallback. A `BLOCK:` means the reviewer found a substantive concern — that is exactly the intended outcome.
+A `BLOCK:` verdict is a **valid response** from advisor and must never trigger fallback. A `BLOCK:` means the reviewer found a substantive concern — that is exactly the intended outcome. (A `BLOCK:` is the one advisor reply that is NOT a failure signal.)
 
-If `advisor()` hangs silently with no error surface, the retry-and-fallback branch cannot fire (there is no catchable signal). In that case, operator escalation is the only remedy.
+If `advisor()` appears to hang / return nothing, treat that perceived non-response as a failure signal too and go straight to fallback. Operator escalation applies only if the fallback dispatch itself also fails (§6).
 
 ---
 
-## 2. Retry budget
+## 2. No retry — immediate fallback
 
-At each advisor call-site:
+**On the FIRST failure signal (§1) from `advisor()`, do NOT retry. Immediately dispatch `advisor-fallback`.** Single attempt only — there is **no retry budget**. (Master directive 2026-06-25: retrying after any error/rejection — API included — is forbidden; go straight to fallback. The earlier 3-attempt budget is abolished.)
 
-- Attempt 1 — initial `advisor()` call.
-- Attempt 2 — first retry, on system failure.
-- Attempt 3 — second retry, on continued system failure.
+Before dispatching, save the artifact under review to a durable path (e.g. job tmp / issue / file) so the fallback agent can read it. Then dispatch `advisor-fallback` with the rubric + the durable-artifact path(s).
 
-After 3 failed attempts (2 retries), dispatch `advisor-fallback`.
-
-This budget is **per invocation only**. Cross-session failure counting is forbidden. No shared state machine tracking failures across sessions or skill runs. (Treadmill avoidance — CLAUDE.md §6.)
+This is **per invocation only**. Cross-session failure counting is forbidden. No shared state machine tracking failures across sessions or skill runs. (Treadmill avoidance — CLAUDE.md §6.)
 
 ---
 
