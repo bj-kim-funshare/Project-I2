@@ -33139,3 +33139,23 @@ data-craft: `packages/fs-viewer-core/src/shared/{config,lib}/**`(신규 53) + `s
 - data-craft-mobile:lib/screens/splash_screen.dart
 - data-craft-mobile:lib/main.dart · android/app/src/main/res/drawable/launch_background.xml(+v21)
 - data-craft-mobile:lib/l10n/app_ko.arb · app_en.arb
+
+## v001.1116.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #469 (funshare-inc/data-craft)
+
+Roadmap-18(라우터 레이어 감사 리팩토링) P4 — 죽은/임시 코드 제거. data-craft-server 단일 repo, FE 호출 없음. 동작·HTTP 계약 무변경(골든 8 엔드포인트 회귀 0).
+
+### 페이즈 결과
+- **Phase 1** (chore) `c64d7d2`: 미마운트 DEPRECATED 스텁 `src/routes/v2/`(4파일: index·social/{ping,health,index}) 전체 삭제 + 임시 dev 디버그 라우터 `src/routes/debug-chain.ts` 삭제. `src/app.ts`의 debug-chain `if (NODE_ENV!=='production')` 마운트 블록 전체 제거(블록 내 해당 2줄만 존재). −92줄, 추가 0. ★app.ts의 다른 미들웨어 체인·마운트 순서 무변경(logger/monitor·tenant 등). ★app.ts L99가 동적 `require('./routes/debug-chain')`였으므로 파일만 지우면 tsc 통과해도 dev 콜드 부팅 크래시 위험 → 삭제 후 src/ 전역 `debugChainRouter|__chain-trace|routes/v2|debug-chain` grep=0 확인. build(tsc)·lint PASS, nodemon 콜드 재시작 /health 200 + 골든 재생 8 PASS/0 FAIL로 부팅 생존·계약 무변경 실증.
+- advisor #1(계획) PASS · advisor #2(완료, advisor 컨텍스트 초과 → 정책상 advisor-fallback 경유) PASS.
+
+### 범위 메모 (미해결/후속)
+- `src/schemas/v2/social/README.md`가 삭제된 v2 경로를 언급(마크다운, 본 P4 명시 범위=routes/v2 밖) → stale 문서, 후속 정리 후보.
+
+### 영향 파일
+data-craft-server:
+- `src/routes/v2/{index,social/index,social/ping,social/health}.ts` (삭제)
+- `src/routes/debug-chain.ts` (삭제)
+- `src/app.ts` (debug-chain 마운트/import 제거)
