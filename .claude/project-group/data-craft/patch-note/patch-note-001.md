@@ -33218,3 +33218,28 @@ data-craft-admin-server:
 
 ### 영향 파일
 data-craft: `packages/fs-viewer-core/src/features/grid/lib/**`(신규 40)·`features/index.ts`·`grid/lib/index.ts` 배럴, `packages/fs-data-viewer/src/features/grid/lib/**`(shim 40·partial index 혼합), `src/pages/mobile/MobilePageView.tsx`(미사용 import 제거)
+
+## v001.1120.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #473 (funshare-inc/data-craft)
+
+Roadmap-17 R4 — 관리자 콘솔 프로모션 카탈로그 직접변경(create/update)·해제(remove)가 실사용 갱신 파이프라인의 LIVE-read 소급성·고아 좌석큐와 충돌하지 않도록 가드. data-craft-admin-server 단일 repo, 코드-only(스키마 무변경).
+
+### 페이즈 결과
+- **Phase 1 (`3ceff4f`, adminPromotion.service.ts)**: 프로모션 카탈로그 변경 가드 2종.
+  - `PROMOTION_HAS_ACTIVE_ASSIGNMENTS` (400): `updatePromotion`이 활성 `client_promotion`(status='active') 보유 시 `is_collaboration`/`min_users`/`max_seats` 변경 거부 [C2]. 이 3필드는 갱신(`renewPromotionClient`)에서 LIVE read(스냅샷 컬럼 없음)되어 활성배정에 소급 — `max_seats` 하향 시 기존 `snapshotSeats` 초과로 `assertValidSeats` throw → 갱신실패 → free 강등. 변경감지 타입 정규화(`Boolean()`/`Number()` 양측). 정확히 이 3필드만 차단, 나머지(is_active·name·monthly_price[스냅샷]·max_retention[스냅샷]·display·priority)는 자유편집.
+  - `INVALID_PROMOTION_SEATS_RANGE` (400): `createPromotion` + `updatePromotion`에서 `min_users > max_seats`(둘 다 non-null) 거부 [C1]. 역전 시 협업 프로모션 좌석검증 모순 방지.
+- **Phase 2 (`89cf9d1`, adminCompanies.service.ts)**: `removePromotion`이 프로모션 해제 시 pending `client_seat_change_requests`를 DELETE [B2a]. 서비스측 `expireClientPromotionInTx`(promotion.model.ts:367-370)의 동일 DELETE와 정합 → 해제 후 고아 좌석 델타가 이후 per-user 유료 복원 시 다음 갱신에 합산 오청구되던 것 차단.
+
+### 알려진 한계
+- **C2 거친 차단**: 유리한 변경(예: max_seats 상향)도 활성배정 중엔 차단됨 → 운영상 비활성화(is_active=false)로 신규 배정 중단 후 변경하거나 비활성+재생성 워크플로우 필요(R2 D2와 동일 트레이드오프).
+- **C2 complete-body 계약 의존**: updatePromotion이 full-replacement(전체 컬럼 교체)이고 C2 변경감지가 `input.X !== undefined` 게이트라, 호출자가 항상 완전한 프로모션 객체를 보낸다는 계약 하에서만 airtight. partial body 전송 시 우회 가능(updatePromotion의 pre-existing 속성, R4 미도입 — note).
+
+### 영향 파일
+data-craft-admin-server:
+- `src/services/adminPromotion.service.ts` (C2, C1)
+- `src/services/adminCompanies.service.ts` (B2a)
+
+### advisor 검증
+- 계획 advisor #1: PASS (5관점). 완료 advisor #2: PASS (5관점, C2/C1 공존·B2a 정합 확인).
