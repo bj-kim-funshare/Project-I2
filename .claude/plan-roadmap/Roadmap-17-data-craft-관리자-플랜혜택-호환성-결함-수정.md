@@ -6,7 +6,7 @@
 
 🟢 /task-db-structure data-craft [R1a·CRITICAL·완료] E1 — referral_credit.source_payment_id nullable 정합(admin 20260619 nullable 의도 확정, server 20260621 SET NOT NULL supersede). 마이그레이션 20260625, dev·prod 적용 완료(머지 30370b3, advisor PASS, 비파괴·행수0). grantCredit 코드 무변경 — source_payment_id=NULL INSERT 정상화. ※원 감사가 admin 20260619 nullable 마이그레이션을 놓쳐 "합성 payment 행·스키마 무변경" 전제가 틀렸고, 실제 수정은 DDL nullable 정합이었다(라이브 dev·prod 실측 확정).
 
-🔴 /plan-enterprise data-craft [R1b·CRITICAL·E3 코드] 평생 3개월 추천 적립 캡 우회 차단. referral_relation.*_granted_months 가 가변 카운터(DB 상한 없음)뿐이라 adjustMonths(0) 리셋 후 무한 재적립 가능. 발급 referral_credit 원장 기반 캡(누적 full_phase 개월 산출) 또는 adjustMonths 하향 시 재적립 게이트로 referralEarning.service.ts 캡 로직 + admin grantCredit/adjustMonths 캡 체크를 정합. 보고서 ~/Documents/data-craft-admin-호환성-감사-20260625/REPORT-관리자-플랜-혜택-호환성.md 참조.
+🟢 /plan-enterprise data-craft [R1b·CRITICAL·완료] E3 — 평생 3개월 추천 적립 캡 우회 차단. adminReferral.adjustMonths 에 no-lowering 가드(FOR UPDATE 현재값보다 낮은 SET 거부) 추가 → granted_months monotonic → adjustMonths(0) 리셋 재적립 우회 봉쇄(Option A 코드-only, 스키마 무변경). 이슈 #465, commit 00ae5905, patch-note v001.1110.0, advisor 계획·완료 PASS. **E1(task-db-structure)과 함께 R1 두 CRITICAL 완결.**
 
 🔴 /plan-enterprise data-craft [R2 쿠폰] 할인쿠폰 결함 3건. (D4) data-craft-server reserveCouponWithConnection·lockCouponCodeForUpdate에 coupon_code.deleted=false 검사 추가(soft-delete 무력화 차단). (D2) updateCoupon LIVE 소급(발급 wallet 즉변) 정책 결정 후 가드(활성 발급분 보유 시 경제필드 변경 차단 또는 wallet 스냅샷). (D1) createCoupon applies_all=false+target0 영구사용불가 서버검증.
 
