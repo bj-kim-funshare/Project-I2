@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1100.0
+
+> 통합일: 2026-06-24
+> 플랜 이슈: #453 (핫픽스8)
+
+**spec-dashboard 미들웨어·엔드포인트 표 순서번호 + 전역 미들웨어 범위 라벨 구분(모순 해소).** (1) 미들웨어·엔드포인트 표 앞에 파이프라인처럼 **순서 번호 열** 추가(미들웨어 1..13, 엔드포인트는 필터 결과 기준 1..M 재번호). (2) **"전역인데 미포함이 있다"는 모순 해소**: 전역(global) 라벨이 두 종류를 똑같이 표기하던 것을 범위별로 구분 — `전역 (전체 라우트)`(cors·helmet 등, /api보다 앞 마운트→225 전부, 미포함0) / `전역 (/api 보호 마운트)`(authMiddleware·permissionMiddleware, /api 마운트에만→공개·자체인증 52개는 미포함) / `전역 (마운트별)` / `라우트레벨`. 포함/미포함 패널 상단에 사유 노트("이 미들웨어는 /api 보호 마운트에만 적용 — /api 앞 공개·자체인증 라우트 52개는 미포함") 추가. authMiddleware의 전역+미포함52가 더 이상 모순으로 보이지 않음.
+
+### 페이즈 결과
+- **핫픽스8 Phase(누적 2커밋)** (feat) `d975934`→`5cb4127`: `spec-dashboard/app.js`·`index.html`·`styles.css`. +100/−13.
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/app.js` (순서번호 + globalScopeLabel + 패널 사유 노트)
+- `spec-dashboard/index.html` (표 헤더 순서 열)
+- `spec-dashboard/styles.css` (번호 셀·범위 라벨 스타일)
+
 ## v001.1098.0
 
 > 통합일: 2026-06-24
