@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1110.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #465
+
+**R1b·E3 — 추천 적립 평생 3개월 캡 우회 차단(CRITICAL).** `referral_relation.{referee,referrer}_granted_months` 가 가변 카운터(DB 상한 없음)로만 캡을 강제하던 탓에 `adminReferral.adjustMonths` 가 카운터를 0 으로 낮추면 `accrueReferralCredits` 가 재적립하여 평생 캡을 무한 우회할 수 있었다. adjustMonths 에 **no-lowering 가드**(FOR UPDATE 로 읽은 현재값보다 낮은 SET 시 `CANNOT_LOWER_GRANTED_MONTHS` 거부)를 추가해 카운터를 monotonic 으로 강제 → 우회 봉쇄(코드-only, 스키마 무변경). 카운터 변경 경로(accrue +, grantCredit +1, admin SET)가 모두 non-decreasing 이 되어 서버측 캡 산출(`referralEarning.service.ts`) 무변경으로 견고. relation 재생성 리셋 벡터 부재 확인(`createReferralRelationWithConnection` INSERT-only, referee PK, DELETE/upsert 경로 없음).
+
+> ⚠️ **알려진 한계(의도)**: 관리자가 과다 설정된 카운터를 하향-교정하는 경로도 함께 차단됨(Option A 채택). 런타임 기능검증(adjustMonths(referee,0) 차단)은 referral_relation 픽스처 필요로 연기 — 정적검증(tsc·eslint·diff) 통과. E1(`referral_credit.source_payment_id` nullable, task-db-structure 별도 완료)과 함께 **R1(관리자 추천 크레딧 결함 2건) 완결**.
+
+### 페이즈 결과
+- **Phase 1** (`00ae5905`, data-craft-admin-server): `adminReferral.adjustMonths` no-lowering 가드 추가 — 카운터 monotonic 강제, 캡 우회 봉쇄. tsc·eslint PASS.
+
+### 영향 파일
+- data-craft-admin-server: `src/services/adminReferral.service.ts`
+
 ## v001.1108.0
 
 > 통합일: 2026-06-25
