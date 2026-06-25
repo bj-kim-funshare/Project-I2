@@ -8,7 +8,7 @@
 
 🟢 /plan-enterprise data-craft [P2·버그] rateLimiter.middleware.ts 의 rate-limit export(authLimiter·strictLimiter·apiLimiter·paymentVerifyLimiter·analyticsLimiter)에 express-rate-limit 의 RateLimitRequestHandler 명시 타입 주석 부여 → 선언(.d.ts) 방출 시 TS2742 포터빌리티 오류 해소. 순수 타입 주석, 런타임 무변경. pnpm build(tsc) 검증.
 
-🔴 /plan-enterprise data-craft [P3·버그] src/routes/test.ts 의 /notification 테스트 핸들러 catch 에 잘못 복붙된 CALL_ID.test.token 을 알림 전용 CALL_ID 로 교정(+동일 복붙 추가 점검). 에러 로그 오분류 수정, 동작 무변경.
+🟢 /plan-enterprise data-craft [P3·버그] src/routes/test.ts 의 /notification 테스트 핸들러 catch 에 잘못 복붙된 CALL_ID.test.token 을 알림 전용 CALL_ID 로 교정(+동일 복붙 추가 점검). 에러 로그 오분류 수정, 동작 무변경.
 
 🔴 /plan-enterprise data-craft [P4·정리] 죽은/임시 코드 제거 — src/routes/v2/ DEPRECATED 빈 스텁 디렉토리 전체 + debug-chain 임시 디버그 라우터(app.ts 조건부 마운트 + routes 등록 + 잔존 FE 호출 포함). 미마운트/prod-비활성 코드라 동작 무변경. 골든 재생으로 무영향 확인.
 
