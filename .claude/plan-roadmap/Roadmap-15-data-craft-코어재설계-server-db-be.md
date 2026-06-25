@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
 >
-> **현황(2026-06-25)**: 🟢2 · 🟡2 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료. 잔여: 레거시 DROP(흡수+cutover 후 보류)·BE cutover(리네임 잠금 해제됨)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
+> **현황(2026-06-25)**: 🟢2 · 🟡3 · 🔴2 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**. 잔여: 레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
 
 ## 프롬프트
 
@@ -16,7 +16,7 @@
 
 **— 구현 (코드 = i-dev 머지 / prod DB·배포만 컷오버 보류) —**
 
-🔴 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화 모델) + 데이터 쓰기 경로 페이지 read/write 권한 강제(현행 company_id-only → 페이지권한).
+🟡 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화 모델) + 데이터 쓰기 경로 페이지 read/write 권한 강제(현행 company_id-only → 페이지권한). **부분완료(#485 CLOSED, 2026-06-25)**: client→company 정렬(12파일·60건) + SP 비-삼킴 호출자 적응(errorMiddleware P0001→400·ALL_FAILED 보존) dev 완료·i-dev 머지(e79dbfe). **잔여**: value_data→data·row_num→row_id(쓰기-경로 fork=SP 바디 재작성 DDL 선행 필요로 보류) · 서버계산 캐싱(Phase3 분리) · 페이지권한(신 permission 0행→흡수 후).
 
 🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환 · option-id 발급 · area→정수격자 도출을 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트, dev=합성시드). 통과 = prod 적용 인가. (db.md pre-deploy 읽기전용 psql 인가 패턴 재활용)
 
@@ -33,7 +33,7 @@
 - 🟢 **선행 Roadmap-5 흡수** — R5(closed 2026-06-11)와 §3 객체 DISJOINT(R5=SQL VIEW/릴레이션3테이블, R15 §3=뷰어세팅+폼 테이블), 충돌 0. 조치 불필요.
 - 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·created_at SP정정(P0a~P0d) dev적용·i-dev머지 ✅. **SP 비-삼킴(3종 sp_manage_data_group/value/bulk: EXCEPTION WHEN OTHERS→FAILED 삼킴 제거→RAISE LOG+RAISE 전파, 행동검증 통과)·client→company 리네임(19 FK 자동추종·제약/인덱스/트리거 cosmetic·잔존 client객체 0) dev적용·i-dev머지 ✅ (2026-06-25, task-db-structure, server i-dev 머지 b6abfde)**. 미착수: **레거시 DROP만 잔존** — 흡수 미완(widget_preset/permission/company_setting 0행·task-db-data 폼흡수 미착수→데이터손실) AND BE cutover BLOCKED 의존 → 흡수+cutover 후 최종단계 의도적 보류. (admin-server=그룹 비소속·DB FK 0건 → `FROM client` 쿼리는 BE cutover 핸드오프.)
 - 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED, DataType 5종·CellData·CellFormulaSpec(재귀AST)·RowId·permission/company_setting/widget_preset 타입 전부 동결·export·additive.
-- 🔴 **BE 콜사이트 cutover** — src/ 무변경(옛 테이블 활성: value_data 205·row_num 541·role 78…). **리네임 얽힘 잠금 해제됨**(client→company dev 적용 완료 2026-06-25 → 이제 cutover 가 `company` 기준으로 정렬 가능). dev BE 는 리네임 후 `client` 참조 raw SQL(708)·`{status:FAILED}` 의존 호출자가 깨진 상태(합성 시드 dev, BE cutover 가 복구) → 이 단위가 cutover 의 선결조건이었음.
+- 🟡 **BE 콜사이트 cutover** — **부분완료(#485 CLOSED, plan-enterprise, 2026-06-25)**: ① client→company SQL 정렬(12파일·60건, PoolClient/client_promotion 무접촉) ② SP 비-삼킴 호출자 적응(errorMiddleware P0001→400 중앙매핑·죽은 FAILED 체크 제거·ALL_FAILED 보존·재구성 금지) dev 완료·i-dev 머지(e79dbfe). 깨짐 창 폐쇄 — dev psql 런타임 스모크로 signin 500 해소 실증. eslint+tsc·advisor #1·#2 PASS. **잔여(후속 단위)**: value_data→data·row_num→row_id(data/row_id 가 generated 아님·트리거 동기화 없음 실측 → SP 바디 재작성[task-db-structure DDL] 선행 필요로 보류) · 서버계산 집계 캐싱/무효화(Phase3 분리) · 페이지 read/write 권한(신 permission 0행→task-db-data 흡수 후, role/page_role 레거시 유지). ⚠️ SP검증오류→HTTP400 전구간 live 스모크는 코드레벨만 검증.
 - 🔴 **prod 형태 재인코딩 게이트** — prod 대상이라 현 dev-only goal 범위 밖.
 - 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. 미착수: option-id 발급·라벨박제 제거·색 전역화·폼→widget_preset 흡수·permission/company_setting/widget_preset 적재(현 0행).
 - 🔴 **조율 컷오버(prod)** — prod 대상, 범위 밖.
