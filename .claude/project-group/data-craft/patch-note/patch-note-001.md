@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1112.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #467 (Roadmap-18 P3)
+
+**Roadmap-18 P3 — test.ts `/notification` 핸들러 CALL_ID 오분류 교정(동작 무변경).** `src/routes/test.ts` 의 `GET /notification` catch 가 복붙으로 `CALL_ID.test.token`(토큰 테스트)을 써서 알림 테스트 에러가 토큰 테스트로 오분류되던 것을 정정. `config/constant.ts` 의 `CALL_ID.test` 에 `notification: { code: 'TEST-R-004', message: '알림 생성 테스트' }` 신규 추가(전체 레지스트리 grep 으로 코드 충돌 0 확인) 후 핸들러를 `CALL_ID.test.notification` 로 교정. 나머지 test 핸들러(db/token/monitor/clearMonitor)는 정상 재확인 — 오용 1건만. diff +2/−1, 성공응답·상태코드·핸들러 로직 무변경. 비고: callId 는 에러 봉투 필드라 `/api/test/notification`(dev 전용) 에러경로 callId 가 TEST-R-002→TEST-R-004 로 바뀜 = 본 버그의 의도된 교정.
+
+**검증**: build(tsc)·lint 통과. baseline 골든 재생(8 엔드포인트) **회귀 0** — /api/test 외 표면 무영향 확인(하니스 첫 리팩토링-단계 회귀 게이트 통과).
+
+### 영향 파일
+data-craft-server:
+- `src/config/constant.ts` (CALL_ID.test.notification 추가)
+- `src/routes/test.ts` (/notification catch callId 교정)
+
 ## v001.1111.0
 
 > 통합일: 2026-06-25
