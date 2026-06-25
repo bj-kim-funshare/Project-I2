@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1136.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #486 (funshare-inc/data-craft)
+
+**뷰어 코어 통합 R16① — fs-viewer-core를 fs-data-viewer로 흡수·core 패키지 삭제(단일 패키지화·방향 반전).** 소비자 그래프 검증 결과 fs-viewer-core 소비자가 fs-data-viewer 단 하나(316 ref, 외부 소비자 0)임이 드러나, 1-소비자 공유 패키지는 군더더기 간접층(패키지 경계 + tsup DTS 빌드 + shim 유지비)일 뿐이고 그 cross-package 경계가 E-namespace TS2724 난관의 원인이었다. → fs-viewer-core 코드 325파일을 fs-data-viewer로 흡수하고 core 패키지를 삭제, **단일 패키지화**. 내부 경계 소멸로 E-namespace류 cross-package DTS 문제를 **구조적으로 영구 제거**. 루트앱은 `fs_data_viewer` 메인엔트리만 소비(subpath 0)하므로 소비자 무영향. dev 전용(prod 무접촉), build:packages·typecheck:all·lint 0 errors 게이트 통과.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `0a843c0f2`: semi-atomic collapse — (1) core src 325파일을 fs-data-viewer 동일경로로 이동(shim 294 대체)+fresh 5(i18n 번역·image-quality.types). (2) 배럴 6: entities/index·e-namespace·viewer.types=core 덮어쓰기(superset), features/index·shared/index·grid/lib/index=**MERGE**(core flat named 표면 + fork F/S/lib 네임스페이스 둘 다 보존 — flat 표면 소실 방지). (3) 잔여 `fs_viewer_core` import 전부 상대경로 재지정(0 잔존). (4) 루트 vite.config.ts alias 2줄·package.json dep 삭제. (5) `packages/fs-viewer-core/` 삭제. 게이트 iterate 4건 수정(패키지 진입 index 복원·S네임스페이스 theme import·helpers/index row-menu 병합·print/engines PrintEngineType 재수출). 독립 gate-runner 0 errors + advisor #2 PASS(3 네임스페이스 배럴 양 표면 보존 확인).
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/**` (core 325파일 흡수·shim 294 대체·배럴 6 병합·import 재지정, 318파일 수정+5 신규)
+- `packages/fs-data-viewer/package.json` (`fs_viewer_core` dep 삭제)
+- `vite.config.ts` (루트, `fs_viewer_core` alias 2줄 삭제)
+- `packages/fs-viewer-core/**` (323파일 삭제 — 패키지 제거)
+
+### 비고
+- 추출 증분(#459~#483)의 방향 반전 — 1-소비자 core는 끝구조에서 군더더기, 진짜 중복제거 이득은 sub/external 삭제(후속). E-namespace 소비측-조립 패턴은 단일 패키지화로 내부화되어 문제 자체 소멸.
+
 ## v001.1135.0
 
 > 통합일: 2026-06-25
