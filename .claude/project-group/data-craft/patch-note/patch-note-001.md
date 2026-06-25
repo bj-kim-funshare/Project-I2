@@ -33319,3 +33319,43 @@ data-craft-server:
 
 ### advisor 검증
 - 계획 advisor #1: BLOCK(초안 E5 backfill — revoke 시그니처 오염 지적) → 관측가능화로 리워크 후 PASS. 완료 advisor #2: PASS (E6-tail 진리표 전수 검증, E5 시그니처 보존 확인).
+
+## v001.1124.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #476 (funshare-inc/data-craft)
+
+Sendbird 채팅 연결을 **lazy(채팅 화면이 활성일 때만 연결)**로 재설계하고 FCM 푸시 토큰 등록을 **서버 Platform API로 이전** → 무료 Developer 플랜의 조직 공용 Peak Concurrent Connections(PCC) 10캡을 절약. 2 repo(data-craft-server 1 + data-craft-mobile 2 페이즈).
+
+### 배경
+기존 설계는 `chatConnectionProvider`가 로그인 즉시 Sendbird에 연결하고 세션 내내 유지 → 채팅을 안 해도 모든 로그인 유저가 PCC 1개를 상시 점유. 게다가 연결 중인 유저는 Sendbird 입장에서 "online"이라 **푸시가 안 옴**(푸시는 오프라인일 때만 전송). 즉 PCC도 낭비하고 푸시도 막는 구조였다. 본 작업으로 "PCC 10 = 동시에 채팅 화면이 떠 있는 유저 10명"이 되고, 채팅 화면 밖/앱 종료 시엔 항상 오프라인이라 푸시가 정상 작동한다.
+
+### 페이즈 결과
+- **Phase 1 (`d3d8ff91`, data-craft-server)** [서버 푸시 토큰 등록/해제 엔드포인트]: `sendbird.service.ts`에 기존 `fetchWithTimeout`+`getHeaders`(Api-Token)+`handleSendbirdError` 패턴을 재사용해 `registerPushToken`(POST `/v3/users/{userId}/push/fcm` body `{push_token}`)·`unregisterPushToken`(DELETE, 토큰 `encodeURIComponent`) 추가. `chat.controller.ts`에 `req.userId!` 인증 + `fcmToken` 빈값 `BadRequestError` 검증을 갖춘 컨트롤러(CHAT-C-013/014), `routes/chat.ts`에 `POST /push-token`·`DELETE /push-token/:fcmToken` 등록. 이로써 클라가 푸시 등록만을 위해 Sendbird에 연결할 필요가 사라진다(PCC 0의 서버측 기반).
+- **Phase 2 (`8d43afe8`, data-craft-mobile)** [푸시↔연결 분리 + lazy ref-count]: `chat_api.dart`에 서버 경유 등록/해제 API 추가. `chat_push.dart`의 SDK `registerPushToken`/`unregisterPushToken`을 서버 호출로 교체(초기 등록 + `onTokenRefresh` 재등록 **둘 다** 서버 경로, kIsWeb/Platform.isAndroid 가드 유지, 전부 fire-and-forget). `chat_service.dart`: `connect()`=SDK 연결만, `disconnect()`=SDK 해제+clearCachedData만(세션 중 반복 호출 안전), 로그아웃 전용 `logoutTeardown()`(푸시 해제+revokeSessionToken+disconnect) 분리. `chat_connection_provider.dart`: 로그인 시 **연결 없이 서버 푸시 등록만**, 로그아웃 시 ref-count 리셋+teardown, `_ChatRefCountController`(acquire/release — 첫 holder만 connect, 0이면 5초 grace 후 disconnect, **release는 푸시 미해제**, 중복연결·음수·재획득취소 가드) 신설.
+- **Phase 3 (`77da553f`, data-craft-mobile)** [화면 배선 + 앱 라이프사이클 + 딥링크]: ChatRoom·ChannelSettings(pushed)는 `_acquired` 가드로 postFrame `acquire()`/dispose `release()`, paused 시 release/resumed 시 re-acquire. ChatRoom은 `chatConnectedProvider` false면 로딩 스캐폴드를 띄워 연결 전 `chatMessagesProvider` 접근 race 차단. ChatList는 kept-alive 탭이라 자체 acquire/release 없음 — `MainShell`(ConsumerStatefulWidget+WidgetsBindingObserver)이 `_reconcile()` 하나로 DM 탭 가시성(currentIndex==3)+라이프사이클(paused/resumed)을 통합 처리(`_shellHolding` 이중방지)해 탭 진입 시 acquire/이탈·백그라운드 시 release. 딥링크는 `chatConnectedProvider` 대기를 제거하고 인증 완료(`authControllerProvider` isAuthed) 시 `pendingNotificationChannelUrl`을 즉시 navigate(1회 소비) — 연결은 ChatRoom 자체 `acquire()`가 주도.
+
+### 알려진 한계
+- **PCC/푸시 동작 실증은 Sendbird 재활성 전까지 불가**: 현재 조직 PCC 캡 초과로 앱이 disabled(403100) → 모든 chat 호출 실패. 본 작업의 핵심 검증 기준(로그인만 시 PCC 미증가, 채팅 화면 진입 시에만 연결, 채팅 밖 푸시 수신)은 정적(build/lint/코드리뷰)까지만 확인했고 **동작 실증은 앱 재활성 후 실기기 필요**(이 수정이 캡을 안 넘게 하는 건데 증명하려면 앱이 켜져 있어야 하는 chicken-and-egg).
+- **첫 DM 탭 진입 시 짧은 빈 채팅목록 플래시**: 연결이 로그인이 아닌 DM 탭 진입 시 시작되므로, 첫 진입(또는 5초 grace 경과 후 재진입)에서 연결 완료 전까지 수백 ms 동안 빈 상태("채팅 없음")가 보일 수 있음(크래시 아님, 채널 로드 후 정상 표시).
+- **prod 갭**: Phase 1 서버 엔드포인트는 i-dev 머지 후 dev에만 라이브 → data-craft-server prod 배포 전까지 모바일 prod 푸시는 옛(클라 SDK) 경로. 모바일 prod 푸시 전환은 서버 배포 후.
+
+### 영향 파일
+data-craft-server:
+- `src/services/sendbird.service.ts` (registerPushToken/unregisterPushToken)
+- `src/controllers/chat.controller.ts` (CHAT-C-013/014)
+- `src/routes/chat.ts` (POST/DELETE /push-token)
+- `src/types/sendbird.types.ts` (SendbirdRegisterPushTokenResponse)
+
+data-craft-mobile:
+- `lib/api/chat_api.dart` (서버 푸시 토큰 API)
+- `lib/chat/chat_push.dart` (SDK→서버 등록, onTokenRefresh 포함)
+- `lib/chat/chat_service.dart` (connect/disconnect/logoutTeardown 분리)
+- `lib/chat/chat_connection_provider.dart` (lazy ref-count 컨트롤러)
+- `lib/screens/dm/chat_room_screen.dart` (acquire/release + 연결 전 로딩 가드)
+- `lib/screens/dm/channel_settings_screen.dart` (acquire/release)
+- `lib/screens/main_shell.dart` (DM 탭 가시성·라이프사이클 통합 reconcile)
+- `lib/main.dart` (딥링크 즉시 navigate 재배선)
+
+### advisor 검증
+- 계획 advisor #1: PASS(5관점) — lazy 연결 + 서버 푸시(Option B) 채택. 완료 advisor #2: PASS — 단방향→순환 연결 전환의 미변경 소비자 3종을 정적 재검증(`chat_channels_provider` 매 연결마다 `_init()` 재생성, `chat_messages_provider` autoDispose+재init, `chat_list_screen` 연결 전 빈상태 렌더 무크래시), 딥링크 라우터-준비 no-op 가드·룸 라우트가 셸 밖 root navigator라 오프탭 점유 불가 확인.
