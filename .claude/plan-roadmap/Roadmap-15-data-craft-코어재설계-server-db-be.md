@@ -1,70 +1,91 @@
 # Roadmap 15: data-craft 코어 재설계 ① 계약동결 + server (DB+BE)
 
-> 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
+> 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
-> **현황(2026-06-26)**: 🟢3 · 🟡3 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**흡수 M1+M2 완료(widget_preset/company_setting/permission 적재·색 전역화·dangling drop, 2026-06-25)**·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**·**SP/트리거 dual-write+option-id 인프라 완료(e6cd2cf/b6dbf4e)·option-id 발급 180행(03f57b7)**. 잔여: **D8(블록타입 41 enum/열 — Roadmap-16 FE 재설계 유입, ①②와 직교)**·레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
+> **현황(2026-06-26 v2)**: 🟢2 · 🟡3 · 🔴11 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
 
 ## 프롬프트
 
-🟢 (ad-hoc) Roadmap-5(data-craft-view-removal-cud-policy) 완료/흡수 확인 — §3 data_viewer_setting/_column_setting 제거·폼 폐지가 Roadmap-5와 직접 중첩. 진입 전 5의 완료/흡수 여부 확인(중복작업·트랙 충돌 방지). Roadmap-12(monorepo refactor)는 FE라 16에서 점검.
+🟢 (ad-hoc) Roadmap-5(data-craft-view-removal-cud-policy) 완료/흡수 확인 — §3 data_viewer_setting/_column_setting 제거·폼 폐지가 Roadmap-5와 직접 중첩. (확인 완료·충돌 0.) Roadmap-12(monorepo refactor)는 FE라 16에서 점검(완료/격리).
 
 **— Phase 0 : 계약 동결 (★Roadmap 16 진입 게이트) —**
 
-🟡 /task-db-structure data-craft — 신 스키마 DDL 설계 + dev/staging 적용(prod는 최종 컷오버 보류): `client→company` 전 스키마 리네임(data-craft-admin-server FK 포함)·컬럼추가(seq·is_required·parent_group_id·parent_row_id 등)·신규 4테이블(permission / company_setting / widget_preset / data_row) + SP·트리거 재작성(비-삼킴 계약 · created_at 정정 · JSON·5타입 검증). REDESIGN-SPEC §3·§8·§9·§11 + REDESIGN-VERIFICATION 보강권고(다형성 owner FK 분해·form-type 강제수단) 반영.
+🟡 /task-db-structure data-craft — 신 스키마 DDL 설계 + dev/staging 적용(prod는 최종 컷오버 보류): `client→company` 전 스키마 리네임(data-craft-admin-server FK 포함)·컬럼추가(seq·is_required·parent_group_id·parent_row_id 등)·신규 4테이블(permission / company_setting / widget_preset / data_row) + SP·트리거 재작성(비-삼킴 계약 · created_at 정정 · JSON·5타입 검증). REDESIGN-SPEC §3·§8·§9·§11 + REDESIGN-VERIFICATION 보강(다형성 owner FK 분해·**form-type 강제수단**[→④에서 신 모델 위해 일반화]) 반영.
 
-🟢 /plan-enterprise data-craft — fs-api 계약 타입 동결(work_repo=data-craft, packages/fs-api, **타입-only·구현 전·i-dev 머지**): columnType 5번째 enum(JSON) · rowField(row_num→row_id) · cells 값 JSON 직렬화 형태 · widget_preset/permission/company_setting 응답 타입. FE↔BE 공유 계약의 단일 소스 → 이 동결이 Roadmap 16 진입 게이트.
+🟢 /plan-enterprise data-craft — fs-api 계약 타입 동결(work_repo=data-craft, packages/fs-api, 타입-only·i-dev 머지): columnType 5번째 enum(JSON) · rowField(row_num→row_id) · cells 값 JSON 직렬화 · widget_preset/permission/company_setting 응답 타입. (#456 CLOSED — **5 dataType 동결**; 41 블록타입 계약은 별건=R16 P1 소유.)
 
 **— 구현 (코드 = i-dev 머지 / prod DB·배포만 컷오버 보류) —**
 
-🟡 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화 모델) + 데이터 쓰기 경로 페이지 read/write 권한 강제(현행 company_id-only → 페이지권한). **부분완료(#485 CLOSED, 2026-06-25)**: client→company 정렬(12파일·60건) + SP 비-삼킴 호출자 적응(errorMiddleware P0001→400·ALL_FAILED 보존) dev 완료·i-dev 머지(e79dbfe). **잔여**: value_data→data·row_num→row_id(쓰기-경로 fork=SP 바디 재작성 DDL 선행 필요로 보류) · 서버계산 캐싱(Phase3 분리) · 페이지권한(신 permission 0행→흡수 후).
+🟡 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화) + 페이지 read/write 권한 강제. **부분완료(#485 CLOSED)**: client→company 정렬 + SP 비-삼킴 호출자 적응 dev 머지(e79dbfe). **잔여**: value_data→data·row_num→row_id 읽기-스위치(dual-write 완료로 해금) · 서버계산 캐싱 · 페이지권한.
 
-🔴 /task-db-structure data-craft — **D8 (Roadmap-16 FE 위젯 재설계에서 유입된 조정, 2026-06-26)**: 41 블록타입 enum 신설 + `data_column.블록타입` 열(Not Null) + 기존 type 컬럼→블록타입 백필. **dataType(5)와 직교한 렌더링타입(41) 메타데이터 — 진행 중인 value_data→data 셀 작업과 무관(직교).** FE 41 블록타입 ↔ DB enum ↔ 레지스트리는 fs-api 계약 단일출처 참조. dev 적용·migration+rollback·advisor 게이트. (FE 설계 = `Roadmap-16-data-craft-위젯시스템-재설계-SPEC.md` §F·D8.)
+🔴 /task-db-structure data-craft — **D8 (Roadmap-16 FE 위젯 재설계 유입, 2026-06-26)**: 41 블록타입 enum 신설 + `data_column.블록타입` 열(Not Null) + 기존 type 컬럼→블록타입 백필. **dataType(5)와 직교한 렌더링타입(41) 메타데이터.** **매핑정정(2026-06-26 적대검증·마스터 확정): timer=number·uniqueID/color=json — 분포 string9/number5/date3/boolean2/json22.** dev 적용·migration+rollback·advisor 게이트. [**fs-api 41-block 계약 = R16 P1 소유·동결목록 정본**(collapse 후 앱 src), 본 enum은 그 목록과 정합·드리프트 금지(⑪)] [⚠️ **파생/계산 블록 7종**(rowID·uniqueID·lastUpdate·log·formula·quickFormula·dualBlock)=셀값 미저장 → dataType/백필 명목상, 셀 마이그 비대상으로 처리(가상/파생 열 개념)]
 
-🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환 · option-id 발급 · area→정수격자 도출을 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트, dev=합성시드). 통과 = prod 적용 인가. (db.md pre-deploy 읽기전용 psql 인가 패턴 재활용)
+**— 위젯 시스템 BE 슬라이스 (Roadmap-16 FE 재설계 유입, 2026-06-26 적대검증 도출) —**
+> 전부 additive 스키마+BE 엔드포인트(i-dev 머지·prod는 조율 컷오버 합류). 신 위젯 모델이 완료된 R15 작업(company_setting 폼락·preset_id 부재·page_section 미편성)과 충돌하는 부분을 정합.
 
-🟡 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod는 컷오버 보류): data_row 전수발급(group_id+row_num distinct = 첫 도미노) → text→JSON 셀 변환(타입충실) → option-id 발급·라벨 박제 제거 → 캘린더/간트 색 전역화·dangling-ref drop → 폼 인스턴스(라이브 170행)→widget_preset 흡수. capture+rollback 동반. **부분완료(M1·M2 dev머지, 2026-06-25): 흡수 trio(widget_preset/company_setting/permission 적재)+색 전역화+dangling drop ✅. 잔여 = option-id 발급·라벨박제 제거(task-db-structure DDL 선행 보류).**
+🔴 /task-db-structure data-craft (+task-db-data) — **④ company_setting 폼락 해제**: 현 `company_setting`은 `widget_type='form'` 하드락(generated col `preset_widget_type` + CHECK + 복합 FK, REDESIGN §F5 의도적). 신 사용자설정="즐겨찾기 최상위 위젯(임의 타입) 등록"과 충돌 → 락 일반화(generated/CHECK/복합FK 완화, 임의 widget_preset 참조 허용). DDL=task-db-structure; **흡수된 폼 29행(M1 c240ff2) 재처리 = task-db-data**(capture+rollback). advisor 게이트.
+
+🔴 /task-db-structure data-craft — **⑤ page_widget.preset_id + 참조해소 계약(스펙)**: REDESIGN §9는 preset_id 연결을 명시하나 §3.5 스키마/fs-api payload에 컬럼 부재 → REFERENCE(나만의 링크·사용자 참조) 미정의. `page_widget.preset_id` 실 컬럼(FK·인덱스) 추가 + 렌더 시 참조해소 **계약 명세** + **로컬편집=금지**(편집하려면 복사, 기본). copy(properties 인라인) vs reference(preset_id) 배타 모델 명문화. (스키마+계약 스펙만; **BE 참조해소 구현은 ⑦**.)
+
+🔴 /task-db-structure data-craft (+task-db-data) — **⑥ page_section/정수격자 스키마 + area→격자 마이그**: SPEC §7·§3.5 — `page_layout_widget→page_widget` 리네임·area 테이블 폐기·`page_section` 신설·정수격자 좌표(section_id·start_x/y·width·height). 라이브 %-기반 area→정수격자(100×70) 도출 알고리즘 명세(§11·§12 미명세분·실행 전 보완) + dev 마이그(task-db-data). **R16①의 선행 요건(R15⑥ 먼저, 단방향 — R15⑥는 FE에 내용 의존 없음).**
+
+🔴 /task-db-structure data-craft (+BE) — **⑦ widget_preset 3계층 확장**: 기존 owner_user_id XOR owner_company_id 소유 tier 활용 — 나만의(user-owned, 복사·참조)·사용자(company-shared, 참조전용)·최근사용(파생, ⑧). 참조/복사 의미(⑤ 연계)·사용자설정 권한(기존 철학). **BE 프리셋 CRUD·참조해소(⑤ 계약 구현).**
+
+🔴 /plan-enterprise data-craft — **⑧ recent-usage 조회 엔드포인트**(work_repo=data-craft-server, **BE-only·DDL無**): 동일 위젯타입+동일 그룹의 최근 적용 config 조회(조합 스코프·회사 범위·같은/다른 페이지). **계약 3줄 선확정**(스코프=조합/회사·그룹키=properties 내 group 바인딩·dedup/order 규칙). page_widget 현재행 파생(신 로그 X)·복사전용 적용용.
+
+🔴 /task-db-structure data-craft (+BE) — **⑨ file-group 모델 정식화**: 데이터그룹과 동격의 파일그룹 1급 엔티티(갤러리·파일 업로더·파일 탐색기 기반). 스키마+BE CRUD. (R16 ⑤⑦⑨⑩ 의존.)
+
+🔴 /task-db-structure data-craft (+BE) — **⑩ 관리주기 D1**: 페이지 관리주기 + 위젯별 연동 옵션(단일 데이터 vs 페이지 관리주기·비활성 시 단일 고정). 스키마+BE. (R16 관리주기 단위 의존.)
+
+🔴 /plan-enterprise data-craft — **⑪ 교차repo 드리프트체크**: DB blockType enum labels ↔ fs-api `ALL_BLOCK_TYPE_IDS` 41목록 byte 일치 검증(생성/CI 체크). 공유 패키지 불가(별도 repo)·이미 3중 드리프트 전력(ViewerType) → 자동 가드. [fs-api 41목록 정본=R16 P1] (소형 단위.)
 
 **— 조율 컷오버 (prod 단일 유지보수 창) —**
 
-🔴 (조율 컷오버) prod 대상 순서대로 (재)실행: `/task-db-structure data-craft`(prod DDL 적용) → `/task-db-data data-craft`(prod 데이터 마이그) → `/pre-deploy data-craft`(BE prod 배포·서버 git pull). **단일 창에서 일괄·조각내기 금지.** FE(Roadmap 16)는 본 컷오버 창에 합류 배포(DB→BE→FE 순).
+🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환·option-id 발급·area→정수격자 도출·timer MM:SS→초를 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트). 통과 = prod 적용 인가.
 
-## 진척 현황 (2026-06-25 검증 — dev 전용 goal 범위)
+🟡 /task-db-data data-craft — 데이터 마이그레이션 dev/staging 적용(prod 컷오버 보류): data_row 전수발급 → text→JSON 셀 변환(타입충실) → option-id 발급·라벨박제 제거 → 색 전역화·dangling drop → 폼→widget_preset 흡수. **부분완료(M1 c240ff2·M2 30ad0b1·option-id 180행 03f57b7 dev머지)**. 잔여: 라벨박제 제거(BE cutover 동반) + **신규(④/⑥ 동반): 폼29행 재처리·area→격자·timer "MM:SS"→초.**
 
-> 11에이전트 포렌식 + 3에이전트 게이트 재검증 기준. dev psql(data_craft_dev)·i-dev·문서 대조.
+🔴 (조율 컷오버) prod 대상 순서대로 (재)실행: `/task-db-structure data-craft`(prod DDL: Phase0+D8+④⑤⑥⑦⑨⑩ 일괄 — ⑧=BE-only DDL無·⑪=CI체크 제외) → `/task-db-data data-craft`(prod 데이터 마이그: text→JSON·option-id·④폼29행·⑥area→격자·timer→초) → `/pre-deploy data-craft`(BE prod 배포·서버 git pull). **단일 창 일괄.** FE(Roadmap 16)는 본 컷오버 창 합류(DB→BE→FE).
 
-- 🟢 **선행 Roadmap-5 흡수** — R5(closed 2026-06-11)와 §3 객체 DISJOINT(R5=SQL VIEW/릴레이션3테이블, R15 §3=뷰어세팅+폼 테이블), 충돌 0. 조치 불필요.
-- 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·created_at SP정정(P0a~P0d) dev적용·i-dev머지 ✅. **SP 비-삼킴(3종 sp_manage_data_group/value/bulk: EXCEPTION WHEN OTHERS→FAILED 삼킴 제거→RAISE LOG+RAISE 전파, 행동검증 통과)·client→company 리네임(19 FK 자동추종·제약/인덱스/트리거 cosmetic·잔존 client객체 0) dev적용·i-dev머지 ✅ (2026-06-25, task-db-structure, server i-dev 머지 b6abfde)**. 미착수: **레거시 DROP만 잔존** — 흡수 미완(widget_preset/permission/company_setting 0행·task-db-data 폼흡수 미착수→데이터손실) AND BE cutover BLOCKED 의존 → 흡수+cutover 후 최종단계 의도적 보류. (admin-server=그룹 비소속·DB FK 0건 → `FROM client` 쿼리는 BE cutover 핸드오프.)
-- 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED, DataType 5종·CellData·CellFormulaSpec(재귀AST)·RowId·permission/company_setting/widget_preset 타입 전부 동결·export·additive.
-- 🟡 **BE 콜사이트 cutover** — **부분완료(#485 CLOSED, plan-enterprise, 2026-06-25)**: ① client→company SQL 정렬(12파일·60건, PoolClient/client_promotion 무접촉) ② SP 비-삼킴 호출자 적응(errorMiddleware P0001→400 중앙매핑·죽은 FAILED 체크 제거·ALL_FAILED 보존·재구성 금지) dev 완료·i-dev 머지(e79dbfe). 깨짐 창 폐쇄 — dev psql 런타임 스모크로 signin 500 해소 실증. eslint+tsc·advisor #1·#2 PASS. **잔여(후속 단위)**: value_data→data·row_num→row_id(**SP/트리거 dual-write 재작성 완료 2026-06-25 server e6cd2cf → 쓰기경로가 data/row_id 유지 시작·스칼라 타입충실·수식=value_data-only → 읽기-스위치 해금**; BE 가 data/row_id 읽기 전환 + 수식 AST 파싱전달[후속 B] 시 완료) · 서버계산 집계 캐싱/무효화(Phase3 분리) · 페이지 read/write 권한(신 permission 0행→task-db-data 흡수 후, role/page_role 레거시 유지). ⚠️ SP검증오류→HTTP400 전구간 live 스모크는 코드레벨만 검증.
-- 🔴 **prod 형태 재인코딩 게이트** — prod 대상이라 현 dev-only goal 범위 밖.
-- 🟡 **데이터 마이그레이션** — data_row 전수발급(142,038)·row_id 100%·text→JSON 99.995%·value_data 100% 보존 dev✅. **M1 흡수 trio(widget_preset 29[폼 form_list→form-type 프리셋 흡수]·company_setting 5·permission 8 적재 + user.permission_id 11 재연결) dev머지 c240ff2 · M2(캘린더/간트 색 전역화 71,248·dangling-ref drop 50,060·살아있는 subgrid 부모 dvrs 2행 보존) dev머지 30ad0b1** ✅(2026-06-25, 대사 통과·advisor PASS·§12 provisional). permission 적재로 #485 페이지권한 강제 데이터 선결조건 해금. **option-id 발급 완료** — data_column_option 적재 **180행**(18 select 컬럼 option_list, seq=0-based ordinality, dedupe 0·고아 0·순서 일치) dev머지 **03f57b7**(2026-06-26, 대사·advisor PASS). 잔여: **라벨박제 제거(셀 재작성)만** — dual-write SP 옵션무지로 재-박제 결합·수식 AST 동류 fork → **BE cutover 단위 이연**(multiSelect 위치참조가 그전까지 brittle → select 읽기-스위치와 동반 이동). ⚠️커버리지: 82 select 컬럼 중 18만 option_list 보유 → ~64컬럼 = 셀라벨 도출 vs 빈채로 후속 master 결정.
-- 🟢 **SP/트리거 dual-write + option-id 인프라 (task-db-structure ①②③, 2026-06-25)** — ③ data_column_option 신설(b6dbf4e) · ①② 코어 셀-쓰기 SP 3종+EAV 트리거 dual-write 재작성(value_data+data[타입충실 CellData]·row_num+row_id, 수식=value_data-only·data=NULL, fn_to_cell_data helper, EAV 트리거 단일함수 통합+data 백스탑 게이팅[advisor BLOCK 보정 — 미게이팅 회귀 149,789행 차단], sp_manage_data_group byte-verbatim) dev머지 e6cd2cf. 행동검증 5종 통과(비-삼킴·스칼라 dual-write·수식 value_data-only·기존 수식셀 소프트삭제 無ERROR). 수식 AST 쓰기/읽기-스위치=후속 B(BE cutover), row_id 백필·option-id 발급=task-db-data 후속. §12 provisional.
-- 🔴 **조율 컷오버(prod)** — prod 대상, 범위 밖.
+## 진척 현황 (2026-06-26 v2)
+
+> 11에이전트 포렌식 + 게이트 재검증 + 2026-06-26 ultracode 적대검증 기준. dev psql(data_craft_dev)·i-dev·문서 대조.
+
+- 🟢 **선행 Roadmap-5 흡수** — §3 객체 DISJOINT, 충돌 0. Roadmap-12(atomic monorepo refactor)는 #458이 추월·격리(i-dev 미머지) — 단, R16 P0가 모노레포 전면 폐기로 12를 사실상 흡수/무효화(별도 추적).
+- 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·SP 비-삼킴·client→company 리네임 dev적용·i-dev머지(b6abfde). 미착수: 레거시 DROP만(흡수+cutover 후 보류).
+- 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED(5 dataType·CellData·RowId·permission/company_setting/widget_preset 타입). 41 블록타입 계약은 별건(R16 P1).
+- 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
+- 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 셀라벨 도출 vs 빈채로 **master 결정 미정**.
+- 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
+- 🔴 **위젯 시스템 BE 슬라이스 ④~⑪ (2026-06-26 유입)** — 미착수. D8(매핑정정 timer=number·파생7블록 명목처리) + company_setting 폼락해제(M1 폼29행 재처리)·preset_id·page_section/격자·widget_preset 3계층·recent-usage·file-group·D1·드리프트체크.
+- 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
 
 ---
 
 ## 로드맵 설명
 
-**★ 진입 게이트: Roadmap 16(FE)은 본 로드맵 Phase 0(① 스키마 DDL + ② fs-api 계약타입 동결) 완료 후에만 착수한다. 그 전 16 시작 금지.**
+**★ 진입 게이트: Roadmap 16(FE)은 본 로드맵 Phase 0(계약동결) 완료 후 착수.** (완료됨.)
 
 ### 목표
-data-craft 코어 서비스 스키마를 확정 설계서(`data-craft-server/docs/db-audit/REDESIGN-SPEC.md` v2)대로 재구축하는 **server(DB+BE) 트랙**. "데이터는 순수 데이터, 위젯이 표시 결정" 원칙 — 5 데이터타입(string/number/date/boolean/JSON) vs 43 렌더링타입 분리, EAV 셀 text→JSON, 폼·뷰어설정 테이블 제거(위젯 properties로 흡수), 권한 4→2 단일 permission 테이블, 프리셋(widget_preset) 시스템, SP/트리거 비-삼킴 재작성.
+data-craft 코어 서비스 스키마를 확정 설계서(REDESIGN-SPEC v2)대로 재구축하는 **server(DB+BE) 트랙**. 5 데이터타입 vs 41 렌더링타입 분리, EAV 셀 text→JSON, 폼·뷰어설정 테이블 제거, 권한 단일 permission, 프리셋(widget_preset), SP/트리거 비-삼킴. **+ 2026-06-26: Roadmap-16 FE 위젯 재설계가 요구하는 BE 슬라이스(④~⑪) 합류.**
 
-### 왜 이 경계·순서인가 (검토 근거)
-종합·적대 검토(`docs/db-audit/ROADMAP-SPLIT-REVIEW.md`) 결론: DB작업과 BE 앱코드는 **둘 다 data-craft-server·동일 i-dev**에 거주하고 raw SQL로 스키마에 708건 강결합 → "DB ∥ 웹BE" 병렬은 동일 브랜치 동시변경+의존 역행으로 깨짐(critical). 그래서 **분할 경계 = repo**(server[DB+BE] = 본 로드맵 직렬 / FE = Roadmap 16). FE는 별도 repo라 본 로드맵 Phase 0 계약동결 이후 staggered 병렬.
+### 분담·경계
+종합·적대 검토(ROADMAP-SPLIT-REVIEW) 결론: DB+BE는 둘 다 data-craft-server·동일 i-dev·raw SQL 708건 강결합 → 분할 경계=repo(server[DB+BE]=본 로드맵 / FE=Roadmap 16). 1+2=본 로드맵(위임 세션), 3=R16(본 세션 감독). FE는 별도 repo라 Phase 0 이후 staggered 병렬.
+
+### 위젯 시스템 BE 슬라이스 (2026-06-26 ultracode 적대검증 도출)
+R16 FE 위젯 재설계가 BE에 요구하는 것 + 신 모델이 완료된 R15 작업과 충돌하는 정합:
+- **충돌 정합**: company_setting 폼락(④, 사용자설정 임의위젯과 충돌·폼29행 재처리)·page_widget.preset_id 부재(⑤, REFERENCE 미정의)·page_section/정수격자 미편성(⑥, area→격자 마이그 미명세).
+- **신규 BE**: widget_preset 3계층(⑦)·recent-usage 조회(⑧, 조합스코프)·file-group(⑨)·D1 관리주기(⑩).
+- **드리프트 가드**: 41목록 DB enum↔fs-api 교차repo 체크(⑪, 공유 패키지 불가·fs-api 정본=R16 P1).
+- 전부 additive → i-dev 머지·조율 컷오버 합류. 각 단위 실행 전 미명세분 보완(⑥ area→격자 알고리즘·⑧ 3줄 계약·⑤ override 정책=기본 금지).
+- ⚠️ 파생/계산 블록 7종(rowID·uniqueID·lastUpdate·log·formula·quickFormula·dualBlock)은 셀값 미저장 → D8 dataType/백필 명목, 셀 마이그 비대상(가상/파생 열 개념). uniqueID는 재설계서 (열ID+행ID+그룹ID) 조합 구조 json.
 
 ### prod 깨짐 방지 (컷오버 전략)
-코드(fs-api 타입·BE 콜사이트)는 i-dev 정상 머지하되, **"prod 보류" = prod DB 적용 + BE prod 배포에 한정**. prod 변경 전체(DDL·데이터·BE배포)를 **마지막 단일 조율 컷오버 창**으로 묶는다 — rename·DROP 중심 설계라 expand/contract 대신 유지보수 창 채택(task-db-structure/task-db-data가 각자 prod까지 자동 롤아웃하면 신스키마-구코드 깨짐 창 발생, 이를 차단). prod DDL/데이터 적용은 마지막 컷오버 프롬프트가 prod 대상 (재)실행으로 수행.
-
-### 주요 결정·반영
-- client→company 리네임은 **전 스키마**(비코어·data-craft-admin-server FK 포함) 전파.
-- created_at 정정: SP UPDATE경로 created_at 5곳 제거(updated_at은 set_updated_at 트리거 자동), protect 트리거 유지 = 안전망(REDESIGN-SPEC §11, 8파티션 실측 HOLDS).
-- 검증 보강권고(REDESIGN-VERIFICATION §12): widget_preset owner_id 다형성 → owner_user_id+owner_company_id+CHECK 분해 / company_setting.preset_id form-type 강제(복합UNIQUE+FK+CHECK) / data_values FK0 유지(의도)·비-삼킴은 재작성 시 확실 제거.
+코드(fs-api·BE)는 i-dev 정상 머지하되 prod 보류 = prod DB 적용 + BE prod 배포. prod 변경 전체를 마지막 단일 조율 컷오버 창으로 묶음. ④~⑩ DDL은 컷오버 prod DDL 일괄에 포함(⑧ BE-only·⑪ CI체크 제외).
 
 ### 위험·메모
-- (실행 메모) 3.2M셀 text→JSON 일괄변환 = 유지보수 창 다운타임 길 수 있음 → task-db-data 실행 시 **온라인 백필(신규 컬럼 이중기록) 후 창에서 짧은 전환** 검토.
-- text→JSON: 라이브 ~70%가 평문 스칼라/수식이라 bare `::jsonb` 캐스팅 불가 → 타입충실 변환 함수 필수(naive to_jsonb = 타입 박제 = §1 원칙4 위반).
-- 모든 dev 실측은 합성 시드 — **prod 형태 재인코딩 검증 게이트 통과 전 마이그 '확정' 아님**(REDESIGN-SPEC §0·§12).
+- 3.2M셀 text→JSON 일괄변환 다운타임 → 온라인 백필 검토. text→JSON 타입충실 변환 함수 필수. 모든 dev 실측=합성 시드, prod 재인코딩 게이트 통과 전 '확정' 아님.
+- ④ company_setting 폼락 해제는 M1 흡수 폼 29행에 영향 → task-db-data capture+rollback 필수. ⑥ page_section은 R16① 선행 요건(R15⑥ 먼저 — FE가 막힘 방지 위해 우선).
 
 ### 검증 이력
-적대검토 워크플로(`ROADMAP-SPLIT-REVIEW.md`) + advisor 2-라운드(BLOCK 2건[컷오버 순서·fs-api 계약 소유] 해소 후 PASS). 본 로드맵 골격은 그 PASS 버전.
+ROADMAP-SPLIT-REVIEW + advisor 2-라운드 PASS(v1) + 2026-06-26 ultracode 적대검증(FE↔BE 렌즈, R15/교차 PASS) — company_setting/preset_id/page_section CRIT를 ④⑤⑥ 단위로 반영, ④ +task-db-data·⑪ /plan-enterprise·파생7블록 FLAG 정련.
