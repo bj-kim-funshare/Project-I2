@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1148.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스11
+
+**다크모드 — kept-alive 페이지 웹뷰가 앱 테마 변경을 반영하도록 리로드.** 페이지 진입 후 마이페이지에서 테마 변경 → 바텀 네비 '페이지' 탭이 (탭 상태 보존으로) 직전 본 페이지 웹뷰로 복귀하는데, 그 웹뷰가 로드 당시 `?theme=`(옛 테마)로 떠 있어 테마 변경이 반영 안 되던 문제 수정. data-craft-mobile 단일 파일, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 21** (fix) `466654d`: `page_web_view_screen.dart`에 `_loadedBrightness` 필드 추가, `_initialize()`에서 로드 밝기 기록, `didChangeDependencies()` 오버라이드로 InheritedTheme(앱 테마) 변경 감지 시 새 `?theme=`로 웹뷰 `loadUrl` 리로드(컨트롤러 미생성 시 `_embedUrl`만 교체→initialUrlRequest 반영). go_router `StatefulShellRoute.indexedStack` 보존 브랜치에서도 테마 변경 시 didChangeDependencies 발화로 동작.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/page/page_web_view_screen.dart` (테마 변경 감지 → 웹뷰 ?theme= 리로드)
+
 ## v001.1147.0
 
 > 통합일: 2026-06-26
