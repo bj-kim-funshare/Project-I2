@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1146.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스9
+
+**다크모드 — 스플래시 중앙 로고 색반전.** 다크 스플래시에서 로고(`auth-wordmark-mark.png`, 라이트용 흑백 에셋)가 검게 묻히고 흰 내부 채움이 튀던 것을, 다크 모드일 때 RGB 색반전(alpha 보존) 적용 → 검은 구조는 흰색(가시), 흰 내부 채움은 어둡게(배경에 묻힘). 라이트 모드는 원본 그대로. data-craft-mobile 단일 파일, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 19** (fix) `17d26f4`: `splash_screen.dart` 로고를 `isDark` 시 `ColorFiltered(ColorFilter.matrix RGB 반전)`로 래핑. 워드마크 텍스트·메시지·진행바·배경(surfaceContainerLowest) 무변경.
+
+> 참고: 반전은 흰 채움을 #000으로 보내는데 스플래시 배경이 #0F172A(네이비)라, 내부 채움이 "배경보다 약간 더 어두운" 형태로 남는다(완전 소멸 아님). 마스터가 완전 동일 배경색을 원하면 white→surfaceContainerLowest 정밀 매핑으로 후속 조정 가능.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/splash_screen.dart` (다크 시 로고 ColorFilter 반전)
+
 ## v001.1145.0
 
 > 통합일: 2026-06-26
