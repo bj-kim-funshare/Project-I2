@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1139.0
+
+> 통합일: 2026-06-25
+> 플랜 이슈: #489 (funshare-inc/data-craft)
+
+**뷰어 코어 재설계 R16② P1b — 레지스트리 dispatcher(오케스트레이션 동등) + 어댑터 토대(additive).** P1a 레지스트리 토대 위에, 기존 `UniversalCellRenderer`와 **behavior-equivalent**한 `RegistryCellRenderer`를 추가해 P1c의 dispatch 이행을 near-trivial swap·저위험화. 핵심: UniversalCellRenderer는 `useCellValueChange` 오케스트레이션(applyCellValueImmutable+saveChange+setViewerModel+onRefresh)을 하는데 P1a 엔트리는 saveChange만 했던 결함을, dispatcher가 동일 hook의 `handleValueChange`를 `RenderContext.onChange`로 주입하고 `makeOnChange=ctx.onChange??old`로 단일점 정합해 해소(advisor 필수 지시). 미등록 17 extended는 UniversalCellRenderer fallback. additive(소비자 미마이그·미소비)라 런타임 0 변화. dev 전용, build:packages·typecheck:all·lint 0 errors.
+
+### 페이즈 결과
+- **Phase 1** (feat) `534e096c`: `shared/ui/rendering/`에 `RegistryCellRenderer.tsx`(동일 useCellValueChange·직접 registry membership 분기·등록 23 ctx.onChange 주입·미등록 17 UniversalCellRenderer fallback·readOnly[log/lastUpdate] isEditMode=false 패리티) + `adapters.ts`(슬롯, calendar/gantt pass-through·grid/kanban 플레이스홀더) 신규. P1a registry 2파일 backward-compatible 정합(RenderContext.onChange 추가·makeOnChange 단일점). advisor #2 전수 검증: 23 엔트리 props가 canonical extraProps와 output-identical·이중 오케스트레이션 없음. +170/-6.
+
+### 영향 파일
+data-craft:
+- `packages/fs-data-viewer/src/shared/ui/rendering/RegistryCellRenderer.tsx` (신규)
+- `packages/fs-data-viewer/src/shared/ui/rendering/adapters.ts` (신규)
+- `packages/fs-data-viewer/src/shared/ui/rendering/{index.ts, registry/types.ts, registry/ViewerTypeRegistry.tsx}` (onChange 정합·export)
+
+### 비고
+- P1c(소비자 dispatch 6곳 swap — calendar/gantt 먼저→grid→kanban + extended 17 엔트리 등록 + connectionSingle/Multi·rowId 브릿지)는 후속. ⚠️ 등록타입 편집 즉시 리렌더는 P1c 실배선 시 vite 시각 검증 권장.
+
 ## v001.1138.0
 
 > 통합일: 2026-06-25
