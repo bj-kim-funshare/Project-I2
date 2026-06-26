@@ -33905,3 +33905,38 @@ data-craft-server:
 data-craft-server:
 - `spec-dashboard/scripts/extract.mjs`, `spec-dashboard/app.js`, `test/regression/golden/auth-class-baseline.json`
 - (spec-dashboard/data/spec.json은 gitignore·serve.py on-demand 재생성이라 미커밋)
+
+## v001.1153.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #493 (funshare-inc/data-craft)
+
+관리자 콘솔 "데이터 분석 및 통계"에 신규 탭 **"플랜 관리"** 추가 — data-craft 웹 [설정→플랜 관리]의 모든 기능(업그레이드 모달·프로모션·인원·카드·결제주기·구독취소/재활성화·쿠폰·엔터프라이즈·결제이력·결제콜백)에 대한 사용자 행동·전환을 수집·집계·시각화. 3개 레포 3계층. `user_events`(JSONB properties) 재사용, DB 스키마 무변경. 기존 23개 이벤트·인증 분석 탭·`getAnalyticsFunnel` 토대 무회귀.
+
+### 페이즈 결과
+- **Phase 1** (data-craft): 업그레이드·플랜선택·쿠폰(plan)·드롭오프 수집 보강. `plan_display_viewed`(ref 가드 단일발화)·`plan_card_clicked`·`plan_usage_warning_shown`·`coupon_select_open/selected/deselected`·`payment_password_cancel`·`payment_modal_abandon`(step). `usePaymentPasswordGate`에 `onCancel` additive 추가.
+- **Phase 2** (data-craft): 프로모션·인원·카드·결제주기·재활성화·엔터프라이즈·결제이력 수집. 동결 카탈로그 키 준수, 임의 이벤트명 무발명. 카드 등록/변경 성공은 `/billing/success` 콜백(범위 밖)에서만 신호 → 기존 `billing_success_done`으로 커버.
+- **Phase 3** (data-craft-admin-server): `getPlanMetrics` 퍼널·전환률. 기존 `UPGRADE_FUNNEL`·`CANCEL_FUNNEL` 재사용 + 신규 5종(promotion/seat/reactivate/billingCycle/card). 단계별 DISTINCT actor `count`+`internalCount` 이중집계·내부회사 필터. 전환률 7종(0분모 가드).
+- **Phase 4** (data-craft-admin-server): 시계열(granularity 버킷·zero-fill·`TOO_MANY_BUCKETS` 가드)·세그먼트(`properties` plan_tier/billing_cycle/쿠폰적용/promotion_id)·실패분석(콜백 error_code 분포·모달 step 이탈·실패율). + data-craft `billing_callback_fail`에 `error_code` properties 보강(`e477e5c7`).
+- **Phase 5** (data-craft-admin-server): `GET /api/admin/analytics/plan-metrics` 컨트롤러·라우트·CALL_ID(ADMIN-ANALYTICS-R-003). `dbMode` dev/prod 토글, `TOO_MANY_BUCKETS` 이중 처리.
+- **Phase 6** (data-craft-admin): 분석 상위 탭(인증 분석 | 플랜 관리) 도입 — 기존 인증 분석 무회귀 하위 이동. `PlanMetrics` 9종 타입 BE 정합, `fetchPlanMetrics`, 플랜탭 골격.
+- **Phase 7** (data-craft-admin): `analytics-plan` recharts 차트 5종(퍼널·KPI·시계열·세그먼트·실패) 렌더, 빈/0 데이터 방어.
+
+### 검증
+- 페이즈별 main-session 5단계 검증 + lint 게이트 전부 PASS (data-craft `typecheck:all && lint`, admin-server `lint && build`(eslint+tsc), admin `typecheck && lint`).
+- **런타임 SQL 실측**: `getPlanMetrics`를 dev `user_events`에 read-only 실행(ts-node) — 7퍼널·7전환률·timeseries(9)·4세그먼트·3실패분석 정상 반환, month+segment 경로 포함. 42703/구문오류 없음.
+- advisor 계획(#1)·완료(#2) 모두 PASS.
+- **잔여(머지 후 수동 검증 필요)**: 이벤트 발화 정확성(시점·중복발화·properties)은 런타임 동작이라 정적 게이트 미포착 → 실제 클릭스루 권장. 신규 이벤트는 과거 이력 없어 탭은 신규 트래픽 누적 전까지 기존 이벤트 외 거의 빈 화면(정상). 전환률 = 단계별 distinct-actor 비율(per-user 순차 퍼널 아님).
+
+### 영향 파일
+data-craft (수집):
+- `src/widgets/settings-dialog/ui/PlanTabContent.tsx`, `.../plan/{CardInfoSection,RegisterCardSection,SubscriptionActionSection,PaymentHistorySection}.tsx`
+- `src/features/subscription/ui/{UpgradeDialog,UpgradeStepSelect,UpgradeStepPayment,PromotionPurchaseDialog,PromotionRow,SeatManageDialog,ReactivateConfirmDialog,EnterpriseContactDialog,DeleteCardDialog}.tsx`
+- `src/features/subscription/lib/usePaymentPasswordGate.ts`, `src/features/coupon/ui/CouponSelectDialog.tsx`, `src/pages/billing-callback/ui/BillingFailPage.tsx`
+
+data-craft-admin-server (집계):
+- `src/services/adminAnalytics.service.ts`, `src/controllers/adminAnalytics.controller.ts`, `src/routes/adminAnalytics.routes.ts`, `src/config/constant.ts`
+
+data-craft-admin (표시):
+- `src/pages/analytics/AnalyticsPage.tsx`, `src/entities/analytics/{api,types,index}.ts`
+- `src/features/analytics-plan/{PlanFunnelCharts,PlanConversionKPICards,PlanTimeSeriesChart,PlanSegmentCharts,PlanFailureAnalysisCharts,index}.tsx` (신규)
