@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
-> **현황(2026-06-26 v2)**: 🟢4 · 🟡3 · 🔴9 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
+> **현황(2026-06-26 v2)**: 🟢4 · 🟡6 · 🔴6 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**·**프리셋 ⑤④ DDL+계약 dev완료(a3eb20c)·⑦ 계약완료(no-DDL)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
 
 ## 프롬프트
 
@@ -25,13 +25,13 @@
 **— 위젯 시스템 BE 슬라이스 (Roadmap-16 FE 재설계 유입, 2026-06-26 적대검증 도출) —**
 > 전부 additive 스키마+BE 엔드포인트(i-dev 머지·prod는 조율 컷오버 합류). 신 위젯 모델이 완료된 R15 작업(company_setting 폼락·preset_id 부재·page_section 미편성)과 충돌하는 부분을 정합.
 
-🔴 /task-db-structure data-craft (+task-db-data) — **④ company_setting 폼락 해제**: 현 `company_setting`은 `widget_type='form'` 하드락(generated col `preset_widget_type` + CHECK + 복합 FK, REDESIGN §F5 의도적). 신 사용자설정="즐겨찾기 최상위 위젯(임의 타입) 등록"과 충돌 → 락 일반화(generated/CHECK/복합FK 완화, 임의 widget_preset 참조 허용). DDL=task-db-structure; **흡수된 폼 29행(M1 c240ff2) 재처리 = task-db-data**(capture+rollback). advisor 게이트.
+🟡 /task-db-structure data-craft (+task-db-data) — **④ company_setting 폼락 해제 — DDL dev완료(a3eb20c)**: 폼락 3종(generated col `preset_widget_type` + CHECK `chk_company_setting_preset_form` + 복합 FK) DROP → 단순 FK(preset_id→widget_preset(id), 임의 widget_type 허용). data-preserving·reversible(5행 intact). ★`uq_widget_preset_id_widget_type`는 rollback 의존이라 컷오버 전까지 DROP 금지. **잔여**: **흡수 폼 29행(M1 c240ff2) 재처리 = task-db-data — ⚠️변환 UNDEFINED-pending**(R16③/⑦ favorites=즐겨찾기 최상위 위젯 의미 미존재→설계 확정 후 정의; 현 5 company_setting+29 widget_preset form은 폼락 해제로 유효 유지).
 
-🔴 /task-db-structure data-craft — **⑤ page_widget.preset_id + 참조해소 계약(스펙)**: REDESIGN §9는 preset_id 연결을 명시하나 §3.5 스키마/fs-api payload에 컬럼 부재 → REFERENCE(나만의 링크·사용자 참조) 미정의. `page_widget.preset_id` 실 컬럼(FK·인덱스) 추가 + 렌더 시 참조해소 **계약 명세** + **로컬편집=금지**(편집하려면 복사, 기본). copy(properties 인라인) vs reference(preset_id) 배타 모델 명문화. (스키마+계약 스펙만; **BE 참조해소 구현은 ⑦**.)
+🟡 /task-db-structure data-craft — **⑤ page_widget.preset_id + 참조해소 계약 — DDL+계약 dev완료(a3eb20c)**: `page_layout_widget.preset_id`(bigint null·FK→widget_preset(id)·부분index) ADD. 207행 무영향. **계약 박제**(plan.md): copy(properties 인라인·preset_id NULL) vs reference(preset_id→config[properties/columnProperties/rowProperties] 병합, style은 page_widget 자체) 배타·로컬편집 금지=app-level(properties NOT NULL이라 DB XOR 부적합, 편집=복사전환). **잔여: BE 참조해소 구현=⑦(plan-enterprise)**.
 
 🟢 /task-db-structure +task-db-data data-craft — **⑥ page_section/정수격자 — dev 완결(스키마 c9da662 + 백필 1567cce)**: SPEC §7·§3.5. **스키마(ADDITIVE)**: `page_section` 신설(section_id PK·layout_id FK→page_layout·height·col_grid_count 100·row_grid_count 70·style·seq·정책4) + `page_layout_widget` 격자좌표 5컬럼 ADD(section_id FK·start_x·start_y·width·height, nullable·ck NOT VALID). **백필(task-db-data, exec dml-…-122ebf)**: area→100×70 격자 도출(경계-차분·prefix-strip·isRowSplit·section_id=type1.area_id 재사용) 구현·적재 — page_section **173행**·위젯 **207행** 좌표 백필. **0-based 확정(R16 FE)**. 대사 전수 통과(위젯207·NULL0·in-bounds0·진성겹침0·containment R-2 2쌍 documented·col100/row70). **★R-1 수정**: 정본 A.2.1 `cum+w>100` 직역=float-near-100 유령줄바꿈(반복소수 4섹션 사일런트 좌표손상, in-bounds/겹침 미포착) → `>100+1e-9` epsilon 가드. 마스터 확정 **D2=1/섹션-area·layout_id FK**(무손실). **이연(컷오버·파괴적)**: `page_layout_widget→page_widget` 리네임·area DROP·NOT NULL/VALIDATE 승격·1섹션/페이지 collapse·R-2 부모위젯 재배치(BE 708 SQL 보호). **R16①의 선행 요건 — 스키마+좌표 데이터 제공 완료.**
 
-🔴 /task-db-structure data-craft (+BE) — **⑦ widget_preset 3계층 확장**: 기존 owner_user_id XOR owner_company_id 소유 tier 활용 — 나만의(user-owned, 복사·참조)·사용자(company-shared, 참조전용)·최근사용(파생, ⑧). 참조/복사 의미(⑤ 연계)·사용자설정 권한(기존 철학). **BE 프리셋 CRUD·참조해소(⑤ 계약 구현).**
+🟡 /plan-enterprise data-craft (BE) — **⑦ widget_preset 3계층 — 계약 완료(no-DDL, a3eb20c plan.md)**: widget_preset 스키마(owner_user_id XOR owner_company_id) **이미 3계층 충분 → DDL 불요**. 계약 박제: 나만의(owner_user_id·복사+참조)·사용자(owner_company_id·참조전용·로컬편집금지)·최근사용(파생·복사전용). **잔여: BE 프리셋 CRUD + 참조해소(⑤ 계약 구현) = plan-enterprise**(work_repo=data-craft-server).
 
 🔴 /plan-enterprise data-craft — **⑧ recent-usage 조회 엔드포인트**(work_repo=data-craft-server, **BE-only·DDL無**): 동일 위젯타입+동일 그룹의 최근 적용 config 조회(조합 스코프·회사 범위·같은/다른 페이지). **계약 3줄 선확정**(스코프=조합/회사·그룹키=properties 내 group 바인딩·dedup/order 규칙). page_widget 현재행 파생(신 로그 X)·복사전용 적용용.
 
@@ -59,7 +59,7 @@
 - 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
 - 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 = **셀 라벨에서 도출 확정**(master 2026-06-26; distinct 셀값→옵션 생성, 정제 1패스[오타/더티값] 동반).
 - 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
-- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ dev완결(스키마 c9da662 + 백필 1567cce)**: page_section 신설 + 위젯 격자 5컬럼 ADD, area→100×70 격자 도출 백필(page_section 173·위젯 207, 0-based, 경계-차분+epsilon 가드[R-1 사일런트손상 수정], 대사 전수통과), D2=1/섹션 layout_id FK 마스터확정. **잔여 미착수**: ④ company_setting 폼락해제(M1 폼29행 재처리)·⑤ preset_id·⑦ widget_preset 3계층·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크.
+- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ dev완결(스키마 c9da662 + 백필 1567cce)**: page_section 신설 + 위젯 격자 5컬럼 ADD, area→100×70 격자 도출 백필(page_section 173·위젯 207, 0-based, 경계-차분+epsilon 가드[R-1 사일런트손상 수정], 대사 전수통과), D2=1/섹션 layout_id FK 마스터확정. **프리셋 ⑤④⑦ dev완료(a3eb20c)**: ⑤ page_layout_widget.preset_id ADD+참조해소 계약·④ company_setting 폼락 3종 DROP→단순 FK(data-preserving)·⑦ 3계층 계약(owner XOR 충분, no-DDL). **잔여 미착수**: ④ 폼29 재처리(task-db-data, 변환 UNDEFINED-pending R16③/⑦)·⑤⑦ BE 참조해소+프리셋 CRUD(plan-enterprise)·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크.
 - 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
 
 ---
