@@ -33878,3 +33878,30 @@ data-craft-server:
 ### advisor 검증
 - 계획 #1: PASS(advisor-fallback, 5관점). C1(default-deny·31 게이트화시 403)·C2(roles/builder forceIncludeAuth dead)·C3(32개 풀로드→includeFullAccount 필요) 소스대조 TRUE.
 - 완료 #2: PASS(advisor-fallback, 적대검증). 풀로드=verbatim+stash byte-identical·31키 정확일치·authz verbatim·#491 additive 충돌0. golden 부재가 비차단(정적 등가 실증).
+
+## v001.1152.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #492 (핫픽스 1)
+
+#492 인증 아키텍처 재설계 후속 핫픽스 — spec-dashboard(서버 명세/소비 대시보드) 추출기·UI를 새 인증 아키텍처에 맞게 재조정. 리팩토링으로 공개/보호 서브라우터 split·새 게이트 미들웨어가 도입되며 추출기가 깨져 엔드포인트 227→210 오집계·auth_class 오분류 상태였음. ★서버 코드(src/) 무변경 — 대시보드 도구만.
+
+### 근본 원인
+- `extract.mjs buildIndexMountMap`이 mount map을 경로(`/auth`)로 keying → 동일 경로 pre-gate(authPublicRouter)+post-gate(authProtectedRouter) 마운트 중 뒤가 앞을 덮어써 공개 서브라우터(auth 15·subscription 2) 소실.
+- `parseRouteFile`이 파일 내 단일 `=Router()` 식별자만 자동탐지 → 한 파일 2라우터 중 한쪽만 파싱.
+- `app.js globalScopeCategory`가 used_mount_prefixes 빈값 시 'all' 반환을 auth-guard 체크보다 먼저 해서, 게이트 전용 미들웨어(tenantGate·fullAccountIfRequested)를 'all'로 오분류.
+
+### 페이즈 결과
+- **핫픽스1 (`ae798b3`)** [fix]: buildIndexMountMap을 경로-key 맵→**mount 배열**(routerVarName 보유)로 전환, parseRouteFile에 **routerIdentifier 인자** 추가(자동탐지 제거 — Roadmap-18 P6 named export 통일 전제), extractEndpoints 배열 순회. PRE_GATE_AUTH: /subscription→public·/promotion 삭제(게이트 뒤 단독). app.js globalScopeCategory가 tenantGate/fullAccountIfRequested를 auth-guard로 인식하도록 순서 교정. auth-class-baseline.json 교정값 동기화.
+
+### 검증
+- `node extract.mjs` → **endpoints 227 복구**(210→227), warnings 0·unresolved 0.
+- ★추출 SET(method+full_path) == token-absent-baseline.json 227 SET **완전 일치(0 누락/0 추가)** — 런타임 오라클 대조.
+- auth_class: public 18(authPublic 15+subPublic 2+chat/file 1)·route-custom-auth 2(sse·analytics)·global-auth 207(175+32 통합) = 227. 엔드포인트별 분류 소스 대조(plans→public·billing/payment→global·pending-users→global·sse→route-custom). 구버전 baseline(public 16) 대비 델타 정합(+2 public·+32 global·−34 custom).
+- 머지 후 i-dev 추출기 재실행 227 재확인. node --check 구문 OK. src/ 무변경.
+- advisor 완료 #2: PASS(advisor-fallback, 적대검증 — 분류 RIGHT·SET 일치·단일라우터/dev-test/named-export 케이스 무회귀).
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/scripts/extract.mjs`, `spec-dashboard/app.js`, `test/regression/golden/auth-class-baseline.json`
+- (spec-dashboard/data/spec.json은 gitignore·serve.py on-demand 재생성이라 미커밋)
