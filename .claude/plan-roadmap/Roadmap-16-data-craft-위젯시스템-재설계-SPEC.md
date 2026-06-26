@@ -81,7 +81,7 @@
 - **표현 전환 = "열 타입 변경(마이그레이션)" 기능**으로만. 셀 데이터(5타입)는 그대로, 블록타입만 변경 → 그 열을 쓰는 **모든 위젯이 자동 전환**.
 - **호환 제약 (2026-06-26 적대검증 정정)**: 열 타입 변경은 **2층 호환(dataType + shape)** 범위 내에서만. ~~"같은 데이터타입 내 = 데이터 무변경 즉시"~~ 는 **거짓** — json 22블록은 shape가 상이(single→multi=스칼라→배열·user/document/vote 제각각)하고 `conversion-catalog.listTargetTypes`가 json 22중 13(log·lastUpdate·formula·quickFormula·uniqueID·image·file·vote·rating·progress·connection·rowConnection·dualBlock)을 변환소스서 제외. 따라서 **shape 호환표(2층)가 마이그 기능의 선행 필수**(dataType 1층만으론 사일런트 셀손상). `listTargetTypes` + `column_type↔viewer_type 불변식`이 경계 가드. (R16 P1.5.)
 - **blockType→dataType 매핑 (2026-06-26 마스터 확정)**: 분포 **string9/number5/date3/boolean2/json22**. **timer=number**(초·FE 계산, 셀 "MM:SS"→초)·uniqueID=json(열ID+행ID+그룹ID 조합 구조)·color=json(확장성). 정본=계약(R16 P1)·DB enum(R15 D8)·교차repo 드리프트체크(R15⑪).
-- **파생/계산 블록 7종**(rowID·uniqueID·lastUpdate·log·formula·quickFormula·dualBlock)=셀값 미저장 → dataType 명목·셀 마이그 비대상(**가상/파생 열 개념** — D8 백필·마이그가 계산열을 변환데이터로 오인 방지).
+- **셀값 미저장 8종(가상/파생 열)**=rowID·uniqueID·formula·quickFormula(파생계산)·image·file(BE 파일테이블·cellValue 비권위)·period·automation(미구현) → dataType 명목·셀 마이그 비대상(**가상/파생 열 개념** — D8 백필·마이그가 가상열을 변환데이터로 오인 방지). ⚠️ **정정(R16 P1.5 blockShape.ts 실측 정본·#497)**: 구 "파생 7종"에 있던 lastUpdate·log·dualBlock은 **실제 저장됨**(stored=true)이나 conversion-catalog 변환제외(conversionEligible=false)라 별개 축 — "미저장"과 혼동 금지. blockShape.ts의 2축(stored ⊥ conversionEligible)이 정본.
 - **"열 1개 = 블록타입 1개"는 뷰모드별 다른 표현을 막지 않음**(같은 status 열을 그리드=셀, 칸반=그룹핑 축으로 쓰는 건 뷰모드 차이지 블록타입 차이가 아님).
 - = Notion 모델(속성 타입 1개, 변경 시 전체 반영)과 동형.
 
