@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1166.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #502 (funshare-inc/data-craft)
+
+**R16 ②-1 — widget_preset FE 클라이언트 + presetId 플러밍 (1페이즈·additive·미소비).** ② 나만의디자인(favorites)의 택소노미-robust 안전 전진 부분. BE widget_preset(#495)을 FE가 소비할 CRUD 클라이언트 + preset 참조 필드. dev 전용·origin 미푸시·typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `065446a9`: `presetId?: number | null` 추가(WidgetConfig·SaveLayoutWidgetItem·DbWidget·optional·무회귀). `builderWidgetPresetApi`(api/builder.widgetPreset.ts) 신설 — BE #495 verbatim 미러 5메서드: **list() 무인자→`ApiResponse<WidgetPresetInfo[]>` bare array**(auth 파생·WidgetPresetListResponse 래퍼 미사용)·get(id)→WidgetPresetInfo·create({ownerScope,name,widgetType,config,dataGroupId필수})→201{id}(ownerId 서버파생)·update(id,{name?,config?,dataGroupId?})→null·delete(id)→null. endpoints `/widget-preset`·index export(builderWidgetPresetApi+CreateWidgetPresetDto/UpdateWidgetPresetDto). WidgetType 충돌은 widgetPreset.ts 직접 import 회피. **ADDITIVE·미소비·택소노미 무결정**(frozen WidgetType 패스스루).
+
+### 후속·주의 (carry-forward)
+- **②-2~5(favorites UI·저장·copy/reference·no-local-edit) = widget_preset frozen WidgetType(form/grid/kanban) ↔ FE 위젯타입/신7카테고리 택소노미 결정(마스터) 후**. 본 클라이언트는 그때 소비.
+- WidgetPresetListResponse 래퍼 타입(widgetPreset.ts:51)이 BE 실응답(bare array)과 불일치 stale → ②-2 list 소비 시 폐기/재목적화(클라이언트는 미사용).
+- recent-usage 클라이언트=③ 소관(builder router).
+
+### 영향 파일
+data-craft:
+- 신설: `src/_packages/fs-api/api/builder.widgetPreset.ts`
+- 수정: `src/_packages/fs-api/constants/endpoints.ts`·`src/_packages/fs-api/index.ts`·`src/_packages/fs-api/types/builder/{entities,requests}.ts`·`src/shared/types/widget-base.types.ts`
+
 ## v001.1165.0
 
 > 통합일: 2026-06-27
