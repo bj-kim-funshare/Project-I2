@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1165.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #501 (funshare-inc/data-craft)
+
+**R16 ① 셸 하드닝 — 드로어 dead code 제거 + DialogTitle a11y (1페이즈·behavior-preserving).** ① 셸(#499) 후 advisor #2 권고 정리. dev 전용·origin 미푸시·typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS(behavior-preserving 실측 확인).
+
+### 페이즈 결과
+- **Phase 1** (chore) `b8c46798`: PropertyDrawer 폐기(① Phase4) 후 항상-false `isSectionDrawerOpen`/`isAreaDrawerOpen` state+4 setter(open/closeSectionDrawer·open/closeAreaDrawer) 완전 제거(grep 0·setter 호출자 0 확인)·소비처 4곳(useActiveEditingTarget·useActiveOnboardingHint·FloatingAIButton·AIAssistantModal) 항상-false 분기만 선별 제거(bit-identical 축약)·orphan 2파일(useDrawerOverlap·WidgetNavigatorDropdown·import 0) 삭제·ColumnMenuModal Radix DialogTitle sr-only 추가(a11y 경고 해소). -270/+8.
+
+### 후속·주의 (carry-forward)
+- ⚠️ **온보딩 sectionCustom 시나리오 STUCK 회귀(① Phase1 유발·마스터 결정 보류)**: 1섹션 고정+섹션추가 제거로 `addSection` 앵커 미등록 → click-mode 튜토리얼 스텝 진행불가 → picker서 sectionCustom 선택 시 영구 STUCK(비크래시이나 멈춤). 단순 2스텝 제거 불가(의존 스텝군 secondSectionSelect·secondSectionExpand·widgetDesignTab 잔존)·**시나리오 폐기 vs 신 1섹션 UX 온보딩 재설계=마스터 결정**. scenarioRegistry:115·411 두 시나리오 점검 필요.
+- `propertyDrawerTab`=상수-but-read(widgetDesignTab completeWhen 결합)→온보딩 재설계와 함께 처리.
+- PropertyDrawer.tsx eslint-disable 불필요 경고(폐기 stub)·SubGridColumnMenu 모달화·중첩 Radix Dialog 런타임 스모크=별도.
+- sr-only DialogTitle 라벨 하드코딩 한글→추후 i18n.
+
+### 영향 파일
+data-craft:
+- 수정: `src/entities/layout/model/{layoutStore,layoutTypes,layoutSelectors,useActiveEditingTarget}.ts`·`src/features/onboarding/lib/useActiveOnboardingHint.ts`·`src/widgets/floating-ai-button/ui/{FloatingAIButton,AIAssistantModal}.tsx`·`src/_packages/fs-data-viewer/widgets/grid-table/components/column-menu-b/ColumnMenuModal.tsx`
+- 삭제: `src/widgets/layout-canvas/hooks/useDrawerOverlap.ts`·`src/widgets/property-drawer/ui/WidgetNavigatorDropdown.tsx`
+
 ## v001.1164.0
 
 > 통합일: 2026-06-27
