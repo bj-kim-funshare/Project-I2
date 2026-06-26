@@ -33997,3 +33997,22 @@ data-craft-server:
 
 ### 영향 파일
 - data-craft-admin: `src/pages/analytics/AnalyticsPage.tsx`
+## v001.1157.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #492 (핫픽스 3)
+
+#492 후속 핫픽스 — vestigial `tenantMiddleware` 완전 제거(죽은 코드 정리). app.ts 전역 마운트로 매 요청 실행됐으나 결과(req.tenant)를 읽는 코드가 0이던 미사용 미들웨어. 과거 서브도메인 멀티테넌시(`?tenant=` 쿼리) 설계 잔재. ★서버 동작 불변 — 실제 테넌트 스코핑은 req.companyId(JWT)+tenantGate가 담당.
+
+### 페이즈 결과
+- **핫픽스3 (`dd8ac6b`)** [refactor]: `src/middlewares/tenant.middleware.ts` 파일 통째 삭제(155줄 — tenantMiddleware·requireTenantMiddleware·TenantRequest·invalidateTenantCache 4개 export 전부 죽음: req.tenant 0 readers·requireTenantMiddleware 0 usage·죽은 캐시). app.ts에서 `app.use(tenantMiddleware)`+import 제거, middlewares/index.ts 배럴 라인 제거, auth.service.ts(withdraw)에서 invalidateTenantCache import+호출 제거. ★TenantInfo 타입·getTenantInfo·/api/auth/tenant-info 엔드포인트는 별개 기능이라 무변경 유지.
+
+### 검증
+- `pnpm build`(tsc)+lint exit 0. `grep tenantMiddleware|requireTenantMiddleware|invalidateTenantCache|req.tenant|TenantRequest src/` = 0(완전 제거, dangling 0). cold-boot(:8098) /health 200.
+- **토큰부재 per-endpoint 재생 227/227 일치(drift 0)** — 서버 동작 불변 실증. 머지 후 i-dev tsc --noEmit exit 0.
+- 유일 관측 변화: `?tenant=<잘못된 companyId>` 요청이 이전 404 TENANT_NOT_FOUND → 200(req.tenant 미사용이라 부작용이었음, master 수용). 보안 회귀 0(이전 404는 가드 아닌 부작용, IDOR 없음 — 실 스코핑은 JWT companyId).
+- advisor 완료 #2: PASS(advisor-fallback 적대검증 — 4 export repo-wide 0 consumer·withdraw clean 제거·TenantInfo 보존·보안 회귀 0).
+
+### 영향 파일
+data-craft-server:
+- `src/middlewares/tenant.middleware.ts`(삭제), `src/app.ts`, `src/middlewares/index.ts`, `src/services/auth.service.ts`
