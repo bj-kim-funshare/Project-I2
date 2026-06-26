@@ -34045,3 +34045,20 @@ data-craft:
 - `packages/{fs-api,fs-data-viewer,fs-data-link,fs-file-attachment,fs-data-viewer-explorer,fs-shared}` → `src/_packages/<name>/` (이동·~1900파일)
 - `pnpm-workspace.yaml`·`turbo.json` (삭제), `vite.config.ts`·`package.json`·`tsconfig*.json`·`src/app/styles/index.css`, `src/**` (import 재작성 ~390)
 - WIP A 머지: i-dev `1d82a387`
+
+## v001.1159.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #496 (funshare-inc/data-craft)
+
+**R16 P1 — 데이터타입(5)↔블록타입(41) 단일 계약.** 흡수된 `src/_packages/fs-api/types/contract/blockType.ts`에 41 블록타입↔dataType 단일 계약(type-only·additive) 저작 — FE 레지스트리(④블록)·DB enum(R15 D8)·교차repo 드리프트체크(R15⑪)의 공유 출처. 정본=Project-I2 SPEC §B(06aef239). dev-only·origin push 금지.
+
+### 페이즈 결과
+- **Phase 1** `201d7ea4`: `blockType.ts` 신설(242줄) — `ALL_BLOCK_TYPE_IDS`(41 영문ID·SPEC §B byte-exact)·`BlockTypeId`·`BLOCK_TYPE_LABELS`(한글)·`BlockTypeCategory`+`BLOCK_TYPE_CATEGORY`(문자10/버튼12/특수13/확장6)·`BLOCK_TYPE_TO_DATA_TYPE`(timer=number·uniqueID/color=json·분포 string9/number5/date3/boolean2/json22)·dataType-level helper 3종(getDataType·areDataCompatible·listDataCompatibleBlockTypes)·json-22 shape/2층 호환표 P1.5 TODO. `contract/index.ts`·`types/index.ts` export.
+
+### 검증
+- 41 ID byte-exact(순서·철자: uniqueID/rowID 대문자·quickFormula·dualBlock·rowConnection·button 없음)·분포 string9/number5/date3/boolean2/json22·ViewerType/FsGridColumnTypes/conversion-catalog **무변경**(additive·미소비)·게이트 `typecheck:all && lint` exit 0(0 errors). advisor 계획(#1)·완료(#2) PASS(byte-level 대조). WIP A 머지: data-craft i-dev `1b06162c`.
+
+### 영향 파일
+data-craft:
+- `src/_packages/fs-api/types/contract/blockType.ts`(신규)·`src/_packages/fs-api/types/contract/index.ts`·`src/_packages/fs-api/types/index.ts`(export)
