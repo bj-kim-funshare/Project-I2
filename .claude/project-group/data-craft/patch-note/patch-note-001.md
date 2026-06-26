@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1150.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스12
+
+**다크모드 일괄 스윕 — 미감사 표면(다이얼로그·상태배지·인증화면).** 핫픽스7~11에서 화면 콘텐츠는 적응했으나, 감사 사각이던 레이어(다이얼로그/오버레이·상태 배지·인증 화면)를 한 번에 처리. data-craft-mobile, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 22** (fix) `46f2f31`: 다이얼로그/오버레이 잔여색 — 로그아웃 확인(`0xFFDC2626`→error), 비번/이메일 변경 스피너(`Colors.white`→onPrimary), 프로필 이미지 스크림(`Colors.black38`→`scrim`). auth_page_badge는 의도적 다크 브랜드 배지라 보존.
+- **Phase 23** (fix) `7d3ca93`: employee 상태 배지(대기/승인/거절)·보라 아바타·녹색 상태를 `isDark` 조건부 다크 변형(어두운 translucent bg + 밝은 텍스트). invite 복사완료(solid green+white)는 양테마 대비 충분해 보존.
+- **Phase 24** (fix) `57489c5`: 인증 화면(signin/signup/forgot) — `auth_tokens.dart`에 brightness 접근자 `*Of(context)` 13종 추가, 7개 파일 62개 라이트-토큰 사이트를 접근자로 전환(const cascade 처리). 인증 화면이 다크에 적응. (auth_page_badge의 `authInk1` 그라디언트 스톱은 고정 다크 배지라 의도적 미변환.)
+
+> ⚠️ 인증 화면 다크는 grep(잔여 0, 의도적 1 제외)+lint로 검증했으나, 로그인 상태에선 노출되지 않아 **실기 육안 미확인** — 다음 로그인/만료 화면 시 확인 필요.
+
+### 영향 파일
+data-craft-mobile:
+- 다이얼로그: `me/widgets/logout_confirm_dialog.dart`·`me/settings/widgets/{change_password_dialog,change_email_dialog,profile_image_section}.dart`
+- 상태배지: `me/settings/widgets/{employee_segment_bar,employee_card}.dart`·`me/settings/employee_settings_screen.dart`
+- 인증: `screens/auth/auth_tokens.dart`+`{common_signin,common_signup,company_signin,company_signup,forgot_password}_screen.dart`+`widgets/{auth_text_field,auth_wordmark}.dart`
+
 ## v001.1148.0
 
 > 통합일: 2026-06-26
