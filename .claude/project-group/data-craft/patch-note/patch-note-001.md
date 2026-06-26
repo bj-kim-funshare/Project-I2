@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1143.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스6
+
+**홈 알림 벨 빨강 배지가 원 테두리에 걸치도록 수정.** 우측 상단 알림 아이콘(42px 원형)의 미읽음 배지가 원 내부로 밀려 갇혀 있던 것을, 원 테두리 위에 걸치도록 조정. `Stack`에 `clipBehavior: Clip.none` 추가(클립/overflow 제약 제거) + 배지 `Positioned`를 `top:6,right:6`→`top:2,right:2`로 이동(8px 배지 중심이 원 45° 테두리 위에 오도록). 배지 크기·색상 무변경. data-craft-mobile 단일 repo, flutter analyze 0, advisor(fallback) 완료 PASS.
+
+### 페이즈 결과
+- **Phase 9** (fix, data-craft-mobile) `3607045`: `lib/screens/home/widgets/home_greeting_header.dart`의 알림 벨 Stack에 `clipBehavior: Clip.none`, 배지 `Positioned top/right` 6→2. 배지 중심 (36,6)이 원 중심에서 거리 ≈21.2(반지름 r≈21)로 테두리 위 걸침(이전 (32,10)은 r 내부 = 갇힘).
+
+### 영향 파일
+data-craft-mobile:
+- `lib/screens/home/widgets/home_greeting_header.dart` (알림 배지 Clip.none + 위치 조정)
+
 ## v001.1142.0
 
 > 통합일: 2026-06-26
