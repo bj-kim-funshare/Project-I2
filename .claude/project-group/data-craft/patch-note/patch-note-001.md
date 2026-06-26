@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1168.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #504 (funshare-inc/data-craft)
+
+**R16 ④a — 블록 시스템 안전 토대 (3페이즈·additive·미소비·라이브 무변경).** ④(블록 위젯)의 1단계=blockType(41)↔columnType(40) 변환층 + 41 블록 레지스트리 + 누락 렌더러. 기존 라이브 dispatch 무변경(#488/#489 패턴)·dispatch 전환=④b(런타임 화면검증·마스터 확인). dev 전용·origin 미푸시·전페이즈 typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `0da6f629`: `blockTypeMapping.ts`(fs-data-viewer/entities/column-types/·정방향 BlockTypeId←@/_packages/fs-api·ColumnTypeId 로컬). `columnTypeToBlockType`(40→41)·`blockTypeToColumnType`(41→40·블록전용 null). 매핑=이름 11쌍 + timeline→period·button→automation + 동일 27 + password = 41/40 전수(Record 완전성·round-trip). ★1차(폐기 cc639cc2)는 fs-api 배치=`fs-api→fs-data-viewer` 역의존 신설→**fs-data-viewer 재배치로 교정**(fs-api 무수정).
+- **Phase 2** (feat) `42ee371d`: `PasswordRenderer.tsx` 신설(블록전용·•••• 마스킹·읽기전용). period·automation=timeline·button 기존 렌더러 재사용(실존 확인)·기존 무수정.
+- **Phase 3** (feat) `fe8ba0c5`: `BlockTypeRegistry.tsx` — `ALL_BLOCK_TYPE_IDS` 41 루프 전등록(Record 완전성). password=PasswordRenderer·23=viewerTypeRegistry 재사용·17=UniversalCellRenderer 폴백(기존 RegistryCellRenderer 동일 패턴). **미소비**(dispatch 6소비처 무수정).
+
+### 후속·주의 (carry-forward·④b)
+- **④b = dispatch 6소비처(cell-renderer-map·rendererMap·SubWidgetEditor·batch-input·calendar·kanban) 전환 + 마스터 화면검증**. 17블록 UniversalCellRenderer 폴백·period/automation timeline/button 렌더 동등성·columnModel.type.id가 BlockTypeId 반환 계약(BE serve ③ 전수=ViewerMetaResponse.columns+ServerColumnData+ServerSubGridColumnModel) ④b서 검증.
+- ④c=열타입변경 마이그 게이트(blockShape canMigrate)·문서위젯 흡수·파생7 read-only.
+
+### 영향 파일
+data-craft:
+- 신설: `src/_packages/fs-data-viewer/entities/column-types/blockTypeMapping.ts`·`shared/ui/cell-renderers/renderers/PasswordRenderer.tsx`·`shared/ui/rendering/registry/BlockTypeRegistry.tsx`
+- 수정(export만): `entities/column-types/index.ts`·`shared/ui/cell-renderers/renderers/index.ts`·`shared/ui/rendering/registry/index.ts`
+
 ## v001.1167.0
 
 > 통합일: 2026-06-27
