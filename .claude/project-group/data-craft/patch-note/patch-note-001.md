@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1142.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스5
+
+**한글 로케일 앱 이름 변경 — 데이터크래프트 → 데크.** 폰 런처/표시 이름이 한글 로케일이면 "데크", 그 외 로케일은 "Datacraft" 유지. 기존 로케일 리소스 메커니즘 그대로 한글 값만 교체(Android `values-ko`, iOS `ko.lproj`). 기본값(`values/strings.xml`·`en.lproj` = Datacraft)·스플래시 워드마크 무변경. data-craft-mobile 단일 repo, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 8** (fix, data-craft-mobile) `5233732`: `android/app/src/main/res/values-ko/strings.xml`의 `app_name` 및 `ios/Runner/ko.lproj/InfoPlist.strings`의 `CFBundleDisplayName`을 `데이터크래프트`→`데크`로 변경. 기본/영문 로케일은 `Datacraft` 그대로.
+
+### 영향 파일
+data-craft-mobile:
+- `android/app/src/main/res/values-ko/strings.xml` (한글 app_name 데크)
+- `ios/Runner/ko.lproj/InfoPlist.strings` (한글 CFBundleDisplayName 데크)
+
 ## v001.1140.0
 
 > 통합일: 2026-06-26
