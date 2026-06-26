@@ -34016,3 +34016,32 @@ data-craft-server:
 ### 영향 파일
 data-craft-server:
 - `src/middlewares/tenant.middleware.ts`(삭제), `src/app.ts`, `src/middlewares/index.ts`, `src/services/auth.service.ts`
+
+## v001.1158.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #494 (funshare-inc/data-craft)
+
+**R16 P0 — 모노레포 전략 전면 폐기·단일 앱화.** data-craft FE 6 라이브 패키지(fs-api·fs-data-viewer·fs-data-link·fs-file-attachment·fs-data-viewer-explorer·fs-shared)를 의존성 역순으로 루트 앱 `src/_packages/`에 흡수, 모노레포(pnpm-workspace·turbo) 폐기로 cross-package DTS(E-namespace TS2724류) 영구 소멸. dev-only(i-dev)·origin push 안 함.
+
+### 페이즈 결과
+- **Phase 1**: 죽은 스텁 4종(sub/external) 정리 (untracked housekeeping·커밋 무).
+- **Phase 2** `322863a3`: fs-data-link 흡수.
+- **Phase 3** `f52c9001`: fs-file-attachment 흡수 (vite alias 제거).
+- **Phase 4** `0fc4359a`: fs-data-viewer-explorer 흡수.
+- **Phase 5** `2a95ee43`: fs-data-viewer strict 사전정합 (FsViewerMode enum→const-object+union·verbatim·noUnused, 이동 전 in-place).
+- **Phase 6** `4c5a1bcb`: fs-data-viewer 이동 1769파일 (123 import 재작성·manualChunks 함수형·viewer 의존 13패키지 루트 이전·process.env→import.meta.env).
+- **Phase 7** `6caa7686`: fs-shared 흡수.
+- **Phase 8** `e6e16c29`: fs-api 흡수 (201파일/370 occ import 재작성) — 6패키지 전부 흡수.
+- **Phase 9** `495d7cb7`: 최종 teardown (pnpm-workspace·turbo 삭제·스크립트 단일앱화·@source/cruft 정리·eslint --fix warning 126→37).
+
+### 검증
+- 매 페이즈 게이트(build:packages·typecheck:all·lint) green. 최종 신 게이트(typecheck:all && lint·build:packages 없이) exit 0(0 errors·37 warnings)·`vite build` exit 0(15s·chunk-data-viewer 6.4MB 분리 보존). 잔여 fs_* workspace import 0·packages/·pnpm-workspace·turbo 부재.
+- advisor 계획(#1)·완료(#2) PASS(advisor-fallback 적대검증 — packages/ 부재·독립 tsc green·push 위반 self-correct 확인).
+- ⚠️ 동작 동등성=정적+vite build 한계(런타임 시각검증 별도). 비차단 후속: lint warning 37·범위밖 6파일 미사용 eslint-disable.
+
+### 영향 파일
+data-craft:
+- `packages/{fs-api,fs-data-viewer,fs-data-link,fs-file-attachment,fs-data-viewer-explorer,fs-shared}` → `src/_packages/<name>/` (이동·~1900파일)
+- `pnpm-workspace.yaml`·`turbo.json` (삭제), `vite.config.ts`·`package.json`·`tsconfig*.json`·`src/app/styles/index.css`, `src/**` (import 재작성 ~390)
+- WIP A 머지: i-dev `1d82a387`
