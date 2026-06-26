@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
-> **현황(2026-06-26 v2)**: 🟢4 · 🟡6 · 🔴6 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**·**프리셋 ⑤④ DDL+계약 dev완료(a3eb20c)·⑦ 계약완료(no-DDL)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
+> **현황(2026-06-26 v2)**: 🟢4 · 🟡8 · 🔴4 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**·**프리셋 ⑤④ DDL+계약 dev완료(a3eb20c)·⑦ 계약완료(no-DDL)**·**⑨ file_group soft-delete DDL dev완료(0f1e0c6)·⑩ 관리주기 계약완료(no-DDL, 인프라 기존)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
 
 ## 프롬프트
 
@@ -35,9 +35,9 @@
 
 🔴 /plan-enterprise data-craft — **⑧ recent-usage 조회 엔드포인트**(work_repo=data-craft-server, **BE-only·DDL無**): 동일 위젯타입+동일 그룹의 최근 적용 config 조회(조합 스코프·회사 범위·같은/다른 페이지). **계약 3줄 선확정**(스코프=조합/회사·그룹키=properties 내 group 바인딩·dedup/order 규칙). page_widget 현재행 파생(신 로그 X)·복사전용 적용용.
 
-🔴 /task-db-structure data-craft (+BE) — **⑨ file-group 모델 정식화**: 데이터그룹과 동격의 파일그룹 1급 엔티티(갤러리·파일 업로더·파일 탐색기 기반). 스키마+BE CRUD. (R16 ⑤⑦⑨⑩ 의존.)
+🟡 /task-db-structure data-craft (+BE) — **⑨ file-group — soft-delete DDL dev완료(0f1e0c6)**: ★탐색 결과 file_group 테이블·file(1:N)·fileApi CRUD·fs-api FileGroup 동결 **이미 존재**. data_group 동격 1급화의 유일 gap = soft-delete 부재 → `file_group`에 `is_deleted`(smallint NOT NULL DEFAULT 0)·`deleted_at`(timestamp null) ADD(56행 무영향). 계층/description 제외(R16 미명세·투기적, 마스터 ①). **잔여: BE soft-delete 채택(hard→soft)=plan-enterprise**(현 hard-delete 유지). (R16 ⑤⑦⑨⑩ 의존 — 스키마 제공.)
 
-🔴 /task-db-structure data-craft (+BE) — **⑩ 관리주기 D1**: 페이지 관리주기 + 위젯별 연동 옵션(단일 데이터 vs 페이지 관리주기·비활성 시 단일 고정). **동작 기준 = `data_values.created_at`**(주기 창 시간 필터의 키 — 켜진 위젯은 현 주기 창 created_at 셀만). 스키마+BE. (R16 관리주기 단위 의존.)
+🟡 /plan-enterprise data-craft (BE) — **⑩ 관리주기 D1 — 계약완료(no-DDL, 인프라 기존, 0f1e0c6 plan.md)**: ★탐색 결과 인프라 **이미 완비** → DDL 불요. `page_list.management_cycle`(varchar10 enum none/daily/weekly/monthly/yearly/page-cycle·fs-api ManagementCycle 동결)·위젯별 옵션 `page_layout_widget.properties.dataMode`(jsonb single/page-cycle)·**동작 기준 `data_values.created_at`**(트리거 trg_protect_created_at_data_values 보호·인덱스 data_values_idx_group_created). **잔여: D1 확장(전 위젯 적용·BE 시간필터 엔드포인트 cycleKey 범위계산·FE 옵션 UI)=plan-enterprise BE/FE**. SPEC §D1 커스텀 주기 미명세(enum이 daily~yearly 커버). (R16 관리주기 단위 의존.)
 
 🔴 /plan-enterprise data-craft — **⑪ 교차repo 드리프트체크**: DB blockType enum labels ↔ fs-api `ALL_BLOCK_TYPE_IDS` 41목록 byte 일치 검증(생성/CI 체크). 공유 패키지 불가(별도 repo)·이미 3중 드리프트 전력(ViewerType) → 자동 가드. [fs-api 41목록 정본=R16 P1] (소형 단위.)
 
@@ -59,7 +59,7 @@
 - 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
 - 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 = **셀 라벨에서 도출 확정**(master 2026-06-26; distinct 셀값→옵션 생성, 정제 1패스[오타/더티값] 동반).
 - 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
-- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ dev완결(스키마 c9da662 + 백필 1567cce)**: page_section 신설 + 위젯 격자 5컬럼 ADD, area→100×70 격자 도출 백필(page_section 173·위젯 207, 0-based, 경계-차분+epsilon 가드[R-1 사일런트손상 수정], 대사 전수통과), D2=1/섹션 layout_id FK 마스터확정. **프리셋 ⑤④⑦ dev완료(a3eb20c)**: ⑤ page_layout_widget.preset_id ADD+참조해소 계약·④ company_setting 폼락 3종 DROP→단순 FK(data-preserving)·⑦ 3계층 계약(owner XOR 충분, no-DDL). **잔여 미착수**: ④ 폼29 재처리(task-db-data, 변환 UNDEFINED-pending R16③/⑦)·⑤⑦ BE 참조해소+프리셋 CRUD(plan-enterprise)·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크.
+- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ dev완결(스키마 c9da662 + 백필 1567cce)**: page_section 신설 + 위젯 격자 5컬럼 ADD, area→100×70 격자 도출 백필(page_section 173·위젯 207, 0-based, 경계-차분+epsilon 가드[R-1 사일런트손상 수정], 대사 전수통과), D2=1/섹션 layout_id FK 마스터확정. **프리셋 ⑤④⑦ dev완료(a3eb20c)**: ⑤ page_layout_widget.preset_id ADD+참조해소 계약·④ company_setting 폼락 3종 DROP→단순 FK(data-preserving)·⑦ 3계층 계약(owner XOR 충분, no-DDL). **⑨⑩ dev완료(0f1e0c6)**: ⑨ file_group soft-delete(is_deleted+deleted_at ADD, 테이블 기존)·⑩ 관리주기 계약(no-DDL, management_cycle/created_at/dataMode 인프라 기존). **잔여 미착수**: ④ 폼29 재처리(task-db-data, 변환 UNDEFINED-pending R16③/⑦)·⑤⑦ BE 참조해소+프리셋 CRUD·⑧ recent-usage(3줄 계약 마스터확정)·⑨ BE soft-delete 채택·⑩ D1 확장·⑪ 드리프트체크 = **전부 plan-enterprise BE**(또는 task-db-data ④폼29).
 - 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
 
 ---
