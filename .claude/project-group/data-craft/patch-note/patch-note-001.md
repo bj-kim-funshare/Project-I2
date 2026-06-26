@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1160.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #495 (funshare-inc/data-craft)
+
+**프리셋 BE ⑤⑦ + ⑧ recent-usage (R15).** widget_preset CRUD(소유 tier 권한) + page_widget.preset_id 참조해소(렌더 병합) + recent-usage 조회 엔드포인트를 data-craft-server에 구현. R16②③ 프리셋 소비 해금. dev 전용·origin 미푸시·eslint+tsc 게이트 PASS·advisor #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `df77efc`: widget_preset model+service — CRUD 5함수(create/list/get/update/softDelete) + 소유 tier 권한(나만의=owner_user_id==userId 본인만 수정/삭제·사용자=is_owner만 write·회사 read). fs-api WidgetPresetInfo 수동 미러.
+- **Phase 2** (feat) `142a052`: widget_preset controller+router + routes/index.ts `/widget-preset` 보호구간 등록. 봉투 {auth:buildAuthResponse,data}·201 create.
+- **Phase 3** (feat) `6592edf`: ⑤ preset_id 참조해소 — findLayoutWidgetsByLayoutId(+WithConnection) LEFT JOIN widget_preset(is_deleted=0·N+1 회피). reference(presetId set)=config authoritative(no-local-edit·style←widget) / copy(NULL)=인라인. WidgetConfig.presetId.
+- **Phase 4** (feat) `6324cbc`: ⑧ recent-usage `GET /api/builder/recent-usage?type=N&groupId=M` — 스코프(위젯타입·데이터그룹[dataViewerField→data_column.group_id]·회사[widget→area→layout→page_list])·blacklist md5((properties - 'dataViewerField')) dedup·DISTINCT ON·updated_at DESC·limit10.
+
+### 후속·주의 (carry-forward)
+- ⚠️ **참조해소 런타임 미검증**: preset_id 전부 NULL(현재) → copy 경로만 실행, reference 병합 미행사(기존 렌더 무회귀). FE R16②③ 채택 후 활성. config→legacy-blob 매핑=config.properties 기준(columnProperties/rowProperties는 page_widget 컷오버 시 WidgetConfig 확장).
+- ⚠️ **⑧ dataViewerField `::int` 캐스트**: 라이브 비숫자 0건(현 안전)·잠재 500 → FE채택/prod 전 `~ '^[0-9]+$'` 가드 보강 권고.
+- fs-api 정합=수동 미러(BE는 fs-api import 안함·tsc 미검증·⑪ drift class). constant.ts CALL_ID.widgetPreset 인라인 CallData(추후 일관성 보강 후보).
+- BE 후속 큐: ⑨ soft-delete 채택·⑩ D1 확장·⑪ 드리프트체크.
+
+### 영향 파일
+data-craft-server:
+- 신설: `src/models/widgetPreset.model.ts`·`src/services/widgetPreset.service.ts`·`src/controllers/widgetPreset.controller.ts`·`src/routes/widgetPreset.router.ts`
+- 수정: `src/routes/index.ts`·`src/models/builder.model.ts`·`src/services/builder/builder.layout.ts`·`src/types/builder.types.ts`·`src/controllers/builder.controller.ts`·`src/routes/builder.router.ts`
+
 ## v001.1150.0
 
 > 통합일: 2026-06-26
