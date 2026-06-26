@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1147.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스10
+
+**다크모드 — 모바일 임베드 웹뷰 테마 desync 해소(device `?theme=` 최우선).** 앱 테마를 다크→화이트로 바꿔도 페이지 본문(webview)이 다크로 뜨거나(서버/저장 테마가 param을 덮어씀), 콜드 재시작 시 다크→화이트 플래시되던 문제 수정. 모든 테마 적용이 거치는 단일 함수 `applyThemeToDocument`에 임베드 가드를 추가 — `/m/` 경로 + `?theme=dark|light`면 서버/저장 테마 대신 **device 파라미터를 최우선** 적용. 일반(비임베드) 라우트는 무영향. data-craft 웹 단일 파일, typecheck:all+lint 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 20** (fix, data-craft 웹) `eee7f50`: `themeStore.ts`에 `getEmbedThemeOverride()`(`/m/`+`?theme=` 감지) 추가, `applyThemeToDocument`가 override 존재 시 `effectiveTheme=override`로 DOM 클래스 적용. setThemeFromServer·applyPreAuthTheme·initThemeListener·restoreActiveTheme 전 경로가 자동으로 device 테마 우선. MobilePageView 리다이렉트가 `location.search`(=`?theme=`) 보존 확인.
+
+> 참고: override는 호출 시점 URL을 읽으므로 device 테마가 항상 우선하나, 첫 페인트 직전 무클래스(기본 라이트) 1프레임은 남을 수 있음(서버테마 플래시는 제거됨 — "device 우선·최소 플래시").
+
+### 영향 파일
+data-craft (웹):
+- `src/entities/theme/model/themeStore.ts` (임베드 `?theme=` 우선 가드)
+
 ## v001.1146.0
 
 > 통합일: 2026-06-26
