@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1167.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #503 (funshare-inc/data-craft)
+
+**R16 ③-1 — recent-usage FE 클라이언트 (1페이즈·additive·미소비).** ③ 사용자/최근 설정의 택소노미-robust 안전 전진. BE recent-usage(#495 P4)를 FE가 소비할 클라이언트. dev 전용·origin 미푸시·typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `2dc18b48`: `builderRecentUsageApi.recentUsage(type, groupId)` → `ApiResponse<RecentWidgetUsage[]>`(bare array·둘 다 필수 쿼리) 신설(BE #495 findRecentWidgetUsage verbatim 미러·`api/builder.recentUsage.ts`). `RecentWidgetUsage` 타입(widgetId·type:number·groupId:number·properties:Record<string,unknown>[dataViewerField 제거]·**updatedAt: string**[Date 아님·JSON 직렬화 컨벤션]). endpoint `RECENT_USAGE: '/api/builder/recent-usage'`(/api prefix). 4단계 배럴 export. **기존 타입 무수정·순additive·택소노미 무결정**(type=frozen 숫자 패스스루). +46/-0.
+
+### 후속·주의 (carry-forward)
+- ③ 본체(최근설정 copy-only UI·조합스코프 / 사용자설정 참조전용·company scope)=② 택소노미 결정 후. 본 클라이언트는 그때 소비.
+- recentUsage 메서드 배치=builder API 영역(`/api/builder/recent-usage`·②-1 widgetPresetApi와 별개·엔드포인트 도메인 기준 그룹).
+
+### 영향 파일
+data-craft:
+- 신설: `src/_packages/fs-api/api/builder.recentUsage.ts`·`src/_packages/fs-api/types/requests/recentUsage.ts`
+- 수정: `src/_packages/fs-api/constants/endpoints.ts`·`src/_packages/fs-api/index.ts`·`src/_packages/fs-api/types/index.ts`·`src/_packages/fs-api/types/requests/index.ts`
+
 ## v001.1166.0
 
 > 통합일: 2026-06-27
