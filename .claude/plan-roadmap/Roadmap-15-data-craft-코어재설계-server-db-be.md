@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
-> **현황(2026-06-26 v2)**: 🟢2 · 🟡3 · 🔴11 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
+> **현황(2026-06-26 v2)**: 🟢3 · 🟡3 · 🔴10 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
 
 ## 프롬프트
 
@@ -20,7 +20,7 @@
 
 🟡 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화) + 페이지 read/write 권한 강제. **부분완료(#485 CLOSED)**: client→company 정렬 + SP 비-삼킴 호출자 적응 dev 머지(e79dbfe). **잔여**: value_data→data·row_num→row_id 읽기-스위치(dual-write 완료로 해금) · 서버계산 캐싱 · 페이지권한.
 
-🔴 /task-db-structure data-craft — **D8 (Roadmap-16 FE 위젯 재설계 유입, 2026-06-26)**: 41 블록타입 enum 신설 + `data_column.블록타입` 열(Not Null) + 기존 type 컬럼→블록타입 백필. **dataType(5)와 직교한 렌더링타입(41) 메타데이터.** **매핑정정(2026-06-26 적대검증·마스터 확정): timer=number·uniqueID/color=json — 분포 string9/number5/date3/boolean2/json22.** dev 적용·migration+rollback·advisor 게이트. [**fs-api 41-block 계약 = R16 P1 소유·동결목록 정본**(collapse 후 앱 src), 본 enum은 그 목록과 정합·드리프트 금지(⑪)] [⚠️ **파생/계산 블록 7종**(rowID·uniqueID·lastUpdate·log·formula·quickFormula·dualBlock)=셀값 미저장 → dataType/백필 명목상, 셀 마이그 비대상으로 처리(가상/파생 열 개념)]
+🟢 /task-db-structure data-craft — **D8 (Roadmap-16 FE 위젯 재설계 유입, 2026-06-26) — dev 완료(6eea8e3)**: `block_type_enum`(41 native PG enum) 신설 + `data_column.block_type`(Not Null) 추가 + coarse 백필(column_type 1→number·2→text·3→date·4→switch). dev psql 적용·검증 통과(라이브 enum 41 라벨 byte-exact·2,193행 NULL 0·분포 text1592/number493/date77/switch31). **41 영문 id 정본 = 명령세션 마스터 확정(byte verbatim 박제, ⚠️button 분해→automation)** — 문자10·버튼12·특수13·확장6. **매핑(마스터확정): timer=number·color/uniqueID=json — 분포 string9/number5/date3/boolean2/json22.** [⚠️ **파생/계산 7종**(rowID·uniqueID·lastUpdate·log·formula·quickFormula·dualBlock)=셀값 미저장·coarse 백필 비대상] **이연**: ⑪ 드리프트체크는 fs-api `ALL_BLOCK_TYPE_IDS` 미구현(R16 P1)이라 R16 P1 단위로 이연(R16 P1=41 정본 verbatim 소비). **coarse=dev 임시·provisional**(fine 백필=prod 재인코딩 게이트서 viewer_type 실데이터). **권고: 마스터가 41 정본을 SPEC §B 영문ID로 박제 → D8·R16 P1·⑪ 단일출처화.**
 
 **— 위젯 시스템 BE 슬라이스 (Roadmap-16 FE 재설계 유입, 2026-06-26 적대검증 도출) —**
 > 전부 additive 스키마+BE 엔드포인트(i-dev 머지·prod는 조율 컷오버 합류). 신 위젯 모델이 완료된 R15 작업(company_setting 폼락·preset_id 부재·page_section 미편성)과 충돌하는 부분을 정합.
@@ -59,7 +59,7 @@
 - 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
 - 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 = **셀 라벨에서 도출 확정**(master 2026-06-26; distinct 셀값→옵션 생성, 정제 1패스[오타/더티값] 동반).
 - 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
-- 🔴 **위젯 시스템 BE 슬라이스 ④~⑪ (2026-06-26 유입)** — 미착수. D8(매핑정정 timer=number·파생7블록 명목처리) + company_setting 폼락해제(M1 폼29행 재처리)·preset_id·page_section/격자·widget_preset 3계층·recent-usage·file-group·D1·드리프트체크.
+- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **잔여 미착수**: ④ company_setting 폼락해제(M1 폼29행 재처리)·⑤ preset_id·⑥ page_section/격자(area→격자 알고리즘 미명세)·⑦ widget_preset 3계층·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크.
 - 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
 
 ---
