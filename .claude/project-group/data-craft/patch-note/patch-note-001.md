@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1145.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스8
+
+**다크모드 후속 — 스플래시 네이티브 배경·바텀 네비·마이페이지 아바타.** 핫픽스7(5영역) 후 발견된 셸/잔여 요소 처리. (1) 네이티브 Android 스플래시가 흰 배경 하드코딩이라 다크에서 "로고 반만 다크"로 보이던 것 수정. (2) 바텀 네비게이션이 다크 미적응이던 것 colorScheme 적용. (3) 마이페이지 기본 아바타·오너 태그를 다크여도 라이트와 동일하게 고정(마스터 지시). data-craft-mobile, flutter analyze 0, advisor 완료 PASS.
+
+### 페이즈 결과
+- **Phase 17** (fix) `3741830`: 네이티브 스플래시 배경을 `@color/splash_background` 리소스로 분리 + `values-night/colors.xml`(#0F172A) 추가 → 다크에서 Flutter 스플래시(surfaceContainerLowest)와 일치, 흰 번쩍임 제거. 바텀 네비(`bottom_nav_bar.dart`) 모듈 const 4종·`Colors.white` bg → colorScheme(surface/outlineVariant/primary/outline/error/onError).
+- **Phase 18** (fix) `70709d7`(+린트 `e44e5e1`): 마이페이지 기본 아바타(배경 `0xFFDBEAFE`·이니셜 `0xFF2563EB`·테두리 white)와 오너 태그(배경 `0xFFDBEAFE`·아이콘/텍스트 `0xFF2563EB`)를 고정 라이트색으로 핀 — 다크모드에서도 라이트 외관 유지.
+
+> 참고: 페이지 로딩 스켈레톤(웹 `MobilePageSkeleton`)은 시맨틱 적응 클래스(bg-background/bg-muted)를 사용하므로 핫픽스7 Phase 16(`?theme=`→`.dark`)+웹 번들 재빌드로 자동 다크 적응(별도 코드 무).
+
+### 영향 파일
+data-craft-mobile:
+- `android/app/src/main/res/values/colors.xml` · `values-night/colors.xml`(신규) · `drawable/launch_background.xml` · `drawable-v21/launch_background.xml`
+- `lib/screens/main_shell/widgets/bottom_nav_bar.dart`
+- `lib/screens/me/me_screen.dart` · `lib/screens/me/widgets/me_profile_card.dart`
+
 ## v001.1144.0
 
 > 통합일: 2026-06-26
