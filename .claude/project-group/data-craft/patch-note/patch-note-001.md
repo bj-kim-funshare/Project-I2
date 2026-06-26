@@ -33790,3 +33790,33 @@ spec-dashboard 추출기 `extract.mjs`의 미들웨어 `used_global` 계산이 i
 ### 영향 파일
 data-craft-server:
 - `spec-dashboard/scripts/extract.mjs` (used_global이 index.ts positional 게이트 반영)
+
+## v001.1149.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #491 (funshare-inc/data-craft)
+
+#476 Sendbird lazy 연결의 후속 — 채팅 좀비의 마지막 두 경로(채팅 화면 연 채 강제킬/재설치 좀비, 멀티 모바일 기기 동시 로그인)를 로그인 시점에 정리. 채팅은 모바일 전용(웹 Sendbird 미연결)이라 웹 로그인 보존. data-craft-mobile + data-craft-server 2 repo.
+
+### 페이즈 결과
+- **Phase 1 (`138cb0e8`, data-craft-mobile)** [좀비 정리, best-effort]: `ChatService.revokeSession()` public 신설(내부 `chatApi.revokeSessionToken()`, 오류 swallow). `chatConnectionProvider` 로그인 분기에서 push 등록 前 fire-and-forget 호출 — lazy라 로그인 시점 현재 앱 미연결이라 revoke 대상은 이전 인스턴스 좀비뿐. ⚠️ best-effort: revoke가 established 좀비 websocket을 즉시 끊는지 미확정(Sendbird 강제 disconnect 공식 API 없음), idle timeout 안전망.
+- **Phase 2 (`25ce2cd0`, data-craft-server)** [single-device-login 서버]: `buildDeviceInfo`로 `X-Client-Platform: mobile` 헤더 시 `device_info`=`mobile|<UA>` prefix(헤더 없으면 raw UA — 웹/구버전 graceful), signin·refresh·autoSignin·init 전 경로 일관. `revokeMobileTokensByUserId`(`LIKE 'mobile|%'`, 웹 토큰 무접촉, except 분기) — signin이 모바일 요청일 때만 호출(rememberMe=true→새 토큰 except / false→전체 모바일 revoke). SESSION_REPLACED는 스키마 무변경 추론(GRACE-MISS에서 자식토큰 부재=직접 revoke + revoked 토큰 mobile prefix + 더 최신 유효 모바일 토큰 존재). 경로 확인: revoke 토큰→verifyRefreshToken REVOKED→refresh() catch→refreshViaGrace→GRACE-MISS 도달(live code).
+- **Phase 3 (`4521ceef`, data-craft-mobile)** [single-device-login 모바일]: `dio_client` 메인 dio + refreshDio 둘 다 `X-Client-Platform: mobile` 송신(kIsWeb 가드, refresh가 SESSION_REPLACED 반환 엔드포인트). refresh 실패 응답에서 SESSION_REPLACED 검출→`AuthState.lastLogoutReason`→로그인 화면 "다른 기기에서 로그인되어 로그아웃되었습니다"(initState 1차 + ref.listen 보조). 일반 만료는 reason=null로 기존 동작 보존. l10n ko/en 추가.
+
+### 알려진 한계
+- **Phase 1 best-effort**: 좀비 즉시 정리 미확정 — 효과 실증은 Sendbird 7/1 월 리셋 후(현재 PCC 초과로 dev/prod disabled 403100).
+- **autoSignin 엣지(deferred)**: autoSignin/init은 prefix 기록만, 이전 모바일 revoke 미수행 → 밀려난 기기가 access TTL 창 내 autoSignin 시 single-device 일시 깨짐(access 만료 후 SESSION_REPLACED 자동 해소). plan 범위 외, 7/1 실측 후 필요 시 후속.
+- **rememberMe=false 메시지 저하**: 새 기기가 rememberMe=false면 새 토큰 미생성 → 밀려난 기기 SESSION_REPLACED 추론이 더 최신 토큰을 못 찾아 generic REFRESH_TOKEN_REVOKED 표시(로그아웃=보안은 정상, 안내 문구만 저하).
+- **company 스코프**: revoke가 (userId, companyId) 기준 — 같은 user가 다른 company로 로그인한 기기는 미차단(의도 정합).
+- **실동작 검증 미완**: SESSION_REPLACED 흐름(로그인→2차 로그인→401→안내, 웹 미차단)은 머지 후 dev(:8000) 실측 필요. 정적(analyze/build/lint)·경로추적까지 완료.
+
+### 영향 파일
+data-craft-mobile:
+- `lib/chat/chat_service.dart`, `lib/chat/chat_connection_provider.dart` (Phase 1)
+- `lib/api/dio_client.dart`, `lib/state/auth_controller.dart`, `lib/screens/auth/common_signin_screen.dart`, `lib/l10n/app_ko.arb`, `lib/l10n/app_en.arb` (Phase 3)
+
+data-craft-server:
+- `src/services/auth.service.ts`, `src/services/init.service.ts`, `src/services/token.service.ts`, `src/models/refreshToken.model.ts`, `src/controllers/auth.controller.ts`, `src/types/auth.types.ts` (Phase 2)
+
+### advisor 검증
+- 계획 #1: PASS(5관점, 4보강: 명시 헤더·rememberMe 무관·best-effort·검증 분리). 완료 #2: PASS — GRACE-MISS reachability 정적 확인(revoke 토큰이 SESSION_REPLACED 브랜치 도달, dead code 아님), known-limitations 2건(rememberMe=false 메시지·company 스코프) 기록.
