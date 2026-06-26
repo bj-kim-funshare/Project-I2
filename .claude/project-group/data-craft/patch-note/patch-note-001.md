@@ -33940,3 +33940,25 @@ data-craft-admin-server (집계):
 data-craft-admin (표시):
 - `src/pages/analytics/AnalyticsPage.tsx`, `src/entities/analytics/{api,types,index}.ts`
 - `src/features/analytics-plan/{PlanFunnelCharts,PlanConversionKPICards,PlanTimeSeriesChart,PlanSegmentCharts,PlanFailureAnalysisCharts,index}.tsx` (신규)
+
+## v001.1154.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #493 (funshare-inc/data-craft) · 핫픽스1
+
+**플랜 관리 분석 — 결제 시도→성공/실패 전환률 100% 중복 해소.** 마스터가 prod 모드에서 `결제 시도→성공`·`결제 시도→실패`가 둘 다 100%(합 200%, 모순)로 표시되는 것을 보고. 원인 = `getPlanMetrics`의 두 비율이 **distinct-actor** 카운트로 계산돼, 한 유저가 결제 실패 후 재시도해 성공하면 attempt·success·failed 각 distinct=1 → 양쪽 분자 모두 1 → 둘 다 100%.
+
+### 페이즈 결과
+- **핫픽스1-BE** (data-craft-admin-server) `c9c12e6`: 메인 집계 쿼리에 `COUNT(*)::int AS event_count` 추가, `FunnelCountRow.event_count` 선언, `safeRateByEventCount` 헬퍼 신설. `attemptToSuccess`·`attemptToFailure` 두 비율만 이벤트 건수 기반(`payment_success`·`payment_failed` 건수 / `payment_attempt` 건수)으로 전환 → 합 ≤100% 보장(구조적으로 200% 불가). 나머지 cross-stage distinct-actor 비율은 기존 `safeRate` 유지. 퍼널/세그먼트/시계열/실패분석 무변경.
+- **핫픽스1-FE** (data-craft-admin) `a1704b6`: KPI `결제 시도→성공`·`결제 시도→실패` 라벨에 `(건수)` 명시 — 같은 화면 전환 퍼널 표의 distinct-actor 기반 `잔존율`(예: 결제시도→결제성공 100%)과 시각적으로 구분(서로 다른 정의가 버그처럼 보이지 않도록).
+
+### 검증
+- 게이트: admin-server `pnpm lint && pnpm build`(eslint+tsc) PASS, admin `pnpm typecheck && pnpm lint` PASS.
+- dev `user_events` read-only 실행: 신규 event_count 경로 에러 없이 동작(dev 데이터 0이라 전부 0, 0분모 가드 정상).
+- advisor 핫픽스 검증 PASS(이벤트 건수 방법론 타당, 200% 구조적 불가 확인 + 퍼널 잔존율/KPID 건수 구분 권고 반영).
+- :8100 admin-server nodemon 머지 후 클린 재시작 확인.
+- **prod 실값 마스터 확인 대기**: 분류기 prod 읽기 차단으로 prod 실측 미수행 — 마스터 브라우저 새로고침으로 `결제 시도→성공/실패 (건수)`가 상보적 값으로 표시되는지 확인 필요(구조적으로 해소).
+
+### 영향 파일
+- data-craft-admin-server: `src/services/adminAnalytics.service.ts`
+- data-craft-admin: `src/features/analytics-plan/PlanConversionKPICards.tsx`
