@@ -1,5 +1,33 @@
 # data-craft — Patch Note (001)
 
+## v001.1164.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #499 (funshare-inc/data-craft)
+
+**R16 ① 디자인 모드 시스템 — 셸 (7페이즈).** 신 위젯 시스템의 FE 프레임워크 — 디자인모드 토글·헤더 말풍선·3탭 설정 모달·호버 백막·드로어/열메뉴 모달 이관·빈섹션 가이드·플로팅 컨트롤바 제거·1섹션 UI 강제. 현 area 레이아웃 모델 위 FE-only(격자 100×70 FE 전환은 BE 격자서빙 #500 해금 후 별도 ①'). dev 전용·origin 미푸시·전 페이즈 typecheck:all+lint exit 0(committed-state 독립 확인)·advisor-fallback #1/#2 PASS(advisor off).
+
+### 페이즈 결과
+- **Phase 1** (refactor) `cc95f499`: 섹션 추가/삭제/열분할 폐지·SectionControls 높이/세로확장만 축소·FloatingSectionBanner null화·LayoutCanvas `slice(0,1)` 1섹션 UI 강제(DB 다중섹션 모델 유지)·DEFAULT_SECTION_HEIGHT 200→700·isExpanded 기본 true(§Cb·§D2-4).
+- **Phase 2** (feat) `64b0f6a3`: AppHeader 디자인모드 말풍선 아이콘박스(DesignHeaderBubble) — 위젯추가(14타입)·높이·세로확장(Phase1서 이관)·나만의디자인 disabled placeholder(②). WIDGET_TYPE_KEYS 단일소스 분리(§D4-5).
+- **Phase 3** (feat) `6af07812`: settings-modal-shell 3탭 Radix Dialog 모달 셸(위젯설정/위젯디자인/배경디자인·shadcn Dialog/Tabs 재사용)+위젯모드 PropertyDrawer 콘텐츠 무변경 이관·WidgetContainer 클릭→openWidgetSettingsModal·layoutStore 모달 상태(§E).
+- **Phase 4** (feat) `31ade4c`+`d71fc90f`: 섹션/영역 설정 모달 2종 추가·SectionStyles/AreaStyles 이관·**PropertyDrawer 완전 폐기**(null stub·import 0)·트리거 cutover·SectionHeader Section.tsx 마운트(§E·§D7).
+- **Phase 5** (feat) `72110ebc`: WidgetContainer 호버 백막(bg-white/80·design+canEdit 한정·평상시 투명)+GripVertical 드래그 핸들(좌상 placeholder)+Settings 버튼(우상→모달)·기존 클릭/ring 제거(§Cj).
+- **Phase 6** (refactor) `081055d5`: ColumnMenuDropdown 포탈 드롭다운→Radix Dialog 모달(ColumnMenuModal·항목 무변경 래핑)·**A3 fs-data-viewer→app 역의존 0**(§D7).
+- **Phase 7** (feat) `3489eedc`: EmptySectionGuide §Cc — "빈 섹션" 안내+7 위젯 카테고리(블록·디자인·자동화·보드·차트·파일·탐색기) 둥근 정사각형 바로가기(상이 배경색)·EmptyPageState @deprecated(뷰모드 잔존).
+
+### 후속·주의 (carry-forward — advisor #2 "정당 후속·치명 0")
+- **격자 100×70 FE 전환 = 별도 ①'**(BE 격자서빙 #500 해금됨·WidgetConfig grid+activeSection 소비·LayoutCanvas/converter 재작성). favorites=②·사용자설정=③·위젯추가 상세플로(그룹/열/등록)·per-widget 설정콘텐츠=④.
+- EmptySectionGuide 7카테고리=현 14타입 잠정 매핑(차트=신타입 없음·디자인=tabs만)·바로가기 §Ce 모달 직행은 ②③④ 위젯추가 모달 후 연결(현재 인라인 목록).
+- ⚠️ ColumnMenuModal 내 2차 Radix Dialog(유형변경 등) 중첩 z-index/포커스 = **dev 런타임 스모크 테스트 권고**(dev-only 미검증).
+- SubGridColumnMenu(fs_grid_sub) 포탈 드롭다운 잔존 = §D7 부분·후속 페이즈.
+- dead code 정리(isSectionDrawerOpen/isAreaDrawerOpen 잔여 7파일·useDrawerOverlap·propertyDrawerTab·온보딩 addSection/secondSectionAdd deadstep[graceful 비크래시]) = cleanup 후속.
+
+### 영향 파일
+data-craft:
+- 신설: `src/widgets/design-header-bubble/`·`src/widgets/settings-modal-shell/`·`src/widgets/empty-section-guide/`·`src/_packages/fs-data-viewer/widgets/grid-table/components/column-menu-b/ColumnMenuModal.tsx`
+- 수정: `src/widgets/layout-canvas/ui/{LayoutCanvas,SectionControls,FloatingSectionBanner,WidgetContainer,Section,SectionHeader,AreaControls,SubAreaControls,EmptyPageState}.tsx`·`src/widgets/header/ui/AppHeader.tsx`·`src/widgets/property-drawer/ui/PropertyDrawer.tsx`(폐기)·`src/features/widget-placement/`·`src/entities/layout/model/{layoutHelpers,layoutStore,layoutTypes}.ts`·`src/pages/builder/BuilderPage.tsx`·`src/_packages/fs-data-viewer/widgets/grid-table/components/ColumnMenuDropdown.tsx`
+
 ## v001.1163.0
 
 > 통합일: 2026-06-26
