@@ -6,6 +6,8 @@
 
 ## 프롬프트
 
+> **★ 실행 규약(위젯 BE 슬라이스 ④~⑪ 공통)**: 프롬프트는 **스코프 포인터**. 각 🔴 실행 시 ① FE 설계 SPEC(`/Users/starbox/Documents/GitHub/Project-I2/.claude/plan-roadmap/Roadmap-16-data-craft-위젯시스템-재설계-SPEC.md`) 해당 § + `data-craft-server/docs/db-audit/REDESIGN-SPEC.md` 정독, ② 스킬 자체 plan+advisor로 상세·수용기준 도출, ③ 미명세분(⑥ area→격자 알고리즘·⑧ recent-usage 3줄 계약 등) 실행 전 보완.
+
 🟢 (ad-hoc) Roadmap-5(data-craft-view-removal-cud-policy) 완료/흡수 확인 — §3 data_viewer_setting/_column_setting 제거·폼 폐지가 Roadmap-5와 직접 중첩. (확인 완료·충돌 0.) Roadmap-12(monorepo refactor)는 FE라 16에서 점검(완료/격리).
 
 **— Phase 0 : 계약 동결 (★Roadmap 16 진입 게이트) —**
@@ -35,7 +37,7 @@
 
 🔴 /task-db-structure data-craft (+BE) — **⑨ file-group 모델 정식화**: 데이터그룹과 동격의 파일그룹 1급 엔티티(갤러리·파일 업로더·파일 탐색기 기반). 스키마+BE CRUD. (R16 ⑤⑦⑨⑩ 의존.)
 
-🔴 /task-db-structure data-craft (+BE) — **⑩ 관리주기 D1**: 페이지 관리주기 + 위젯별 연동 옵션(단일 데이터 vs 페이지 관리주기·비활성 시 단일 고정). 스키마+BE. (R16 관리주기 단위 의존.)
+🔴 /task-db-structure data-craft (+BE) — **⑩ 관리주기 D1**: 페이지 관리주기 + 위젯별 연동 옵션(단일 데이터 vs 페이지 관리주기·비활성 시 단일 고정). **동작 기준 = `data_values.created_at`**(주기 창 시간 필터의 키 — 켜진 위젯은 현 주기 창 created_at 셀만). 스키마+BE. (R16 관리주기 단위 의존.)
 
 🔴 /plan-enterprise data-craft — **⑪ 교차repo 드리프트체크**: DB blockType enum labels ↔ fs-api `ALL_BLOCK_TYPE_IDS` 41목록 byte 일치 검증(생성/CI 체크). 공유 패키지 불가(별도 repo)·이미 3중 드리프트 전력(ViewerType) → 자동 가드. [fs-api 41목록 정본=R16 P1] (소형 단위.)
 
@@ -55,7 +57,7 @@
 - 🟡 **Phase 0 DDL** — 신규4테이블·additive컬럼·SP 비-삼킴·client→company 리네임 dev적용·i-dev머지(b6abfde). 미착수: 레거시 DROP만(흡수+cutover 후 보류).
 - 🟢 **Phase 0 fs-api 계약동결** — #456 CLOSED(5 dataType·CellData·RowId·permission/company_setting/widget_preset 타입). 41 블록타입 계약은 별건(R16 P1).
 - 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
-- 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 셀라벨 도출 vs 빈채로 **master 결정 미정**.
+- 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 = **셀 라벨에서 도출 확정**(master 2026-06-26; distinct 셀값→옵션 생성, 정제 1패스[오타/더티값] 동반).
 - 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
 - 🔴 **위젯 시스템 BE 슬라이스 ④~⑪ (2026-06-26 유입)** — 미착수. D8(매핑정정 timer=number·파생7블록 명목처리) + company_setting 폼락해제(M1 폼29행 재처리)·preset_id·page_section/격자·widget_preset 3계층·recent-usage·file-group·D1·드리프트체크.
 - 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
