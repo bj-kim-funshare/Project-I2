@@ -33658,3 +33658,19 @@ data-craft-server:
 - `src/app.ts` (6 직접 마운트+전역 게이트 → `app.use('/api', routes)` 단일)
 - `src/routes/index.ts` (5 공개/커스텀+chat/file → positional 게이트 → 18 보호)
 - `spec-dashboard/scripts/extract.mjs` (새 구조 대응)
+
+## v001.1141.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #490 (funshare-inc/data-craft)
+
+spec-dashboard 추출기 `extract.mjs`의 미들웨어 `used_global` 계산이 index.ts positional 게이트를 반영하도록 수정 — #484(app.ts 배럴 일원화) 회귀로 대시보드 미들웨어 탭이 authMiddleware를 포함 44/미포함 183으로 잘못 표시하던 것을 정상화. data-craft-server 단일 repo, 대시보드 도구 단일 파일, 런타임·HTTP 계약·실제 인증 무관.
+
+### 페이즈 결과
+- **Phase 1** (fix) `990f0bd`: `extractMiddlewares`의 `used_global`이 app.ts 텍스트만 검사하던 것을, routes/index.ts의 **path-less** `router.use(authMiddleware, permissionMiddleware)` 게이트 args 식별자(`gateMiddlewareNames`, buildIndexMountMap의 `!firstText.startsWith('/')` 가드 동형으로 수집)도 인식하도록 확장(`appText.includes(name) || gateMiddlewareNames.has(name)`). #484로 게이트가 app.ts→index.ts 이동 후 false로 뒤집혔던 authMiddleware·permissionMiddleware의 used_global을 true로 복구. fillMiddlewareUsage(per-route 메트릭)·auth_class 분류·엔드포인트 추출·app.js·src/ 무변경.
+- 검증: 추출기 재실행 → authMiddleware.used_global=true·permissionMiddleware.used_global=true, auth_class **public16·route-custom-auth36·global-auth175**·총 227·unresolved 0 불변. 대시보드 authMiddleware 탭 auth-guard 분기 복귀(포함 175/미포함 52, #484 이전 동작). lint PASS. advisor #1·#2 PASS(advisor-fallback).
+- 참고: permissionMiddleware는 per-route 사용 0이라 대시보드에서 'all'(227/0)로 표시됨 — #484 이전과 동일한 기존 표시(회귀 아님). auth-guard(175)로 보이게 하려면 app.js globalScopeCategory 소변경이 별도 필요(후속 선택).
+
+### 영향 파일
+data-craft-server:
+- `spec-dashboard/scripts/extract.mjs` (used_global이 index.ts positional 게이트 반영)
