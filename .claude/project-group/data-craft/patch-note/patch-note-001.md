@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1161.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #497 (funshare-inc/data-craft)
+
+**R16 P1.5 — json 셀 shape 규격 + 2층(shape) 호환 게이트.** 흡수된 fs-api 계약에 41 블록 셀값 shape 규격 + dataType(1층)·shape(2층) 마이그레이션 호환 판정 게이트를 type-only additive 신설. 열 타입 변경 마이그 기능의 선행 필수. 미소비·런타임 0·dev 전용·origin 미푸시·typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS(advisor off).
+
+### 페이즈 결과
+- **Phase 1** (feat) `b76369c3`: `src/_packages/fs-api/types/contract/blockShape.ts` 신설 — `CellValueShape`(9종)·`BLOCK_SHAPES`(41 전수 Record·tsc 완전성 강제)·`ShapeCompat`(4상태)·`canMigrate()` 게이트·helper 4종(isStored·isConversionEligible·getCellShape·listMigrationCandidates). **2축 분리** `stored`(실저장·false 8종: rowID·uniqueID·formula·quickFormula·image·file·period·automation) ⊥ `conversionEligible`(conversion-catalog EXCLUDED 13 + 미구현 2[period·automation]·false 15종). 게이트 로직: 비-eligible→immediate-no / 자기→always-ok / 동종 dataType→inspect-required(의미검증·user↔tag) / 이종→needs-type-conversion(타입충실 변환레이어 소관·가능). blockType.ts P1.5 TODO→blockShape 참조 갱신·contract/index.ts export 추가.
+
+### 후속·주의 (carry-forward)
+- ⚠️ **conversion-catalog body→content 버그**(text→document SYSTEM_TRANSFORMS가 `body` 키 생성·파서는 `content` 기대): P1.5 비수정(additive 원칙)·마이그 채택 단위(catalog 교체 시) 수정 대상 FLAG.
+- ⚠️ **SPEC §F(Project-I2 문서) 사실오류 2건**: ① dualBlock·log·lastUpdate를 "셀값 미저장 7종"에 오분류 — 실측상 stored=true·conversionEligible=false(실 미저장 = rowID·uniqueID·formula·quickFormula·image·file·period·automation). ② "같은 dataType=무변경 즉시" 규칙 → shape-compat 선행으로 정정 필요. blockShape.ts가 실측 정본 → 메인세션 별도 후속(Project-I2 SPEC 편집).
+- 미소비(④블록·마이그 단위서 채택). formula AST 마이그(cell.ts CellFormulaSpec 적용)=별도 로드맵.
+
+### 영향 파일
+data-craft:
+- 신설: `src/_packages/fs-api/types/contract/blockShape.ts`
+- 수정: `src/_packages/fs-api/types/contract/index.ts`·`src/_packages/fs-api/types/contract/blockType.ts`
+
 ## v001.1160.0
 
 > 통합일: 2026-06-26
