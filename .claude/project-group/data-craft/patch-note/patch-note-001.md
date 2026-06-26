@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1140.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스4
+
+**profile 빌드에서도 cleartext(HTTP) 허용 — prod급 dev 빌드 가능.** "배포 환경과 동일(AOT)하되 dev 서버로 요청"하는 profile 빌드가 로컬 HTTP dev 서버를 WebView로 로드할 수 있도록 cleartext 허용을 profile 소스셋에도 추가. (release 모드는 `env.dart`가 비-prod 호스트를 prod로 강제 coercion하여 dev 서버를 못 바라보므로, AOT면서 dev URL을 존중하는 profile이 정답.) hotfix3(debug)와 동일 패턴. data-craft-mobile 단일 repo, flutter analyze 0, advisor 완료 PASS, profile APK 병합 매니페스트 `usesCleartextTraffic=true` 실측 확인.
+
+### 페이즈 결과
+- **Phase 7** (fix, data-craft-mobile) `bf639de`: `android/app/src/profile/AndroidManifest.xml`(profile 소스셋)에 `<application android:usesCleartextTraffic="true" />` 오버레이 추가. profile 빌드만 cleartext 허용 → `flutter build apk --profile --dart-define=API_BASE_URL/WEB_BASE_URL=http://<lan-ip>:…` 로 prod급 성능 + dev 서버 타깃 빌드 가능. main/release(HTTPS prod)는 무영향.
+
+### 영향 파일
+data-craft-mobile:
+- `android/app/src/profile/AndroidManifest.xml` (profile 전용 cleartext 허용 오버레이)
+
 ## v001.1139.0
 
 > 통합일: 2026-06-25
