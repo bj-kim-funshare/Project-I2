@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
-> **현황(2026-06-26 v2)**: 🟢3 · 🟡4 · 🔴9 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 스키마 dev완료(c9da662, 백필 후속)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
+> **현황(2026-06-26 v2)**: 🟢4 · 🟡3 · 🔴9 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
 
 ## 프롬프트
 
@@ -29,7 +29,7 @@
 
 🔴 /task-db-structure data-craft — **⑤ page_widget.preset_id + 참조해소 계약(스펙)**: REDESIGN §9는 preset_id 연결을 명시하나 §3.5 스키마/fs-api payload에 컬럼 부재 → REFERENCE(나만의 링크·사용자 참조) 미정의. `page_widget.preset_id` 실 컬럼(FK·인덱스) 추가 + 렌더 시 참조해소 **계약 명세** + **로컬편집=금지**(편집하려면 복사, 기본). copy(properties 인라인) vs reference(preset_id) 배타 모델 명문화. (스키마+계약 스펙만; **BE 참조해소 구현은 ⑦**.)
 
-🟡 /task-db-structure data-craft (+task-db-data) — **⑥ page_section/정수격자 — 스키마 dev완료(c9da662), 백필 후속**: SPEC §7·§3.5. **완료(ADDITIVE)**: `page_section` 테이블 신설(section_id PK·layout_id FK→page_layout·height·col_grid_count 100·row_grid_count 70·style·seq·정책4) + `page_layout_widget`에 격자좌표 5컬럼 ADD(section_id FK·start_x·start_y·width·height, 전부 nullable·ck NOT VALID). dev 적용·검증(page_section 0행·207위젯/390area 무영향). **area→정수격자(100×70) 도출 알고리즘 = plan.md 박제 완료**(`docs/migration/r15-6-page-section-grid/`): 경계-차분(비겹침 증명)·prefix-strip 링크·isRowSplit 합성·section_id=type1.area_id 재사용. 마스터 확정: **D2 page_section=1/섹션-area·layout_id FK**(무손실 additive, "1/page"는 END STATE→collapse 컷오버 수렴). **이연(컷오버)**: `page_layout_widget→page_widget` 리네임·area DROP·NOT NULL/VALIDATE 승격(BE 708 SQL 보호·expand먼저·contract나중). **후속**: 백필(task-db-data, 알고리즘 구현·좌표 0-based provisional D1 재확인). **R16①의 선행 요건 — 스키마 제공 완료.**
+🟢 /task-db-structure +task-db-data data-craft — **⑥ page_section/정수격자 — dev 완결(스키마 c9da662 + 백필 1567cce)**: SPEC §7·§3.5. **스키마(ADDITIVE)**: `page_section` 신설(section_id PK·layout_id FK→page_layout·height·col_grid_count 100·row_grid_count 70·style·seq·정책4) + `page_layout_widget` 격자좌표 5컬럼 ADD(section_id FK·start_x·start_y·width·height, nullable·ck NOT VALID). **백필(task-db-data, exec dml-…-122ebf)**: area→100×70 격자 도출(경계-차분·prefix-strip·isRowSplit·section_id=type1.area_id 재사용) 구현·적재 — page_section **173행**·위젯 **207행** 좌표 백필. **0-based 확정(R16 FE)**. 대사 전수 통과(위젯207·NULL0·in-bounds0·진성겹침0·containment R-2 2쌍 documented·col100/row70). **★R-1 수정**: 정본 A.2.1 `cum+w>100` 직역=float-near-100 유령줄바꿈(반복소수 4섹션 사일런트 좌표손상, in-bounds/겹침 미포착) → `>100+1e-9` epsilon 가드. 마스터 확정 **D2=1/섹션-area·layout_id FK**(무손실). **이연(컷오버·파괴적)**: `page_layout_widget→page_widget` 리네임·area DROP·NOT NULL/VALIDATE 승격·1섹션/페이지 collapse·R-2 부모위젯 재배치(BE 708 SQL 보호). **R16①의 선행 요건 — 스키마+좌표 데이터 제공 완료.**
 
 🔴 /task-db-structure data-craft (+BE) — **⑦ widget_preset 3계층 확장**: 기존 owner_user_id XOR owner_company_id 소유 tier 활용 — 나만의(user-owned, 복사·참조)·사용자(company-shared, 참조전용)·최근사용(파생, ⑧). 참조/복사 의미(⑤ 연계)·사용자설정 권한(기존 철학). **BE 프리셋 CRUD·참조해소(⑤ 계약 구현).**
 
@@ -59,7 +59,7 @@
 - 🟡 **BE 콜사이트 cutover** — 부분완료(#485, e79dbfe). 잔여: value_data→data 읽기-스위치·캐싱·페이지권한.
 - 🟡 **데이터 마이그레이션** — data_row·text→JSON·M1 흡수 trio(c240ff2)·M2 색전역화+dangling drop(30ad0b1)·option-id 180행(03f57b7) dev머지. 잔여: 라벨박제 제거. ⚠️커버리지: 82 select 중 18만 option_list → ~64컬럼 = **셀 라벨에서 도출 확정**(master 2026-06-26; distinct 셀값→옵션 생성, 정제 1패스[오타/더티값] 동반).
 - 🟢 **SP/트리거 dual-write + option-id 인프라** — e6cd2cf/b6dbf4e/03f57b7. 행동검증 통과.
-- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ 스키마 dev완료(c9da662)**: page_section 신설 + 위젯 격자 5컬럼 ADD(additive·nullable), area→격자 알고리즘 plan.md 박제, D2=1/섹션 layout_id FK 마스터확정, 백필=task-db-data 후속. **잔여 미착수**: ④ company_setting 폼락해제(M1 폼29행 재처리)·⑤ preset_id·⑦ widget_preset 3계층·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크. **+ ⑥ 백필**(task-db-data, 알고리즘 구현).
+- 🟡 **위젯 시스템 BE 슬라이스 D8·④~⑪ (2026-06-26 유입)** — **D8 dev완료(6eea8e3)**: block_type_enum 41 + data_column.block_type Not Null + coarse 백필. 41 영문 id 마스터확정 박제·⑪ R16 P1 이연·SPEC §B 박제 권고. **⑥ dev완결(스키마 c9da662 + 백필 1567cce)**: page_section 신설 + 위젯 격자 5컬럼 ADD, area→100×70 격자 도출 백필(page_section 173·위젯 207, 0-based, 경계-차분+epsilon 가드[R-1 사일런트손상 수정], 대사 전수통과), D2=1/섹션 layout_id FK 마스터확정. **잔여 미착수**: ④ company_setting 폼락해제(M1 폼29행 재처리)·⑤ preset_id·⑦ widget_preset 3계층·⑧ recent-usage(3줄 계약 미확정)·⑨ file-group·⑩ D1·⑪ 드리프트체크.
 - 🔴 **prod 형태 재인코딩 게이트 / 조율 컷오버** — prod 대상, 범위 밖.
 
 ---
