@@ -2,7 +2,7 @@
 
 > 작성일: 2026-06-24 | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬)
 >
-> **현황(2026-06-25)**: 🟢3 · 🟡3 · 🔴2 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**흡수 M1+M2 완료(widget_preset/company_setting/permission 적재·색 전역화·dangling drop, 2026-06-25)**·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**·**SP/트리거 dual-write+option-id 인프라 완료(value_data→data 읽기스위치·option-id 발급 해금, e6cd2cf/b6dbf4e)**. 잔여: 레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
+> **현황(2026-06-26)**: 🟢3 · 🟡3 · 🔴3 — Phase 0 부분완료(계약동결·신스키마 additive·**SP 비-삼킴·client→company 리네임 dev적용**)·데이터변환 dev완료·**흡수 M1+M2 완료(widget_preset/company_setting/permission 적재·색 전역화·dangling drop, 2026-06-25)**·**BE cutover 부분완료(#485: client→company 정렬+SP 비-삼킴 적응 dev머지 e79dbfe, 깨짐창 폐쇄)**·**SP/트리거 dual-write+option-id 인프라 완료(value_data→data 읽기스위치·option-id 발급 해금, e6cd2cf/b6dbf4e)**. 잔여: **D8(블록타입 41 enum/열 — Roadmap-16 FE 재설계 유입, ①②와 직교)**·레거시 DROP(흡수+cutover 후)·BE cutover 잔여(value_data→data·캐싱·페이지권한)·prod 컷오버. 상세 ↓ 진척 현황 섹션.
 
 ## 프롬프트
 
@@ -17,6 +17,8 @@
 **— 구현 (코드 = i-dev 머지 / prod DB·배포만 컷오버 보류) —**
 
 🟡 /plan-enterprise data-craft — BE 콜사이트 cutover(work_repo=data-craft-server, i-dev): raw SQL 708건·SP호출 41곳 신스키마 정렬(테이블 리네임 · value_data→data JSON 마샬링 · row_num→row_id) + 서버 계산 엔드포인트(집계·차트 + 캐싱/무효화 모델) + 데이터 쓰기 경로 페이지 read/write 권한 강제(현행 company_id-only → 페이지권한). **부분완료(#485 CLOSED, 2026-06-25)**: client→company 정렬(12파일·60건) + SP 비-삼킴 호출자 적응(errorMiddleware P0001→400·ALL_FAILED 보존) dev 완료·i-dev 머지(e79dbfe). **잔여**: value_data→data·row_num→row_id(쓰기-경로 fork=SP 바디 재작성 DDL 선행 필요로 보류) · 서버계산 캐싱(Phase3 분리) · 페이지권한(신 permission 0행→흡수 후).
+
+🔴 /task-db-structure data-craft — **D8 (Roadmap-16 FE 위젯 재설계에서 유입된 조정, 2026-06-26)**: 41 블록타입 enum 신설 + `data_column.블록타입` 열(Not Null) + 기존 type 컬럼→블록타입 백필. **dataType(5)와 직교한 렌더링타입(41) 메타데이터 — 진행 중인 value_data→data 셀 작업과 무관(직교).** FE 41 블록타입 ↔ DB enum ↔ 레지스트리는 fs-api 계약 단일출처 참조. dev 적용·migration+rollback·advisor 게이트. (FE 설계 = `Roadmap-16-data-craft-위젯시스템-재설계-SPEC.md` §F·D8.)
 
 🔴 (ad-hoc) prod 형태 재인코딩 검증 게이트 — prod psql 읽기전용 introspection으로 text→JSON 타입충실 변환 · option-id 발급 · area→정수격자 도출을 prod 실분포에 dry-run(REDESIGN-SPEC §12 필수 게이트, dev=합성시드). 통과 = prod 적용 인가. (db.md pre-deploy 읽기전용 psql 인가 패턴 재활용)
 
