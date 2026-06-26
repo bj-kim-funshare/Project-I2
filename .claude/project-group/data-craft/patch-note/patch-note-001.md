@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1144.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #477 (funshare-inc/data-craft) · 핫픽스7
+
+**다크모드 미적용 5영역 전수 수정 + 모바일 임베드 본문 다크 연동.** 테마(`app_theme.dart` light/dark ColorScheme)는 완비돼 있었으나 화면들이 하드코딩 색(`Color(0xFF…)`·`Colors.white`)을 써서 다크에서 안 바뀌던 것을, 5영역(홈 카드·페이지 목록·알림·채팅·내 정보) ~26파일의 구조색을 `colorScheme` 역할로 전수 치환. 의도적 시맨틱색(앰버 별·카테고리 액센트·성공/경고/위험·미디어뷰어 black·브랜드 그라디언트)은 보존. 페이지 본문(webview)은 Flutter가 `?theme=dark|light` 힌트를 넘기고 웹앱이 받아 `.dark` 적용(모바일 임베드 위젯은 이미 시맨틱 적응 클래스 사용). data-craft-mobile + data-craft 2 repo, flutter analyze 0 / typecheck:all+lint 0, advisor 완료 PASS.
+
+> ⚠️ 알려진 영향: 단일 토큰 매핑 특성상 `0xFF94A3B8`→`cs.outline`(light=0xFF64748B)로 **light 모드의 일부 보조 텍스트/체브론/타임스탬프가 약간 진해짐**(의도된 트레이드오프). `notification_type_meta`의 2개 타입 회색 카테고리색은 const Map API 제약으로 유지(회색은 양 테마 무난).
+
+### 페이즈 결과
+- **Phase 10** (fix) `c3ed156`: 홈 바로가기 카드·알림 요약(home_quick_actions·home_notification_summary·home_tokens) — 카드 bg/배지/컬러컨테이너 위 흰 텍스트 colorScheme.
+- **Phase 11** (fix) `327fe4c`: 페이지 목록(page_screen·page_tree_item)·웹뷰 chrome(page_web_view_screen 로딩배경·에러) colorScheme + `?theme=` 힌트 전달.
+- **Phase 12** (fix) `216bd17`: 알림/인박스(inbox_screen·filter_chip_bar 모듈const 이동·notification_cell·group_header).
+- **Phase 13** (fix) `2ef20dd`: 채팅(chat_list·member_picker; chat_room은 기적용). 미디어뷰어 black/white·앰버 보존.
+- **Phase 14** (fix) `4484cd7`: 내 정보 코어(me_screen·me_header 그라디언트 보존·me_menu_list·me_profile_card const 이동).
+- **Phase 15** (fix) `71f6fa2`: 내 정보 설정 18파일 중 10파일 구조색 치환(시맨틱 status색 보존).
+- **Phase 16** (fix, data-craft 웹) `9744866`: `MobilePageView`에 `useLayoutEffect`로 `?theme=` 읽어 `useThemeStore.setThemeFromServer` 호출(.dark 적용, 서버 미동기화).
+
+### 영향 파일
+data-craft-mobile (5영역 ~26파일): `lib/screens/home/widgets/{home_quick_actions,home_notification_summary}.dart`·`home/home_tokens.dart`·`page/{page_screen,page_web_view_screen}.dart`·`page/widgets/page_tree_item.dart`·`inbox/{inbox_screen,widgets/*}.dart`·`dm/{chat_list_screen,member_picker_screen}.dart`·`me/{me_screen,widgets/*,settings/*}.dart`
+data-craft (웹): `src/pages/mobile/MobilePageView.tsx`
+
 ## v001.1143.0
 
 > 통합일: 2026-06-26
