@@ -33840,3 +33840,41 @@ data-craft-server:
 
 ### advisor 검증
 - 계획 #1: PASS(5관점, 4보강: 명시 헤더·rememberMe 무관·best-effort·검증 분리). 완료 #2: PASS — GRACE-MISS reachability 정적 확인(revoke 토큰이 SESSION_REPLACED 브랜치 도달, dead code 아님), known-limitations 2건(rememberMe=false 메시지·company 스코프) 기록.
+
+## v001.1151.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #492
+
+#492 인증 아키텍처 재설계 — 인증을 단일 진입점으로 규격화(신뢰성)하고, 인증 이후 적재/인가를 URL별 필요에 따라 유동 조립하는 계층으로 재설계. ★순수 구조 리팩토링: 공개/보호 적용범위·실제 인가 결과·라이브 동작 100% 불변. data-craft-server 단일 repo, 6페이즈.
+
+### 핵심 설계 결정 (master 락)
+- **D1 (Universal 유지 + 화이트리스트)**: permissionMiddleware(plan-endpoint-allow)는 default-deny 화이트리스트라 게이트에 universal 유지. 게이트화되는 31개 엔드포인트를 PLAN_ENDPOINTS[FREE]에 등재(현 pre-gate=plan무제한=FREE허용 등가). 실제 인가 결과 보존.
+- **D3 (includeFullAccount 전환)**: 게이트 뒤 roles/builder의 dead forceIncludeAuth를 includeFullAccount(서버측 명시 풀로드)로 전환. 실클라(항상 ?includeAuth 전송) 동작 동일, 무param+유효토큰 엣지만 403→200(잠재 취약성 해소).
+
+### 페이즈 결과
+- **Phase 1 (`c3f3cc6`)** [test 안전망]: 토큰부재 per-endpoint 기준선(227개) + auth_class 기준선(public 16·route-custom 36·global 175) 박제, 골든 레지스트리 +5엔트리. 이후 매 페이즈 이 동결 227 리스트로 drift 0 검증.
+- **Phase 2 (`66e3a43`)** [refactor]: 풀로드 로직을 `loadFullAccount(req)` 추출(idempotent), `includeFullAccount`/`fullAccountIfRequested` export. authMiddleware in-place 치환(동작 100% 동일).
+- **Phase 3 (`95a82c3`)** [refactor]: auth.router → authPublicRouter(공개 15, 게이트 앞) + authProtectedRouter(보호 9, 게이트 뒤). 보호 9개 per-route authMiddleware 제거→게이트+includeFullAccount, PLAN_ENDPOINTS[FREE] 8키 등재.
+- **Phase 4 (`802b72c`)** [refactor]: subscription → public(2) + protected(19, 게이트 뒤), promotion 게이트 뒤 마운트. 23 보호 라우트 includeFullAccount + ownerOnly/requirePaymentPassword/renewalWindow/limiter authz 보존, PLAN_ENDPOINTS[FREE] 23키 등재.
+- **Phase 5 (`bffaa9b`)** [refactor]: 모놀리식 authMiddleware 분해 — authMiddleware=JWT-only(DB 0), tenantGate 신규=고정 floor(light 1쿼리·상태차단·resolveEffectivePlan/handleExpiredPlan 1회·planType/isOwner+stash). loadFullAccount=stash 재사용 순수 로더(req.planType 미터치). 게이트=`authMiddleware,tenantGate,fullAccountIfRequested,permissionMiddleware`. ★재해소 제거로 만료+활성프로모션 시 planType 덮어쓰기 인가버그 차단.
+- **Phase 6 (`29e445d`)** [chore]: roles 9·builder 7 dead forceIncludeAuth→includeFullAccount 전환, forceIncludeAuth 정의 완전 폐지(잔존 0).
+
+### 검증
+- 매 페이즈: pnpm build(tsc)+lint exit 0, 워크트리 콜드부팅 :8099 /health 200, **토큰부재 per-endpoint 재생 227/227 일치(drift 0, 6페이즈 일관)**, 표적 에러코드 curl(공개=핸들러도달·보호=TOKEN_NOT_FOUND·잘못된토큰=ACCESS_TOKEN_EXPIRED).
+- 머지 후 i-dev: tsc --noEmit exit 0 + lint exit 0(#491 single-device-login과 통합 컴파일 클린).
+- golden(인증) 재생은 dev owner creds 미확보로 유보 — 토큰부재+표적 curl+정적 diff가 binding 게이트. advisor 완료#2가 풀로드=verbatim+stash(byte-identical)·31키 라우트 정확일치·authz verbatim을 정적 실증.
+
+### 알려진 한계
+- **삭제유저+includeAuth 엣지(수용)**: includeAuth 요청+삭제된유저/회사 시 OLD 404→NEW 401(tenantGate light JOIN이 먼저 거부). 극단 엣지(삭제유저+유효토큰≤15m+includeAuth), 양쪽 모두 거부(인가/접근 영향 0), OLD가 이미 비일관(light 401/full 404)이라 완전보존 불가·NEW는 일관 401. non-includeAuth는 OLD/NEW 모두 401 불변.
+- **추출기(spec-dashboard) 미터 갭(후속 권장)**: extract.mjs가 공개/보호 서브라우터 split(`export const authPublicRouter`·`subscriptionPublicRouter`)을 미파싱해 공개 17개 누락(227→210 집계). 서버 동작 무관(token-absent가 동결 227로 검증). 대시보드 정확도 복구는 extract.mjs split 파싱 후속 핫픽스 권장.
+
+### 영향 파일
+data-craft-server:
+- `src/middlewares/auth.middleware.ts`, `src/middlewares/tenant-gate.middleware.ts`(신규), `src/middlewares/index.ts`, `src/middlewares/permission.middleware.ts`
+- `src/routes/index.ts`, `src/routes/auth.router.ts`, `src/routes/subscription.router.ts`, `src/routes/promotion.router.ts`, `src/routes/roles.router.ts`, `src/routes/builder.router.ts`
+- `test/regression/token-absent.ts`(신규), `test/regression/endpoints.ts`, `test/regression/golden/token-absent-baseline.json`(신규), `test/regression/golden/auth-class-baseline.json`(신규), `test/regression/.gitignore`
+
+### advisor 검증
+- 계획 #1: PASS(advisor-fallback, 5관점). C1(default-deny·31 게이트화시 403)·C2(roles/builder forceIncludeAuth dead)·C3(32개 풀로드→includeFullAccount 필요) 소스대조 TRUE.
+- 완료 #2: PASS(advisor-fallback, 적대검증). 풀로드=verbatim+stash byte-identical·31키 정확일치·authz verbatim·#491 additive 충돌0. golden 부재가 비차단(정적 등가 실증).
