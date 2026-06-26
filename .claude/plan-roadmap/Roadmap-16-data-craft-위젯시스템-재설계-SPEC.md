@@ -33,10 +33,12 @@
 
 ## B. 렌더링 타입 (기존 "기능"을 "블록"으로 대체, 총 41개)
 
-1. **문자 블록 (10개)**: 텍스트 · 긴 텍스트 · 숫자 · 링크 · 전화번호 · 이메일 · 통화 · 백분율 · 코드 · **비밀번호**
-2. **버튼 블록 (12개)**: 스위치 · 체크박스 · 기간 · 날짜 · 날짜 및 시간 · 시간 · 마감일 · 세계 시간 · 단일 선택 · 복수 선택 · 국가 · 색상(기존 색상 선택)
-3. **특수 블록 (13개)**: 사용자 · 고유ID · **행ID** · 태그 · 투표 · 평점 · 진행률 · 타이머 · 수식 · 빠른 수식(기존 간단한 수식) · 자동화(버튼) · 로그 · 마지막 업데이트
-4. **확장 블록 (6개)**: 연결 · 행 연결 · 듀얼 위젯 · 문서 · 이미지 · 파일
+1. **문자 블록 (10개)**: 텍스트 `text`(str) · 긴텍스트 `longText`(str) · 숫자 `number`(num) · 링크 `link`(str) · 전화번호 `phoneNumber`(str) · 이메일 `email`(str) · 통화 `currency`(num) · 백분율 `percentage`(num) · 코드 `code`(str) · 비밀번호 `password`(str)
+2. **버튼 블록 (12개)**: 스위치 `switch`(bool) · 체크박스 `checkbox`(bool) · 기간 `period`(json) · 날짜 `date`(date) · 날짜및시간 `dateTime`(date) · 시간 `time`(date) · 마감일 `deadline`(json) · 세계시간 `worldTime`(str) · 단일선택 `singleSelection`(json) · 복수선택 `multiSelection`(json) · 국가 `nation`(str) · 색상 `color`(json)
+3. **특수 블록 (13개)**: 사용자 `user`(json) · 고유ID `uniqueID`(json) · 행ID `rowID`(num) · 태그 `tag`(json) · 투표 `vote`(json) · 평점 `rating`(json) · 진행률 `progress`(json) · 타이머 `timer`(num) · 수식 `formula`(json) · 빠른수식 `quickFormula`(json) · 자동화 `automation`(json) · 로그 `log`(json) · 마지막업데이트 `lastUpdate`(json)
+4. **확장 블록 (6개)**: 연결 `connection`(json) · 행연결 `rowConnection`(json) · 듀얼블록 `dualBlock`(json) · 문서 `document`(json) · 이미지 `image`(json) · 파일 `file`(json)
+
+> **★ 41 영문ID 정본 (단일 출처 — 마스터 확정·byte verbatim)**: 위 `englishID`가 **D8 `block_type_enum`(라벨 byte-exact)·R16 P1 fs-api `ALL_BLOCK_TYPE_IDS`·⑪ 드리프트체크**의 단일 정본. ⚠️ `button` 없음(분해→`automation`)·`uniqueID`/`rowID` 대문자 ID·`quickFormula`(≠simpleFormula)·`dualBlock`(≠dualWidget)·`rowConnection`(≠rowLink). dataType 분포 = **str9·num5·date3·bool2·json22**(timer=num·uniqueID/color=json — §F 매핑정정 반영).
 
 ## C. 렌더링 타입(위젯)의 동작 방식 — 시나리오 1번 (기본) (마스터 요구 원문)
 
