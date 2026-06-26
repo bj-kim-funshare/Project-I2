@@ -33980,3 +33980,20 @@ data-craft-server:
 ### 영향 파일
 - data-craft-admin-server: `src/services/adminAnalytics.service.ts`
 - data-craft-admin: `src/features/analytics-plan/PlanConversionKPICards.tsx`
+
+## v001.1156.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #493 (funshare-inc/data-craft) · 핫픽스2
+
+**데이터 분석 탭 구조 단일화 — 2단계 탭 → 단일 3항목 탭.** Phase 6에서 상위 탭(`인증 분석`|`플랜 관리`) + 하위 탭(`공용 인증`|`기업 인증`) 2단계로 과설계했던 것을, 마스터 요청대로 단일 탭 줄 **`공용 인증` | `기업 인증` | `플랜 관리`** 3항목으로 평탄화.
+
+### 페이즈 결과
+- **핫픽스2** (data-craft-admin) `5455f2b`: `AnalyticsPage`의 `VIEW_TABS`+`AUTH_TABS` 2단계 구조와 `activeView`/`authGroup` 이중 상태를 제거하고, `ANALYTICS_TABS`(공용 인증·기업 인증·플랜 관리) 단일 탭 + `activeTab` 단일 상태로 교체. `activeTab`이 'plan'이 아니면 그 값을 그대로 `authGroup`으로 써 인증 분석 fetch/렌더, 'plan'이면 플랜 분석 fetch/렌더. 공유 필터·오류처리·차트 컴포넌트·fetch 로직 무변경(탭 구조만 평탄화, +17/-28 순감).
+
+### 검증
+- 게이트: admin `pnpm typecheck && pnpm lint` PASS.
+- :5175 Vite HMR로 마스터 브라우저 반영(인증/플랜 콘텐츠 동작 보존).
+
+### 영향 파일
+- data-craft-admin: `src/pages/analytics/AnalyticsPage.tsx`
