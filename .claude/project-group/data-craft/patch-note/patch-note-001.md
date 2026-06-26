@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1162.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #498 (funshare-inc/data-craft)
+
+**R15 ⑨⑩⑪ BE 위젯 슬라이스 잔여 3종.** file_group soft-delete 채택·관리주기 시간필터 capability·block_type↔fs-api 드리프트 가드를 data-craft-server에 구현. dev 전용·origin 미푸시·각 페이즈 eslint+tsc PASS·런타임 검증·advisor #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `0c2d9aa`: ⑨ file_group soft-delete BE 채택(retain). file.model 7 read + getOrCreateFileGroup에 is_deleted=0 필터·deleteFileGroupController/fileCleanup 5함수 DELETE→UPDATE is_deleted=1(물리 unlink·file row 삭제 제거=복구가능). 개별 file 삭제 hard 유지. 런타임 검증(psql BEGIN/ROLLBACK: 56→55 은닉·file row 2건 보존).
+- **Phase 2** (feat) `1bb96f2`: ⑩ 관리주기 시간필터 **capability**. 신설 `src/utils/managementCycle.ts` cycleKeyToCreatedAtRange(generateCycleKey 정확 역함수). getGroupDataAsCells(+Auto)에 **trailing optional createdAtRange**(무필터 기본=hot read path 무회귀)·getViewerData가 dataMode='page-cycle' 시 범위 전달. 런타임 round-trip 48/48(daily TZ 버그 적발·수정).
+- **Phase 3** (chore) `90efe2c`: ⑪ `scripts/check-block-type-drift.ts`(DB enum 41↔fs-api ALL_BLOCK_TYPE_IDS 41 byte+순서 비교·불일치 exit1·sibling 부재 skip)·package.json `check:block-type-drift`·pr-ci.yml step. 표준 체크아웃 실행 "✅ passed (41 labels)". + D8 plan.md §F dataType 정정노트(fs-api #496 정본).
+
+### 후속·주의 (carry-forward)
+- ⚠️ **⑩ = capability(service/model), 엔드포인트 미완**: 컨트롤러/라우트가 req에서 cycleKey를 전달하는 wiring은 **FE 통합 후속**(현재 service/model 레이어에 필터 메커니즘만·HTTP 트리거 없음·dormant). 필터 firing은 FE R16 옵션 UI + 컨트롤러 wiring 후.
+- ⑩ partial-row 의미: created_at 범위 밖 셀 제외=행 일부 컬럼 누락 가능(마스터 "created_at 셀만" 확정).
+- ⑩ round-trip 가드 ephemeral: generateCycleKey↔역함수 결합 보호 committed 단위테스트=후속 권고.
+- ⑨ orphan 물리파일 cleanup 잡(retain→누적)=별도 잔업.
+- ⑪ CI cross-repo: pr-ci가 data-craft 미체크아웃 시 skip-warning(로컬/표준 체크아웃 정상). pr-ci 기존 깨짐 best-effort.
+
+### 영향 파일
+data-craft-server:
+- 신설: `src/utils/managementCycle.ts`·`scripts/check-block-type-drift.ts`
+- 수정: `src/models/file.model.ts`·`src/controllers/file.controller.ts`·`src/services/fileCleanup.service.ts`·`src/models/viewer.model.ts`·`src/services/viewer/viewer.service.ts`·`package.json`·`.github/workflows/pr-ci.yml`·`docs/migration/r15-d8-block-type/plan.md`
+
 ## v001.1161.0
 
 > 통합일: 2026-06-26
