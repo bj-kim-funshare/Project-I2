@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1163.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #500 (funshare-inc/data-craft)
+
+**R15 ⑥-BE page_section/정수격자 좌표 BE 서빙 (additive).** 레이아웃 조회 응답(`GET /api/builder/layout/:pageId`)에 위젯 정수격자 좌표 + 활성 섹션 메타를 additive로 추가 서빙해 R16① 격자 100×70 FE 전환 해금. 이미 wired 엔드포인트라 FE 즉시 수신(capability-gap 없음). dev 전용·origin 미푸시·eslint+tsc+런타임 검증·advisor #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (feat) `6467b16`: findLayoutWidgetsByLayoutId(+WithConnection)에 page_layout_widget 직접 5컬럼(section_id→sectionId·start_x→startX·start_y→startY·width→gridWidth·height→gridHeight, JOIN 불요·style 충돌회피 alias) + LayoutWidgetRowData 타입. 신설 findActiveSectionByLayoutId(layout_id·is_deleted=0·seq ASC LIMIT 1·없으면 null).
+- **Phase 2** (feat) `54bcb34`: getLayoutService가 findActiveSectionByLayoutId(active layoutId) 호출·**전 위젯**에 sectionId/startX/startY/width/height additive(접근A·서버측 무필터)·activeSection 메타 응답 추가. 구 area 모델(LayoutCanvas/sections/areaId/%) 무변경. WidgetConfig/GetLayoutResponse/PageSectionMeta 타입(camelCase·0-based optional). 런타임: round-trip(위젯 grid=DB 백필값·무변환)·173/173 col100row70·207 위젯 in-bounds 위반 0.
+
+### 응답 계약 (de-facto·FE ①' 수동 미러 — cross-repo drift class, 컴파일검증 아님)
+- WidgetConfig += `sectionId·startX·startY·width·height`(0-based 셀·optional·백필無=null). 구 `areaId`/`properties`(%) 병존.
+- GetLayoutResponse += `activeSection: {sectionId, height(px), colGridCount=100, rowGridCount=70, seq, style} | null`.
+
+### 후속·주의 (carry-forward)
+- ⚠️ **활성섹션 부분성**: 다중섹션 페이지(16)는 grid view가 seq-min 활성섹션 한정(부분)·전체 fidelity는 무변경 area 모델·최종 1섹션은 컷오버 collapse.
+- 구 area 무변경 = additive-only + area-assembly 경로 무변경으로 검증(라이브 응답 byte-diff는 서버 무기동으로 범위밖).
+- 0-based 좌표=provisional(컷오버 재인코딩서 확정·D1). 응답 격자필드명=FE ①' 정합 기준.
+
+### 영향 파일
+data-craft-server:
+- 수정: `src/models/builder.model.ts`·`src/services/builder/builder.layout.ts`·`src/types/builder.types.ts`
+
 ## v001.1162.0
 
 > 통합일: 2026-06-26
