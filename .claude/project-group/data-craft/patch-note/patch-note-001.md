@@ -33940,3 +33940,22 @@ data-craft-admin-server (집계):
 data-craft-admin (표시):
 - `src/pages/analytics/AnalyticsPage.tsx`, `src/entities/analytics/{api,types,index}.ts`
 - `src/features/analytics-plan/{PlanFunnelCharts,PlanConversionKPICards,PlanTimeSeriesChart,PlanSegmentCharts,PlanFailureAnalysisCharts,index}.tsx` (신규)
+
+## v001.1154.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #492 (핫픽스 2)
+
+#492 후속 핫픽스 — src/index.ts에 하드코딩돼 있던 cron 스케줄 등록을 별도 모듈로 추출하고 index.ts에선 단일 호출로 처리(부팅 진입점 정리). ★순수 리팩토링: 부팅 시 등록되는 6개 스케줄 동작 100% 불변.
+
+### 페이즈 결과
+- **핫픽스2 (`7d2c000`)** [refactor]: `src/schedules/index.ts` 신규 — `registerSchedules()`로 6개 cron 블록(자동갱신 01:00·만료전환 02:00·만료알림 09:00·incomplete billing 청소 매시·토큰정리 03:00·추천만료감사 04:00) + 중복가드 플래그 6종 + logger 메시지를 verbatim 이전. index.ts는 cron·billingScheduler·deleteExpiredTokens import 제거 + `registerSchedules()` 단일 호출(db.warmup 직후)로 교체. db.warmup·validateRequiredEnv·process 핸들러·gracefulShutdown 무변경.
+
+### 검증
+- `pnpm build`(tsc)+lint exit 0. cold-boot(:8098) 실측 — 6개 '...등록 완료...' 로그 전부 출력(크론식·timezone Asia/Seoul·중복가드 동일). index.ts 잔존 cron.schedule 0·node-cron import 0, registerSchedules() 1회 호출, db.warmup 잔류.
+- 머지 후 i-dev tsc --noEmit exit 0.
+- advisor 완료 #2: PASS(advisor-fallback 적대검증 — byte-identical 이동·가드 per-process dedup 보존·크론식/timezone 불변·드롭/댕글 0).
+
+### 영향 파일
+data-craft-server:
+- `src/index.ts`(스케줄 블록 제거+단일 호출), `src/schedules/index.ts`(신규 registerSchedules)
