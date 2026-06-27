@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1177.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #512 (funshare-inc/data-craft)
+
+**R16 ① 디자인모드 재구축 3/3 — 플로팅 컨트롤바 제거 + 위젯 호버 백막설정 (§D4·§C-j·2페이즈·마지막).** 마스터 지적#3(위젯/영역 컨트롤바 자체가 없어야·대시보드는 위젯 자체에 설정 버튼) 교정. dev 전용·origin 미푸시·typecheck:all+lint exit 0(0 errors)·advisor-fallback #1/#2 PASS. ★**① 재구축 3단위(#510 헤더+→모달 · #511 격자편집 · #512 컨트롤바제거+호버설정) 완성 — 마스터 3지적 전부 교정·통합 화면검토 대기.**
+
+### 페이즈 결과
+- **Phase 1** (feat) `63d7f143`: GridWidgetItem에 §C-j 호버 백막 — `group/widget` 호버·하얀 막(bg-white/80·z-10·pointer-events-none·콘텐츠 클릭 통과)·좌상 드래그 아이콘(GripVertical·z-20·onMouseDown→onDragStart 보존)·우상 설정 버튼(Settings·z-20→openWidgetSettingsModal). 평상시 뷰모드 동일(투명)·호버 시만 백막+아이콘. 위젯 바로 설정 불가→모달(§D7).
+- **Phase 2** (refactor) `f68b084f`(+lint fix `b05f3234`): Section.tsx 디자인모드 격자(351)서 SectionHeader 제거+area% 폴백 dead SectionHeader(481)+import 정리(참조 0). 섹션 높이/세로확장은 헤더 말풍선(단위1)·격자 고정 100×70이라 높이 드래그 불요. 뷰모드 격자/area% 폴백 무변경(무회귀). lint fix: 미사용 isLast/isFirst destructure 제거(인터페이스·호출부 보존).
+
+### 후속·주의 (carry-forward)
+- ★**openSectionSettingsModal(섹션 배경/테두리 설정) 진입점 제거** = §D2/§E 의도(섹션 배경→위젯별 배경탭 이전)·store 액션 자체는 잔존·§E 단위서 위젯별 배경탭으로 해소.
+- AreaControls/SubAreaControls는 area% 폴백(뷰모드) 전용→디자인모드 격자 미렌더 확정(별도 정리 불요).
+- bg-white/80은 80% 반투명(§C-j "불투명 막" 대비 위젯 희미하게 비침)·마스터 미세조정 가능.
+- ⚠️ **① 재구축 1+2+3 런타임 미검증 → 마스터 통합 화면검토**(양 dev 서버 i-dev·디자인모드: 헤더 + → 모달 추가 / 격자 셀 배치·드래그·설정 크기 / 호버 백막 설정·컨트롤바 없음).
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/layout-canvas/ui/GridWidgetItem.tsx`·`src/widgets/layout-canvas/ui/Section.tsx`
+
 ## v001.1176.0
 
 > 통합일: 2026-06-27
