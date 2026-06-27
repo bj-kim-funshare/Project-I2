@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1170.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #506 (funshare-inc/data-craft)
+
+**R16 ①'(렌더-only) — 100×70 격자 표시 (2페이즈).** ① 셸 후속·마스터 확정 렌더-우선(A). #500(BE 격자좌표 serve·area 파생) 소비해 위젯을 100×70 CSS 격자로 화면 표시·구 area % 저장/편집 유지(간이)·격자 저장/편집=컷오버 후속. dev 전용·origin 미푸시·전페이즈 typecheck:all+lint exit 0·advisor-fallback #1/#2 PASS. **⚠️ 런타임 시각검증=마스터 화면 확인(dev 미검증).**
+
+### 페이즈 결과
+- **Phase 1** (feat) `4cb63f87`: 격자 타입 미러(BE #500 직렬화 실측) — `WidgetConfig` += startX/startY/width/height(number|null)·**sectionId string|null**(★BE 실측 hex UUID·플랜 number 오류 정정)·`GetLayoutResponse` += `activeSection: ActiveSectionInfo | null`{sectionId·height·colGridCount·rowGridCount·seq·style}. 렌더/converter/저장 무변경·구 area % 모델 병존.
+- **Phase 2** (feat) `e034037d`: `gridLayoutUtils.ts`(CSS grid 100×70·`gridColumn: startX+1 / span width`·0→1-based·hasGridCoords 가드). LayoutCanvas가 캐시서 activeSection·gridWidgets 추출→Section. Section **뷰 모드+activeSection 일치 시 격자 렌더**·디자인 모드 area % 유지(편집핸들 무변경)·null/sectionId 불일치 시 % 폴백(구 레이아웃 무회귀). area 저장/converter 무변경.
+
+### 후속·주의 (carry-forward)
+- **★마스터 화면검증 필요**(①' 완료 게이트): 격자 정렬·구 레이아웃 폴백 무붕괴. advisory: ① 부분 백필 시 좌표없는 위젯 격자뷰 조용히 누락(데이터 무손실·디자인모드 다 보임)·② BE sectionId(page_section hex)==FE section.id(area_id)일 때만 격자 활성(어긋나면 격자 안 뜸=안전 폴백).
+- **격자 저장/편집·area 폐기·1섹션 collapse = 컷오버급 후속**(파괴적). 현 간이 병존(뷰=격자·디자인=area% 편집).
+- #505(blockType serve) 병행 머지와 충돌 없이 결합(결합 게이트 typecheck:all+lint 0 재확인).
+
+### 영향 파일
+data-craft:
+- 신설: `src/widgets/layout-canvas/ui/gridLayoutUtils.ts`
+- 수정: `src/_packages/fs-api/types/builder/{entities,requests,index}.ts`·`src/widgets/layout-canvas/ui/{LayoutCanvas,Section}.tsx`
+
 ## v001.1169.0
 
 > 통합일: 2026-06-27
