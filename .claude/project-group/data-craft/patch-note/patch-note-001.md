@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1173.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #508 (funshare-inc/data-craft)
+
+R16 격자 컷오버 Phase1 — BE 격자 저장 WRITE. #500 read/serve의 WRITE 짝으로, 레이아웃 저장 시 격자 섹션(page_section)과 위젯 격자좌표(page_layout_widget section_id/start_x/start_y/width/height)를 additive 영속화. section-derived(layoutCanvas.sections[] 직접·FE payload 무변경)·신호=section.colGridCount!=null·col/row 고정 100/70·구 area 모델 무변경. dev 전용·prod 이연·origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** `6d25c61` (primitives): builder.types.ts Section += colGridCount?/rowGridCount?. builder.model.ts createPageSection 신설(INSERT page_section·col/row 100/70 고정·ON CONFLICT(section_id) DO UPDATE 멱등) + createLayoutWidget 확장(optional sectionId/startX/startY/width/height·격자컬럼 조건부 INSERT·기존 area-only 무변경). ⚠️ master 명명 createLayoutWidgetWithGrid → base 확장 채택(base-reuse 컨벤션·master 비준).
+- **Phase 2** `7d9d10b` (service): saveLayoutService에서 sections[] 순회→colGridCount!=null 섹션마다 createPageSection(위젯 루프 이전·FK-safe), createdGridSectionIds Set + 위젯→섹션 맵을 sections[] 단일 출처로 빌드(id-form 일관·strip은 모델 toUuidParam만). 위젯 루프 isGridSection 단일 게이트로 격자 위젯에만 section_id+격자좌표 전달. deleteOldLayoutData에 page_section DELETE(위젯 삭제 후·FK-safe). 멱등(UPSERT+DELETE 양층).
+
+### 검증
+- 게이트: eslint+tsc exit 0(양 페이즈). **DB-contract 증명(dev psql BEGIN/ROLLBACK)**: page_section INSERT(col=100/row=70) 성공·유효 grid 위젯 성공·start_x+width>100 & start_y+height>70 → ck_page_layout_widget_grid CHECK 거부·존재안하는 section_id → FK 거부·#500 read 경로 read-back 정합. **UPSERT 증명**: ON CONFLICT(section_id) DO UPDATE 재INSERT 성공(conflict target=PK 일치)·DO UPDATE 실적용(height/seq 갱신)·revival(is_deleted 1→0). advisor #1(계획)·#2(완료) PASS.
+- TS 오케스트레이션=diff 정독+tsc(서버 미기동→런타임 round-trip 미주장). 구 area 저장 경로 무변경(else 분기 원본 동일).
+- WIP A 머지: data-craft-server i-dev `b5809f1`. origin 미푸시.
+
+### 영향 파일
+data-craft-server:
+- `src/types/builder.types.ts` · `src/models/builder.model.ts` · `src/services/builder/builder.layout.ts`
+
 ## v001.1172.0
 
 > 통합일: 2026-06-27
