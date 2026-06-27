@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.1169.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #505 (funshare-inc/data-craft)
+
+R15 D8 blockType을 컬럼 조회 응답 + fs-api 타입 계약에 additive 반영. ②(컬럼 생성 SP coarse-set, dev i-dev 618ad7a) 후속 — block_type을 읽기/타입 계약에 추가해 ④b(FE 블록타입 소비) 해금. ADDITIVE(기존 columnType/viewerType/setting 무변경)·dev 전용·prod 무접촉·origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** `aa8af6b` (data-craft-server): 메인 그리드 viewer-meta 컬럼에 blockType additive serve — findColumnsByGroupId SELECT `block_type AS "blockType"`·DataColumnRow optional·viewer.meta.ts 양 조립경로(columnSettings/폴백)·ViewerMetaResponse.columns 타입.
+- **Phase 2** `dc5e9a6` (data-craft-server): 서브그리드 viewer-meta 컬럼모델(buildSubGridMeta)에 blockType additive·SubGridSharedConfig.columnModelList 타입. col=masterColumns=findColumnsByGroupId(P1 alias). 보조 사이트(postSubGridViewer·getViewerData)는 비-렌더 경로로 이연.
+- **Phase 3** `352154d` (data-craft): fs-api 컬럼 응답 3타입(ViewerMetaResponse.columns·ServerColumnData·ServerSubGridColumnModel)에 `blockType?: BlockTypeId` 미러(타입 전용·top-level·import '../contract'). 컨버터 wiring=④b/R16 소관.
+
+### 검증
+- 게이트: server eslint+tsc exit 0 · data-craft typecheck:all+lint exit 0. P1 SQL proxy(dev psql): 신 SELECT가 blockType 도착·전 1673컬럼 NULL 0·column_type coarse 정합(1→number·2→text·3→date·4→switch). **i-dev 머지 후 typecheck:all 재실행 exit 0**(병렬 R16 세션 통합 검증 — 초기 실패는 stale node_modules @tanstack 미설치·install로 해소·내 변경 무관). advisor #1(계획)·#2(완료) PASS. external/inputStore 제외(렌더 안함·호출자 0).
+- WIP A 머지: data-craft-server i-dev `424e075` · data-craft i-dev `89fa28fb`. origin 미푸시.
+
+### 영향 파일
+data-craft-server:
+- `src/models/viewer.model.ts` · `src/services/viewer/viewer.meta.ts` · `src/types/viewerPaging.types.ts` · `src/types/viewer.types.ts`
+
+data-craft:
+- `src/_packages/fs-api/types/viewer/request.ts` · `src/_packages/fs-api/types/dataViewer/response.ts`
+
 ## v001.1168.0
 
 > 통합일: 2026-06-27
