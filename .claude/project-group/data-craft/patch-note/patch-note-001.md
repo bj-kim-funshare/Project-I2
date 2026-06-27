@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1175.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #510 (funshare-inc/data-craft)
+
+**R16 ① 디자인모드 재구축 1/3 — 위젯 추가 모달 플로 (§C-d~f·3페이즈).** 마스터 "완전히 잘못 구현" 지적 교정(SPEC 정독). 헤더 말풍선 + 버튼이 죽은 드롭다운(무동작)만 띄우던 것을 **위젯 추가 모달**(카테고리7→세부타입→등록)로 교체·분산된 즉시생성 3경로를 모달 단일경로로 통일. dev 전용·origin 미푸시·typecheck:all+lint exit 0(0 errors)·advisor-fallback #1/#2 PASS. ⚠️ 순서 1→2→3 중 1단위 — **격자 셀 배치=2단위·플로팅 컨트롤바 제거+위젯 호버설정=3단위·3단위 완료 후 마스터 통합 화면검토.**
+
+### 페이즈 결과
+- **Phase 1** (feat) `6d3afd0f`(+fix `44e69884`): `widgetCategories.ts` 신설(7 카테고리 단일출처·CategoryDef·WIDGET_CATEGORIES·NO_GROUP_WIDGET_TYPES)·`EmptySectionGuide` 인라인 중복 제거→공용참조. `layoutStore`/`layoutTypes`에 widgetAddModalOpen + open/closeWidgetAddModal. shadcn Dialog 3단계 상태머신(category→subtype→register·§C-g 그룹게이팅 골격·no-group 위젯 즉시등록·뒤로가기) `WidgetAddModal` 신설.
+- **Phase 2** (feat) `50268dc9`: `DesignHeaderBubble` + 버튼 → openWidgetAddModal·무동작 드롭다운(WIDGET_TYPE_KEYS·isWidgetMenuOpen·useScrollLock·Escape) 전면 제거. `AppHeader`에 WidgetAddModal 마운트. 헤더 + → 모달 열림 작동(순감 49줄).
+- **Phase 3** (refactor) `fa86b7f1`(+fix `09054aec`): WidgetAddModal 등록이 위젯 생성·배치 직접 처리(빈 영역 우선·없으면 새 섹션·격자좌표 #509 findGridPlacement·§C-i)·viewer 계열은 등록 후 openWidgetSettingsModal(§C-g~i). EmptySectionGuide 카테고리 클릭=모달 세부타입 점프(initialCategory 채널·§C-e)·AddWidgetButton 버그수정·AreaControls **create 경로만** 모달 전환(컨트롤바 UI 무변경=3단위 보존). lint fix: initialCategory.ts 분리(react-refresh)·effect startTransition.
+
+### 후속·주의 (carry-forward)
+- ★**1단위는 모달 플로만** — 등록 위젯은 아직 **기존 area 링크**로 배치(전체차지=마스터 지적 #2 완전해소=2단위 격자 셀 배치). 플로팅 컨트롤바 잔존(지적 #3=3단위).
+- (advisor 관찰) §C-d "격자 만공간 시 비활성"=2단위(격자상태 의존)·NO_GROUP_WIDGET_TYPES={text,button,tabs} 휴리스틱은 신 블록모델서 정련(text/document=셀 타겟→그룹 필요)·startTransition은 프리셋 오픈 시 'category' 순간노출 가능(종착 정확).
+- 블로커 2: ① AddWidgetButton SubArea 경로는 모달 미지원(setSubAreaWidget)이라 인라인 유지(scope_expansion 이연) ② AddWidgetButton orphan(렌더 미사용·기존).
+
+### 영향 파일
+data-craft:
+- 신설: `src/entities/widget/model/widgetCategories.ts`·`src/widgets/widget-add-modal/{ui/WidgetAddModal.tsx,lib/initialCategory.ts,index.ts}`
+- 수정: `src/entities/layout/model/{layoutStore,layoutTypes}.ts`·`src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`·`src/widgets/header/ui/AppHeader.tsx`·`src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`·`src/widgets/layout-canvas/ui/AreaControls.tsx`·`src/features/widget-placement/ui/AddWidgetButton.tsx`
+
 ## v001.1174.0
 
 > 통합일: 2026-06-27
