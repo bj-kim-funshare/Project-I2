@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.1172.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #507 (funshare-inc/data-craft)
+
+**R16 격자 컷오버 Phase2 — FE 격자 populate (2페이즈).** 신규 레이아웃이 격자(100×70) 모델로 생성·저장되게. ①'(렌더-only)+BE Phase1(격자 저장 write·보조 병행)과 함께 컷오버 완성 — 신규 레이아웃 생성→위젯 추가→page_section+격자좌표 저장→리로드 시 격자 렌더. 구 area 레이아웃 병존(데이터손실0). dev 전용·origin 미푸시·typecheck:all+lint exit 0(0 errors)·advisor-fallback #1/#2 PASS. ⚠️ 시각검증=BE Phase1 통합 후 마스터 화면(저장+리로드+뷰모드).
+
+### FE↔BE 격자 신호 계약 (PIN)
+격자 신호 = 섹션 격자 dims(colGridCount=100·rowGridCount=70) 존재. 신규 레이아웃 섹션만 보유·구 area=null. FE가 savePageLayout 페이로드에 섹션 격자 dims+위젯 격자좌표 운반 → BE Phase1이 격자 dims 있는 섹션만 page_section 생성+격자좌표 저장 → 리로드 activeSection serve → ①' 격자 렌더.
+
+### 페이즈 결과
+- **Phase 1** (feat) `13f2eb02`: 섹션 격자 모델 — FE Section(`layout.types.ts`)+fs-api SAVE-path Section(`entities.ts`)에 colGridCount/rowGridCount(optional nullable)·`createNewSection`(`layoutHelpers.ts`)이 신규 섹션에 100/70 세팅. savePageLayout이 `{layoutCanvas,widgets}` 통째 전송→격자 dims 자동 운반. 구 area 섹션 null 병존.
+- **Phase 2** (feat) `2f9d60b4` (+lint fix `0e035f18`): 위젯 격자좌표 자동배치 — `computeNextGridCell`(`gridLayoutUtils.ts`·5열·기본 셀 20×8·startY 클램프로 ★DB CHECK start_x+width≤100·start_y+height≤70 **항상** 충족)·`createWidget`(`widgetCrudActions.ts`)이 전체 격자위젯 수(startX!=null) 기준 startX/startY/width/height 세팅(비겹침). lint fix: 스토어 `WidgetConfig<T>`(`widget-base.types.ts`)에 격자필드 additive(①'은 별개 fs-api 타입에만 추가했어서 누락분 보완).
+
+### 후속·주의 (carry-forward)
+- ★**컷오버 완성=BE Phase1(보조 병행) 통합 필수**. FE 단독은 격자 dims+좌표 전송만·BE가 page_section 저장해야 리로드 격자 렌더. 마스터 확인=BE Phase1 통합 후·신규 레이아웃 생성·저장·리로드·**뷰모드**(디자인모드=격자배경+area 위젯).
+- 항상-세팅 단순화: createWidget이 격자/area 구분 없이 격자좌표 세팅 — 구 area 페이지선 무해(activeSection null→area 렌더로 무시·hasGridCoords 배제 아님). 회귀 없음(advisor #2 실측).
+- ≥40 위젯 시 마지막 행 겹침(자동배치 한계)·**격자 드래그 편집(수동 셀 배치/이동)=Phase3 후속**.
+- (advisory) computeNextGridCell이 widgets/layout-canvas 거주·entities/widget import = entities→widgets 상향(boundaries 플러그인 없어 lint 무에러·순수함수 런타임 호출이라 순환 무해)·후속 정리 시 shared 이전 고려.
+- 원 Phase2 affected_files(EmptySectionGuide/areaActions/sectionActions)는 createWidget 실제 위치(widgetCrudActions.ts)와 어긋나 메인 탐색으로 사전 정정.
+
+### 영향 파일
+data-craft:
+- 수정: `src/shared/types/{layout.types,widget-base.types}.ts`·`src/_packages/fs-api/types/builder/entities.ts`·`src/entities/layout/model/layoutHelpers.ts`·`src/entities/widget/model/widgetCrudActions.ts`
+- 신설(헬퍼 함수): `src/widgets/layout-canvas/ui/gridLayoutUtils.ts`(computeNextGridCell)
+
 ## v001.1171.0
 
 > 통합일: 2026-06-27
