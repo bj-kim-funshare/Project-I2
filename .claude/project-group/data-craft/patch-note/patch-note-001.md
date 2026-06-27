@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.1174.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #509 (funshare-inc/data-craft)
+
+**R16 격자 placement 재정렬 — 검증된 대시보드 격자 알고리즘 재사용 (1페이즈).** 마스터 지적("기존 해체 전 대시보드뷰 격자 방식 벤치마킹") 수용 — #507의 위젯 자동배치 `computeNextGridCell`(단순 stacking·충돌 미고려)을 라이브 대시보드 격자(`fs-data-viewer/shared/lib/widget-space.utils.ts`)의 검증된 충돌인식 알고리즘으로 교체. dev 전용·origin 미푸시·typecheck:all+lint exit 0(0 errors)·advisor-fallback #1/#2 PASS.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `527e2e7c`: `gridLayoutUtils.ts`에 `isWidgetOverlapping`(rect AABB·startX/startY/width/height)+`findGridPlacement`(대시보드 `findEmptySpace` 포팅·좌→우/위→아래 스캔·첫 비충돌 셀·100×70·null 폴백=마지막행 {0,62,20,8} **DB CHECK start_x+width≤100·start_y+height≤70 항상 충족**) 추가·`computeNextGridCell` 제거(잔여 참조 0). `widgetCrudActions.ts createWidget`이 기존 격자위젯 rect(4필드 non-null) 수집→findGridPlacement→**비충돌 첫 빈 셀** 좌표 세팅. 충돌 회피로 위젯 겹침 제거(구 stacking 대비 엄격 우월).
+
+### 재사용 방식 (PIN)
+대시보드 util은 **fs-data-viewer 패키지 공개 API 미포함**(top-level index 미재export) → 직접 import=경계위반·페이지빌더→뷰어 의존 부적절 → **알고리즘 포팅**(순수 27줄 복제+벤치마크 출처 주석). 위젯 콘텐츠(차트 위젯 ↔ 41블록)는 별개 시스템·격자 레이아웃 메커닉만 공유.
+
+### 후속·주의 (carry-forward)
+- (advisory·advisor #2) existingRects가 **전역 격자위젯 수집**(섹션 스코프 아님) — ①' 1섹션 설계상 동치·구 computeNextGridCell 전역동작 보존·겹침 불변식 유지(섹션 내 겹침 절대 없음). 다중섹션 시 섹션 스코프 필터(`cellId→section` 매핑) 권고=Phase3/④블록 후속.
+- 기본 셀 20×8 고정·**타입별 min-size**(대시보드 WIDGET_MIN_SIZE 패턴)=④블록 후속.
+- ★**Phase3 드래그/리사이즈 격자 편집** = DashboardGrid 드래그/스냅/충돌/드롭프리뷰 엔진 벤치마크·마스터 화면검증 후 별도 플랜(~1000줄·고위험).
+- duplicateWidget 격자좌표 미할당(기존 동작·이번 스코프 외).
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/layout-canvas/ui/gridLayoutUtils.ts`(findGridPlacement·isWidgetOverlapping 추가·computeNextGridCell 제거)·`src/entities/widget/model/widgetCrudActions.ts`(createWidget findGridPlacement 통합)
+
 ## v001.1173.0
 
 > 통합일: 2026-06-27
