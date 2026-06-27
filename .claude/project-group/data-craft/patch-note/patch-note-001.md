@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1171.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #506 (funshare-inc/data-craft·핫픽스 2건)
+
+**R16 ①' 핫픽스 2건 — 보이는 격자 + 빈섹션 위젯추가 wiring (마스터 화면검증 피드백).** ①'(렌더-only) 화면 확인 시 "격자 안 보임"·"빈섹션 가이드 선택 무동작" 2건 대응. dev 전용·origin 미푸시·typecheck:all+lint exit 0.
+
+### 핫픽스 결과
+- **Hotfix 1** (feat) `f303d337`: 보이는 100×70 격자 배경 — Section에 faint 1px 라인 오버레이(linear-gradient·calc(100%/colGridCount)×calc(100%/rowGridCount)·rgba(0,0,0,0.07)·z:1·pointer-events:none). **activeSection 일치 시에만 표시**(디자인+뷰 모드)·구 레이아웃(activeSection null)은 미표시(=ID공간/백필 진단). ⚠️다크모드 알파 후속.
+- **Hotfix 2** (feat) `dd86ed71`: 빈섹션 가이드 위젯추가 wiring — EmptySectionGuide 타입 클릭(Text/Button/문서 등)을 기존 플로로 연결(addSection→createWidget(areaId,type)→setAreaWidget). 빈섹션(0섹션)서 타입 선택 시 섹션+area 생성·위젯 추가·가이드 사라짐. ⚠️보드/탐색기 타입은 그룹/열 미설정 기본값만(§Cf-i 상세=④블록).
+
+### 후속·주의 (carry-forward)
+- ★**격자는 백필된 레이아웃(page_section/activeSection 존재)에서만 표시** — 신규/빈 페이지(page_section 없음)는 격자 미표시. **기존 위젯 있는 페이지를 열어야 격자 보임.** 신규 격자 레이아웃 생성·격자 편집·area 폐기 = 컷오버급(addSection은 구 area 모델 생성·page_section 미생성).
+- Hotfix 2 보드/탐색기 타입 §Cf-i(그룹/열/등록) = ④블록.
+
+### 영향 파일
+data-craft:
+- 수정: `src/widgets/layout-canvas/ui/{Section,gridLayoutUtils}.ts(x)`(Hotfix1)·`src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`(Hotfix2)
+
 ## v001.1170.0
 
 > 통합일: 2026-06-27
