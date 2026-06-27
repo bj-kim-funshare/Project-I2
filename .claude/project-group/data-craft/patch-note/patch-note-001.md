@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1176.0
+
+> 통합일: 2026-06-27
+> 플랜 이슈: #511 (funshare-inc/data-craft)
+
+**R16 ① 디자인모드 재구축 2/3 — 디자인모드 격자 편집기 (§C-k·§D2·4페이즈).** 마스터 지적#2(세로확장은 섹션인데 위젯 전체차지) 교정. 디자인 모드를 구 area % 모델→**100×70 격자 편집기**로 전환. 마스터 확정: 1섹션 고정·격자 항상 표시(구 대시보드 뷰 스타일)·위젯0개일때만 바로가기 격자위·이쁜 격자·드래그 이동·설정서 격자 크기. dev 전용·origin 미푸시·typecheck:all+lint exit 0(0 errors)·advisor-fallback #1/#2 PASS. ⚠️ 순서 1→2→3 중 2단위(최대/최고위험·런타임 검증불가)·**플로팅 컨트롤바 제거+위젯 호버 백막설정=3단위·3단위 완료 후 마스터 통합 화면검토.**
+
+### 페이즈 결과
+- **Phase 1** (feat) `b9db6aa6`: `widgetCategories.ts` DEFAULT_GRID_SIZE 종류별(보드/탐색기 viewer 50×30·디자인/자동화/파일 30×16·블록 폴백 20×8·§C-k)·`findGridPlacementOrNull`·createWidget 종류크기+소형 폴백.
+- **Phase 2** (feat) `4f2632f1`: `Section.tsx` 디자인모드 **activeSection 게이팅 없이 항상 100×70 CSS grid** 렌더(빈/신규 페이지도)·위젯 셀 배치(sectionId+area.widgetId 합산·좌표없는 구위젯 findGridPlacement 즉석·area % flexBasis 전체차지 폐기·area 데이터 잔존/격자 미렌더 흡수). buildGridBackgroundStyle variant('view' rgba 보존·'design' var(--border) color-mix 이쁜 격자). 위젯0개면 EmptySectionGuide 바로가기 오버레이.
+- **Phase 3** (feat) `8649e06b`: `GridWidgetItem.tsx` 신설·DashboardGrid Move 엔진 포팅(handleDragStart/Move/End·드래그 중 절대위치→mouseup Math.round 셀 스냅·isWidgetOverlapping 충돌회피·DB CHECK 클램프·드롭 프리뷰 점선/충돌 빨강/정상 초록)·updateWidget(startX/startY) 좌표갱신. 훅 isDesignMode 분기 앞(rules-of-hooks).
+- **Phase 4** (feat) `b7a13342`: `GridSizeInput.tsx` 신설·위젯 설정 모달 '배경 디자인' 탭에 width/height 셀 number 입력(대시보드 WidgetSizeInput 패턴)·getMaxAvailableSize(충돌없는 최대)·1~max 클램프·DB CHECK·updateWidget→즉시 격자 반영. 고정격자(100×70)라 단순.
+
+### 후속·주의 (carry-forward)
+- ★**2단위는 격자 렌더+드래그+크기**·**플로팅 컨트롤바 제거(AreaControls 등)+위젯 호버 백막(좌상 드래그·우상 설정→모달)=3단위**(마스터 지적#3).
+- createWidget이 sectionId 미세팅→신규 위젯 리로드 전까지 Source2(area.widgetId)로 표시(표시 정상·리로드 시 BE sectionId로 Source1 활성).
+- Section.tsx sectionDiv area 폴백 dead code(디자인모드 도달불가·통합 리팩토링서 정리)·color-mix() 모던브라우저(Chrome111+·dev OK).
+- ⚠️ 런타임 미검증(최대위험)→3단위 완료 후 마스터 화면검토 필수.
+
+### 영향 파일
+data-craft:
+- 신설: `src/widgets/layout-canvas/ui/GridWidgetItem.tsx`·`src/widgets/settings-modal-shell/ui/GridSizeInput.tsx`
+- 수정: `src/entities/widget/model/{widgetCategories,widgetCrudActions}.ts`·`src/widgets/layout-canvas/ui/{Section,gridLayoutUtils}.ts(x)`·`src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`·`src/widgets/settings-modal-shell/ui/SettingsModalShell.tsx`
+
 ## v001.1175.0
 
 > 통합일: 2026-06-27
