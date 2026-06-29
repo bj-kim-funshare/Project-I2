@@ -34481,3 +34481,32 @@ data-craft:
 ### 영향 파일
 data-craft-server:
 - `src/middlewares/permission.middleware.ts`·`monitor.middleware.ts`·`plan-limit.middleware.ts`·`index.ts`(배럴), `src/types/auth.types.ts`, `src/index.ts`
+
+## v001.1179.0
+
+> 통합일: 2026-06-29
+> 플랜 이슈: #514 (funshare-inc/data-craft)
+
+🔴긴급 **인증·관리자알림 복구 — role→permission cutover (인증경로 한정).** R15 #4a가 dev DB에서 `user.role_id` + RBAC 4테이블(role·page_role·role_permission·settings_form_role)을 DROP하고 `permission` 1테이블 + `user.permission_id`로 전환했으나 BE 코드가 미전환이라 로그인(signin/refresh) 500·모바일 로그인 불가·관리자 알림 발송 불가(`column "role_id" does not exist`). 신 권한도출(`user.permission_id → permission.findPermissionById`, capability smallint 9 플래그 = PERMISSION_KEYS 8과 1:1)로 cutover. FE-facing 필드명 roleId/roleName 유지(값만 permission_id/permission.name 소스)·전면 rename은 #7 이연. dev only·origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** (fix) `0d5e848`: user.model.ts 7개 SELECT `role_id AS "roleId"`→`permission_id AS "roleId"`(28·41·128·213·230·305·322). int8 파서(config/database.ts:32)로 number 반환·roleId:number 계약 유지.
+- **Phase 2** (feat) `bf056fb`: permission.model.ts 신설 — `findPermissionById(id)→{roleName, permissions: PERMISSION_KEYS.filter(k=>row[k]===1)}` 단일 소스. roles.types.ts PermissionKey 재사용.
+- **Phase 3** (refactor) `228c3d1`: auth.middleware + auth.service 권한도출 cutover — findRoleById/findPermissionsByRoleId(dropped) → findPermissionById. 미들웨어 SELECT permission_id, req.user/응답 shape 무변경.
+- **Phase 4** (fix) `bc59f0a`: SSE 관리자알림 — client.model findSSEUserInfo(u.permission_id) + sse.controller findPermissionById. 대상자 식별(isOwner||user_manage) 무변경.
+- **Phase 5** (refactor) `e82ce5d`: init.service.ts(POST /api/auth/init 앱 초기화 번들) 권한도출 cutover — 실행 중 발견된 동일 깨진 사본, 핵심 세션경로라 포함.
+
+### 검증
+- pnpm build(tsc) exit 0 · pnpm lint(eslint) exit 0 (5페이즈 후 재실행).
+- 런타임 dev psql 실측(비침습): findUserByEmail 정상(column-error 해소)·findPermissionById(27)="주임" 8 capability 도출·findSSEUserInfo 비오너 user_manage=1 알림 대상 확인 → 비오너 user_manage 알림 실증.
+- advisor 계획 #1 PASS / 완료 #2 PASS.
+- 마스터 사후 확인 권장(헤드리스 불가): 모바일 로그인·실제 알림 수신.
+
+### 범위 밖 발견 (마스터 결정 대기 — 핫픽스 vs #7)
+- `getApprovedUsers`(auth.service:1195) findRoleById 잔존 → 관리자 사용자목록 enrich 시 `relation "role" does not exist`. 1줄 수정(findRoleById→findPermissionById).
+- signup/registerUser(findDefaultRoleByCompanyId + updateUserRoleId) 회원가입 기본권한 할당 파손.
+
+### 영향 파일
+data-craft-server:
+- `src/models/user.model.ts`·`src/models/permission.model.ts`(신규)·`src/models/client.model.ts`
+- `src/middlewares/auth.middleware.ts`·`src/services/auth.service.ts`·`src/services/init.service.ts`·`src/controllers/sse.controller.ts`
