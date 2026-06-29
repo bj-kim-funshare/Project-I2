@@ -34462,3 +34462,22 @@ data-craft:
 ### 영향 파일
 data-craft:
 - `src/_packages/fs-api/types/contract/blockType.ts`(신규)·`src/_packages/fs-api/types/contract/index.ts`·`src/_packages/fs-api/types/index.ts`(export)
+
+## v001.1178.0
+
+> 통합일: 2026-06-26
+> 플랜 이슈: #492 (핫픽스 4)
+
+#492 후속 핫픽스 — 진입층 죽은 코드 일괄 정리 + 중복 process 핸들러 fail-fast(A) 통일. grep 전수 감사로 입증된 미사용 코드만 제거. ★서버 동작 보존(의도된 변경 1건: unhandledRejection graceful→fail-fast).
+
+### 페이즈 결과
+- **핫픽스4 (`704d919`)** [refactor]: 죽은 심볼 삭제 — `approvedUserMiddleware`(미배선, isApproved 검사는 tenantGate가 enforce)·`logFunctionCall`(소비처 0)·`checkFeatureAccess`+종속 `PlanFeatureKey`/`FEATURE_MIN_PLAN`(미배선 팩토리)·`TenantInfo`(orphaned). middlewares/index.ts 배럴을 실수입 12심볼만 남기게 정리(죽은 재export 11종 제거, 원본 export는 유지). src/index.ts 중복 process 핸들러(초기 console.error 블록 + 후기 gracefulShutdown 경유) 제거 후 fail-fast 단일쌍(uncaughtException·unhandledRejection→logger.error+process.exit(1))으로 통일. gracefulShutdown 함수 + SIGTERM/SIGINT는 정상 배포 종료용으로 유지.
+
+### 검증
+- pnpm build(tsc)+lint exit 0. grep 삭제심볼 0(dangling 0). cold-boot(:8098) /health 200. 토큰부재 per-endpoint 227/227 일치(drift 0). 머지 후 i-dev tsc --noEmit exit 0.
+- advisor 완료 #2: PASS(적대검증 — 6심볼 dead 0 consumer·approvedUserMiddleware 제거 인가손실 0(tenant-gate.middleware.ts:46-47 enforce)·배럴 12 정확·fail-fast가 exit(1) 전체 teardown이라 무손실).
+- fail-fast(A) 채택 근거: uncaughtException 후 프로세스 상태 불신뢰 → 즉시 종료·재시작이 Node 권고. master 결정.
+
+### 영향 파일
+data-craft-server:
+- `src/middlewares/permission.middleware.ts`·`monitor.middleware.ts`·`plan-limit.middleware.ts`·`index.ts`(배럴), `src/types/auth.types.ts`, `src/index.ts`
