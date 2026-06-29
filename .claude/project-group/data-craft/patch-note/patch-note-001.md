@@ -34510,3 +34510,34 @@ data-craft-server:
 data-craft-server:
 - `src/models/user.model.ts`·`src/models/permission.model.ts`(신규)·`src/models/client.model.ts`
 - `src/middlewares/auth.middleware.ts`·`src/services/auth.service.ts`·`src/services/init.service.ts`·`src/controllers/sse.controller.ts`
+
+## v001.1180.0
+
+> 통합일: 2026-06-29
+> 플랜 이슈: #515 (funshare-inc/data-craft)
+
+🔴긴급 **빌더 settings_form 로딩 복구 — dropped 3테이블 BE 디레퍼런스(빌더경로 한정).** R15 #4a가 dev DB에서 `settings_form`·`form_list`·`form_widget`을 DROP(폼 시스템→`widget_preset` 흡수)했으나 BE 빌더 레이어가 미전환이라 `GET /api/builder/settings/forms` 500(`relation "settings_form" does not exist`)·빌더/레이아웃 로딩 실패. 빌더 레이어가 dropped 3테이블을 더 이상 쿼리하지 않도록 neutralize → 엔드포인트 200·레이아웃 로딩 복구. **widget_preset 재배선 금지**(settings_form↔widget_preset 의미적 매핑 없음)·graceful 응답 채택·응답 봉투/FE 계약 무변경. 폼↔widget_preset 전면 cutover와 비-빌더 서브시스템 form_list 잔존참조는 #7 carry-forward. dev only·origin 미푸시. (직전 #514와 동일 R15 #4a DROP 캠페인의 자매 복구 — #514=인증경로, #515=빌더경로.)
+
+### 변환 원칙
+- READ(목록/단건/카운트): dropped-table SQL 제거 → graceful-empty(`[]`/`undefined`/`0`), DB 호출 자체 제거·시그니처/반환타입 보존.
+- WRITE(INSERT/UPDATE/DELETE): dropped-table SQL 제거 → `throw new BadRequestError('FORM_SYSTEM_MIGRATED')`(500 대신 정상 4xx, 봉투 보존).
+
+### 페이즈 결과
+- **Phase 1** (fix) `10809ea`: builder.model.ts settings_form 함수군 10개 neutralize — READ 6개(findSettingsForms/findSettingsFormsByRoleId/findSettingsFormById/findSettingsFormByFormId/getMaxSettingsFormDisplayOrder/countSettingPagesByCompanyId)→빈값, WRITE 4개(createSettingsForm/softDeleteSettingsForm/updateSettingsFormIcon/updateSettingsFormOrders)→BadRequestError. findSettingsForms는 DB 쿼리 제거로 relation-error 발생 불가 = 200 구조적 보장. (+30/−170)
+- **Phase 2** (fix) `bbab4ec`: builder.model.ts form_list 7개·form_widget 12개 함수 동일 원칙 변환. builder.form.ts createForm 상단 즉시 throw + form_list SQL 포함 트랜잭션 본문 제거(라인 110 data_group orphan-heal는 본문 제거로 동반 소멸·부분보존 없음)·미사용 import 정리. builder.types.ts 주석 6곳 reword(FE 계약 타입 SettingsFormItem/FormWidgetRow/FormRow 등 무변경). (+83/−485)
+- **lint 후속** `8f93592`: Phase 2 createForm 본문 제거 후 미사용 `createFormModel` import 제거(eslint no-unused-vars).
+
+### 검증
+- **빌더경로 grep-0**: `git grep -nE 'settings_form|form_list|form_widget' src/models/builder.model.ts src/services/builder/ src/types/builder.types.ts` = 0건.
+- pnpm build(tsc) exit 0 · pnpm lint(eslint) exit 0.
+- 레이아웃 로딩 임계경로(`GET /layout/:pageId` → page_layout/page_layout_area/page_layout_widget + LEFT JOIN widget_preset, 전부 생존 테이블)가 dropped 3테이블과 독립임을 코드로 확인 → carry-forward는 레이아웃 로딩 비차단.
+- advisor OFF → advisor-fallback 계획 #1 PASS / 완료 #2 PASS(동일 권위).
+- 마스터 사후 확인 권장(헤드리스): dev BE 재시작 후 `GET /api/builder/settings/forms` 200(`{ data: { settingsForms: [] } }`)·레이아웃 로딩.
+
+### Carry-forward → #7 (범위 밖, 명시)
+- 비-빌더 서브시스템 form_list 잔존참조: `externalData.model.ts`(GET /external-data/groups)·`file.model.ts`(GET /files/groups)·`inputStore.*`(폼 데이터 저장)·`viewer.group.ts`(그룹 삭제 cascade) — 각 액션 시 500 위험(레이아웃 로딩과 무관).
+- 폼↔widget_preset 의미적 재배선(display_order/icon/role-access) 전체.
+
+### 영향 파일
+data-craft-server:
+- `src/models/builder.model.ts`·`src/services/builder/builder.form.ts`·`src/types/builder.types.ts`
