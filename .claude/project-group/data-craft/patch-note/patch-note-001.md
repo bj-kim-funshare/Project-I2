@@ -34899,3 +34899,21 @@ data-craft-server:
 
 ### 영향 파일
 - `data-craft-server`: src/models/builder.model.ts
+
+## v001.1198.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #538 (funshare-inc/data-craft)
+
+**#420 regression 수정 — 회사 로고 404 (파일경로 identifier 하위폴더 누락·rename 무관).** #420(f417c34·6/22)이 getCompanyLogo를 파일 스트리밍으로 바꾸며 `path.basename(logoUrl)`을 써서 업로드 경로의 identifier 하위폴더(`main/` 등)를 떼어내 로고 404. cwd-상대 전체경로 resolve로 복구.
+
+### 페이즈 결과
+- **Phase 1** (fix) `9defff4`: src/services/auth.service.ts getCompanyLogo — `const basename = path.basename(logoUrl); const resolved = path.resolve(logoDir, basename);` (2줄) → `const resolved = path.resolve(process.cwd(), logoUrl);` (identifier 하위폴더 포함). path-traversal 가드(startsWith logoDir)·확장자 allowlist·fs.existsSync 3종 byte-identical 유지(테넌트격리 보존).
+
+### 검증 (런타임 완전 실증)
+- 실 logo_url(`storage/funshare-…/files/company-logo/main/<uuid>.jpeg`)로: NEW 경로 guard pass + **existsSync=TRUE(실 파일 존재)**, OLD(#420) 경로 existsSync=FALSE(=404 재현). 테넌트격리(other-company 차단) 보존. build(tsc)+lint exit 0. advisor #1·#2 PASS.
+- 마스터: BE 재기동으로 코드 활성화 후 로고 표시 확인.
+
+### 영향 파일
+data-craft-server:
+- `src/services/auth.service.ts`
