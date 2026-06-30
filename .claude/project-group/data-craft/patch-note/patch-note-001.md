@@ -34633,3 +34633,24 @@ data-craft-admin:
 ### 검증/한계
 - 각 페이즈 lint PASS(BE eslint, FE typecheck+eslint). 런타임 최종 확인은 마스터 몫 — 기업 생성은 prod write라 자동 테스트 불가, dev 모드는 통일 스키마로 42703. 어드민 prod UI(x-db-mode=prod)에서 실제 기업 1개 생성 → 메인앱 로그인까지 확인 필요.
 - 후속: createCompany는 admin_client_audit 감사기록 미호출('create' action 부재, 해당 인프라는 dev-only best-effort) — 필요 시 별도 처리.
+
+## v001.1186.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: funshare-inc/data-craft#522
+
+#7 뷰어 cutover 토대 — `data-craft-server` `src/models/viewer.model.ts`의 읽기/쓰기를 DROP된 뷰어설정 테이블(data_viewer_setting/_column_setting/_row_setting = dvs/dvcs/dvrs)에서 `page_widget.properties/column_properties/row_properties` JSONB + `data_row`로 갈아끼움. 복구-우선·동작보존(모든 함수 시그니처·반환 shape 보존·`viewer.meta.ts` 무수정·FE 무변경). 위젯↔그룹 바인딩 = `page_widget.data_group_id`.
+
+### 페이즈 결과
+- **Phase 1 (refactor) — READ** `7b9f569`: dvs/dvcs READ 함수(findViewerSettingByGroupId·findColumnSettingsByGroupId 등)를 `page_widget.properties`/`column_properties` 재투영으로 cutover. 그룹키=결정적 MIN(`ORDER BY page_widget_id LIMIT 1`·지휘 결정)·viewerType KEEP(Guard#1)·sparsity(data_column enumerate + LATERAL column_properties overlay)·gantt/calendar flat→nested 재조립·kanban columnColors verbatim. ★dev psql 왕복이 rename 컬럼 런타임 버그(group_id→data_group_id 등 미적용·tsc 무검출) 포착·수정.
+- **Phase 2 (refactor) — WRITE** `a8c8dad`+`6274786`: 뷰어/컬럼 WRITE를 `page_widget` JSONB **즉시영속** merge(`properties || ?::jsonb`·`jsonb_set(column_properties,'{<id>}',…)`)·신규 write-whitelist(VIEWER/COLUMN_PROPERTIES_WRITE_FIELDS)·seq=data_column.seq·softDeleteColumnSetting no-op(의미론 보존).
+- **Phase 3 (refactor) — 행설정** `9551bfa`: dvrs 행설정 7함수를 `data_row` cutover(calendarColorIndex/ganttBarColors=`data_row.property`·seq=data_row.seq·updated_at 트리거 위임).
+- **Phase 4 (refactor) — 서브그리드+회사목록** `911aae3`: dvrs identity JOIN→data_row·dvcs subgrid→column_properties overlay(viewerType='rowId' 보존)·findViewerSettingsByCompanyId→page_widget(is_subgrid=parent_row_num/parent_group_id 파생)·updateSubGridSharedConfig §6 분해·updateSubGridRowDataList §6 DISCARD no-op. **dvs/dvcs/dvrs SQL 잔존 0** 달성.
+
+### 상태 (code-complete vs runtime)
+- **code-complete**: viewer.model.ts dvs/dvcs/dvrs SQL **0**·eslint exit 0·`tsc --noEmit` 0 errors·각 phase **dev psql 왕복** 검증(실게이트, tsc/lint은 SQL 문자열 무검출).
+- **runtime**: backfilled 비-서브그리드 그룹은 dev에서 동작보존 검증됨. ⚠️**서브그리드**(`data_group.parent_row_num`→`data_row_id` 리맵 데이터 마이그 미완 → 현재 빈 결과)·**column_properties 미백필 그룹**(viewerType null → 수치 columnType fallback)은 별도 트랙 gated(동작보존 조건부). `change.viewerConfig.ts`/`change.viewerSettings.ts`/`viewer.bulkSave.column.ts`의 dvs 직접 UPDATE 경로는 별도 트랙(#522 carry-forward·dvs DROP 상태서 진입 시 런타임 오류).
+
+### 영향 파일
+data-craft-server:
+- `src/models/viewer.model.ts`(+607/-335)·`src/utils/sqlFieldWhitelist.ts`(+26)
