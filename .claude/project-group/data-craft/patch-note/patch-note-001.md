@@ -34541,3 +34541,14 @@ data-craft-server:
 ### 영향 파일
 data-craft-server:
 - `src/models/builder.model.ts`·`src/services/builder/builder.form.ts`·`src/types/builder.types.ts`
+
+## v001.1181.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: funshare-inc/data-craft#516
+
+### 페이즈 결과
+- **Phase 1 (fix)**: `data-craft-admin-server` 의 `admin_email_verification` 모델 SQL 5개소를 dev DB 키 통일(PK `id` → `admin_email_verification_id`)에 정렬 — 어드민 로그인(1단계)·이메일 인증(2단계)의 PG 42703 (column "id" does not exist, ADMIN-AUTH-R-001) 복구. RETURNING·SELECT 절은 `AS id` 별칭으로 TypeScript `.id` 계약 보존, WHERE 3개소는 컬럼명 직접 교체. 인터페이스·서비스 호출부·플레이스홀더 무변경. **prod 전용 동작 정책에 따라 dataPool→prod(미통일 스키마) 경로는 무변경** — bare `id` 참조는 prod 와 일치하므로 정상. lint(pnpm lint) PASS + dev 라이브 5쿼리 BEGIN/ROLLBACK 실측으로 42703 해소 확인.
+
+### 영향 파일
+- `data-craft-admin-server`: `src/models/adminEmailVerification.model.ts`
