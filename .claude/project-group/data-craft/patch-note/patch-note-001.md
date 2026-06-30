@@ -34709,3 +34709,27 @@ data-craft:
 ### 영향 파일
 data-craft (i-dev, 신경로):
 - 수정: `src/_packages/fs-data-viewer/shared/ui/view-mode-dropdown/{ViewModeDropdownPanel.tsx,useViewModeDraft.ts}`·`src/_packages/fs-data-viewer/widgets/cell-renderers/row-link/RowLinkColumnDropdown.tsx`·`src/_packages/fs-data-viewer/widgets/dashboard/widget-settings/common/{ColumnSelector.tsx,AggregationSelector.tsx}`
+
+## v001.1189.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: 긴급 핫픽스 (전용 이슈 없음 — master 승인 수동 carve-out) · PR funshare-inc/data-craft#525
+
+**긴급 prod 핫픽스 — 튜토리얼 디버그 프로브(TUT DEBUG) prod 노출 제거.** `TutorialDebugProbe`("임시 진단 프로브 — 진단 후 제거" 주석)가 `TutorialRoot`에서 환경 게이트 없이 무조건 렌더되어, prod(datacraft.ai.kr)에서 튜토리얼 사용 시 화면 좌하단에 검정 디버그 오버레이가 노출됨. dev 누적 작업 미경유로 main 분기 WIP에서 dev 전용 게이트 적용 → main 머지(b88a14d1f) → gh-pages 배포(5c950cf67).
+
+### 변경 (1커밋)
+- `264a4962a`: `TutorialRoot.tsx`에서 `<TutorialDebugProbe />` → `{import.meta.env.DEV && <TutorialDebugProbe />}`. prod 빌드(`import.meta.env.DEV=false`)에서 트리셰이킹되어 번들에서 제거. dev 진단 툴은 보존(완전 삭제 아님 — 게이트 방식).
+
+### 검증
+- 완전성 sweep: prod 디버그 누출은 본 프로브 단일(다른 *Debug*/*Probe* 컴포넌트·무조건렌더 오버레이 없음).
+- install/build:packages/typecheck:all/lint(0 error)/build PASS.
+- **정적 검증**: 빌드 dist 번들 내 `TUT DEBUG` 출현 = 0 (트리셰이킹 확인) → UI 스모크 불요.
+- 배포 후 gh-pages 새 번들(`index-ePjsKqLF.js`)이 프로브 미포함. (CDN 전파 ~1-2분.)
+
+### 후속 (carry-forward)
+- 게이트 방식이라 dev엔 프로브 잔존 — 진단 완료 시 파일 완전 삭제는 선택적 후속.
+- i-dev에도 동일 게이트 백포트 여부는 선택(현재 i-dev는 대규모 작업 중·미배포, 배포 전 처리하면 됨).
+
+### 영향 파일
+data-craft:
+- 수정: `src/features/onboarding/ui/TutorialRoot.tsx`
