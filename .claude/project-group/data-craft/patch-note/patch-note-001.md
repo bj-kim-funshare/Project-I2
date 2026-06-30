@@ -34883,3 +34883,19 @@ data-craft-server:
 data-craft-server:
 - `src/models/file.model.ts`
 - `src/models/storage.model.ts`
+
+## v001.1197.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #537 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (fix·★긴급)**: `data-craft-server` builder.model.ts 페이지관리 4함수 — page_layout PK `layout_id`→`page_layout_id` 정합(8곳: SELECT 2·★ORDER BY 2·createLayout 인라인타입+RETURNING+JS·hardDeleteLayout WHERE). `AS "layoutId"` 별칭 보존(소스만 rename). PUT /builder/pages/reorder 크래시 복구. ★ORDER BY layout_id DESC→page_layout_id DESC(별칭 "layoutId" 대소문자 다름·누락시 크래시 잔존)는 advisor-fallback이 짚어 보정 (`0acb7d6`).
+
+### 검증
+- ★dev psql reorder 쿼리(findActiveLayoutByPageIdWithConnection·ORDER BY page_layout_id 포함) 실행 → layoutId 반환·resolve(reorder 복구 실측)·tsc(pnpm build) exit0·eslint exit0.
+- advisor() 불가→advisor-fallback 2회(계획 BLOCK→ORDER BY 보정·완료 PASS).
+- ★R16 LEAVE 보존: page_layout_area(드롭)·page_layout_widget(→page_widget)·page_section.layout_id·findPages 서브쿼리 별칭 무수정.
+
+### 영향 파일
+- `data-craft-server`: src/models/builder.model.ts
