@@ -34985,3 +34985,33 @@ data-craft-server:
 
 ### 영향 파일
 - `data-craft`: src/features/logo-upload/ui/CompanyLogo.tsx, src/features/page-management/ui/PageEditPreview.tsx, src/features/logo-upload/ui/LogoUploadDialog.tsx
+
+## v001.1202.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #530 (funshare-inc/data-craft)
+
+### 페이즈 결과 (data-craft 웹 9 + data-craft-mobile 1)
+- **Phase 1 (fix)**: 공용키 신설(common.saving/noData/loadError/select/back) + 인증·부팅 한글→영어 누수(AuthProvider·BuilderPage·SiteCreation·signupValidation·subdomain-register, signup 쌍둥이 미러링) + 그리드 빈상태 영어→한글(LoadingStates) + settings.accessLevel.none 폴백키 (`5beee232`+`582a71b0`).
+- **Phase 2 (fix)**: 모바일 웹 뷰어 6종(Grid/Calendar/Dashboard/Kanban/Gantt/Card+PageView) 빈상태/로딩/오류, common 재사용+mobileViewer 신설 (`14fbd6bd`).
+- **Phase 3 (fix)**: 모바일 웹 위젯 9종+cellFormat, mobileWidget 신설, cellFormat 정적 LABELS→런타임 getCellLabel (`f91985c0`).
+- **Phase 4 (fix)**: 파일 업로더/첨부(메인앱+fs-file-attachment), uiConstants 라벨인자화+FileGroupDetail 주입(scope확장)+file-attachment-ui SYNC (`72e2e153`+`8218e4f4`).
+- **Phase 5 (fix)**: 문서위젯+기타(fs-data-viewer+메인앱), documentWidget/sseProvider/coupon 등 (`252ef3f8`).
+- **Phase 6 (fix)**: fs-data-link 워크스페이스+explorer(columnRowCount/rowNumber 4-lang)+도움말(guide.selection 7키) (`96dce16c`).
+- **Phase 7 (fix)**: aria-label 한글(common.back/close·deselectCoupon·widget.move*)+하드코딩 영어(gridTable·print.margin·formBuilder)+SiteCreation 잔여 (`011b4d78`).
+- **Phase 8 (fix)**: 오역 3(tabAreaDesign·tagline·columnDescriptions) + en 용어 일관성(Permission Group·Kanban·Connection) + ko 동음이의어 통일(컬럼→열 68·화면→페이지 84, 디스플레이 화면 46건 보존, 조사 후처리 29) (`dd36cbd1`).
+- **Phase 9 (refactor)**: 포맷 로컬라이제이션(날짜/숫자 활성언어 구동, cellRenderers·SubWidgetRenderer·DefaultTemplate·cellFormat, ₩ 유지) (`0311f344`).
+- **검증 핫픽스**: en propertyDrawer 5키명 *Page→*Screen 정합(Phase8 키-이름 불일치 사일런트 누수 수정) (`865a4d45`).
+- **Phase 10 (fix, data-craft-mobile)**: Flutter splash·video·channel_display(channelOthersCount int+호출부3)+permissionKeyAppProfileChange 오역(Company Default Profile Image→App Profile Image)+Role→Permission Group, gen-l10n (`9033d8d6`).
+
+### 검증
+- 기계분석 WIP 키셋 양방향 diff=0 (전 6스코프·양 repo), en 내 한글누수 0(언어라벨 제외), 4-lang(ko/zh/ja) 균형. 게이트: 웹 typecheck:all && eslint 0 errors, 모바일 flutter analyze "No issues found". advisor #1(계획)·#2(완료) PASS.
+- ko 화면→페이지 동음이의어: 디스플레이 의미(전체화면·홈 화면·설정 화면·PC 화면 등) 보존 확인, 한글 조사 깨짐 0.
+
+### 후속 (보류 — 별도 핫픽스 권장)
+- P7: document-edit BlockSpec 'Add image/video/audio/file' 4건(createReactBlockSpec render 콜백 — 훅 주입 시 rules-of-hooks 크래시 위험, document.add* 키는 추가됨·런타임 검증 후 배선만), widgetDefaultProperties 'No data available'(정적모듈, 소비측 t 주입 필요).
+- P9: cellValueFormatter(print) 'ko-KR' — 비-React print 진입점 다수(generate*PrintHtml·PdfAdapter)로 language threading 광범위(인쇄 출력 한정).
+
+### 영향 파일
+- `data-craft`(웹, #530 9페이즈 73파일): src/shared/i18n/locales/{ko,en}.ts, src/_packages/{fs-data-viewer(4-lang),fs-data-link,fs-file-attachment,fs-data-viewer-explorer}/**, src/{app,pages,widgets,features}/**
+- `data-craft-mobile`(8파일): lib/l10n/app_{ko,en}.arb, lib/screens/splash_screen.dart, lib/chat/{widgets/video_message_view,channel_display}.dart + lib/screens/dm/{chat_list,channel_settings,chat_room}_screen.dart
