@@ -35015,3 +35015,21 @@ data-craft-server:
 ### 영향 파일
 - `data-craft`(웹, #530 9페이즈 73파일): src/shared/i18n/locales/{ko,en}.ts, src/_packages/{fs-data-viewer(4-lang),fs-data-link,fs-file-attachment,fs-data-viewer-explorer}/**, src/{app,pages,widgets,features}/**
 - `data-craft-mobile`(8파일): lib/l10n/app_{ko,en}.arb, lib/screens/splash_screen.dart, lib/chat/{widgets/video_message_view,channel_display}.dart + lib/screens/dm/{chat_list,channel_settings,chat_room}_screen.dart
+
+## v001.1203.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #542 (funshare-inc/data-craft)
+
+**레이아웃 로드 실패 토스트 반복(스팸) 차단 (FE·1페이즈·useRef 가드).** 페이지 레이아웃 로드 실패 시 에러 토스트가 같은 페이지에서 반복 발화되던 스팸을 (pageId, 에러 에피소드)당 1회로 차단. ★레이아웃 로드 실패 *자체*는 R16(뷰어/레이아웃 BE 미복구)의 예상오류라 **미수정** — 토스트 반복만 막음. origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `135e796`: `usePageInitializer.ts` 에러 토스트 useEffect에 `shownLayoutErrorPageRef`(useRef<string|null>) 가드 추가. isLayoutError 지속 중 deps(`pages` 등) identity 변경으로 effect가 재실행돼도 ref 일치 시 즉시 return → 토스트 1회만. `!isLayoutError` 분기에서 ref 리셋 → 페이지 이동/에러 해제 후 다음 에피소드 정상 1회 발화(pageId-keyed라 페이지별 1회 보존). 401 위임 분기·toast 문구·deps 배열·레이아웃 쿼리 옵션(retry:0·refetchOnWindowFocus:false)·레이아웃 로드 effect 일체 무변경(+11/-0 순수 추가).
+
+### 검증
+- pnpm typecheck:all + pnpm lint exit 0(신규 오류/경고 없음·ref-write-in-effect는 set-state 위반 아님).
+- ★dev 서버 미기동 — **정적 검증 완료**(같은 pageId effect 재실행 시 토스트 1회·pageId 변경 시 1회·리셋 재발화). 스팸 제거 자체는 **마스터 라이브 검증 대기**(설정모달 반복 조작 시 토스트 1회 확인). 레이아웃 로드 실패 토스트의 유일 소스가 이 effect임은 grep 확증.
+
+### 영향 파일
+data-craft:
+- `src/features/page-management/hooks/usePageInitializer.ts`
