@@ -34552,3 +34552,26 @@ data-craft-server:
 
 ### 영향 파일
 - `data-craft-admin-server`: `src/models/adminEmailVerification.model.ts`
+
+## v001.1182.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #519 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (fix)**: `data-craft-server` storage.model.ts + externalColumnType(Change/Check).service.ts 3파일 — 2026-06-29 전면 `{table}_id` rename 후 깨진 raw SQL의 컬럼 참조 정합(`group_id`→`data_group_id`·`column_id`→`data_column_id`·`value_id`→`data_values_id`). `column_type`(6+2)·`row_num`·`value_data`·camelCase·`AS "columnId"` 우변 별칭·JS 객체키 전량 보존 (`0776114`).
+- **Phase 2 (fix)**: viewer.connection.ts + pivotBuilder.ts 2파일 — 동일 rename 정합. `? AS group_id` 출력 별칭·`row_num`·`value_data` 보존. pivotBuilder JSDoc 예시 SQL(주석)은 계약상 무변경 (`6c3cff8`).
+
+### 검증
+- 드롭모델 마커(data_viewer*/dvs/dvcs/dvrs/role/area 등) 5파일 0건 확인 → rename-only 안전(green-but-broken 없음).
+- over-rename 가드: camelCase·column_type·value_data·row_num 카운트 편집 전후 불변.
+- dev psql 컬럼 resolution: renamed 컬럼(data_group_id/data_column_id/data_values_id) 존재·구명칭 부재 실측 → SQL resolve 성공.
+- tsc(pnpm build) exit 0 + eslint(5파일) exit 0.
+
+### 영향 파일
+- `data-craft-server`:
+  - src/models/storage.model.ts
+  - src/services/externalColumnType/externalColumnTypeChange.service.ts
+  - src/services/externalColumnType/externalColumnTypeCheck.service.ts
+  - src/services/viewer/viewer.connection.ts
+  - src/utils/pivotBuilder.ts
