@@ -34733,3 +34733,21 @@ data-craft (i-dev, 신경로):
 ### 영향 파일
 data-craft:
 - 수정: `src/features/onboarding/ui/TutorialRoot.tsx`
+
+## v001.1190.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: 정리 (전용 이슈 없음 — master 승인 수동 carve-out) · PR funshare-inc/data-craft#528
+
+**튜토리얼 디버그 프로브 완전 삭제 (v001.1189.0 dev 게이트 → 파일 삭제 정리).** 진단 완료된 임시 `TutorialDebugProbe`를 dev 게이트 방식에서 **완전 삭제**로 정리. `TutorialRoot`의 import/render 제거 + `TutorialDebugProbe.tsx` 파일 삭제. prod 동작 무변화(이미 v1189 게이트로 번들에서 제외됨 → **prod 재배포 불필요**, 소스 정리 성격). i-dev는 프로브가 애초에 없어(R16 미반영) 별도 작업 불요(확인 완료).
+
+### 변경 (1커밋)
+- `759366b1`: `TutorialRoot.tsx`에서 `{import.meta.env.DEV && <TutorialDebugProbe />}` + import 제거, `TutorialDebugProbe.tsx` 삭제. 잔여 참조 0.
+
+### 검증
+- install/build:packages/typecheck:all(dangling import 없음 확인)/lint(0 error)/build PASS · dist 'TUT DEBUG'=0.
+
+### 영향 파일
+data-craft:
+- 삭제: `src/features/onboarding/ui/TutorialDebugProbe.tsx`
+- 수정: `src/features/onboarding/ui/TutorialRoot.tsx`
