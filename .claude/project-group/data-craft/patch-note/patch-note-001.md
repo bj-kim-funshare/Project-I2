@@ -34770,3 +34770,26 @@ data-craft:
 
 ### 영향 파일
 - `data-craft-server`: src/models/user.model.ts, src/services/auth.service.ts, src/models/refreshToken.model.ts, src/models/permission.model.ts, src/models/user-preference.model.ts, src/middlewares/auth.middleware.ts, src/services/resetPassword.service.ts
+
+## v001.1192.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #532 (funshare-inc/data-craft)
+
+**#7 복구 — 결제/플랜 PK/컬럼 rename 정합 (동작보존·FE 무변경).** 전면 rename(PK id→{table}_id) 적용 후 결제/플랜 비-뷰어 7파일 raw SQL이 옛 `id`/`code_id`를 써서 `column does not exist` 크래시 → 새 이름으로 정합. 반환키(AS "id" 등) 보존으로 FE 계약 유지. dev-only·origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** (fix) `c46673a`: billing.model·paymentHistory.model — billing_info_id·payment_history_id, RETURNING id→`payment_history_id AS "id"` 2건.
+- **Phase 2** (fix) `c069b75`: coupon.model·couponDeduction.svc — coupon_code/wallet/target id, code_id→coupon_code_id, 3-table JOIN 양변(c.coupon_code_id=w.coupon_code_id).
+- **Phase 3** (fix) `dbcb214`: clientSeatChangeRequests.model·billingCleanup.svc — client_seat_change_requests_id, bi.id AS "billingInfoId" 별칭보존, company 이미 company_id.
+- **Phase 4** (fix) `3b9b71d`: billingRenewal.svc — client_promotion_id (SQL 1곳), JS .id 다수 전부 보존.
+
+### 검증 (동작보존)
+- 전 7파일 bare SQL id·code_id 잔존 0·build(tsc)+lint exit 0·id 함정 3분류(SQL컬럼/JS .id/AS "id") 일관 적용·드롭객체 0.
+- dev psql 왕복: 스키마-해석 + 출력키(id/codeId/billingInfoId, 0-row 포함) 보존 + RETURNING write-path EXPLAIN + coupon JOIN 양변, column-does-not-exist 0. advisor #1·#2 PASS.
+- 마스터 사후 런타임 스모크 권장(머니경로): 가입→payment insert→rows[0].id 캡처, 쿠폰 redemption.
+
+### 영향 파일
+data-craft-server:
+- `src/models/{billing,paymentHistory,coupon,clientSeatChangeRequests}.model.ts`
+- `src/services/{couponDeduction,billingCleanup,billingRenewal}.service.ts`
