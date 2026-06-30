@@ -34793,3 +34793,22 @@ data-craft:
 data-craft-server:
 - `src/models/{billing,paymentHistory,coupon,clientSeatChangeRequests}.model.ts`
 - `src/services/{couponDeduction,billingCleanup,billingRenewal}.service.ts`
+
+## v001.1193.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #534 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (fix·★crit)**: `data-craft-server` tenant-gate.middleware.ts — `INNER JOIN "user" u ON u.id`→`u.user_id`. 모든 인증요청 크래시 복구. dev psql resolution 검증 (`6c3b5a3`).
+- **Phase 2 (no-op)**: promotion.service.ts — SQL alias.id 0(19건은 전부 JS 객체접근). 변경 없음.
+- **Phase 3 (fix)**: client.model.ts(`u.id`→user_id)·billingScheduler.service.ts(`b.id`→billing_info_id·`rc.id`→referral_credit_id 양측)·billingSubscription.service.ts(client_promotion bare id→client_promotion_id) (`c397810`).
+- **Phase 4 (no-op)**: files.controller.ts·init.service.ts — raw SQL 0(전부 JS). 변경 없음.
+
+### 검증
+- ★alias→테이블 바인딩 dev psql 실측: 4개 renamed 컬럼 전부 해당테이블 실제 PK(user.user_id/billing_info.billing_info_id/referral_credit.referral_credit_id/client_promotion.client_promotion_id) — silent-wrong-data 가드 PASS.
+- tenant-gate 쿼리 resolve(모든 요청 경로 복구)·tsc(pnpm build) exit0·eslint exit0·SELECT* 0·no-op 2건 SQL 0 실측 확인.
+- ★`id` 3분별: SQL alias.id/id(rename)·JS `.id`(보존)·`AS "id"`(FE계약). `"user"` 예약어 따옴표 유지.
+
+### 영향 파일
+- `data-craft-server`: src/middlewares/tenant-gate.middleware.ts, src/models/client.model.ts, src/services/billingScheduler.service.ts, src/services/billingSubscription.service.ts (P2/P4 파일 no-op)
