@@ -34812,3 +34812,28 @@ data-craft-server:
 
 ### 영향 파일
 - `data-craft-server`: src/middlewares/tenant-gate.middleware.ts, src/models/client.model.ts, src/services/billingScheduler.service.ts, src/services/billingSubscription.service.ts (P2/P4 파일 no-op)
+
+## v001.1194.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #531 (funshare-inc/data-craft)
+
+**#7 복구 — 알림·프로모션·기타 비-뷰어 PK/컬럼 rename 정합 (3페이즈·동작보존·dev-only).** 전면 rename(PK `id`→`{table}_id` + data_* 컬럼) 이후 비-뷰어 모델/컨트롤러의 raw SQL이 옛 이름을 써서 크래시하던 14+ 쿼리를 새 이름으로 정합. 서빙 API shape 보존(`AS "id"`/camelCase 반환키 유지). origin 미푸시·dev psql 왕복 검증·lint·build exit 0.
+
+### 페이즈 결과
+- **Phase 1 (fix)**: `notification.model.ts` — `id`→`notification_id`(WHERE bare + SELECT/RETURNING `notification_id AS "id"` shape 보존). notification.controller/service는 raw SQL 무·무변경 (`fb92fe5`).
+- **Phase 2 (fix)**: `promotion.model.ts`·`referral.model.ts` — promotion/client_promotion PK(`SELECT *, <pk> AS "id"` shape 보존·RETURNING 별칭)·referral_credit/coupon/deduction PK + `credit_id`→`referral_credit_id`·`payment_id`→`payment_history_id`. CTE/파생테이블 외부 `SELECT id`는 내부 별칭 참조라 보존 (`14ef259`).
+- **Phase 3 (fix)**: `file.controller.ts`(file_group/file PK·`AS "id"` 보존)·`inputStore.model.ts`(data_group/column/values의 `group_id`→`data_group_id`·`column_id`→`data_column_id`·`value_id`→`data_values_id`·camelCase 별칭 보존). chat.controller는 raw SQL 무·무변경 (`cfd27e2`).
+
+### 검증
+- ★dev psql 왕복: 변경 가능 14쿼리 전부 `column/relation does not exist` 크래시 0·`AS "id"`/camelCase 반환 shape 보존 확인.
+- `id` 3분별 준수: SQL컬럼 id(rename)·JS객체 `.id`(보존)·`AS "id"`(FE계약 유지). `value_data`·`column_type`·`is_deleted`·`row_num`·`company_id` KEEP. `"user"` 예약어 따옴표 유지. alias.id(`u.id`·`c.id` 등)도 점검 — 누락 0.
+- 무변경 3파일(notification.controller/service·chat.controller) raw SQL 시그널 0 positively 검증(델리게이트). advisor#2 PASS.
+
+### Blocker (기록·범위 밖)
+- `inputStore.model.ts`의 `findFormDataGroupByFormId`는 `form_list` 테이블 참조 — **form_list가 psql에 애초에 미존재**(MySQL 전용 레거시)·캠페인 이전부터 dead-code(이번 회귀 아님). forms(settings_form/form_list)는 R16 재개편(user_setting_page 폐기) 영역 → ★변경 없이 그대로 두고 R16에서 제거/no-op(지휘 결정).
+
+### 영향 파일
+data-craft-server:
+- `src/models/{notification,promotion,referral,inputStore}.model.ts`
+- `src/controllers/file.controller.ts`
