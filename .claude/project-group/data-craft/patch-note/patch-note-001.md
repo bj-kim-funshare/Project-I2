@@ -34689,3 +34689,23 @@ data-craft-server:
 ### 영향 파일
 data-craft:
 - 수정: `packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/{ViewModeDropdownPanel.tsx,types.ts,useViewModeDraft.ts}`·`src/features/page-management/ui/{CreatePageForm,EditPageForm}.tsx`·`src/widgets/settings-dialog/ui/{AppTabContent,PageAccessList,RoleSelect}.tsx`·form-builder/form-widgets/tabs-widget 다이얼로그 inline 배선·`packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/{ColumnSelector,AggregationSelector}.tsx`·`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkColumnDropdown.tsx`
+
+## v001.1188.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #524 (funshare-inc/data-craft)
+
+**i-dev 드롭다운 핫픽스 백포트 — 모달 상호작용 3종 (prod 핫픽스 v001.1187.0 / PR #523의 i-dev 반영).** main에 배포한 모달 드롭다운 dialogMode 수정이 i-dev엔 없어(R16 atomic-absorption으로 신경로 `src/_packages/`, 게다가 #449는 i-dev에서 오발 revert로 net-zero) i-dev 배포 시 회귀 재발 위험 → 동일 수정을 i-dev 신경로에 재적용. typecheck:all + lint(0 error) + build PASS. advisor #1/#2 PASS. WIP A → i-dev 머지(b24908b34), origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** (fix) `8a2e000c`: dialogMode 재오픈 시 draft 초기화 — `useViewModeDraft`에 stable `reset(sel)` + `ViewModeDropdownPanel`에 `prevOpenRef` closed→open edge effect(dialogMode 가드). iter-2 net form(렌더 중 ref 쓰기 없음 — i-dev 엄격 lint 정합).
+- **Phase 2** (fix) `5efe461b`: RowLink 열 드롭다운 portal(anchor)→dialogMode 전환(trigger prop·open state·disabled 게이트, items/labels/zIndex 20000/searchable 보존).
+- **Phase 3** (fix) `cd940369`: 대시보드 Column/AggregationSelector portal→dialogMode 전환(noneItem(danger)·searchable·Z_INDEX.NESTED_MODAL_DROPDOWN·AggregationType 캐스팅 보존).
+
+### 검증/한계
+- 각 페이즈 main-session 7c 검증(diff·affected_files·마커 추가/제거·배선 보존) + 통합 게이트 typecheck:all/lint 0err/build PASS. 핵심 reset 파일은 main 핫픽스와 로직 패리티(포매팅만 상이) 확인.
+- 런타임 미검증(의도) — dev DB 스키마 개편 중이고 i-dev 미배포 시점이라, i-dev 대규모 작업 배포 시 함께 검증(carry-forward).
+
+### 영향 파일
+data-craft (i-dev, 신경로):
+- 수정: `src/_packages/fs-data-viewer/shared/ui/view-mode-dropdown/{ViewModeDropdownPanel.tsx,useViewModeDraft.ts}`·`src/_packages/fs-data-viewer/widgets/cell-renderers/row-link/RowLinkColumnDropdown.tsx`·`src/_packages/fs-data-viewer/widgets/dashboard/widget-settings/common/{ColumnSelector.tsx,AggregationSelector.tsx}`
