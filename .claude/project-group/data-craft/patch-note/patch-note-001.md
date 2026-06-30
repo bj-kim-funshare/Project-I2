@@ -34947,3 +34947,21 @@ data-craft-server:
 
 data-craft-admin-server:
 - `src/services/adminNotification.service.ts`
+
+## v001.1200.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #541 (funshare-inc/data-craft)
+
+**TOGGLE_USER_ACTIVE `NOT smallint` 수정 (MySQL→pg 런타임 결함·단일 라인).** 사용자 활성/비활성 토글(PUT /api/auth/approved-users/:id/active)이 `argument of NOT must be type boolean, not type smallint` 500. MySQL은 `NOT tinyint` 허용하나 PostgreSQL은 `NOT smallint` 거부 — 컷오버 잠복 결함. pg-safe 토글로 복구.
+
+### 페이즈 결과
+- **Phase 1** (fix) `be56473`: src/models/user.model.ts toggleUserActive — `UPDATE "user" SET is_active = NOT is_active …` → `SET is_active = 1 - is_active …` (smallint 0↔1 토글). WHERE/바인딩/반환(isActive===1) 무변경. BE 전수 grep상 `SET x=NOT x`는 이 1곳뿐.
+
+### 검증 (dev psql 완전 런타임 실증)
+- 실 row(user_id=44) `1 - is_active` UPDATE: before=1→after=0 flip, `NOT must be boolean` 에러 0(BEGIN…ROLLBACK). is_active 도메인 0/1. pnpm lint exit 0. advisor #1·#2 PASS.
+- 마스터: BE 재기동 후 사용자관리→승인사용자→비활성/활성 확인.
+
+### 영향 파일
+data-craft-server:
+- `src/models/user.model.ts`
