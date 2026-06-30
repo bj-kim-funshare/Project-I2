@@ -34751,3 +34751,22 @@ data-craft:
 data-craft:
 - 삭제: `src/features/onboarding/ui/TutorialDebugProbe.tsx`
 - 수정: `src/features/onboarding/ui/TutorialRoot.tsx`
+
+## v001.1191.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #533 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (fix)**: `data-craft-server` user.model.ts — `"user"` PK `id`→`user_id` 정합(WHERE 술어 18 + SELECT/RETURNING 11 `user_id AS "id"` shape 보존). 로그인 사용자조회(findUserByEmail) 크래시 복구. dev psql login E2E 검증(반환 id키+password) (`1459a65`).
+- **Phase 2 (fix)**: auth.service.ts — `role_id`→`permission_id` + `id`→`user_id`(line284·이중치환 방지) (`3d0ad83`).
+- **Phase 3 (fix)**: refreshToken/permission/user-preference 모델 — PK `id`→`{table}_id`(refresh_token_id/permission_id/user_preference_id·`AS "id"` 보존) (`97b60d5`).
+- **Phase 4 (fix)**: auth.middleware/resetPassword.service — `"user"` id→user_id (`cddc212`).
+
+### 검증
+- ★login E2E: findUserByEmail 원문 dev psql 실행 → 반환 컬럼 `id`(FE계약 보존)+password 존재·OLD `SELECT id` crash 확인.
+- 7파일 dev psql 컬럼 resolution(renamed PK 존재·OLD id 부재)·tsc(pnpm build) exit0·eslint exit0·로그인 경로 인접파일 bare-id 0(7파일 커버).
+- ★`id` 3분별: SQL컬럼 id(rename)·JS .id(보존)·`AS "id"`(FE계약 유지) 준수. `"user"` 예약어 따옴표 유지.
+
+### 영향 파일
+- `data-craft-server`: src/models/user.model.ts, src/services/auth.service.ts, src/models/refreshToken.model.ts, src/models/permission.model.ts, src/models/user-preference.model.ts, src/middlewares/auth.middleware.ts, src/services/resetPassword.service.ts
