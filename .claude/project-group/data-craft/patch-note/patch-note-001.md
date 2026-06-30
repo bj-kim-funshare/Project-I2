@@ -34837,3 +34837,25 @@ data-craft-server:
 data-craft-server:
 - `src/models/{notification,promotion,referral,inputStore}.model.ts`
 - `src/controllers/file.controller.ts`
+
+## v001.1195.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #535 (funshare-inc/data-craft)
+
+**#7 복구 — builder 페이지목록(findPages, 사이드바) rename 정합 (마스터 (B)·동작보존·앱진입 블로커 해소).** `page_list does not exist`로 앱 진입 차단되던 findPages를 복구. 섹션/위젯 내용(page_layout_area·page_widget)은 R16 무접촉.
+
+### 페이즈 결과
+- **Phase 1** (fix) `5bf7003`: pure-page 14함수 `page_list`→`page`(findPageById·CRUD·tree·count·cleanup·softDeleteLayouts subquery+주석). user.service.ts raw SQL 0 → 무변경.
+- **Phase 2** (fix) `c5908ea`: **findPages 복구 3종** — page_list→page + layout_id→page_layout_id(layoutJoin MAX) + page_role(드롭)→permission.page_access jsonb `@> jsonb_build_array(jsonb_build_object('page_id',?::int))` containment(RBAC 복구·#514 패턴) + accessLevel 코릴레이티드 추출. 바인딩 순서·출력키 보존.
+
+### 검증 (dev psql 실증)
+- findPages 역할필터(permission_id=27): COUNT=31 비빈결과·accessLevel='write'·layoutId 정상, 오너브랜치 정상, page_list/page_role/layout_id 크래시 0. getAncestorPageIds 재귀 walk·createPage INSERT RETURNING 정상. build(tsc)+lint exit 0. SQL page_role 잔존 0. advisor #1·#2 PASS.
+- 런타임 바인딩(req.user.roleId=permission_id)은 마스터 재기동·사이드바 테스트로 확인.
+
+### 무접촉 (R16)
+findRecentWidgetUsage(page_layout_widget/area/column JOIN @1274)·area_id·section_id·page_widget.
+
+### 영향 파일
+data-craft-server:
+- `src/models/builder.model.ts`
