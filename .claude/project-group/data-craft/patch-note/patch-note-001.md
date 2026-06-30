@@ -34654,3 +34654,38 @@ data-craft-admin:
 ### 영향 파일
 data-craft-server:
 - `src/models/viewer.model.ts`(+607/-335)·`src/utils/sqlFieldWhitelist.ts`(+26)
+
+## v001.1187.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: 긴급 핫픽스 (전용 이슈 없음 — master 승인 수동 carve-out) · PR funshare-inc/data-craft#523
+
+**긴급 prod 핫픽스 — 모달 내부 드롭다운 상호작용 복구 (클릭통과/스크롤).** 드롭다운 디자인 통일(#347/#357/#374/#381/#391)이 prod 배포 후 Radix Dialog 내부 드롭다운에서 ① 클릭 시 뒷배경 클릭(클릭통과 → 다이얼로그 닫힘) ② 스크롤 불가 = 사용불가 회귀. 수정(#407 dialogMode 패밀리)은 배포불가한 i-dev(대규모 작업 245커밋)에만 존재 → i-dev **미경유**로 main 분기 WIP에 검증 수정만 외과 이식 → main 머지(18b46cb68) → gh-pages 배포(a0db8f63a) → datacraft.ai.kr 라이브 확인.
+
+### 원인 (메커니즘)
+통일 패널이 `createPortal(document.body)`로 떠 Radix Dialog 콘텐츠의 형제 노드가 됨 → 모달의 `body{pointer-events:none}` + DismissableLayer 네이티브 capture 외부클릭 감지에 노출(클릭통과)·`react-remove-scroll` 화이트리스트 밖이라 휠 차단(스크롤 불가). 수정 = ViewModeDropdownPanel `dialogMode`(Radix Popover) + onWheelCapture 스크롤 우회.
+
+### 변경 (3 레이어, 13커밋)
+- **L1**: #407 패밀리 8커밋 cherry-pick — page/settings/form-builder 모달 드롭다운 dialogMode 복구.
+- **L2a**: #449 phase1/2(`3193190f0`·`744203873`) — 대시보드 Column/AggregationSelector dialogMode. ⚠️ 오발 revert(`3cf0552b8`)·`86af0a13b` 의도적 제외.
+- **L2b**: RowLink 열 드롭다운 dialogMode 손이식(i-dev에서 미수정이던 표면).
+- **회귀수정**: dialogMode 패널 상시마운트로 searchable 드롭다운 재오픈 시 검색어/필터 잔존(2차 회귀, dev-merge bug-detector 적발) → closed→open edge에서 `useViewModeDraft` reset(렌더 중 ref 쓰기 금지=eslint 'Cannot access refs during render').
+
+### 검증
+- 다중에이전트 읽기전용 조사(6에이전트) + 적대적 검증(confidence 86·blocking 0).
+- cherry-pick 충돌 0 (main이 #407 수정 베이스와 바이트 동일·경로이동 이전 커밋이라 옛 경로 정합).
+- 빌드 게이트 3회 PASS(install/build:packages/typecheck:all/lint 0err/build).
+- dev-merge 리뷰어 2종 ×2라운드(compliance·bug-detector 최종 `[]`) + lint 게이트 0 error.
+- prod 백엔드 연결 빌드(`vite preview`)로 모달 드롭다운 클릭선택+스크롤 스모크 통과(dev DB 개편 중이라 prod 백엔드로 검증).
+
+### 배포·롤백
+- main=`18b46cb68`(PR #523 머지·--no-ff), gh-pages=`a0db8f63a`(CNAME=datacraft.ai.kr 보존). main 체크아웃이 i-dev 점유라 hotfix 워크트리 dist(=M 트리)에서 `npx gh-pages -d dist` 배포.
+- 롤백: `git revert -m 1 18b46cb68`+재배포, 또는 gh-pages 직전양호 `b300f594b`.
+
+### 후속 (carry-forward)
+- ⚠️ **i-dev 백포트 필요**: 신규 3종(RowLink dialogMode·대시보드 셀렉터 phase1/2·reset-on-open)이 i-dev에 없음(i-dev RowLink=portal 깨짐·대시보드=오발 revert net-zero·reset 없음). i-dev 배포 시 회귀 재발 → 정식 plan-enterprise로 i-dev(신경로 `src/_packages/fs-data-viewer/...`) 백포트.
+- manual-verify: Formula/SimpleFormula·dual-widget 다이얼로그는 hand-rolled 배경(비-Radix)이라 메커니즘상 무영향 판정 — 1회 눈 확인 권장.
+
+### 영향 파일
+data-craft:
+- 수정: `packages/fs-data-viewer/src/shared/ui/view-mode-dropdown/{ViewModeDropdownPanel.tsx,types.ts,useViewModeDraft.ts}`·`src/features/page-management/ui/{CreatePageForm,EditPageForm}.tsx`·`src/widgets/settings-dialog/ui/{AppTabContent,PageAccessList,RoleSelect}.tsx`·form-builder/form-widgets/tabs-widget 다이얼로그 inline 배선·`packages/fs-data-viewer/src/widgets/dashboard/widget-settings/common/{ColumnSelector,AggregationSelector}.tsx`·`packages/fs-data-viewer/src/widgets/cell-renderers/row-link/RowLinkColumnDropdown.tsx`
