@@ -34917,3 +34917,33 @@ data-craft-server:
 ### 영향 파일
 data-craft-server:
 - `src/services/auth.service.ts`
+
+## v001.1199.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #539 (funshare-inc/data-craft)
+
+**notification fan-out 재설계 + company_id 제거 (BE).** company_id 제거 작업(DB)의 BE 단계. notification 회사단위 알림을 유저별 fan-out으로 재설계하고 notification·user_preference·refresh_token이 company_id를 더 이상 참조하지 않게 정리. 시그니처 유지·SQL 본문만 변경(surgical). expand→BE→contract 중 BE 단계(DDL-1 expand 선행 적용됨, DDL-2 contract 후속).
+
+### 페이즈 결과
+- **Phase 1** (refactor) `1608b81`·`83a8c93`: notification.service 회사단위 6함수를 findUsersByCompanyId fan-out(유저별 N행, SSE 1회)으로. model read user_id 스코프(`OR user_id IS NULL` 제거), markAsRead `AND user_id`(IDOR 차단·controller가 req.userId), INSERT·투영 company_id 제거. types userId non-null.
+- **Phase 2** (refactor) `4b4aa2e`·`064ec8f`: adminNotification "전체" 발송을 listNotificationUsers 회사멤버 fan-out으로, notification INSERT·발송이력 SELECT·NotificationRow에서 company_id 제거. ⚠️구 client/`"user".id` 이름 잔존은 R15 미반영 별개 사안(미수정) — 그 리네임 전까지 admin "전체" fan-out은 dev 비기능.
+- **Phase 3** (refactor) `2b735ce`: user-preference.model ON CONFLICT `(user_id,pref_key)`(선행 uk_user_pref_user_key) + company_id 미참조.
+- **Phase 4** (refactor) `c7e1828`: refreshToken.model INSERT/WHERE/투영 company_id 제거(CreateRefreshTokenParams 호환 유지).
+
+### 검증
+페이즈별 eslint + tsc(pnpm build) exit 0(타입 변경이라 tsc 필수). 시그니처 유지로 호출부 파급 0. advisor #1·#2 PASS.
+
+### 후속 / 주의 (범위 밖)
+- **DDL-2 (task-db-structure)**: 3테이블 company_id DROP + 구 uk_user_pref DROP + notification user_id NOT NULL + user FK + refresh_token 인덱스→(user_id). **게이트**: 가동 dev BE가 새 BE로 재시작된 뒤 실행 + notification user_id NULL=0 재확인.
+- **admin-server 구 client→company / id→user_id 리네임**(별개 사안) — admin "전체" fan-out은 그 전까지 dev 비기능.
+- **fan-out 수신자 = 회사 전 활성 멤버**(findUsersByCompanyId). 가입요청 알림도 전원 — 오너/관리자 한정 원하면 별도 지시.
+
+### 영향 파일
+data-craft-server:
+- `src/services/notification.service.ts`, `src/models/notification.model.ts`, `src/controllers/notification.controller.ts`, `src/types/notification.types.ts`
+- `src/models/user-preference.model.ts`, `src/types/user-preference.types.ts`
+- `src/models/refreshToken.model.ts`
+
+data-craft-admin-server:
+- `src/services/adminNotification.service.ts`
