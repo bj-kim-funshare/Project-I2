@@ -34586,3 +34586,30 @@ data-craft-server:
 
 ### 영향 파일
 - `data-craft-admin-server`: `src/services/adminCompanies.service.ts`
+
+## v001.1184.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #520 (funshare-inc/data-craft)
+
+**#7 권한 subsystem cutover — roles.model.ts (동작보존·FE 무변경).** 옛 4테이블(role·role_permission·page_role·settings_form_role)+user.role_id → 새 단일 permission 테이블+user.permission_id로 컷오버. API 모양(roles.types.ts RoleInfo·PageAccessItem·SettingsFormAccessItem·PermissionKey[]) 전부 보존=FE 무변경. roles.model.ts 단일 파일·호출부 무변경. dev-only·origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1** (refactor) `dded449`: Role CRUD — role→permission 테이블. ROLE_SELECT_COLUMNS(permission_id AS "id"·seq AS "sortOrder")·is_deleted=0 필터·하드 deleteRole 유지.
+- **Phase 2** (refactor) `389e8db`: 8플래그 피벗 — role_permission 키리스트 ↔ permission 8컬럼. 읽기=PERMISSION_KEYS.filter(k=>Number(row[k])===1), 쓰기=단일 UPDATE(setClause·values 모두 PERMISSION_KEYS 순서 구동). #514 permission.model과 일관.
+- **Phase 3** (refactor) `dc1ef80`: page_access jsonb — page_role→permission.page_access. findRolesByPageId `@> jsonb_build_array(jsonb_build_object('page_id',?::int))`·replacePageRoles 2단계 스코프 게이팅·number[] 반환 보존·방어적 typeof 파싱.
+- **Phase 4** (refactor) `b7cbd69`: settings+user — settings_form_role→user_setting_access jsonb·updateUserRoleId(permission_id/user_id). insertPermissions conn? 보존(트랜잭션 원자성).
+
+### 검증 (동작보존)
+- 옛 4테이블 raw SQL 잔존 0·pnpm build(tsc)+lint exit 0·반환 shape byte-동일.
+- dev psql 왕복 실측(BEGIN…ROLLBACK): 8플래그 피벗 동일집합·page_access jsonb 왕복·@> 컨테인먼트·replacePageRoles 2단계 전부 통과(스키마-의미론 검증).
+- advisor 계획 #1 / 완료 #2 PASS.
+
+### ⚠️ 확정 동작 발산 (마스터 후속)
+deleteRole FK: 옛 fk_user_role ON DELETE SET NULL → 새 fk_user_permission NO ACTION. 사용중 permission 삭제 시 옛=널화 성공, 새=에러. FK 변경(task-db-structure) 또는 서비스층 선재배정 필요.
+### 부수 해소
+getApprovedUsers(#514 이연) findRoleById 크래시 본 cutover로 자동 해소.
+
+### 영향 파일
+data-craft-server:
+- `src/models/roles.model.ts`
