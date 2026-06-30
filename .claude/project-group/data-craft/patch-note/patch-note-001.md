@@ -34965,3 +34965,23 @@ data-craft-admin-server:
 ### 영향 파일
 data-craft-server:
 - `src/models/user.model.ts`
+
+## v001.1201.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #540 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1 (fix)**: `data-craft`(FE) CompanyLogo.tsx·PageEditPreview.tsx — logoSrc 하이브리드 분기(외부 http URL이면 `src={logoUrl}` 직접·#420 phase3 이전 동작 복원, 로컬 파일이면 스트리밍 엔드포인트 유지). CompanyLogo는 `?t=${logoRefreshKey}` cache-bust 유지·PageEditPreview는 기존 형태(?t= 없음) 유지·미사용 hasLogo 제거 (`b4b3e45`).
+- **Phase 2 (fix)**: LogoUploadDialog.tsx — (a)현재 로고 미리보기 currentLogoEndpointSrc 하이브리드 (b)다이얼로그 open시 외부 URL pre-fill(render-time 가드·set-state-in-effect 회피) (c)★저장 직후 옵티미스틱 store 갱신: BE 응답에 auth.account 없어 미작동하던 `if(response.auth?.account)` 가드를 `updateAccount({logoUrl})` 직접호출로 대체(리로드 전 즉시반영)·handleResetLogo도 동일 (`4af2bf2`).
+
+### 근본원인
+#420 phase3(da930ff55)가 모든 로고를 스트리밍 엔드포인트(getCompanyLogoImageUrl) 강제→외부 http URL은 BE 302 redirect→`<img>` 렌더실패→fallback. BE/저장/DB 정상이라 FE 렌더 경로만 복구.
+
+### 검증
+- logoSrc 분기 정적확인(외부→logoUrl 직접·로컬→엔드포인트)·typecheck:all(tsc) exit0·eslint exit0·로컬파일 동작 회귀0.
+- updateAccount 가드 대체(double-write 0)·render-time 가드(useEffect set-state 0). 파일업로드는 '적용' 경로서 store 갱신(저장전 오염 회피).
+- BE(data-craft-server)·TenantBlock.tsx 무수정. advisor #1(렌더분기/?t=/double-write 강화)·#2 PASS.
+
+### 영향 파일
+- `data-craft`: src/features/logo-upload/ui/CompanyLogo.tsx, src/features/page-management/ui/PageEditPreview.tsx, src/features/logo-upload/ui/LogoUploadDialog.tsx
