@@ -34575,3 +34575,14 @@ data-craft-server:
   - src/services/externalColumnType/externalColumnTypeCheck.service.ts
   - src/services/viewer/viewer.connection.ts
   - src/utils/pivotBuilder.ts
+
+## v001.1183.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: funshare-inc/data-craft#516 (핫픽스1)
+
+### 페이즈 결과
+- **Phase 2 (fix, 핫픽스1)**: `data-craft-admin-server` `updateCompany` 의 A1a 카드 가드(`NO_BILLING_METHOD` — 결제수단 없는 유료 플랜 부여 차단) 제거 → 운영자가 결제수단 없는 고객에게도 유료 플랜(basic/standard/premium)을 수동 부여 가능(comp 용도). 안전성 근거: 자동과금 스케줄러(`processAutoRenewals`/`processRetryPayments`)는 `billing_info` 를 INNER JOIN 하여 무카드 고객을 과금 대상에서 구조적으로 제외하고, 만료 도래 시 `processExpiredPlans`(`b.id IS NULL` 분기)가 자동 free 강등하므로 **기한부 comp** 로 안전 동작. 만료일 연장·좌석 증가는 plan_type 미변경 시 가드 무관(기존에도 가능). A3(enterprise 만료)·A-COMBO(유료 null 만료) 가드는 보존. prod 기준 무변경 원칙에 따라 data-craft-server billing 스케줄러(`bi.id`)는 prod 정상이므로 무수정.
+
+### 영향 파일
+- `data-craft-admin-server`: `src/services/adminCompanies.service.ts`
