@@ -34859,3 +34859,27 @@ findRecentWidgetUsage(page_layout_widget/area/column JOIN @1274)·area_id·secti
 ### 영향 파일
 data-craft-server:
 - `src/models/builder.model.ts`
+
+## v001.1196.0
+
+> 통합일: 2026-06-30
+> 플랜 이슈: #536 (funshare-inc/data-craft)
+
+**#7 복구 마지막 배치 — file/storage alias.id+bare id 잔존 정합 (3페이즈·동작보존·dev-only).** 전면 rename 후 file/storage 모델의 raw SQL이 file_group PK(`file_group_id`)·file PK(`file_id`)를 옛 이름(`fg.id`·`f.id`·bare `id`)으로 참조해 크래시하던 경로를 정합. 마스터 막힌 두 경로 `/api/file/image`(verifyFileOwnershipByUri)·`/api/subscription/status`(getFileStorageUsage) 복구. 반환 shape 보존(`AS "id"`)·origin 미푸시·dev psql 왕복 검증·lint·build exit 0.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `5af6d4b`: file.model.ts clean 함수 5개 alias.id 12건 — `f.id`→`f.file_id`(7)·`fg.id`→`fg.file_group_id`(5). SELECT-return 4곳은 `f.file_id AS "id"`로 FE 소비(row.id) 반환키 보존.
+- **Phase 1b (fix)** `cfe5f6f`: file.model.ts bare `id` on file_group 3함수(getOrCreateFileGroup·findFileGroup·findFileGroupsByConditions) — `id`→`file_group_id AS "id"`. alias.id grep이 놓친 잔존(undercount)·executor catalog 검증 적발·파일 업로드/그룹조회 경로 복구. FileGroupRow.id 계약 보존.
+- **Phase 2 (fix)** `17e1431`: storage.model.ts `fg.id`→`fg.file_group_id` 2건(getFileStorageUsage·updateAllUrisForClientFolder). billingRenewal.service.ts의 `cp.id` 5건은 JS 객체 프로퍼티 확인 → 0 변경(over-rename 시 undefined 바인딩 회귀라 보존).
+
+### 검증
+- ★dev psql 왕복: 고친 clean 함수 전 쿼리 `column does not exist` 크래시 0·`AS "id"`/반환 shape 보존. storage bare-id 추가 sweep 0.
+- `id` 3분별 준수: SQL컬럼 rename·JS객체 `.id`(cp.id 등) 보존·`AS "id"`(FE계약) 유지. `cp.client_promotion_id` over-rename 0건. value_data·column_type·is_deleted·company_id KEEP.
+
+### Blocker (R16·범위 밖)
+- `file.model.ts`의 `findFileGroupsWithStats`(파일목록 stats·form/viewer 제목 enrichment)는 `form_list`(psql 미존재·MySQL 레거시) + `data_viewer_setting`(#522 cutover로 DROP) 서브쿼리 참조 → **캠페인 전부터 런타임 크래시**·이번 회귀 아님·R16 dead-code(form/viewer 재설계 시 복구). 지휘 결정대로 통째로 미변경.
+
+### 영향 파일
+data-craft-server:
+- `src/models/file.model.ts`
+- `src/models/storage.model.ts`
