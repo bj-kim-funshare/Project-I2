@@ -1,5 +1,7 @@
 # Roadmap 16: data-craft 코어 재설계 ② FE (web)
 
+> 🚫 **비정본 — 초기 방향성 참고용(작성 시점 스냅샷)**. 진행 중 요구사항은 **지휘 세션 확인**으로 재정의됨. **착수·판단 전 반드시 지휘 확인 — 이 문서를 단독 근거로 판단 금지.** (2026-07-01 격하: 작업 모델이 지휘 오케스트레이션+세션별 계획→컨펌으로 진화. 상세=memory `feedback_roadmap_non_authoritative_command_confirm`.)
+
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft FE 트랙 — Roadmap 15(server+DB+BE) 위임 세션 병렬, 본 세션 FE 담당·양 트랙 검증·종합·감독
 >
 > **현황(2026-06-26 v2) — 모노레포 전략 전면 폐기 + 위젯 시스템 재설계로 전면 재구성**(2026-06-28 현행화): 🟢8 · 🟡3 · 🔴10. 단일 출처 SPEC = `Roadmap-16-data-craft-위젯시스템-재설계-SPEC.md`. 분담: 1(DB)+2(BE)=Roadmap-15(위임 세션), 3(FE)=본 로드맵. 핵심 추가: **모노레포 전략 전면 폐기**(6 라이브 패키지→앱 `src/`)를 인프라 기초(P0)로 선행. 데이터 ⊥ 표현 ⊥ 레이아웃. 데이터타입 5(string/number/date/boolean/json) ⊥ 블록타입 41(**string9·number5·date3·boolean2·json22** — timer=number 정정·uniqueID·color=json 유지).
