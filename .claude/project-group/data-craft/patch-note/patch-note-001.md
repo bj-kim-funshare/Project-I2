@@ -35033,3 +35033,21 @@ data-craft-server:
 ### 영향 파일
 data-craft:
 - `src/features/page-management/hooks/usePageInitializer.ts`
+
+## v001.1204.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #543 (funshare-inc/data-craft)
+
+**어드민 알림 발송 prod 회귀 수정 — notification.company_id 복원 (BE·1페이즈).** 어드민 "알림 관리" 발송이 prod에서 23502(NOT NULL 위반)로 100% 실패하던 회귀를 해소. #539(dev의 notification.company_id DROP)에 맞춰 어드민 코드에서 company_id 참조를 제거했으나 prod DB는 개편 미반영이라 company_id가 여전히 NOT NULL(default 없음)이었다. #539 이전 정상 컬럼셋을 정확히 복원. origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `5b472a6`: `adminNotification.service.ts` — sendNotification의 두 INSERT(특정 유저·전체 fan-out)에 `company_id`를 첫 컬럼(`$1`)으로 복원하고 나머지 플레이스홀더 +1 시프트(`payload`→`$5::jsonb`), params 선두에 스코프 내 `companyId` 바인딩. `listSentNotifications` SELECT projection에 `company_id` 복원. `NotificationRow` 인터페이스에 `company_id: string` 추가. raw withDataClient PoolClient INSERT는 `$n` 유지(`?` 미변환), prod baseline 이름만 사용. 컨트롤러(row 통과)·FE(`SentNotification.company_id`/`{n.company_id}` 기존 정합) 무변경(+8/-5).
+
+### 검증
+- pnpm lint exit 0(0 errors). git 히스토리(#539 4b4aa2e·064ec8f)로 제거된 컬럼이 company_id 하나뿐임을 확증 → 복원이 정상 컬럼셋과 정확히 일치(증명 가능).
+- ★prod write(실고객 알림)라 throwaway 검증 불가 — **마스터 라이브 검증 대기**: prod 토글 ON(`ADMIN_PROD_TOGGLE_ENABLED=true`) 상태에서 단일 수신자 1명으로 먼저 발송 확인(전체 fan-out 금지). dev 모드는 별개 회귀(PK가 dev에서 notification_id로 rename)로 깨져 있으나 어드민은 prod 기준만 지원 → 스코프 밖.
+
+### 영향 파일
+data-craft-admin-server:
+- `src/services/adminNotification.service.ts`
