@@ -1,5 +1,21 @@
 # data-craft — Patch Note (001)
 
+## v001.1221.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #555 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1**: FE fs-api 위젯 정본 `widgetType.ts` 신설 — `WidgetCategory`(8)·`WidgetSubtype`(34 leaf, blockWidget leaf=`block`) 2 union + 8 const맵(category-members·subtype→category·labels(ko/en)·capability(미소비 힌트)·group-source·extended→block(XBlock)). 향후 stub 3(documentBoard·noteExplorer·documentExplorer) 전맵 완전엔트리(tsc Record 완결). `index.ts` barrel export. additive·미소비(런타임 0). (0234f8b)
+
+### 영향 파일
+data-craft:
+- `src/_packages/fs-api/types/contract/widgetType.ts` (신설)
+- `src/_packages/fs-api/types/contract/index.ts` (barrel)
+
+### 비고
+정의 베이스 구축 계획(정본→BE 미러→드리프트 게이트)의 **2/4 슬라이스** — 위젯 "정의" 축 신설. ★저장/codec 대상 **34 leaf**이며 **74는 표시 카탈로그**(`widgetCatalog.ts`·FE 파생·본 슬라이스 제외·후속) — 40 누락 아님. 이 머지는 taxonomy 재설계 전체 완료가 아님. 후속: BE 미러(3·data-craft-server·★Phase2 파일점유 확인)·드리프트 게이트(4·FE+BE 착지 후에만 유효). 정의만·behavior(소비/렌더) 후속.
+
 ## v001.1220.0
 
 > 통합일: 2026-07-01
