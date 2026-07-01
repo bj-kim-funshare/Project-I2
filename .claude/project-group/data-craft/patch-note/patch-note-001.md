@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1229.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #551 (funshare-inc/data-craft) · 핫픽스4
+
+**빈 페이지 빠른-추가 위젯 catalog를 canonical 계약(widgetType.ts/blockType.ts)으로 정합 (핫픽스4).** 다른 세션이 신설한 FE 설계 규격(`fs-api/types/contract/widgetType.ts` 34 leaf/8범주·`blockType.ts` 41 XBlock)에 hand-authored `widgetSubtypes.ts`를 정합 — FE 단일 진실원천화. id를 canonical로 통일(bare→접미형), 라벨·구조를 계약에서 파생. 확정된 말풍선 UI/동작은 보존(id만 통일).
+
+### 핫픽스 결과
+- **Phase 10 (핫픽스4·fix)** `2ee54c2`: `widgetSubtypes.ts`를 `buildFlat`/`buildBlockGroups`로 계약에서 **파생 재구성**. 비-블록 6범주 id=canonical 접미형(`textDesign`·`gridBoard`·`barChart`·`fileUploader`·`dataExplorer`·`longTextExtended`…), 블록 4그룹(`BLOCK_TYPE_CATEGORY`)→41 렌더타입 canonical XBlock id(`textBlock`·`longTextBlock`·`noteBlock`·`dualBlock`…). 라벨: 비블록=`WIDGET_SUBTYPE_LABELS`(ko/en 인라인 소비), 블록=확정 spaced "{…} 블록"을 XBlock id로 re-key 보존. `comingSoon` 13=`COMING_SOON_IDS` Set(canonical id). `CategoryExpandRow` 아이콘맵(BLOCK/FLAT_SUBTYPE_ICONS) lockstep re-key + `labelKey`→`{labelKo,labelEn}` 인라인(`i18n.language` 판별). i18n `widget.subtype.*` 키 제거(블록 그룹헤더만 잔존). bare id 잔존 0.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0(id 리팩터) + **병합 후 i-dev typecheck/lint exit0**. canonical id 사용·comingSoon 13(Set)·UI 구조/동작 보존.
+- ⚠️**알려진 변경(마스터 확인 필요)**: 비-블록 **한글 표시명이 canonical `WIDGET_SUBTYPE_LABELS.ko`(짧은 형)로 변경**됨 — design '텍스트 디자인'→'텍스트'·chart '막대 차트'→'막대'·extended '긴 텍스트 확장'→'긴 텍스트'·automatic '불러오기'→'자동 불러오기'. 계약 소비(스펙 §1)의 결과. full 형 원하면 canonical `widgetType.ts WIDGET_SUBTYPE_LABELS.ko` 수정(별개·계약파일). blockType.ts의 무공백 ko('긴텍스트')도 별개 계약 불일치로 기록.
+
+### 영향 파일
+data-craft:
+- `src/entities/widget/model/widgetSubtypes.ts`
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1227.0
 
 > 통합일: 2026-07-01
