@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1219.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #552 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1**: FE fs-api 블록 계약 41 블록 ID를 코드 규약(camelCase + "Block" 접미사, 모든 단어 유지)으로 명명 정합. `document`→`noteBlock` 개칭(표시명 '문서'→'노트'), `dualBlock` 유지, `blockTypeMapping` columnType 축 무변경. additive·미소비(런타임 0). DB `block_type_enum`(data-craft-server 8d6bffc)과 동기. (b1f5ed5)
+
+### 영향 파일
+data-craft:
+- `src/_packages/fs-api/types/contract/blockType.ts`
+- `src/_packages/fs-api/types/contract/blockShape.ts`
+- `src/_packages/fs-data-viewer/entities/column-types/blockTypeMapping.ts`
+- `src/_packages/fs-data-viewer/shared/ui/rendering/registry/BlockTypeRegistry.tsx`
+
+### 비고
+정의 베이스 구축 계획(정본→BE 미러→드리프트 게이트)의 **1/4 슬라이스** — 블록 "코드 명명" 축 완결. 이 머지는 taxonomy 재설계 전체 완료가 아님. 후속: widgetType.ts 정본(2)·BE 미러(3)·드리프트 게이트(4). 정의만·behavior(소비/렌더 컷오버) 후속.
+
 ## v001.1216.0
 
 > 통합일: 2026-07-01
