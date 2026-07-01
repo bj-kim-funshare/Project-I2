@@ -35051,3 +35051,26 @@ data-craft:
 ### 영향 파일
 data-craft-admin-server:
 - `src/services/adminNotification.service.ts`
+
+## v001.1205.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #543 (funshare-inc/data-craft) — 핫픽스1
+
+**어드민 알림 관리 dev 구조 정합 (BE·FE·핫픽스1).** ★마스터 방향 정정에 따라 **v001.1204.0(prod company_id 복원)을 dev 정합으로 대체**한다. 알림 관리 한정으로 dev(신규 키통일) 구조에 맞추며, prod는 배포 전까지 일시적으로 미동작해도 됨을 승인. dev 설계가 확정됐으므로 어드민을 거기 맞추는 것이 맞다는 판단. #539가 남긴 반쪽 마이그레이션(INSERT company_id만 제거·나머지 미수정)을 완결.
+
+### 페이즈 결과
+- **핫픽스1 BE** `e1bcd7e` (data-craft-admin-server): `adminNotification.service.ts` 6개 수정 — NotificationRow에서 company_id 제거, listNotificationUsers `SELECT user_id AS id`, 회사 확인 `FROM client`→`FROM company`, 유저 확인 `WHERE id`→`WHERE user_id`, 두 INSERT에서 company_id 컬럼·param 제거 + `RETURNING notification_id AS "id"`, listSentNotifications `SELECT notification_id AS id`(company_id 제거). raw withDataClient PoolClient는 `$n` 유지, 단일 파일(리포 전역 rename sweep 없음 — 타 기능 prod 정합 유지). eslint PASS. 컨트롤러는 row 통과라 `.company_id` 미접근(소비처 grep 확인).
+- **핫픽스1 FE** `c15d7ff` (data-craft-admin): `SentNotification.company_id` 타입 제거 + 발송내역 테이블 company_id 컬럼(헤더+셀) 제거. 발송 폼 company_id 입력(수신자 선택용)은 유지. typecheck+lint PASS.
+
+### 검증
+- dev 구조 도출 근거 = data-craft-server 현재 post-rename 코드(notification.model.ts·user.model.ts·client.model.ts). BE eslint PASS·FE typecheck+lint PASS. advisor 계획/완료 PASS.
+- ★최종 동작 검증은 **마스터 dev 모드 단일 수신자 발송**(dev DB 대상이라 안전). 이 테스트가 admin `dataPool('dev')`가 rename 적용된 dev DB를 실제 가리키는지·조인 컬럼(`"user".company_id`·`company.is_deleted`)이 실제 해소되는지 최종 확인. prod 모드는 prod DB 미개편으로 일시 미동작(승인된 상태).
+
+### 영향 파일
+data-craft-admin-server:
+- `src/services/adminNotification.service.ts`
+
+data-craft-admin:
+- `src/entities/notification/api.ts`
+- `src/pages/notifications/NotificationsPage.tsx`
