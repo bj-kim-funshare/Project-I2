@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1216.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스7
+
+### 페이즈 결과
+- **Phase 10 (핫픽스7)**: 페이지 2개를 왔다갔다 할 때 "레이아웃 불러오는 중/초기화" 화면이 순간 깜빡이던 문제 제거. 원인은 `usePageInitializer`가 레이아웃 쿼리를 `gcTime:0` + 전환 시 이전 페이지 `removeQueries`로 매번 캐시 폐기 → 전환-복귀 시 isPending → `isLoadingLayout` true → 로딩 화면. 수정: `gcTime:0` 옵션 제거(전역 기본 10분 유지로 페이지별 캐시 보존) + 이전 페이지 `removeQueries` 호출 제거(`structuralSharing:false`가 이미 refetch마다 새 참조 보장해 중복). `cancelQueries`·`staleTime:0`·`refetchOnMount:'always'` 유지 → 백그라운드 refetch로 신선도 유지. 결과: 방문 페이지 전환-복귀 시 캐시 즉시 렌더(깜빡임 없음), 진짜 초기 로드에서만 로딩 화면.
+
+### 영향 파일
+data-craft:
+- src/features/page-management/hooks/usePageInitializer.ts
+
 ## v001.1215.0
 
 > 통합일: 2026-07-01
