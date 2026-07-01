@@ -1,5 +1,20 @@
 # data-craft — Patch Note (001)
 
+## v001.1225.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #556 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1**: BE 계약 미러 신설 — FE `fs-api/types/contract` 5파일(blockType·dataType·blockShape·widgetType·index)을 `data-craft-server/src/types/contract/`에 byte-copy 미러(4행 sync 헤더). index.ts는 `./cell` re-export 제외(cell.ts 미미러) + 예외 주석. 정의만·additive·미소비. pnpm build(tsc) 0·lint 0. (73ebf25 + index caveat 9c0755b)
+
+### 영향 파일
+data-craft-server (전부 신설):
+- `src/types/contract/blockType.ts` · `dataType.ts` · `blockShape.ts` · `widgetType.ts` · `index.ts`
+
+### 비고
+정의 베이스 구축 계획(정본→BE 미러→드리프트 게이트)의 **3/4 슬라이스** — BE가 FE 계약을 미러로 참조(손-중복 금지). 미러 선례=`conversion-catalog.ts`. **4 taxonomy 파일은 FE와 byte-identical**. ★**index.ts는 byte-identity 예외**(`./cell` 라인 의도적 제외·헤더에 예외 주석) → **슬라이스4 드리프트 게이트는 index.ts를 "byte-compare −cell"로 취급**(맹목 byte-compare 시 false-positive drift). 이 머지는 taxonomy 재설계 전체 완료 아님. 후속: **슬라이스4 드리프트 게이트**(DB·FE·BE 3자 — FE①②·BE③ 착지 완료로 이제 유효)·behavior(소비 컷오버·6중복 은퇴) 후속.
+
 ## v001.1223.0
 
 > 통합일: 2026-07-01
