@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1214.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #547 (funshare-inc/data-craft)
+
+**위젯 피커 8-카테고리 골격 (위젯 전면개편 1단계·"나"=골격만).** 위젯 추가 피커를 최신 위젯 설계(8 위젯 카테고리)에 맞춰 7→8개로 재구성했다. 신규 **확장(extended)** 카테고리 추가. 마스터 방침=B(전면개편)를 순차·단계별 논의 확인으로 진행하며, 이번 1단계는 **피커 카테고리 골격만**(블록도 아직 껍데기·실제 위젯 생성 없음). ★이번 단계 이후 **위젯 추가는 전부 비작동**(블록=placeholder·나머지 7=준비중) — 의도된 골격 상태(회귀 아님). 블록 위젯 실제 동작·WidgetType/41블록타입 배선·document→note는 후속 단계.
+
+### 페이즈 결과
+- **Phase 1 (feat)** `3496dc9`: `WIDGET_CATEGORIES`(widgetCategories.ts)를 7→8로 재구성 — 블록·디자인·자동화·보드·차트·파일·탐색기·**확장**(신규 8번째). `CategoryDef`에 `labelKey`(i18n)·`comingSoon` 플래그 추가·label 하드코딩 제거. **블록**(comingSoon=false·types=[]) 클릭 시 "블록 위젯 2단계 구축 예정" placeholder만(생성 없음). 나머지 7=comingSoon=true→disabled+"준비중" 뱃지. 두 렌더러(EmptySectionGuide·WidgetAddModal) disabled 판별을 types.length→comingSoon로 전환. i18n ko/en `widget.category.*` 키 추가.
+
+### 검증
+- WIDGET_CATEGORIES 소비처=렌더러 2곳만(숨은 소비처 0·회귀 없음). 금지영역(createWidget/WidgetType union/blockType) 무접촉. `pnpm typecheck:all`+`pnpm lint` 직접 실측 exit0(gate-runner 초기 exit1=flaky·재현 시 green·내 5파일 lint 경고 0·잔여 39 warnings는 선존 fs-data-viewer 등 타 트랙). advisor 계획/완료 PASS.
+- ★정적 검증만 — dev 서버 미기동. 마스터 라이브 확인: dev 환경을 병합된 i-dev로 갱신·하드리프레시해야 8개 피커가 보임.
+
+### 영향 파일
+data-craft:
+- `src/entities/widget/model/widgetCategories.ts`
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+- `src/widgets/widget-add-modal/ui/WidgetAddModal.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1213.0
 
 > 통합일: 2026-07-01
