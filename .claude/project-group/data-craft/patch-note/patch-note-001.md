@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1212.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스4
+
+### 페이즈 결과
+- **Phase 7 (핫픽스4)**: 공용 `Switch` 손잡이가 바와 같은 높이로 꽉 껴 원이 안 보이던 문제를 Material식으로 재설계. 트랙을 `h-4 w-11`(16×44px, 얇은 바)로 줄이고 `border-2` 제거, 손잡이를 `size-5`(20px)로 바(16px)보다 크게 키워 위아래 2px씩 돌출. `bg-white` 명시 + `shadow-md` + `ring-1 ring-black/5` 엣지로 **바 위에 얹힌 흰 원형 손잡이**가 또렷하게, `translate-x-6`로 양 끝 이동. 켜짐 초록·꺼짐 회색 바 유지, 그라데이션 없음. 앱 전역 스위치 일괄 반영.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/shadcn/switch.tsx
+
 ## v001.1211.0
 
 > 통합일: 2026-07-01
