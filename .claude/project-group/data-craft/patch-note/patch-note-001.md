@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1213.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스5
+
+### 페이즈 결과
+- **Phase 8 (핫픽스5)**: 스위치 디자인 확정 후 바 너비 미세 조정. `SwitchPrimitive.Root` 트랙 너비를 `w-11`(44px)에서 `w-[37px]`(~15% 축소)로 줄이고, thumb의 checked 이동거리를 `translate-x-6` → `translate-x-[17px]`로 맞춰 손잡이가 양 끝에 밀착되게 함. 높이·색·손잡이 크기·shadow·ring 불변. 앱 전역 스위치 일괄 반영.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/shadcn/switch.tsx
+
 ## v001.1212.0
 
 > 통합일: 2026-07-01
