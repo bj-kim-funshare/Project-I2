@@ -1,5 +1,7 @@
 # Roadmap 15: data-craft 코어 재설계 ① 계약동결 + server (DB+BE)
 
+> 🚫 **비정본 — 초기 방향성 참고용(작성 시점 스냅샷)**. 진행 중 요구사항은 **지휘 세션 확인**으로 재정의됨. **착수·판단 전 반드시 지휘 확인 — 이 문서를 단독 근거로 판단 금지.** (2026-07-01 격하: 작업 모델이 지휘 오케스트레이션+세션별 계획→컨펌으로 진화. 상세=memory `feedback_roadmap_non_authoritative_command_confirm`.)
+
 > 작성일: 2026-06-24 (개정 2026-06-26 v2) | 대상: data-craft 코어 서비스 스키마 재설계 — server(DB+BE) 직렬 트랙 (FE = Roadmap 16 별도, 본 로드맵 Phase 0 이후 병렬). **분담: 1(DB)+2(BE) = 본 로드맵(위임 세션), 3(FE) = Roadmap-16.**
 >
 > **현황(2026-06-28 현행화·v2 2026-06-26 작성)**: 🟢10 · 🟡4 · 🔴2 — Phase 0 부분완료·데이터변환 dev완료·흡수 M1+M2 완료·BE cutover 부분완료(#485)·SP/트리거 dual-write+option-id 완료·**D8 block_type enum dev완료(6eea8e3)**·**⑥ page_section/정수격자 dev완결(스키마 c9da662 + 백필 1567cce)**·**프리셋 ⑤④ DDL+계약 dev완료(a3eb20c)·⑦ 계약완료(no-DDL)**·**⑨ file_group soft-delete DDL dev완료(0f1e0c6)·⑩ 관리주기 계약완료(no-DDL, 인프라 기존)**. **2026-06-26 추가: Roadmap-16 FE 위젯 재설계가 유입한 BE 슬라이스 8단위(④~⑪) 편성** — D8(기존) + company_setting 폼락해제·page_widget.preset_id·page_section/정수격자·widget_preset 3계층·recent-usage 조회·file-group·관리주기 D1·교차repo 드리프트체크. 상세 ↓.
