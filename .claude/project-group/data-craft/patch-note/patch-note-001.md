@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1211.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스3
+
+### 페이즈 결과
+- **Phase 6 (핫픽스3)**: 공용 `Switch` 켜짐 바 전체에 그라데이션이 깔려 '토글'처럼 보이던 문제를 iOS식으로 정리. 켜짐 바 색을 `bg-gradient-to-r from-indigo-500 to-sky-400`에서 **`bg-green-500`(초록 단색)**으로 교체 → **켜짐 = 초록 바 + 흰 원형 손잡이, 꺼짐 = 회색 바 + 흰 원형 손잡이**. 스위치 그라데이션 제거, thumb·크기·Radix 로직 불변. 버튼(`GradientOutlineButton`) 그라데이션은 유지(스위치 한정). 앱 전역 스위치 일괄 반영.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/shadcn/switch.tsx
+
 ## v001.1210.0
 
 > 통합일: 2026-07-01
