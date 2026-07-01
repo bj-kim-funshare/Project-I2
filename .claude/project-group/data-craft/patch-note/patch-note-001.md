@@ -1,5 +1,19 @@
 # data-craft — Patch Note (001)
 
+## v001.1208.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스1
+
+### 페이즈 결과
+- **Phase 4 (핫픽스1)**: 빈 상태 CTA·사이드바 추가 버튼(`GradientOutlineButton`)의 그라데이션을 반전 — 흰 배경+그라데이션 테두리/글씨/아이콘에서 **인디고→스카이 그라데이션 채움 배경 + 흰색 글씨·흰색 아이콘**으로 전환. 2단 레이어를 단일 버튼으로 축소. '디자인 모드로 이동' 아이콘은 흰색 정적 `Palette`로 교체(반전으로 팔레트 그라데이션 애니메이션은 이 CTA에서 제거 — 헤더 아이콘 애니는 유지), Plus 아이콘은 `text-white` 상속.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/GradientOutlineButton.tsx
+- src/widgets/layout-canvas/ui/EmptyPageState.tsx
+- src/widgets/page-navigation/ui/DesignSidebar.tsx
+
 ## v001.1206.0
 
 > 통합일: 2026-07-01
