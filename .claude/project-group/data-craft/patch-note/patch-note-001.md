@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1215.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스6
+
+### 페이즈 결과
+- **Phase 9 (핫픽스6)**: 설정 → 사용자 관리(승인 대기/완료/거부) 탭에서 선택된 활성 탭 주위에 뜨던 검정 테두리 제거. `EmployeeTabContent`의 세 `TabsTrigger` className에만 `border-transparent!`·`focus-visible:ring-0!`·`focus-visible:outline-none!`(Tailwind v4 important)을 추가해 로컬 범위로 테두리·링·아웃라인 무력화. 공용 `tabs.tsx` 무변경 → 앱 전역 다른 탭 무영향. 활성 흰 알약+그림자 표시는 유지.
+
+### 영향 파일
+data-craft:
+- src/widgets/settings-dialog/ui/EmployeeTabContent.tsx
+
 ## v001.1214.0
 
 > 통합일: 2026-07-01
