@@ -35248,3 +35248,27 @@ data-craft-admin-server:
 - `src/services/adminCoupon.service.ts`
 - `src/services/adminReferral.service.ts`
 - `src/services/adminCompanies.service.ts`
+
+## v001.1217.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #549 (funshare-inc/data-craft)
+
+**payment_password user→company 이전 + 결제 확정 결함 정리 (dev).** 결제 재설계 검토 결과 확정 결함만 최소 수정: 순환참조(company↔client_promotion) 절단 + payment_password를 서비스 straddler(user)에서 company로 이전(회사당 1개·오너). 이상 재설계(17테이블)는 순이득 없음으로 보류, 이 최소안 채택.
+
+### 페이즈 결과
+- **선행 DDL-1** (task-db-structure, i-dev 19147a3): company.active_promotion_id의 FK(fk_company_active_promotion) 드롭(순환 절단·컬럼 유지) + company.payment_password varchar(255) 추가·오너 PIN 백필.
+- **Phase 1** (refactor) `8e0f306`: payment_password 저장 user→company 컷오버 — 모델 3함수 user.model→client.model 이동·리네임(company_id 키), 호출부 5곳 req.companyId, billingCleanup 서브쿼리 `c.payment_password IS NULL` 의미보존, delete-card clear companyId. lint0·tsc0.
+- **Phase 2** (refactor) `2aeaf48`: payment-password 6개 라우트에 includeFullAccount→ownerOnlyMiddleware(per-company PIN 오너 전용). lint0·tsc0.
+
+### 후속 / 주의
+- **DDL-2**: `"user".payment_password` DROP. 게이트=가동 dev BE가 새 BE로 재시작 + user PIN 신규기입 0 재확인.
+- **FE 스모크**: /payment-password/exists·verify가 오너 전용화 → 비오너 화면이 exists 호출 시 403 가능, 확인 필요.
+- dev 전용(prod 나중)·미푸시.
+
+### 영향 파일
+data-craft-server:
+- `src/models/client.model.ts`, `src/models/user.model.ts`, `src/middlewares/requirePaymentPassword.ts`, `src/routes/user.router.ts`
+- `src/controllers/paymentPassword.controller.ts`, `src/controllers/subscription.controller.ts`
+- `src/services/billingSubscription.service.ts`, `src/services/billingCleanup.service.ts`
+- `migrations/20260701064623_cyclefix_paymentpw_expand.*` (DDL-1)
