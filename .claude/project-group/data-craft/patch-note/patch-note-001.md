@@ -35272,3 +35272,30 @@ data-craft-server:
 - `src/controllers/paymentPassword.controller.ts`, `src/controllers/subscription.controller.ts`
 - `src/services/billingSubscription.service.ts`, `src/services/billingCleanup.service.ts`
 - `migrations/20260701064623_cyclefix_paymentpw_expand.*` (DDL-1)
+
+## v001.1218.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #548 (funshare-inc/data-craft)
+
+form_list 드롭 잔재 청소가 dev psql 검증서 **2겹 결함**(지배적 #7 컬럼 리네임 미완 + 표면 드롭 뷰어테이블 `data_viewer_setting` 참조)으로 확대됨. 지휘 승인 경계 **(A)** = 비-뷰어 데이터 경로 + 공유 접근자(Track W·user-form 제외)로 #7 리네임 컷오버 완결 + 드롭참조 제거(dvs 필터는 뷰어/일반 구분 분해 방향으로 미러링 없이 삭제).
+
+### 페이즈 결과
+- **Phase 1** (`cb33c73`): externalData.model.ts 7함수 — #7 리네임(`group_id→data_group_id`·`column_id→data_column_id`) + findExternalDataGroups/ById의 dvs·form_list 조인·`dvs.id IS NULL` 필터 제거·CASE 붕괴. 별칭키 보존.
+- **Phase 2** (`b445cc4`): file.model.ts findFileGroupsWithStats — 리네임(`fg.id→file_group_id AS "id"`·`f.id→file_id`) + form_list/dvs 서브쿼리 `NULL` 대체·파라미터 `[companyId]`(3→1).
+- **Phase 3** (`a422e4b`): viewer.group.ts deleteGroupRecursive form_list UPDATE 제거 + viewer.model.ts Tier1 접근자 4개(findGroupByIdWithConnection·findColumnsByGroupIdWithConnection·findAllColumnsByGroupIdWithConnection·getGroupDataAsCells) 리네임. caller-agnostic·Track W 무접촉.
+- **Phase 4** (`6807152`): viewer.model.ts Tier2 접근자 5개(findGroupById·findSubGridByParentRowNum·findColumnNameToIdMap·findDuplicateValue·getColumnNamesByGroupId) 리네임.
+
+### 검증
+- 각 페이즈 3중: 별칭키 static diff **byte-identical**·**dev psql 런타임**(stale-column/dead-table 에러 0·병합트리 재확인)·tsc/eslint exit0.
+- **완전 복구**: 일반 데이터그룹 목록(GET /external-data/groups)·상세(/:id)·파일그룹 목록(GET /file/groups)·데이터그룹 삭제.
+
+### 후속 / 주의 (조율)
+- ⚠️ **value_data 경로 = 지휘 Phase 2 대상**: getGroupDataAsCells(데이터 fetch)·findDuplicateValue는 `value_data`(dev DROP·→`data` JSONB) 잔여로 #548만으론 여전히 500. #548(리네임) 위에 지휘 value_data 컷오버 재베이스 후 완전 복구. **⇒ P1~P4 green ≠ 이 두 경로 지금 동작.**
+- **Tier3 defer→R16/Track W**: findColumnNameToIdMapPool·@deprecated findSubGridsByParentRowNum·checkGroupNameDuplicate (Track-W-only·비명시)는 의도적 미변경.
+- **user-form 제외**: findFormDataGroupByFormId 및 user-form 위젯은 read/write/create 전부 마이그레이션으로 끊긴 별도 A/B 제품결정(팔레트 노출 중).
+- dev 전용(prod 미배포·배포 전 필수)·**origin 미푸시**.
+
+### 영향 파일
+data-craft-server:
+- `src/models/externalData.model.ts`, `src/models/file.model.ts`, `src/models/viewer.model.ts`, `src/services/viewer/viewer.group.ts`
