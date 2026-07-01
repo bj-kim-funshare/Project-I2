@@ -1,5 +1,34 @@
 # data-craft — Patch Note (001)
 
+## v001.1223.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #551 (funshare-inc/data-craft)
+
+**빈 페이지 빠른-추가 인터랙션 재설계 (가로 계층 확장·6페이즈).** 디자인 모드 빈 페이지의 위젯 빠른-추가를 모달 방식에서 **인라인 가로 계층 확장**으로 재설계. 카테고리 클릭 시 그 자리에서 가로로 확장(형제 밀어냄)하며 세부 선택지를 표시하고, 블록은 문자/버튼/특수/확장 4그룹 → 타입 2단계로 펼침. 명칭/안내문 교체(빈 섹션→빈 페이지·괄호 팔레트 아이콘)·세부 준비중·장식 배경 격자·세로 위치 정렬 포함. ★이번 단계엔 **세부 선택지 클릭 시 실제 위젯 생성은 없음**(생성·데이터그룹 바인딩은 후속 단계) — "옵션은 뜨지만 눌러도 안 만들어짐"은 의도된 상태.
+
+### 페이즈 결과
+- **Phase 1 (feat)** `2486db7`: 제목 '빈 섹션'→'빈 페이지', 안내문을 `<Trans>`로 교체해 텍스트 중간에 **괄호로 감싼 팔레트(그라데이션) 아이콘** 인라인 삽입. i18n ko/en.
+- **Phase 2 (feat)** `8f7b80a`: `widgetSubtypes.ts` 신규 — 8카테고리 하위타입 카탈로그(블록=character/button/special/extended 4그룹→41타입 2단계·타 7카테고리 flat). **공백 포함 표시명 ko/en 직접 작성**('긴 텍스트 블록'/'long text block'). 세부 준비중 3건(문서보드·노트/문서 탐색기). 카테고리 레벨 comingSoon 폐기(8개 전부 false).
+- **Phase 3 (feat)** `c18013f`: `CategoryExpandRow.tsx` 신규 — 단일 가로 행 확장/축소(모달 제거). 카테고리 클릭→`max-width` 트랜지션 가로 확장(형제 밀림·overflow-x-auto·재클릭 축소). 블록=4그룹 칩, 준비중=회색 뱃지. leaf 선택=스텁(createWidget 미연결).
+- **Phase 4 (feat)** `ec5e111`: 블록 2번째 레벨 — 그룹 클릭→비선택 그룹 축소+선택 그룹 타입들 가로 확장(마스터 목업 블록▸문자▸타입). 전부 가로.
+- **Phase 5 (feat)** `d9fe376`: 빈 페이지에 **장식용 배경 격자** — 실제 격자와 동일(`buildGridBackgroundStyle(100,70,'design')` 재사용·pointer-events none·콘텐츠 z-[2] 위·기능 없음).
+- **Phase 6 (feat)** `a451975`: 컨텐츠 세로 위치를 "디자인 모드로 이동"(EmptyPageState `pt-[15%]`)과 동일 정렬(justify-center 제거·pt-[15%]).
+
+### 검증
+- 페이즈별 `pnpm typecheck:all && pnpm lint` exit0 + **병합 후 i-dev typecheck/lint exit0**(both-green-broken-together 갭 차단). advisor 계획/완료 PASS. #553 ko/en 자동병합(충돌 없음).
+- ★정적/타입 검증만 — **마스터 라이브 검증 필요**: 가로 확장/밀어내기 애니메이션·장식 격자가 실제 격자와 육안 일치·세로 위치. leaf 선택 생성 없음(후속 단계).
+- ⚠️알려진 부작용(후속 정리): P2가 `WIDGET_CATEGORIES.comingSoon`을 8개 false로 바꿔 **WidgetAddModal**(빈 페이지 아닌 header+/AreaControls/DesignHeaderBubble 진입)에서도 7카테고리가 stale `types`로 활성화됨(비크래시). 모달을 새 카탈로그로 전환하거나 자체 준비중 복원은 별도 후속.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx` (신규)
+- `src/entities/widget/model/widgetSubtypes.ts` (신규)
+- `src/entities/widget/model/widgetCategories.ts`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1221.0
 
 > 통합일: 2026-07-01
