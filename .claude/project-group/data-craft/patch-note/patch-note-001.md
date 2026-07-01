@@ -1,5 +1,31 @@
 # data-craft — Patch Note (001)
 
+## v001.1220.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #553
+
+### 페이즈 결과
+- **Phase 1**: 설정→앱 설정 기업 기본 프로필 이미지의 "이미지 삭제" 버튼을 `variant="outline"`→`variant="ghost"` + 빨강(`text-red-500`)으로, 옆 "이미지 변경"(테두리 없음)과 통일.
+- **Phase 2**: 공용 `PageDialogSectionHeader`(│-바 섹션 헤더) 신규(Edit 무접촉). `PageEditPreview`에 `newPageMode` 추가 — store 무변경 복사본에 sentinel ghost 노드를 예상 위치로 삽입·SEL 하이라이트, isVisible 무관 노출.
+- **Phase 3**: 새 페이지 생성 모달을 편집 모달과 동일한 2컬럼 디자인(`sm:max-w-[1100px]` 와이드 셸·박스 아이콘 헤더·좌 섹션 폼/우 예상위치 미리보기·분할 푸터)으로 리디자인. Create 고유 로직 전량 보존.
+- **Phase 4**: 접힘 사이드바에서 짧은 화면 이름 미설정 시 `page.name.slice(0,2)`(이름 앞 2글자) 폴백 표시(View/Design collapsed leaf·popover 4곳).
+- **Phase 5**(마스터 추가): 빈 페이지 설명 문구를 "없습니다." 뒤 개행(locale `\n` + `whitespace-pre-line`, `max-w-sm` 제거로 둘째 줄 한 줄).
+- **Phase 6**(보정): 생성 미리보기 ghost 부모를 복사본에서 `defaultExpanded=true`로 강제(store 무변경) → 접힘 기본 부모 하위여도 예상 위치 표시.
+
+### 영향 파일
+data-craft:
+- src/widgets/settings-dialog/ui/DefaultProfileImageSection.tsx
+- src/features/page-management/ui/PageDialogSectionHeader.tsx (신규)
+- src/features/page-management/ui/PageEditPreview.tsx
+- src/features/page-management/ui/CreatePageDialog.tsx
+- src/features/page-management/ui/CreatePageForm.tsx
+- src/widgets/page-navigation/ui/ViewSidebarCollapsed.tsx
+- src/widgets/page-navigation/ui/DesignSidebarCollapsed.tsx
+- src/widgets/layout-canvas/ui/EmptyPageState.tsx
+- src/shared/i18n/locales/ko.ts
+- src/shared/i18n/locales/en.ts
+
 ## v001.1219.0
 
 > 통합일: 2026-07-01
