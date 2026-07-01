@@ -1,5 +1,28 @@
 # data-craft — Patch Note (001)
 
+## v001.1227.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #551 (funshare-inc/data-craft) · 핫픽스3
+
+**빈 페이지 빠른-추가 말풍선 디자인 정리 (핫픽스3 · 3커밋 6항목).** #551 말풍선 인터랙션의 시각 디테일을 마스터 라이브 검증 반복으로 다듬음. 구분선 여백·분류명 명칭·세부항목 카드화·비-블록 헤더·준비중 확대·포인터/선택버튼 마감.
+
+### 핫픽스 결과 (3커밋)
+- **57eb2ded**: (1) 블록 분류 구분선을 절대위치 9999px 라인→`flex gap-2 pr-2`+`flex-1 h-px`로 교체(라벨 겹침·우측 끝 딱붙음 제거). (2) 블록 4분류명에 "블록" 접미(문자 블록·버튼 블록·특수 블록·확장 블록 / character·button·special·extended block). (3) 세부항목(SubtypeItem)을 말풍선과 동색 배경→`bg-white/80`+border+shadow-sm **정사각 카드**로 재설계(말풍선 배경과 대비·카테고리색 액센트).
+- **93706f156**: (4) 비-블록 7개 말풍선(디자인/자동화/보드/차트/파일/탐색기/확장)에 **최상단 구분선 헤더**(카테고리명+구분선·블록 그룹헤더와 동일 스타일) 추가. (5) 세부 준비중 **13종**으로 확대(추가: 디자인 image/video·보드 feed/gallery·확장 전체6 / 기존: 문서 보드·노트 탐색기·문서 탐색기).
+- **a246ceb**: (6) 말풍선 포인터 꼬리 `rounded-sm`(둥근 끝)+bubble `mt-3→mt-4`(버튼 행과 gap). (7) 선택 카테고리 버튼 `brightness-90` 제거(배경 안어둡게)·`border-4 border-current`+scale-105 유지.
+
+### 검증
+- 커밋별 + **병합 후 i-dev `pnpm typecheck:all && pnpm lint` exit0**. leaf 선택 시 실제 위젯 생성 없음(스텁·후속) 유지.
+- ★정적/타입 검증만 — 마스터 라이브 시각 검증(구분선 여백·분류명·정사각 카드·비블록 헤더·준비중 13·포인터 둥글게+여백·선택버튼 배경 유지).
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
+- `src/entities/widget/model/widgetSubtypes.ts`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1226.0
 
 > 통합일: 2026-07-01
