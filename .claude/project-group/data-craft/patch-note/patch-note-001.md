@@ -35094,3 +35094,28 @@ data-craft-admin-server:
 data-craft-admin:
 - `src/entities/notification/api.ts`
 - `src/pages/notifications/NotificationsPage.tsx`
+
+## v001.1207.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #545 (funshare-inc/data-craft)
+
+**어드민 BE 서비스 SQL dev 구조 정합 (rename cutover · 5페이즈 · ~53 콜사이트).** 어드민 전 기능 dev-정합 전수 감사(Workflow) 결과 확정된 미스매치를 조정. dataPool(dev)가 rename 적용된 data_craft_dev를 조회하는데 SQL이 prod-baseline 이름(client, "user".id, role/role_permission/role_id, promotion.id, coupon/referral *_id, page_list, group_id 등)을 써서 dev에서 하드에러/사일런트(RETURNING *의 .id undefined→감사로그 NULL·NaN)를 내던 결함 해소. ★방침: 순수 dev 규격 단일 로직 — dev/prod 토글 인프라 무수정(물리 DB만 선택), 구조 분기 신설 금지, renamed PK는 AS id 별칭으로 응답 계약 보존 → FE 무변경. 각 쿼리 기존 플레이스홀더($n) 유지. authPool 경로(admin_* audit) 무변경. origin 미푸시.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `80a6c99`: adminPromotion.service.ts 7건 — promotion.id→promotion_id(★L202 WHERE id=$18 하드에러 포함), SELECT*/RETURNING*에 promotion_id AS id 별칭.
+- **Phase 2 (fix)** `5287d21`: adminCoupon.service.ts 13건 — coupon_code.id→coupon_code_id, code_id→coupon_code_id(JOIN/WHERE/INSERT), list·RETURNING에 AS id, audit newRow.coupon_code_id.
+- **Phase 3 (fix)** `26de185`: adminReferral.service.ts 8건 — referral_credit/coupon .id→*_id, rcd.credit_id→referral_credit_id, grant* RETURNING 별칭으로 NaN 감사오염 silent 결함 수정. referral_relation.referee_company_id(5-예외) 무변경.
+- **Phase 4a (fix)** `17b4814`: adminCompanies.service.ts 기계적 rename 22건 — client→company(단어경계, client_promotion/client_seat_change_requests 보존), client_promotion.id·promotion.id·page_list→page·file_group.id·data_group group_id·user.id 전환, settings_form→company_setting(UNCERTAIN 주석).
+- **Phase 4b (fix)** `e6845465`: createCompany RBAC dev 재설계 — role/role_permission → permission 단일 테이블(Owner INSERT RETURNING permission_id, 8 bool 플래그 단일 UPDATE, 기본 seq 서브쿼리 INSERT), user.role_id→permission_id. dev roles.model.ts/auth.service.ts 교차검증 일치. OWNER_PERMISSION_KEYS 제거.
+
+### 검증
+- 5페이즈 전부 eslint PASS·사이트별 diff 대조·전 파일 잔재 스윕 클린(주석·authPool audit 컬럼만 잔존). advisor 계획/완료 PASS. 4b는 dev roles.model.ts와 독립 대조.
+- ★최종 게이트=마스터 dev 모드(토글 OFF=dev) 각 기능 실동작(rename cutover는 정적 grep이 아니라 dev 런타임이 진짜 게이트). 특히 createCompany "기업 추가→메인앱 로그인". 정적 미해결 2건(dev 검증 대상): getCompanyUsage L457 설정페이지 카운트 테이블(company_setting vs company_setting_page), L478 data_values 파티션키 컬럼명 — 둘 다 read COUNT라 틀리면 dev에서 즉시 하드에러로 드러남. prod 모드는 prod DB 미개편으로 일시 미동작(승인).
+
+### 영향 파일
+data-craft-admin-server:
+- `src/services/adminPromotion.service.ts`
+- `src/services/adminCoupon.service.ts`
+- `src/services/adminReferral.service.ts`
+- `src/services/adminCompanies.service.ts`
