@@ -35420,3 +35420,31 @@ data-craft-server (31):
 - utils: `src/utils/pivotBuilder.ts`
 - models: `viewer.model.ts`, `inputStore.model.ts`, `viewerPaging.whereclause.ts`, `aggregation/{rawquery,formula,engine,filter,simple,sqlcount}.ts`, `paging/{grid,grouped,kanban,row,subGrid,gantt,calendar}.ts`
 - services: `columnType/{columnTypeChange,columnTypeCheck,conversion-catalog}.ts`, `externalColumnType/{externalColumnTypeChange,externalColumnTypeCheck}.ts`, `viewer/{batchInput,batchRowDelete,connection}.ts`, `dataViewerBulkRowCreate.service.ts`, `dataViewerColumnStats.service.ts`
+
+## v001.1224.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #554 (funshare-inc/data-craft)
+
+새로고침 시 불필요·중복 요청 제거 (원 요청아키텍처 계획 2번 = 지점3 user-preference + 지점1 analytics). #548(form_list/rename)과 무관한 별개 FE-primary 작업.
+
+### 페이즈 결과
+- **Phase 1** (`b1aebd7`, data-craft): 지점3 — seedBundleData에 온보딩 hint dismissed 시딩 + `loaded=true` 린치핀 → init이 이미 번들하는 preferences로 GET /api/user-preference 별도요청 소거(onboardingStore.ensureLoaded 가드 단락). 데드 loadThemeFromServer 제거.
+- **Phase 2** (`8c9f8e2` + 보강 `05098ed`, data-craft-server): 지점1 — analytics.service `recordServerEvent` 신설 + refresh 핸들러 **main·grace 양경로**에서 `auto_login` 서버측 기록(admin 소비 지표 보존·page=null pageless 정합·fire-and-forget·응답 무차단).
+- **Phase 3** (`a4f64ca`, data-craft): 지점1 — FE client 분석 발사 제거(auto_login·auth_link·인증트리 page_view[RootLayout usePageTracking 마운트]·dwell/page_view_end 비콘). ★게스트 page_view(AuthGuard 마운트·admin 소비)는 유지.
+
+### 검증
+- 각 페이즈: FE typecheck:all/eslint 또는 BE tsc/eslint+dev psql, + 양 repo 병합트리 재검증. auto_login 서버기록 행이 admin pageless 집계에 포함됨을 dev psql로 실증(cnt=1).
+- 결과: 인증 새로고침 → 분석 별도요청 0건(버퍼 empty)·GET /user-preference 미발사. 소비 이벤트 auto_login은 refresh 서버기록으로 존속.
+
+### 후속 / 주의
+- write-only 이벤트(auth_link·dwell/page_view_end·인증 landing page_view)는 제거 — 향후 anon→user 스티치/dwell 필요 시 소비처 있는 신규 기능으로.
+- 최종 "0요청·미발사"는 마스터 새로고침 재캡처로 확인(정적검증 요청수 미증명·loaded 린치핀 순서는 렌더 확인 권장).
+- dev 전용(prod 미배포)·**origin 미푸시**.
+
+### 영향 파일
+data-craft(FE):
+- `src/app/lib/seedBundleData.ts`, `src/features/onboarding/model/onboardingStore.ts`, `src/entities/theme/model/themeServerSync.ts`, `src/entities/theme/index.ts`, `src/app/providers/AuthProvider.tsx`, `src/entities/auth/model/authStore.ts`, `src/app/router/RootLayout.tsx`, `src/shared/lib/analytics/usePageTracking.ts`
+
+data-craft-server(BE):
+- `src/services/analytics.service.ts`, `src/services/auth.service.ts`
