@@ -35359,3 +35359,35 @@ form_list 드롭 잔재 청소가 dev psql 검증서 **2겹 결함**(지배적 #
 ### 영향 파일
 data-craft-server:
 - `src/models/externalData.model.ts`, `src/models/file.model.ts`, `src/models/viewer.model.ts`, `src/services/viewer/viewer.group.ts`
+
+## v001.1222.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #550 (funshare-inc/data-craft)
+
+data-craft value_data 컷오버 Phase 2 — BE 읽기 컷오버. Phase A/B로 DROP된 `data_values.value_data` 참조를 BE 31파일에서 `dv.data #>> '{}'`(루트 스칼라 무따옴표 텍스트)로 atomic 전환. **#548(리네임) 위에 재베이스** — getGroupDataAsCells·findDuplicateValue 등 value_data 잔여 경로 복구(위 v001.1218.0 "지휘 Phase 2 후속" 조건 충족).
+
+### 페이즈 결과
+- **Phase 1** (`d14900a`): pivotBuilder.ts 구조 변경점 — CASE 안 unwrap(`MAX(CASE … data #>> '{}' END)`, MAX(text) 유지)·서브쿼리 bare `dv.data`·join_key. pv-family insulation.
+- **Phase 2** (`397e2da`): viewer.model.ts + inputStore.model.ts — SELECT/WHERE `value_data`→`data #>> '{}'`, `"valueData"` alias 보존.
+- **Phase 3** (`41bad02`): aggregation 6(rawquery·formula·engine·filter·simple·sqlcount) — LIKE·numeric-CASE·GROUP BY·jsonb-aware 가드·`AS value_data` alias 보존(accumulator/streaming JS 무변경). accumulator·streaming·helpers·formula-eval **무변경**.
+- **Phase 4** (`58e2899`): paging 6(grid·grouped·kanban·row·subGrid·gantt) — EAV 읽기·numeric·GROUP BY·gantt split_part.
+- **Phase 5** (`cc0d145`): paging.calendar.ts + viewerPaging.whereclause.ts — calendar dualWidget은 확정 dead 경로(`text ->> key` 무효 + composite=scalar-string) **dead 유지**·EAV 빌더(buildEavFiltersSubquery/buildSingleFilterDeleteSQL). pv-family 빌더 무접촉.
+- **Phase 6** (`4b8389a`): 서비스 10(columnType/externalColumnType Change·Check 4·viewer.batchInput/batchRowDelete/connection 3·dataViewerBulkRowCreate/columnStats 2). conversion-catalog 주석만.
+
+### 검증
+- 6페이즈 per-file bare `<alias>.value_data` SQL read **0**·전 31파일 alias-aware 잔존게이트 통과(잔존=alias/JS속성/주석)·`::text` **0**·페이즈별 eslint 클린.
+- **dev psql 왕복 실측**: pivot/LIKE/numeric-CASE/GROUP BY 4패턴 셀값 정상 왕복(임시셀 BEGIN…ROLLBACK, data_values EMPTY).
+- advisor #1(계획)·#2(완료) 5관점 PASS.
+- 머지: WIP A → data-craft-server i-dev `07cd1e2` — #548과 viewer.model.ts 충돌 **both-preserve**(rename `data_column_id`/`data_group_id` + cutover `data #>> '{}'` 동시 보존), inputStore auto-merge, 머지 후 재검증 PASS.
+
+### 주의 / 후속
+- **dev 전용**(prod 미배포)·**origin 미푸시**·언어분리 준수.
+- ★**dev 뷰어 런타임 복구는 BE 재기동 시 반영**(코드 컷오버·머지 완료이나 dev 서버 미재기동=요청 시). 왕복실측=대표 패턴 합성(실 앱 빌더 런타임 아님).
+- 정수 canonicalization(§6-7)·calendar dualWidget dead는 기지 잔여(write측·미구현 기능).
+
+### 영향 파일
+data-craft-server (31):
+- utils: `src/utils/pivotBuilder.ts`
+- models: `viewer.model.ts`, `inputStore.model.ts`, `viewerPaging.whereclause.ts`, `aggregation/{rawquery,formula,engine,filter,simple,sqlcount}.ts`, `paging/{grid,grouped,kanban,row,subGrid,gantt,calendar}.ts`
+- services: `columnType/{columnTypeChange,columnTypeCheck,conversion-catalog}.ts`, `externalColumnType/{externalColumnTypeChange,externalColumnTypeCheck}.ts`, `viewer/{batchInput,batchRowDelete,connection}.ts`, `dataViewerBulkRowCreate.service.ts`, `dataViewerColumnStats.service.ts`
