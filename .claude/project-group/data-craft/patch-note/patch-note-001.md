@@ -1,5 +1,17 @@
 # data-craft — Patch Note (001)
 
+## v001.1210.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft) · 핫픽스2
+
+### 페이즈 결과
+- **Phase 5 (핫픽스2)**: 공용 `Switch`가 동그란 thumb(손잡이) 없이 밋밋한 알약으로 렌더돼 '토글'처럼 보이던 문제 수정. 트랙을 `h-5 w-9 border-2`로 키워 내부 여백(16px 내경)을 확보하고 thumb에 `shadow-lg` 추가 + checked 이동거리를 `translate-x-4`로 정확히 맞춰 **흰색 원형 knob이 트랙 안에서 또렷하게 좌우로 슬라이드**되는 표준 스위치 형태를 복원. 그라데이션 ON 색상·꺼짐 회색·Radix 로직 불변, 앱 전역 스위치 일괄 반영.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/shadcn/switch.tsx
+
 ## v001.1209.0
 
 > 통합일: 2026-07-01
