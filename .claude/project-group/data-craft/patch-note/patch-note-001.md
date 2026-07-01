@@ -35505,3 +35505,34 @@ data-craft(FE):
 
 data-craft-server(BE):
 - `src/services/analytics.service.ts`, `src/services/auth.service.ts`
+
+## v001.1228.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #557 (funshare-inc/data-craft)
+
+잔여 요청아키텍처 정리 — 원 6지점 검토의 마지막 2개(지점4 user-form 폐기·A + 지점5+6 init shell화·Fork X). #554·#548과 별개.
+
+### 페이즈 결과
+- **Phase 1** (`f2899ae`, data-craft): 지점4 — useActiveOnboardingHint의 settings-form 부트 구독 제거 → 새로고침 GET /builder/settings/forms 소거(정상 계정). 다른 힌트/튜토리얼 로직 무변경.
+- **Phase 2** (`4f70b5c`, data-craft): 지점4 — user-form 위젯 팔레트/등록 폐기(WidgetRegistryProvider·widgetTypeConfig). ★FormRenderer/FormDataList/FormDialogContent 3인방 존치.
+- **Phase 3** (`220b845f`, data-craft·★최소-안전): 지점4 — useFormData listFirst 죽은 분기 제거. settings-dialog catalog UI·settingsFormApi/Queries는 role-permission(scope:'manage') LIVE 공유라 defer. UserFormWidget은 EmptyInputWidget·TabFormContent서 라이브라 존치.
+- **Phase 4** (`b3975eb`, data-craft-server): 지점5+6 — init.service layout 슬롯·pageId 파라미터·init.types(layout/pageId) 제거 → init=shell 전용. ★getLayoutService/GET /builder/layout 엔드포인트 무변경.
+- **Phase 5** (`bfcaace`, data-craft): 지점5+6 — FE init-layout 배관(auth.ts pageId/layout·seedBundleData layout 시딩·extractPageIdFromUrl) 제거 + hasBundleCache 이중요청 취약가드 제거. ★온보딩 시딩·useLayout(전용 본문 요청) 존치.
+
+### 검증
+- 각 페이즈: FE typecheck:all/eslint 또는 BE tsc/eslint + 양 repo 병합트리 재검증. ★P3 diff role-permission 파일 0건·금지심볼(user_setting_access/roles.model/scope:'manage') 무접촉 확인.
+- 결과(예상): 새로고침 GET /settings/forms 소거(정상 계정)·user-form 팔레트 부재·init에 layout 없음·본문은 /builder/layout 1회 fetch(hasBundleCache 이중요청 제거).
+
+### 후속 / 주의
+- ⚠️ **GET /settings/forms 완전 소거 아님**: useAdjustResources:41이 **pages 플랜한도 초과 계정**에서만 발사(의식적 존치·[]관용). 정상 계정=0·초과 계정=잔존(회귀 아님·true-0 원하면 1줄 후속).
+- settings-dialog catalog UI·user-form 데이터경로 500(form_list)은 폼 재구축 때 별도 정리(defer).
+- 병렬화(legacy URL 왕복 절감)·물리적 page-init 개명은 후속(cosmetic).
+- dev 전용(prod 미배포)·**origin 미푸시**. 마스터 재캡처 확인 권장(init 200·본문 1회 fetch·온보딩 힌트 정상).
+
+### 영향 파일
+data-craft(FE):
+- `src/features/onboarding/lib/useActiveOnboardingHint.ts`, `src/app/providers/WidgetRegistryProvider.tsx`, `src/widgets/property-drawer/ui/widgetTypeConfig.ts`, `src/widgets/form-widgets/lib/useFormData.ts`, `src/_packages/fs-api/api/auth.ts`, `src/_packages/fs-api/types/requests/auth.ts`, `src/app/lib/seedBundleData.ts`, `src/app/providers/AuthProvider.tsx`, `src/entities/layout/api/layoutQueries.ts`
+
+data-craft-server(BE):
+- `src/services/init.service.ts`, `src/types/init.types.ts`, `src/controllers/init.controller.ts`
