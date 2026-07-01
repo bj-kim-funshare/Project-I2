@@ -1,5 +1,25 @@
 # data-craft — Patch Note (001)
 
+## v001.1206.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #544 (funshare-inc/data-craft)
+
+### 페이즈 결과
+- **Phase 1**: 헤더 디자인모드 아이콘(팔레트 그라데이션+SMIL 애니)을 `AnimatedDesignModeIcon`으로 추출해 헤더와 재사용, 인디고→스카이 그라데이션 테두리 필 버튼 `GradientOutlineButton` 신규(forwardRef·`{...rest}` 전파로 Radix asChild 지원).
+- **Phase 2**: 빈 상태 '디자인 모드로 이동'·'새 화면 추가' CTA와 사이드바 상시 추가 버튼(펼침/접힘)을 `GradientOutlineButton`으로 교체(디자인 모드 CTA는 헤더 동일 애니 아이콘, 검정 배경 제거). i18n·핸들러 불변.
+- **Phase 3**: 공용 `Switch` 켜짐색을 근검정 단색(`bg-primary`)에서 인디고→스카이 브랜드 그라데이션으로 전환 — 앱 전역 스위치(페이지 생성/편집 모달·앱 설정 사이드바 기본 상태 포함) 일괄 반영.
+
+### 영향 파일
+data-craft:
+- src/shared/ui/AnimatedDesignModeIcon.tsx (신규)
+- src/shared/ui/GradientOutlineButton.tsx (신규)
+- src/shared/ui/index.ts
+- src/shared/ui/shadcn/switch.tsx
+- src/widgets/header/ui/ModeSwitchButton.tsx
+- src/widgets/layout-canvas/ui/EmptyPageState.tsx
+- src/widgets/page-navigation/ui/DesignSidebar.tsx
+
 ## v001.1177.0
 
 > 통합일: 2026-06-27
