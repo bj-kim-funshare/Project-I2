@@ -1,5 +1,26 @@
 # data-craft — Patch Note (001)
 
+## v001.1209.0
+
+> 통합일: 2026-07-01
+> 플랜 이슈: #546 (funshare-inc/data-craft)
+
+**빌더/레이아웃 BE 격자-네이티브 컷오버 — READ-우선 (P1+P2·dev).** `GET /api/builder/layout/:pageId` 가 폐기 테이블 `page_layout_area`(2026-06-29 DROP)·`page_layout_widget`(→page_widget)·`page_list`(→page) 참조로 500 크래시하던 레이아웃 조회 경로를 라이브 격자모델(page_layout→page_section 1섹션→page_widget 100×70 격자)로 컷오버했다. 복원이 아니라 "BE가 이미 존재하는 DB를 따라잡기". 지휘 승인(결정 a~g, page_widget 통합엔티티 컬럼소유권 계약 포함). ★이번 실행 = **READ 경로만**; WRITE(저장/삭제/생성)는 FE #506/#511 락스텝 + page_widget in-place 계약(빌더=배치컬럼·행수명 / 뷰어=jsonb group-scoped UPDATE·delete+reinsert 금지) 필요로 **P3~P5 DEFERRED** → 따라서 **저장(POST layout)은 아직 500**(설계상 후속·회귀 아님).
+
+### 페이즈 결과
+- **Phase 1 (fix)** `0a7f774`: READ 경로 격자-네이티브 서빙 — `getLayoutService` + 죽은 read 3종(`findAreasByLayoutId`·`findLayoutWidgetsByLayoutId` 2변형·`findActiveSectionByLayoutId`) + `normalizedToHierarchical` rewrite. `page_section`/`page_widget` 조회로 `GetLayoutResponse{layout(빈 areas[]·colGridCount:100/rowGridCount:70 상수)·widgets(격자좌표)·activeSection}` emit. 죽은 `widget_preset` LEFT JOIN(존재않는 preset_id) 제거. ★수용기준: `sections[0].id` ≡ `activeSection.sectionId` 바이트동일(bare 32-hex)·`WidgetConfig.areaId`=sectionId non-null 보존. `findActiveSectionByLayoutId` 죽은참조 4종(seq/style/col_grid_count/row_grid_count)+`WHERE layout_id` 정합.
+- **Phase 2 (fix)** `7b2f7ad`: `findRecentWidgetUsage` 조인체인 격자-네이티브 전환(`page_widget`→`page_section`→`page_layout`→`page`)·`data_group_id` 직접필터(dead `data_column` 조인 제거)·반환계약(widgetId/type/groupId/properties/updatedAt)+dedup 해시(`properties - 'dataViewerField'` 스트립) 보존.
+
+### 검증
+- 페이즈별 dev psql **시드 왕복**(빈 테이블이라 0행 게이트는 hollow → `page_section`+`page_widget` 시드 후 rewrite 쿼리 원문 실행·바이트동일/반환shape assert·ROLLBACK) + `pnpm build`(tsc — BE eslint는 타입 미검출) + eslint, 독립 gate-runner 전부 PASS. 머지 diff `@ts-ignore`/`any` 0.
+- ★**정적/시드 검증 완료 — 서버 미기동이라 라이브 `GET /api/builder/layout/1` 확인은 마스터 대기**(라이브 빈 페이지=0섹션/0위젯 → 빈 레이아웃 정상 반환 설계). 잔존 dead-ref는 전부 **P3-4 WRITE**(save/delete/create/IDOR)·**P5 주석** residual-0 — DEFERRED. 병렬 지휘 value_data 트랙과 파일 disjoint 확인.
+
+### 영향 파일
+data-craft-server:
+- `src/models/builder.model.ts`
+- `src/services/builder/builder.layout.ts`
+- `src/services/builder/builder.helpers.ts`
+
 ## v001.1208.0
 
 > 통합일: 2026-07-01
