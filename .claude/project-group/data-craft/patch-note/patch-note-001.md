@@ -35975,3 +35975,23 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
+
+## v001.1250.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스5
+
+뷰 모드 빈 페이지 배경이 회색이던 회귀 수정 + 고정 높이 섹션 대응 (마스터 지시·FE-only).
+
+### 원인 / 수정
+- **원인(회귀)**: #559 영-섹션 프로비저닝이 빈 페이지에 섹션 1개를 주입 → `isEmpty = sections.length===0`가 false → 뷰 모드 흰색 배경 오버라이드(`isEmpty && !isDesignMode && bg-background`) 미발동 → 회색. 뷰 모드 빈(위젯 0) 분기가 EmptyPageState를 회색 캔버스(bg-muted)에 직접 렌더.
+- **수정 A**(LayoutCanvas): 뷰 모드 빈 분기에서 EmptyPageState를 **첫 섹션 크기 흰 박스**로 감쌈 — `emptyExpanded`(isExpanded)면 `flex-1`(전체 흰색), 고정 높이면 `height:{px}`(섹션 영역만 흰색·바깥은 캔버스 회색). 캔버스는 bg-muted 유지.
+- **수정 B**(EmptyPageState): 위치를 `pt-[15%]`(폭 기준 % 패딩 오동작) → `justify-center + pb-16`(고정 64px 바이어스) → 흰 섹션 영역 내 중앙-살짝위.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/layout-canvas/ui/LayoutCanvas.tsx`, `src/widgets/layout-canvas/ui/EmptyPageState.tsx`
