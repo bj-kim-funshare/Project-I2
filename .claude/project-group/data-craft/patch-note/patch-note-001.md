@@ -35873,3 +35873,36 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1246.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #561 (funshare-inc/data-craft)
+
+상단 "저장"(POST /api/builder/pages/:pageId/layout)이 DROP된 옛 area 모델 테이블(page_layout_area·page_layout_widget)을 건드려 500(BUILDER-C-010)나던 #546 WRITE 저장 버그 복구 — saveLayout 위젯 write를 격자 모델(page_widget)로 컷오버. BE-only, FE payload 무변경. 계약서 `Documents/data-craft-위젯모달-병렬착수-계약-20260702.md` A 방식 준수.
+
+### 페이즈 결과
+- **Phase 1 (refactor·041ed89)**: `builder.types.ts`에 `CANONICAL_TO_LAYOUT_TYPE`(textDesign→'text')·`resolveWidgetTypeToIndex(type)` 신설. 레거시 직접→캐노니컬 폴백→throw. `LayoutWidgetTypeFromIndex`(읽기) 무수정으로 현 FE 호환 유지.
+- **Phase 2 (feat·0707144)**: `builder.model.ts`에 `createPageWidget` 신설 — page_widget INSERT(toUuidParam·`JSON.stringify(x ?? {})`로 properties/style jsonb NOT NULL 보장·is_deleted=0). 옛 3함수 정의 유지.
+- **Phase 3 (fix·94c90dc)**: `builder.layout.ts` 컷오버 — `deleteOldLayoutData`가 page_widget DELETE(USING page_section, child→parent FK)+page_section DELETE로 교체, `saveLayoutService`가 createArea 제거·IDOR 존재검사 grid 조인 재작성(`pl.page_id<>?` 스코프)·위젯 삽입을 createPageWidget 단일 호출로 통합. ★모든 위젯이 격자 섹션 id 획득(widgetAreaToSection→fallback→NO_GRID_SECTION, NULL 경로 없음).
+
+### type 매핑표 (Track A 단독 소유)
+| canonical (FE 정본) | legacy LayoutWidgetType | int (page_widget.type) |
+|---|---|---|
+| textDesign | text | 0 |
+| (레거시 21종 0–20 그대로) | text…document | 0–20 (`LayoutWidgetTypeIndex` 무변경) |
+
+- 리졸버: 레거시면 `LayoutWidgetTypeIndex` 직접, canonical이면 별칭(textDesign→text) 경유, 미상이면 `INVALID_WIDGET_TYPE` throw. 읽기 방향(`FromIndex`, 0→'text')은 무변경(현 FE 호환) — canonical read emission은 Track B/C 착지 시 조율.
+
+### 설계 근거 (리뷰어 주의)
+- **batch delete+reinsert가 Phase 1에서 합법**: 계약 A 방식으로 saveLayout이 **유일 DB write 경로**(모달은 FE 캔버스만 반영)라 page_widget 공유소유권의 "in-place UPDATE·delete+reinsert 금지" 규칙은 **Phase 2 per-widget 엔드포인트**(별도 후속) 대상. batch 컷오버는 정합.
+- **후속(별도)**: per-widget CRUD 엔드포인트(계약1)·`duplicateSinglePageContent` 격자 이관(현재 dropped 테이블 write로 별도 파손, 그래서 옛 3함수 정의 유지).
+
+### 검증
+- **tsc(`tsc --noEmit`) 0 error · eslint 0 error**. ⚠️ type 게이트는 배선 완료 후 **1회(Phase 3 종료 시) 실행** — BE lint 게이트가 eslint 전용(타입 미검출)이고 Phase 1·2는 가산-only라 독립 tsc 미실행(041ed89/0707144 단독은 개별 타입검증 안 됨, 전체 트리 tsc가 커버).
+- **저장→재로드 왕복(진짜 게이트)**: createPageWidget 동형 INSERT 2건 → getLayoutService 읽기쿼리(page_widget INNER JOIN page_section) **정확히 2건 반환**(보낸 N=읽힌 N·FK/NULL 사일런트 소실 없음). resolveWidgetTypeToIndex 실행 검증(text/textDesign→0·document→20·bogus→throw). 격자 CHECK·type<0 거부 확인. dev BEGIN…ROLLBACK 무잔존.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft-server(BE):
+- `src/types/builder.types.ts`, `src/models/builder.model.ts`, `src/services/builder/builder.layout.ts`
