@@ -35995,3 +35995,26 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/layout-canvas/ui/LayoutCanvas.tsx`, `src/widgets/layout-canvas/ui/EmptyPageState.tsx`
+
+## v001.1251.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스6
+
+헤더 섹션 컨트롤 말풍선을 디자인팀 최종 시안대로 반영 (마스터 지시·FE-only·순수 리스타일).
+
+### 수정 (DesignHeaderBubble — 시안대로, 배선 전량 보존)
+- **바**: 회색(bg-muted)→**흰 배경** + border #D6D6CF + rounded 14px + 이중 box-shadow(라이트)/단층(다크). 우측 꼬리: CSS 삼각형→**회전 사각(15×15 rotate-45)** + border.
+- **위젯추가**: ghost→**파란 primary(#3B82F6·흰 텍스트·그리드 인라인 SVG)**, hover #2563EB.
+- **높이**: "높이" 라벨(#6B7178) + **흰 필드(border #DCDCD6·rounded 11px·focus-within 링)** 안에 굵은 입력(15px)+리턴 인라인 SVG, 밖에 "px"(#9AA0A8).
+- **세로확장**: **파란 아웃라인(border #BFD4FA·텍스트 #3B82F6)** + 확장 인라인 SVG, hover #EFF4FF, active(isExpanded) 채움.
+- **라이트/다크 양버전**(시안 다크 hex 반영). lucide 3종(LayoutGrid·Maximize2·CornerDownLeft)→시안 인라인 SVG 3종.
+- ★**로직 무변경**: Popover(pickerOpen·blur 가드)·높이 입력 핸들러 전체(applyHeight 클램프 500·Enter/blur/focus)·handleExpand·Tooltip·disabled={!section}·페이지 추종 resync 전부 원형 보존(마크업/className만 변경).
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 배선 13개 매치 확인·시안 색/SVG 랜드마크 확인. 정적 통과·마스터 재캡처 대기.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
