@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1232.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft)
+
+**빈 페이지 안내 문구 — 중간 아이콘 제거 + 문장 끝 노랑-주황 번개 아이콘.** 디자인 모드 빈 페이지 중앙 안내 문구("아래 메뉴를 선택해 빠르게 위젯을 추가하세요")에서 문장 중간의 괄호 `( )` 와 인디고→하늘색 그라데이션 팔레트 아이콘을 제거하고, 대신 문장 끝에 노랑→주황 그라데이션 번개(Zap) 아이콘을 배치.
+
+### 페이즈 결과
+- **Phase 1 (fix)** `ef90eb18`: `emptySection.hint` locale(ko/en)에서 중간 괄호 제거 + 아이콘 슬롯 `<0/>` 을 문장 끝으로 이동(ko 조사 '위젯 을'→'위젯을' 보정). `EmptySectionGuide.tsx` 의 `PaletteGradientIcon`(lucide `Palette` + `#6366f1`→`#38bdf8` stroke 그라데이션)을 `ZapGradientIcon`(lucide `Zap` + `#facc15`→`#f97316` fill 그라데이션·`stroke="none"`)으로 교체. `Palette` import 제거·`Zap` import 추가, gradient id 및 파일 상단 주석 정정.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. 정적 diff + lint 게이트 기준 검증(시각 렌더 미확인 — 아이콘 크기/간격 미세조정은 필요 시 후속 핫픽스). 참고: 원문 문자열이 슬롯 주변 공백을 렌더했던 사실로 보아 `<Trans>` 가 후행 공백을 보존 → 문장 끝 간격 유지.
+
+### 영향 파일
+data-craft:
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1231.0
 
 > 통합일: 2026-07-02
