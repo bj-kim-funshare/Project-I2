@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1238.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스6
+
+**빈 페이지 번개 아이콘 상하 균형 확정값 (핫픽스6).** 핫픽스5(`top -0.3em`)가 위로 쏠려, 관측된 두 상태(`-0.1em` 아래 쏠림 / `-0.3em` 위 쏠림)의 이분법 중간값으로 균형점 확정.
+
+### 핫픽스 결과
+- **Phase 7 (핫픽스6·fix)** `94f20005`: `EmptySectionGuide.tsx` `ZapGradientIcon` `<Zap>` style `top` 을 `-0.3em → -0.2em`. 크기·scaleY·색·간격 무변경.
+
+### 검증
+- 메인 세션 실측 `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38). (gate-runner 가 exit1 오보고했으나 실제 명령 직접 실행으로 PASS 확인 — 본 1글자 변경은 lint 영향 불가.)
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1237.0
 
 > 통합일: 2026-07-02
