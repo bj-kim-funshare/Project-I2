@@ -35792,3 +35792,41 @@ data-craft(FE):
 
 data-craft-server(BE):
 - `src/services/init.service.ts`, `src/types/init.types.ts`, `src/controllers/init.controller.ts`
+
+## v001.1243.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft)
+
+디자인 모드 섹션 컨트롤 말풍선 재설계 + 섹션 높이/세로확장 + 위젯추가 스크롤-스파이 피커 (FE 헤더 + BE page_section write 복구). ★경영 결정: 1 페이지 = 1 섹션(1:1 고정, 페이지 전환 자동 추종).
+
+### 페이즈 결과 (BE 2 · FE 6)
+- **Phase 1** (`9b41c55`, data-craft-server): page_section write 경로 컷오버 — createPageSection INSERT/upsert를 현행 스키마(page_section_id·page_layout_id·height·is_vertical_expand)로 재작성, 죽은 grid 컬럼 6종(section_id·layout_id·col_grid_count·row_grid_count·style·seq) 제거, BE 방어 클램프(`GREATEST(COALESCE(?,500),500)`·`COALESCE(?,true)`). deleteOldLayoutData DELETE `layout_id`→`page_layout_id`.
+- **Phase 2** (`64e566d`, data-craft-server): read 경로 — findAreasByLayoutId·findActiveSectionByLayoutId SELECT에 is_vertical_expand 추가, normalizedToHierarchical 하드코딩 `isExpanded:true`→실값(expand-off 여태 미영속 잠재버그 수정).
+- **Phase 3** (`4aaa53b`, data-craft): 기본/최소 높이 500 정합(DEFAULT_SECTION_HEIGHT·MIN 상수)·loadLayout `isExpanded ?? true`·★영-섹션 프로비저닝(서버 sections:[] 시 기본섹션 1개 주입 = "말풍선 미표시" 근본 수정, 기존 섹션 보존).
+- **Phase 4** (`d1bd042`, data-craft): DesignHeaderBubble — 상시표시(하드게이트 제거·위젯추가 항상활성·높이/토글 section부재 시 disabled)·3요소화("나만의디자인" placeholder 제거)·높이 클램프 500(빈값→500)·페이지 전환 추종(resync dep에 section?.id).
+- **Phase 5** (`d6beb29`, data-craft): 말풍선 합침 — ManagementButtonGroup 삭제·user-form 버튼 제거(FormBuilderDialog는 onboarding 참조로 존치·FormBuilder 서브시스템 무접촉).
+- **Phase 6** (`4d350d1`, data-craft): 외부데이터 버튼 이동 + #544 이동 그라데이션 재사용 — AnimatedDesignModeIcon additive props(icon·stops·gradientId, 기본값 보존→ModeSwitchButton 무영향)·노랑주황·고유 gradientId·disabled여도 그라데이션 stroke full opacity.
+- **Phase 7** (`d8f4577`+보정 `fb0bf84`, data-craft): 위젯추가 피커 셸 — CategoryExpandRow의 BubbleContent 순수화 재사용(빈페이지 behavior-neutral)·좌 세로 8분류 사이드+우 8분류 BubbleContent 세로 스택(본문 644px 고정·cat.bgColor 경계)·Radix Popover(PopoverAnchor를 Button에 직접 배치=앵커 rect 측정 정상). canonical WIDGET_SUBTYPES 소비(스테일 WidgetAddModal 미사용).
+- **Phase 8** (`103411b`, data-craft): 스크롤-스파이(IntersectionObserver 최대비율+passive scroll 바닥클램프로 마지막 짧은 분류=자동화 보정)·사이드 앵커 점프(scrollIntoView)·닫힘 3종(버튼 토글/외부클릭/leaf)·window blur 가드(`!document.hasFocus()`).
+
+### 공유 DB 계약 (보조2 소관·dev LIVE)
+- `page_section.is_vertical_expand` bool NOT NULL DEFAULT true · `height` NOT NULL DEFAULT 500 CHECK(≥500) = **보조2 마이그레이션**(dev 이미 적용 확인). 본 플랜은 코드만 소유(마이그레이션 미작성). FE `isExpanded` ↔ BE `is_vertical_expand` 컬럼 브리지(DB명 권위).
+
+### 검증
+- **BE(실증)**: dev psql BEGIN…ROLLBACK 원문 실행 — createPageSection 클램프(height 499→500·NULL→500·flag NULL→true)·page_layout_id DELETE·read SELECT is_vertical_expand resolution 42703/42P01 없음. 각 페이즈 lint(eslint)·build(tsc) 게이트.
+- **FE(정적)**: typecheck:all(tsc -p tsconfig.app.json)+eslint 0 error 각 페이즈. 상시표시·3요소·user-form 부재·그라데이션 이동·클램프·피커 8분류 스택·스크롤스파이·닫힘 3종 정적 확인.
+- ⚠️ **FE↔BE 통합(save→reload 영속·페이지 전환 추종·스크롤스파이 마지막분류 활성·blur 가드·그라데이션 가독)은 코드완료·정적통과이나 미실행(dev 서버 미기동) → 마스터 재캡처로 최종 확인**.
+
+### 후속 / 주의
+- 피커 leaf=닫힘 스텁 — 90% 설정모달·실제 위젯 생성은 #546 page_widget write에 물림(별개 위젯 phase·deferred). 오해로 생성 로직 넣지 않음.
+- 피커 고정높이=max-h 80vh(블록패널 ~843px proxy·뷰포트 캡) — 정밀 px 튜닝은 재캡처 피드백 시.
+- 레거시 멀티섹션 페이지 collapse는 범위 밖(1:1 신규 기준·죽은 write로 거의 미영속).
+- dev 전용(prod 미배포)·**origin 미푸시**.
+
+### 영향 파일
+data-craft-server(BE):
+- `src/models/builder.model.ts`, `src/services/builder/builder.layout.ts`, `src/services/builder/builder.helpers.ts`
+
+data-craft(FE):
+- `src/entities/layout/model/layoutHelpers.ts`, `src/entities/layout/model/layoutSelectors.ts`, `src/shared/config/layout.config.ts`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`, `src/widgets/header/ui/AppHeader.tsx`, `src/widgets/header/ui/ManagementButtonGroup.tsx`(삭제), `src/shared/ui/AnimatedDesignModeIcon.tsx`, `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`(신규), `src/widgets/widget-add-picker/index.ts`(신규)
