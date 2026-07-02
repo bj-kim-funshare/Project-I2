@@ -36308,3 +36308,28 @@ data-craft-server(BE):
 ### 영향 파일
 data-craft(FE):
 - `src/features/logo-upload/ui/CompanyLogo.tsx`
+
+## v001.1265.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #565 (funshare-inc/data-craft) — 핫픽스3
+
+로고 편집 클릭 영역이 콘텐츠만 감싸 좌우 여백이 남던 문제 + 복합(이미지+텍스트) 로고 우측 치우침 동시 해소 (마스터 지시·FE-only).
+
+### 원인
+- 헤더 로고 슬롯은 중앙정렬 컨테이너(`flex-1 justify-center`, 폭=sidebarWidth)이나 CompanyLogo 버튼/복합이 **콘텐츠 폭**이라, 편집 점선 테두리(클릭 영역)가 콘텐츠에만 밀착되어 슬롯 좌우 여백이 클릭 불가로 남고, 복합 이미지+텍스트가 슬롯 중앙이 아닌 한쪽으로 치우쳐 보임.
+
+### 수정 (CompanyLogo)
+- 편집 `<button>`에 `w-full flex items-center justify-center` 추가 → **점선 테두리(클릭 영역)가 헤더 슬롯 전체 너비를 채우고** 내부 콘텐츠는 중앙정렬.
+- 뷰 모드 `<div data-testid="company-logo">`에 동일 클래스 추가 → 복합 로고가 슬롯 중앙 정렬.
+- `CompositeLogoContent` 이미지+텍스트 분기: 고정 `max-w-[200px]` → `max-w-full`(부모 `justify-center`가 중앙정렬 전담). 텍스트 전용 폴백은 감싸는 div 제거→순수 `<span>`(부모가 중앙정렬). 이미지 전용 `img`(h-50·w-200)·LogoPlaceholder 무변경.
+- 렌더 사이트 확인: `<CompanyLogo>`는 AppHeader 2곳뿐(주 로고=`flex-1` definite width→슬롯 전체, 접힘 상태=shrink-to-fit→콘텐츠 폭). auth/signin JSX 렌더 없음(스트리밍 URL 함수 참조뿐)→뷰모드 `w-full` 회귀 없음.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기.
+- ⚠️ 해석 명시: "주어진 너비 전부"를 **헤더 슬롯(flex-1) 전체 너비로 확장**으로 구현. 만약 의도가 이미지 전용 로고와 동일한 고정 200px 폭이었다면 재캡처 후 그 방향으로 재조정 가능.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/features/logo-upload/ui/CompanyLogo.tsx`
