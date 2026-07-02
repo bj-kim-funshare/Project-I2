@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1237.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스5
+
+**빈 페이지 번개 아이콘 상하 균등 배치 (핫픽스5).** 아이콘이 "빈 페이지" 텍스트 기준 아래로 더 튀어나가 있어 위로 올려 균등화.
+
+### 핫픽스 결과
+- **Phase 6 (핫픽스5·fix)** `b093b435`: `EmptySectionGuide.tsx` `ZapGradientIcon` `<Zap>` style 의 `top` 을 `-0.1em → -0.3em` 으로 조정 — 한글(CJK) 글자 시각 중심이 `vertical-align:middle` 기준점보다 높아 큰 아이콘이 아래로 쏠리던 것을 보정. 크기·scaleY·그라데이션·간격 무변경.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. **정적 diff + lint 기준** — 렌더 미확인. ⚠️ 순수 시각 미세조정 5회 반복(#371 트레드밀) — `top` 균등값은 폰트 메트릭에 의존해 blind 로 정확히 못 맞춤. 후속은 devtools 실측 후 전 축(top/size/scaleY/색/섀도) 최종값 1회 확정 권장.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1236.0
 
 > 통합일: 2026-07-02
