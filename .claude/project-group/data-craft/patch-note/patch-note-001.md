@@ -36289,3 +36289,22 @@ data-craft(FE):
 ### 영향 파일
 data-craft-server(BE):
 - `src/middlewares/auth.middleware.ts`, `src/services/init.service.ts`
+
+## v001.1264.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #565 (funshare-inc/data-craft) — 핫픽스2
+
+디자인 모드에서 로고가 있어도 로고 편집 클릭 영역을 점선 테두리로 감싸기 (마스터 지시·FE-only).
+
+### 수정 (CompanyLogo)
+- editable(디자인 모드) 로고 버튼은 로고가 없을 때만 LogoPlaceholder 자체 점선 테두리를 보였고, 로고(이미지/복합)가 있으면 테두리가 없어 클릭 영역 시각 단서 부재.
+- `showEditFrame = isComposite || (!!logoSrc && !imageLoadError)` 도출 → **로고/복합 존재 시 편집 버튼에 조건부 점선 테두리**(`border border-dashed border-muted-foreground/40 rounded-md p-1`) 추가(cn import). 로고 없을 때는 기존 LogoPlaceholder 테두리 유지 → 로고 유무 무관하게 편집 클릭 영역이 점선으로 감싸짐. 뷰 모드·CompositeLogoContent 무변경.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기(점선 테두리 가독·클릭 영역 정합).
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/features/logo-upload/ui/CompanyLogo.tsx`
