@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1234.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스2
+
+**빈 페이지 번개 아이콘 세로 위치 미세 상향 (핫픽스2).** 마스터 피드백에 따라 "빈 페이지" 제목 우측 번개 아이콘을 살짝 위로 올림. 제목 텍스트는 무변경.
+
+### 핫픽스 결과
+- **Phase 3 (핫픽스2·fix)** `81e4f247`: `EmptySectionGuide.tsx` 의 `ZapGradientIcon` `<Zap>` style에 `position: 'relative'` + `top: '-0.1em'` 추가 — 인라인 아이콘을 기준선에서 약 0.1em(제목 text-lg 기준 ~1.8px) 위로. 기존 `scaleY(1.3)`·`marginLeft 0.3em`·레몬 그라데이션·제목/힌트 텍스트 전부 무변경.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. **정적 diff + lint 기준** — 시각 렌더 미확인. 현재 아이콘 파라미터(조정 시 참조): `transform: scaleY(1.3)`·`top: -0.1em`·`marginLeft: 0.3em`·그라데이션 `#fde047→#facc15`.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1233.0
 
 > 통합일: 2026-07-02
