@@ -36018,3 +36018,22 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1252.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스7
+
+핫픽스6(시안 반영)을 너무 문자대로 옮겨 생긴 2문제 보정 (마스터 지시·FE-only).
+
+### 수정 (DesignHeaderBubble — 로직 무변경)
+- **① 바 높이 축소**: 시안의 42px 버튼/필드가 헤더엔 과대 → 컴팩트하게. 버튼·필드 `h-[42px]`→`h-8`, 루트 `p-[7px]`→`py-1 pl-1 pr-3`·`gap-1`·`rounded-xl`, 버튼 `rounded-lg px-2.5 text-[13px]`, 아이콘 SVG 축소(Grid 19→16·Expand 17→15·Return 15→13), 필드/입력 `h-8 w-11 text-[13px]`, 구분선 `h-4`. 색/테두리/그림자/다크는 시안 유지.
+- **② 세로확장 버튼 우측 테두리 "구멍" 제거**: 시안의 회전 사각 꼬리가 안쪽으로 파고들어 마지막(세로확장) 버튼 파란 테두리(#BFD4FA)를 흰색으로 끊던 아티팩트(시안에도 있던 버그를 그대로 재현). **기하학적 클리어런스로 해소** — 루트 우측 패딩 `pr-3`(꼬리 내측 도달범위 밖으로 버튼 이동) + 꼬리 축소·재배치(`w-2.5 h-2.5 right-[-4px]`). z-index 트릭(-z-10, 꼬리 전체 은닉 위험)은 미채택. 결과: 버튼 테두리 온전 + 꼬리 포인터 가시.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 배선 11개 매치(핸들러 전량 보존). 정적 통과·마스터 재캡처 대기.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
