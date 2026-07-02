@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1266.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #568 (funshare-inc/data-craft) · 핫픽스1
+
+**섹션 제어 말풍선을 3구획 통합 세그먼트 바로 재구성 (#568 핫픽스1).** #568(3영역 통일)이 "둥근 말풍선 안에 테두리 달린 3개 pill 이 gap 으로 떠 있는 박스-인-박스" 모양이라는 마스터 피드백 → 말풍선을 **덜 둥글게**(rounded-xl→rounded-lg) 하고 **3구획으로 분할**해 각 기능이 자기 구획을 edge-to-edge 로 채우는 **통합 세그먼트 바**로 변경. "담겨 있는" 느낌 제거·"말풍선 자체 기능"처럼 보이게.
+
+### 결과 (1 핫픽스)
+- **핫픽스1 (fix/style)** `018ec41`: `DesignHeaderBubble.tsx` return 블록 재구성 — (1) 외부 div 를 bare `relative inline-flex`(꼬리 위치 기준)로 단순화, 내부에 `inline-flex items-stretch h-9 rounded-lg overflow-hidden` 단일 세그먼트 바. (2) 각 컨트롤 `h-full rounded-none`·개별 pill 테두리/rounded/gap 제거 → 구획 꽉 채움. 위젯추가=좌측 파랑 구획(overflow-hidden 으로 좌측 모서리 클린 클립), 높이=가운데 투명 구획(말풍선 배경과 동일·focus-within 시 옅은 배경), 세로확장=우측 구획. (3) 구획 사이 `w-px self-stretch` full-height 분리선 2개. (4) input 은 focus shadow-ring→`focus-within:bg`(overflow-hidden 클립 회피). 입력 핸들러(onChange·Enter→applyHeight·onBlur·onFocus)·i18n 원문 보존.
+
+### 검증
+- 머지 후 정적 게이트 `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings). 전체 블록 재작성 후 input 핸들러 4종 잔존 실측 확인(기능 회귀 없음).
+- ★**dev 런타임(마스터 몫)**: 화이트/다크 양쪽에서 덜 둥근 3구획 세그먼트 바로 보이는지, 각 기능이 구획을 꽉 채우는지, **위젯추가 피커 오픈 시 파랑 버튼만 어두운 베일 위로 부각(z-50)** 되는지(overflow-hidden 스택 컨텍스트 회귀 없음). 조정 레버=둥글기(rounded-lg)·구획 패딩(px-3.5)·분리선 색. "정적 통과"가 렌더 일치를 의미하지 않음.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
 ## v001.1263.0
 
 > 통합일: 2026-07-02
