@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.1270.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #569 (funshare-inc/data-craft)
+
+**R16 위젯 설정 모달 셸 시안-정합 재디자인 + 위젯 격자 진입 fix (보조4).** textDesign end-to-end(#566) 런타임에서 모달 셸이 디자인팀 시안과 크게 다르고 미리보기 사용 불가·**적용해도 위젯이 격자에 안 들어감** 발견. 지휘 지시로 헤더 제외 셸 전반(레일·푸터·미리보기·배경설정)을 시안 정합 + 콘텐츠 정렬 제거 + 둥글기 개별화 + 푸터 라벨 정정. 대상=모든 위젯 공유 모달 셸. dev-only·i-dev·미푸시. ★디자인 피델리티는 dev 런타임 스크린샷 검증 필요("정적 통과≠렌더 일치").
+
+### 결과 (8 페이즈)
+- **Phase 0 (★fix)** `c256e54`: 위젯 격자 진입 — handleSaveApply가 새 위젯에 현재 격자 섹션 sectionId 세팅(`resolvedSectionId = 모달 sectionId ?? layout.sections[0].id`·updateWidget). Section.tsx `designSectionWidgets` Source1(`w.sectionId===id`) 매칭 → 적용 시 격자 출현. addSection은 섹션 전무 시만(2번째 위젯 오배치 버그 해소).
+- **Phase 0b (★fix)** `3afd5ab`: 새로고침-영속 — `mapServerWidget`가 서버 sectionId 미복원하던 갭 봉합(`ServerWidgetData.sectionId` + `serverData.sectionId ?? null` 반환). BE는 sectionId 반환(builder.model.ts `replace(page_section_id,'-','')`). 리로드 시 Source1 재매칭 → 새로고침 후 격자 유지.
+- **Phase 1 (fix)** `86997fe`: 미리보기 파손 수정 — 100×70 미니캔버스(grid-span) 제거(위젯 4% 셀 13px 붕괴 근본원인). flex 중앙정렬(max-w-sm/min-h-40·bg-muted/20) 자연 크기 렌더 + LIVE 헤더 + "격자 N×M·변경사항 자동 반영" 푸터.
+- **Phase 2 (refactor)** `ae4199c`: 콘텐츠 정렬(9점) 전역 제거 — ContentAlignmentSection 삭제(렌더러 기본 center·무해).
+- **Phase 3 (feat)** `25a33ec`: 배경 설정 시안 정합 — 격자 스테퍼+dot 프리뷰+인포배너·테두리 두께 카드(박스모델+인덱스 슬라이더 0.5/1/2/3px)·색상 카드(박스모델+스와치)·단일 borderMode 4면 일괄/개별 동기화. ★patchStyle/setGrid 키 20종 불변.
+- **Phase 4 (feat)** `4bd8dfc`: 둥글기 per-corner — 타입 4모서리 필드 additive·컨트롤 4면 일괄/개별 토글·렌더러 per-corner emit+단일 borderRadius 폴백(하위호환).
+- **Phase 5 (feat)** `4e0ddec`: 사이드 레일 시안 정합 — "설정 분류" 소제목·아이콘 칩+부제(그룹·열·필터·기간 등)·선택 파랑(시맨틱 토큰·다크 호환)·하단 요약. 3/4항목 필터·잠금·gridBoard 토글 보존.
+- **Phase 6 (feat)** `fcd3a01`: 푸터 시안 정합 + "저장 및 적용"→"적용"(A방식·Check 아이콘·취소 아웃라인·설정 초기화 제거 유지).
+
+### 지휘 확정
+설정 초기화=제거 유지 / 스타일 본문(강조색·본문밀도·헤더스타일) 전면 시안화=스코프 밖(textDesign 크기·굵기·색만) / 미리보기=자연크기 센터링 / 둥글기=4모서리+4면일괄 / 공유 셸 충돌 없음(β#563·δ#564 머지·미편집).
+
+### 검증
+- 정적 게이트(페이즈별): `pnpm typecheck:all && pnpm lint` exit0(0 error·기존 38 warning 무관).
+- advisor 계획#1 PASS(자연크기 프레이밍·공유셸 충돌 확인·per-corner 3겹 반영)·완료#2 PASS(★새로고침-영속 갭 지적 → Phase 0b로 봉합).
+- ★**dev 런타임(REQUIRED·마스터 몫)**: (1)★최우선 = 빈 페이지→디자인→텍스트→모달→적용 → 위젯 격자 출현 + 위젯 2·3개 추가 + 상단 저장→**새로고침 유지**(Phase 0/0b·addSection 변경 엣지케이스는 다중 위젯 테스트 필수). (2)시안 스크린샷 대조: 미리보기 카드·배경 스테퍼/박스모델/슬라이더·레일 칩+부제·푸터 "적용"·둥글기 모서리별. 디자인 페이즈(1·3·5·6)는 시안 미시각 executor 구현이라 육안 정합 반복 예상.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/widget-settings-modal/ui/{WidgetSettingsModal.tsx,PreviewPane.tsx,CategoryRail.tsx,ModalFooter.tsx}`
+- `src/widgets/widget-settings-modal/ui/sections/{BackgroundSettingsSection.tsx,ContentAlignmentSection.tsx(삭제)}`
+- `src/entities/widget/model/widgetCrudActions.ts` · `src/shared/types/widget-base.types.ts` · `src/shared/lib/widget-styles.ts`
+
 ## v001.1269.0
 
 > 통합일: 2026-07-02
