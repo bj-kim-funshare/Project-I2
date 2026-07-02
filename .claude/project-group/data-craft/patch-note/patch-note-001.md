@@ -35830,3 +35830,25 @@ data-craft-server(BE):
 
 data-craft(FE):
 - `src/entities/layout/model/layoutHelpers.ts`, `src/entities/layout/model/layoutSelectors.ts`, `src/shared/config/layout.config.ts`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/header/ui/DesignModeToolbar.tsx`, `src/widgets/header/ui/AppHeader.tsx`, `src/widgets/header/ui/ManagementButtonGroup.tsx`(삭제), `src/shared/ui/AnimatedDesignModeIcon.tsx`, `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`(신규), `src/widgets/widget-add-picker/index.ts`(신규)
+
+## v001.1244.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스1
+
+디자인 모드 피커 UX 4항목 핫픽스 (마스터 스크린샷 지시·FE-only).
+
+### 수정 항목
+- **① 빈페이지 가이드 위치**(EmptySectionGuide): `pt-[15%]`(★%-패딩은 width 기준으로 해석돼 섹션 높이 미추종·세로확장 시 드리프트) 제거 → `justify-center`(flex 주축=높이, 섹션 높이 기준 중앙) + 콘텐츠 wrapper `-translate-y-8`(고정 32px·"살짝 상단", %-오프셋 금지).
+- **② 빈페이지 확장 말풍선 float**(CategoryExpandRow): 인-플로우 말풍선이 Section `overflow-hidden`(고정 height)에 잘리던 것을 각 카테고리 버튼 Radix Popover(portal)로 전환 → 섹션 밖으로 떠서 전부 보임. `align="center"`(꼬리=버블 가로 중앙에서 버튼 가리킴)·`side="bottom"`·PopoverArrow·`max-h-[80vh] overflow-y-auto`(포털이 섹션은 탈출하나 ~843px 블록패널 뷰포트 하단 이탈 방지)·blur 가드(`!document.hasFocus()`)·**카테고리 전환 레이스 제거**(onOpenChange close 브랜치 함수형 업데이터 `prev===cat.id?null:prev` → A close가 B open 이후 도착해도 no-op). BubbleContent/BUBBLE_WIDTH export 보존 = 헤더 피커 무영향.
+- **③ 헤더 피커 꼬리 중앙**(DesignHeaderBubble): 위젯추가 PopoverContent `align="start"`→`align="center"` → `+`를 버블 가로 중앙에서 가리킴(기존 좌측 치우침 해소).
+- **④ 헤더 피커 좌측 사이드 여백**(WidgetAddPicker): 세로 사이드바 컨테이너 `px-2`→`px-4`(좌우 여백 확대·"조금만").
+
+### 검증
+- typecheck:all(tsc -p tsconfig.app.json)+eslint 0 error. BubbleContent/BUBBLE_WIDTH export 유지=헤더 WidgetAddPicker import 정상 grep 확인.
+- ⚠️ 전부 시각/인터랙션 behavior → **정적 통과·마스터 재캡처 대기**(dev 서버 미기동). ③ `align="center"`는 좁은 창에서 Radix avoidCollisions로 재-오프셋될 수 있음(넓은 창·`+` 중앙부에선 정상, 재캡처 확인). ② 카테고리 전환은 함수형 업데이터로 이벤트 순서 무관 고정.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`, `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`
