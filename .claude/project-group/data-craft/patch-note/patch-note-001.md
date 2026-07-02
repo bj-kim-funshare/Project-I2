@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1239.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스7
+
+**빈 페이지 안내 — 번개 아이콘 제거 + "위젯" 키워드 강조 (핫픽스7).** 마스터 방향 전환: 번개 아이콘을 완전히 걷어내고, 안내 문구의 "위젯"(ko)/"widget"(en) 단어만 굵게 + 서비스 하늘색으로 키워드 처리.
+
+### 핫픽스 결과
+- **Phase 8 (핫픽스7·fix)** `af3a1daf`: `EmptySectionGuide.tsx` 에서 `Zap` import·`ZAP_GRADIENT_ID`·`ZapGradientIcon`·제목 우측 렌더 전부 제거. `<Trans>` 재도입으로 `emptySection.hint`(ko/en)에 `<0>위젯</0>`/`<0>widget</0>` 슬롯 추가, `font-bold text-sky-400` span 으로 렌더. **색상 근거**: 서비스 브랜드 하늘색 = Tailwind `sky-400`(#38bdf8, `from-indigo-500 to-sky-400` 브랜드 그라데이션의 sky 끝). semantic `primary` 토큰은 회색(near-black)이라 파랑이 아님 → `text-primary` 미사용.
+
+### 검증
+- `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38). 정적 diff + lint 기준 — 렌더 미확인. 참고(비차단): `sky-400` 는 흰 배경 대비가 낮은 편이라 옅게 보이면 동계열 `sky-500`(#0ea5e9) 또는 브랜드 토큰 `--brand-blue-500`(#3b82f6)이 대안. 이전 v001.1232~1238 항목은 지금 제거된 번개 아이콘 이력(그대로 보존).
+
+### 영향 파일
+data-craft:
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1238.0
 
 > 통합일: 2026-07-02
