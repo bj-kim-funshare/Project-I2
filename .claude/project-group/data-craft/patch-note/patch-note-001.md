@@ -36204,3 +36204,31 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1260.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #565 (funshare-inc/data-craft)
+
+헤더 로고 변경 모달 4탭 개편 + 복합(이미지+텍스트) 로고 지원 (FE 모달/렌더 + BE logo_text).
+
+### ★동작 전 필수 선행 (DB)
+로고는 `company.logo_url` 단일 컬럼뿐이라 텍스트 저장에 **`company.logo_text VARCHAR(255)` dev 추가가 필수 선행**. 본 플랜은 코드만 소유(계약 기준)·BE 검증은 rolled-back ALTER 시뮬. **컬럼 미적용 시 로고 저장이 42703로 깨짐**(기존보다 악화) → task-db-structure(dev)로 컬럼 랜딩 후 동작. prod DDL은 출시 시 후속.
+
+### 페이즈 결과 (BE 1 · FE 3)
+- **Phase 1** (`fa22cdd`, data-craft-server): BE logo_text 저장/조회 계약 — UpdateCompanyLogoRequest +logoText, model SQL `UPDATE company SET logo_url = ?, logo_text = ?`, 검증(길이 100), ★응답 전용 셰이프 `{companyId, logoUrl, logoText}`, findClient·getAuthInfo·getTenantInfo round-trip에 logo_text 포함. dev psql rolled-back ALTER 시뮬 검증.
+- **Phase 2** (`84e3f7d`, data-craft): FE 데이터 계약 — AccountInfo/UpdateCompanyLogoRequest +logoText·전용 UpdateCompanyLogoResponse·GetTenantInfoResponse +logoText·tenant store. accountInfo.logoText는 setAuth spread로 자동 hydrate 확인.
+- **Phase 3** (`21c8e64`+보정 `5ec16c2`, data-craft): LogoUploadDialog 4탭 개편(shadcn Tabs: 이미지/URL/이미지+텍스트/URL+텍스트)·복합 프리뷰(정사각+텍스트)·저장 {logoUrl,logoText}+optimistic·재오픈 활성탭 추론·i18n(ko/en). ★보정: 텍스트만 수정 시 기존 로고 보존(handleSave 폴백 + 복합 탭 저장버튼 활성).
+- **Phase 4** (`243828e`, data-craft): CompanyLogo 복합 렌더 — logoText 있으면 정사각 이미지(h-[50px] w-[50px]) 좌측+텍스트, 없으면 기존 image-only(w-[200px] h-[50px]). editable/view 양쪽·복합 이미지 에러→텍스트만·logoSrc 하이브리드 유지.
+
+### 검증
+- BE: dev psql rolled-back ALTER 시뮬(실 컬럼 후속) round-trip. FE: typecheck:all(tsc)+eslint 0 error 각 페이즈. round-trip logoText hydrate(getAuthInfo)·imageLoadError src변경 시 reset 확인.
+- ⚠️ **정적 통과·마스터 재캡처 대기**(logo_text 컬럼 dev 랜딩 후). 4탭 전환·복합 정사각+텍스트 프리뷰/렌더·저장/재오픈 = 재캡처.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft-server(BE):
+- `src/types/account.types.ts`, `src/types/auth.types.ts`, `src/controllers/account.controller.ts`, `src/services/account.service.ts`, `src/services/auth.service.ts`, `src/models/client.model.ts`
+
+data-craft(FE):
+- `src/shared/types/user.types.ts`, `src/_packages/fs-api/types/entities.ts`, `src/_packages/fs-api/types/requests/account.ts`, `src/_packages/fs-api/types/requests/auth.ts`, `src/_packages/fs-api/api/account.ts`, `src/entities/tenant/model/tenantStore.ts`, `src/features/logo-upload/ui/LogoUploadDialog.tsx`, `src/features/logo-upload/ui/CompanyLogo.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
