@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1236.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스4
+
+**빈 페이지 번개 아이콘 그라데이션 — 주황 제거·노란 계열 세로 방향·밝게 (핫픽스4).** 마스터 지시로 앰버(주황) 계열을 버리고 노란 계열 안에서 밝은 그라데이션으로 조정.
+
+### 핫픽스 결과
+- **Phase 5 (핫픽스4·fix)** `c5587be0`: `EmptySectionGuide.tsx` `ZapGradientIcon` 의 `<linearGradient>` 를 상단 `#fef08a`(밝은 레몬)·하단 `#facc15`(선명한 노랑)으로 교체(앰버 `#f59e0b` 제거), 방향을 가로(`x2=100% y2=0`)→**세로(`x2=0 y2=100%`)**로 전환 — 좁은 폭을 가로지르던 그라데이션을 긴 번개 세로 방향으로 흐르게 해 실제로 보이도록. `<Zap>` 크기(1.2em)·`scaleY(1.5)`·`top -0.1em`·`marginLeft 0.3em`·제목/힌트 무변경.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. **정적 diff + lint 기준** — 이번 반영 렌더 미확인. 참고: 확대(핫픽스3)+노란 세로 그라데이션(핫픽스4)이 처음 함께 렌더됨. 밝은 노랑(`#fef08a`)은 흰 배경 대비가 낮아 추가 가시성 필요 시 후보 = 드롭섀도/외곽선(순수 노랑 유지) 또는 하단을 골든 `#eab308`(여전히 노랑)으로 심화.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1235.0
 
 > 통합일: 2026-07-02
