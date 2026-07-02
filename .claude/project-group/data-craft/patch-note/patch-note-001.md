@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1259.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #567 (funshare-inc/data-craft)
+
+**위젯 설정 모달 확장(전체화면) 버튼 배선 — 무동작 수정.** 우상단 X 버튼 좌측의 확장 버튼이 클릭해도 반응 없던 원인은 `ModalHeader` 의 해당 버튼 onClick 이 `// TODO(phase-5+)` 주석뿐인 완전 no-op 플레이스홀더였기 때문. 클릭 시 모달을 전체화면 ↔ 기본 90%×90% 로 토글하고 아이콘도 확대/축소로 전환하도록 배선. FE-only·dev-only·origin 미푸시. 경계=모달 셸의 확장 버튼 + 컨테이너 사이징만 — 콘텐츠/registry/저장/textDesign(보조4)·스타일(δ 기머지)·진입 피커(β) 무접촉.
+
+### 결과 (1 페이즈)
+- **Phase 1 (fix)** `e732938`: `fullscreen` 로컬 state 를 Root(`WidgetSettingsModal`)에 `useState(false)`(조기반환 앞·rules-of-hooks 준수)로 두고 Root→Inner(props)→`ModalHeader`(props)로 전달. `DialogContent` className 을 `cn()` 조건부로 전환 — 전체화면 시 `w-screen h-screen max-h-screen rounded-none`(shadcn base `w-full`/`rounded-lg` override, 중앙 translate + 뷰포트 꽉참), 기본 시 기존 `w-[min(95vw,1600px)] h-[min(90vh,900px)]` 유지. `ModalHeader` 확장 버튼: `onClick={onToggleFullscreen}`·아이콘 `Maximize2`↔`Minimize2`·`aria-label` 확대↔축소 토글. 모달 자신의 className 만 변경(공유 `dialog.tsx` blast radius 0).
+
+### 검증
+- 머지 후 정적 게이트 `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings) — prop 스레딩 4지점 타입 정합 + `Minimize2` 해석 확인. 메인 세션 diff 실측 병행.
+- ★**dev 런타임 클릭 검증은 마스터 확인 몫**(bg job dev 미기동): 빈 페이지→아무 leaf 로 모달 오픈→확장 클릭→전체화면 전환 + 아이콘 축소(Minimize2) / 재클릭→90%×90% 복귀 + 아이콘 확대(Maximize2). 정적 검증만 통과 상태이며 "검증 통과"가 런타임 통과를 의미하지 않음.
+
+### 후속 / 지휘
+- **재오픈 시 직전 사이즈 유지(의도·비블로커)**: `fullscreen` state 가 Root 에 상주해 모달 close→reopen 시 직전 전체화면/기본 상태를 보존한다(요청 최소 범위 — reset-on-close 로직 미추가). 매 오픈 90% 강제가 필요하면 후속 결정.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/widget-settings-modal/ui/WidgetSettingsModal.tsx`
+- `src/widgets/widget-settings-modal/ui/ModalHeader.tsx`
+
 ## v001.1258.0
 
 > 통합일: 2026-07-02
