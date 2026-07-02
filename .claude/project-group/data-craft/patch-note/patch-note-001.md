@@ -1,5 +1,48 @@
 # data-craft — Patch Note (001)
 
+## v001.1271.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #570 (funshare-inc/data-craft) · work_repo=data-craft-server(BE)
+
+**뷰어 서빙 dead-join crash fix — 13개 서빙 read 파일이 DROP된 레거시 스키마를 참조하던 것을 신모델로 컷오버.** dev psql 실측으로 서빙 크래시가 dvrs/dvcs/dvs 하나가 아니라 **스키마 rename 3종 세트**(① `data_viewer_row_setting/column_setting/setting`(dvrs/dvcs/dvs) DROP·② `column_id`→`data_column_id`·③ `group_id`→`data_group_id`·+`id`→`data_row_id`)임을 확인, 마스터 스코프 확장(A) 승인 후 13 서빙 read 파일 전체를 정합. FE 무관·BE-only·dev-only·origin 미푸시.
+
+### 배경 (진짜 게이트=런타임·grep 언더카운트)
+- 2026-06-29 전면 `{table}_id` rename에 뷰어 서빙이 미정합 상태 → 재사용 보드 BE 서빙(메인 그리드 포함)이 **실제 500 크래시**(dead-join·42703). grep으로 dvrs만 보면 놓쳤을 것을 dev psql `to_regclass`(3테이블 DROP 확정)+42703 런타임 재현으로 포착.
+- 실측: dvrs/dvcs/dvs 전부 DROP·신모델 `data_row`/`data_column`/`page_widget` 정상. 핵심 4테이블 dev 활성행 0. 피벗 빌더 `buildPivotSelect`는 정상(내부 data_column_id·출력 `? AS group_id` 별칭)이라 무접촉 — 깨진 건 직접 EAV/cellRows 조인.
+
+### 확정 매핑
+- **dvrs→data_row**: `rs.id`→`rs.data_row_id`(join 값은 `row_num` 유지 = done 템플릿 `viewer.model.ts findRowSettingsByRowNums` `data_row_id IN (rowNums)` 정합), `rs.group_id`→`rs.data_group_id`.
+- **dvcs→data_column + page_widget.column_properties overlay**: `viewerType`/`optionList`/`customDataList` 등은 `column_properties -> data_column_id::text` LATERAL(COLUMN_WITH_PROPS_SQL 패턴)·`seq`는 data_column.
+- **dvs→page_widget.properties**: 뷰어 설정·`sub_grid_shared_config`는 properties 키로 분해 재조합(openHeight↔subGridOpenHeight 등).
+- **컬럼 rename**: 전 base-table `.column_id→.data_column_id`·`.group_id→.data_group_id`(스키마에 `column_id`/`group_id` 컬럼 부재 실측). 피벗 별칭 `pv.group_id`·JS 문자열·jsonb 키·주석은 무접촉.
+
+### 결과 (7 페이즈 + 보강)
+- **P1** `537592d`: 인벤토리 + 매핑/게이트 문서화(docs).
+- **P2** `83c445a`: 메인 그리드 pivot 페이징(fast/fallback/slow)+공유 기간필터 dvrs→data_row.
+- **P3** `12aef2d`: gantt/calendar/kanban dvrs→data_row.
+- **P2·3 보강** `19d5ed0`: 5 파일 base-table column_id/group_id rename(스코프 A 확장).
+- **P4** `780341e`: grouped/row/subGrid.
+- **P5** `256aad0`: 집계 simple/helpers/filter(helpers dvcs→overlay).
+- **P6** `991f069`: 집계 distribution/formula(dvcs→overlay·optionList/customDataList jsonb).
+- **P7** `9af627c`: subGridData read 3함수(parent_row_num→data_row·sub_grid_shared_config 재조합·dvcs overlay). write 함수는 범위밖.
+
+### 검증 (게이트=dev psql 원문 실행·grep/tsc 아님)
+- 각 페이즈 재작성 쿼리를 dev psql 실행 → 42P01/42703 부재 확인(fast-path·기간필터·overlay·pivot-wrapped 조립 쿼리·subgrid parent join 등). BE lint=eslint 각 페이즈 exit 0. ⚠️dev 활성행 0이라 **스키마-유효성**만 검증 가능 — 데이터-동작보존(정확한 행/순서/집계값)은 픽스처 시드(task-db-data) 선결 시 검증(범위밖).
+- 완결: **13 서빙 read 파일 전 라이브 SQL이 42703 없이 실행(크래시-free)**. bare+alias 이중 grep·조립 pivot 실행으로 확인.
+
+### 후속 (범위밖·필수 예약)
+- **write 경로 ~25 service 파일**(dataViewerChange/dataViewerPost·subGridData write 등)도 동일 dead → 별도 후속 플랜(읽기 됨·쓰기 크래시=반쪽).
+- **뷰어-인접 모델**(`externalData.model.ts`·`inputStore.model.ts`·`storage.model.ts`·`file.model.ts`)도 동일 스테일 `column_id`/`group_id` 잔존 — 본 13 파일 밖·후속.
+- fidelity(dev 0행 미검증): `findParentSubGridConfig` `showAggregation` 기본 `false`→`true`(reproject 미러)·`findColumnsByGroupId` `enableSorting/enableAggregation` smallint→boolean(소비부 `Boolean()` 안전 확인). 필요 시 소폭 보정.
+
+### 영향 파일
+data-craft-server(BE):
+- paging: `paging.grid.ts`·`paging.gantt.ts`·`paging.calendar.ts`·`paging.kanban.ts`·`paging.grouped.ts`·`paging.row.ts`·`paging.subGrid.ts`
+- aggregation: `aggregation.simple.ts`·`aggregation.helpers.ts`·`aggregation.filter.ts`·`aggregation.distribution.ts`·`aggregation.formula.ts`
+- `viewerPaging.whereclause.ts`·`subGridData.model.ts`(read only)
+- `docs/migration/dvrs-dvcs-dvs-serving-cutover/inventory.md`(신규)
+
 ## v001.1270.0
 
 > 통합일: 2026-07-02
