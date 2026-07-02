@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1261.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #567 (funshare-inc/data-craft) · 핫픽스1
+
+**위젯 설정 모달 전체화면 시 미리보기가 너비 증가분 전체를 흡수 (#567 핫픽스1).** #567 로 확장(전체화면) 토글을 배선했으나, 전체화면 전환 시 중앙 콘텐츠(`flex-1`)가 늘어난 너비를 모두 가져가고 미리보기는 340px 고정이었다. 마스터 요청: 전체화면에서 사이드(CategoryRail 260px)·중앙 콘텐츠는 90% 때 너비를 그대로 유지하고, **늘어난 너비 전부를 미리보기(PreviewPane)가 흡수**하게.
+
+### 결과 (1 핫픽스)
+- **핫픽스1 (fix)** `c8589be`: `WidgetSettingsModalInner` 의 콘텐츠 행에서 fullscreen 조건부 전환 — (1) 중앙 콘텐츠를 fullscreen 시 `flex-1` 제거 + `shrink-0` + **인라인 스타일 `width: calc(min(95vw, 1600px) - 600px)`** 로 90% 때 너비 고정(rail 260 + preview 340 = 600 을 90% 모달 폭에서 차감; border-box 라 정확). (2) 미리보기를 fullscreen 시 `flex-1 min-w-0` 로 나머지 전부 흡수, 기본 시 기존 `w-[340px] shrink-0` 유지. 기본(90%) 레이아웃은 무변경.
+- **인라인 스타일 채택 이유**: 중앙 폭이 `calc()` 내부 `min()` 중첩이라 Tailwind JIT 임의값 클래스(`w-[calc(min(...)_-_600px)]`)가 묵음 실패(미컴파일→중앙 collapse)할 수 있어, 렌더 보장을 위해 인라인 스타일로 이전. 미리보기의 `flex-1`/`w-[340px]` 는 JIT 안전 범위라 클래스 유지.
+
+### 검증
+- 머지 후 정적 게이트 `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings). 인라인 스타일 전환 후 재실행 통과.
+- ★**dev 런타임 클릭 검증은 마스터 확인 몫**(bg job dev 미기동): 전체화면 전환 시 사이드·중앙 폭 유지 + 미리보기 확대 / 중앙이 content 폭으로 collapse 되지 않는지(=인라인 스타일 정상 렌더) 확인. "정적 통과"가 런타임 통과를 의미하지 않음.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/widget-settings-modal/ui/WidgetSettingsModal.tsx`
+
 ## v001.1259.0
 
 > 통합일: 2026-07-02
