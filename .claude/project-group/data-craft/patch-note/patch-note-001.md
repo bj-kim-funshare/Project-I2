@@ -1,5 +1,36 @@
 # data-craft — Patch Note (001)
 
+## v001.1258.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #564 (funshare-inc/data-craft) · Track δ
+
+**R16 위젯 공통 스타일 보강 — (1) 9점 콘텐츠 정렬(세로 상/중/하 × 가로 좌/중/우) 복원·기본값 중앙, (2) per-side 박스모델 테두리(상/하/좌/우 각 width·style·color).** 설계서 §2(스타일/배경)의 두 ★항목. FE-only·dev-only·origin 미푸시. 경계=textDesign 렌더/registry(보조4)·빈 페이지 피커(보조3) 무접촉·공통 스타일 타입/UI/적용부만 소유.
+
+### 결과 (4 페이즈)
+- **Phase 1 (fix)** `ce6b77d`: 공통 위젯 박스 셀-채움 정합 — `buildGridItemStyle` 반환에 `display:'flex'` 추가. 부모 grid-item이 block이라 자식 `SingleWidgetRenderer` 컨테이너의 `flex-1`이 무효→콘텐츠 높이 접힘→세로중앙 불가였던 **근본 원인 해소**. `buildGridItemStyle`은 R16 3경로 공통 소비(모달 미리보기 `PreviewPane`·디자인모드 격자 `GridWidgetItem`·뷰모드 격자 `Section`)→한 지점 수정이 세 경로 동시 정합. 드래그 고스트 `absStyle`도 동일. 공유 `SingleWidgetRenderer`·레거시 Area(AreaWidgetContent, buildGridItemStyle 미사용) 무변경.
+- **Phase 2 (feat)** `0312abf`: 9점 정렬 공통 UI — `ContentAlignmentSection`(3×3 피커) 신설, `verticalAlignment`×`alignment`를 `patchStyle` 기록·**미설정 기본 center/center**·stretch(뷰어) no-match 처리. `WidgetSettingsModal` 스타일 설정 분기 `baseContent` 위 공통 블록 배선(per-widget `StyleSettings`·`ConditionalStyleSection` 무변경). 렌더 매핑(`getWidgetContainerStyles`)은 기존 존재+Phase 1로 실동작.
+- **Phase 3 (feat)** `e0ee915`: per-side 테두리 타입+렌더러 — `WidgetStyleProps`에 `border{Side}Width/Style/Color` 12필드 additive(기존 bool·공유 필드 유지·하위호환). `getWidgetBorderStyles()` 신설(면별 CSS·per-side ?? 공유 ?? 폴백[1px·#000000])→ dead `getAreaDesignStyles`가 못하던 **활성 경로 연결**. `SingleWidgetRenderer` 컨테이너에 disjoint-key 얕은 머지. 레거시 위젯은 border를 `area.style`(AreaStyleProps)에 저장→`{}` 반환→무회귀. 기존엔 모달이 기록한 테두리가 **어디서도 렌더 안 되던 공백**을 메움.
+- **Phase 4 (feat)** `2fc96e9`: per-side 테두리 UI — `BackgroundSettingsSection` 개별 모드=활성 면마다 두께·스타일(실선/파선/점선)·색 행 조건부 렌더, 일괄 모드=기존 공유 두께·색 + 스타일 선택기(4면 동시) 추가, 둥글기=전체-박스라 양 모드 공용.
+
+### 검증
+- 각 페이즈 후 lint gate `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings). 메인 세션 직접 실측 병행.
+- **★런타임 게이트(마스터 라이브 — bg job 렌더 불가)**:
+  - ① 빈/비-stretch 위젯 기본이 모달 미리보기·격자(디자인+뷰 모드) **양쪽 세로/가로 중앙** 렌더.
+  - ② **광범위 재중앙 확인(무회귀 아님·거동 변화)**: Phase 1로 기존 배치된 **모든 비-stretch 위젯이 이전 상단 고정→세로 중앙**으로 이동. 허용 가능 여부 확인 필요(뷰어는 stretch 강제라 무영향).
+  - ③ **수평 오프셋 별도 확인**: 마스터가 보고한 "좌상단"의 세로(top)는 Phase 1로 해소되나 가로(좌)는 `w-full`+`justifyContent:center`상 이미 중앙이어야 함 — 잔여 좌측 오프셋이 남으면 Phase 1과 무관한 별도 원인.
+  - ④ 9점 정렬 9개 위치 반영 · per-side 테두리 면별 width/style/color 구분 렌더.
+
+### 후속 / 지휘
+- **모드전환 per-side 잔존(비블로커)**: 개별 모드 per-side 설정 후 일괄 모드로 공유값 변경 시 `getWidgetBorderStyles` per-side 우선으로 해당 면 미반영. 폴백 우선순위상 의도된 동작 — 모드전환 초기화 로직 추가 여부는 후속 마스터 결정.
+- **배경색 박스 불일치(범위 밖)**: 현재 `backgroundColor`는 textDesign 내부(`getWidgetInlineStyles`)에 적용되어 테두리(컨테이너 박스)와 다른 박스에 렌더. 배경색의 컨테이너 이전은 별도 후속(surgical 유지).
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/layout-canvas/ui/gridLayoutUtils.ts` · `GridWidgetItem.tsx` · `SingleWidgetRenderer.tsx`
+- `src/widgets/widget-settings-modal/ui/sections/ContentAlignmentSection.tsx`(신규) · `BackgroundSettingsSection.tsx` · `WidgetSettingsModal.tsx`
+- `src/shared/types/widget-base.types.ts` · `src/shared/lib/widget-styles.ts`
+
 ## v001.1257.0
 
 > 통합일: 2026-07-02
