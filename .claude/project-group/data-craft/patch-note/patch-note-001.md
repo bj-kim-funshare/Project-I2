@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1263.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #568 (funshare-inc/data-craft)
+
+**디자인모드 헤더 섹션 제어 말풍선 3영역 통일 재디자인.** 기존 말풍선은 "높이" 라벨·"px" 문구가 입력 박스 바깥에 떠 있고 세로 구분선 2개 + 버튼/박스 높이 불일치(h-7/h-8)로 여러 조각으로 흩어져 보였다. 마스터 요청(이미지 스펙): 높이·px 를 입력 영역 내부로 넣어 말풍선을 3개 균일 영역(① 위젯 추가 ② 높이 500 px ↩ ③ 세로 확장)으로 통일. FE-only·dev-only·origin 미푸시. 순수 마크업/스타일 재배치 — 핸들러/상태/스토어/i18n 무변경.
+
+### 결과 (1 페이즈)
+- **Phase 1 (fix/style)** `da56663`: `DesignHeaderBubble.tsx` — (1) 세로 구분선 2개 삭제, (2) 외부 "높이" 라벨·"px" 스팬을 높이 입력 박스 내부로 이동(박스 = 높이 라벨·입력값·px·리턴아이콘 `gap-1` 한 줄), (3) 박스 배경 `bg-white`→`bg-[#F5F5F3]` 연회색 채움으로 가운데 영역 시각 분리(다크 `#171A1F`), px·리턴아이콘 다크 변형 추가, (4) 위젯추가·세로확장 버튼 `h-7`→`h-8` 로 세 영역 높이 통일, 컨테이너 `gap-1`→`gap-1.5`. 입력 핸들러(value/onChange/onKeyDown/onBlur/onFocus)·`applyHeight`·`expandSection`·i18n 키 전부 원문 보존. input `w-11`(pl-2 pr-0.5)→`w-10`(gap 정렬)로 유효 자릿수 폭은 오히려 증가.
+
+### 검증
+- 머지 후 정적 게이트 `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings).
+- ★**dev 런타임(화이트/다크) 렌더는 마스터 확인 몫**(bg job dev 미기동): 말풍선이 3개 균일 높이 영역으로, 높이 박스 안에 `높이 500 px ↩` 한 줄·구분선 없음으로 보이는지, 높이 입력/Enter/세로확장 기능 회귀 없는지. 조정 레버=가운데 박스 채움색(`#F5F5F3`)·세그먼트 간격(`gap-1.5`). "정적 통과"가 이미지 일치를 의미하지 않음.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
 ## v001.1261.0
 
 > 통합일: 2026-07-02
