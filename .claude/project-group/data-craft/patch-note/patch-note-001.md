@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1272.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #569 (funshare-inc/data-craft) · 핫픽스1
+
+**위젯 설정 모달 런타임 5건 일괄 수정 (#569 핫픽스1).** 마스터 dev 런타임 검증(스크린샷+DevTools)에서 발견한 결함 5종을 봉합. 모든 위젯 공유 셸·dev-only·미푸시.
+
+### 결과 (핫픽스1 · 4커밋)
+- **A (fix)** `8045867`: ★**헤더 저장 무반응** — `handleSaveApply`가 적용 후 `setAreaWidget`에만 의존했는데 R16 격자 섹션은 area 슬롯 불일치로 early-return(areaActions:140) → `hasUnsavedChanges` 미설정 → 저장 버튼 `disabled=!hasUnsavedChanges`로 비활성(Network 요청 0). 적용 종료 직전 `useLayoutStore.setState({hasUnsavedChanges:true})` 명시 삽입으로 경로 무관 저장 활성. + **모달 너비**: 중앙 −20%·미리보기 +20%(비확장 preview 340→520px·풀스크린 center calc −600→−800px).
+- **B (fix)** `bb0f6aa`: **일괄/개별 상태 손실** — borderMode/radiusMode가 로컬 `useState('uniform')`라 탭 전환 remount 시 4면 일괄 복귀. lazy initializer `useState(()=>deriveBorderMode(style))`로 draft.style에서 파생 → 탭 전환 후에도 개별 설정 유지. + **테두리 두께 0.5~3→0.5~7**(BORDER_WIDTH_OPTIONS 8단계·WidgetStyleProps union 확장·fs-api entities mirror 동반).
+- **C (fix)** `a45e5fbf`: **미리보기 배경색이 콘텐츠만큼만** — backgroundColor가 `getWidgetInlineStyles`(콘텐츠 div)에, 테두리는 `getWidgetBorderStyles`(외곽 컨테이너)에 있어 bg가 테두리 박스보다 작음. bg를 `getWidgetContainerStyles`(테두리와 동일 컨테이너)로 이동 → 테두리 내부 전체 채움.
+- **C2 (fix)** `438fde68`: **회귀 방지**(advisor#2 지적) — C의 bg 이동이 `SubAreaCell`(container styles 미적용·createWidget만) 경로의 서브영역 위젯 배경을 소실시킴. backgroundColor를 `getWidgetInlineStyles`에도 복원(container와 병행·같은 색 무해) → 모든 render 경로 배경 유지.
+
+### 검증
+- 정적 게이트(그룹별): `pnpm typecheck:all && pnpm lint` exit0(0 error). advisor#2 PASS(★bg 이동 전위젯 render 경로 grep 확인 → SubAreaCell 회귀 C2로 봉합).
+- ★**dev 런타임(REQUIRED·마스터 몫)**: (1)★위젯 추가(2·3개)→적용→**헤더 저장 클릭 시 Network POST 발생**→**새로고침 유지**. ※저장 "활성"≠"영속" — 새로고침 실패 시 원인은 write payload areaId→page_section 매핑(dirty 아님). (2)미리보기 배경색 테두리 내부 전체 채움. (3)테두리/둥글기/색 개별 설정 후 탭 전환→유지. (4)두께 슬라이더 7px 도달. (5)중앙 좁아지고 미리보기 넓어짐. ★**비-textDesign 위젯(뷰어/보드)도 배경·두께 회귀 없는지 함께 확인**(공유 코드 변경).
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/widget-settings-modal/ui/WidgetSettingsModal.tsx` · `src/widgets/widget-settings-modal/ui/sections/BackgroundSettingsSection.tsx`
+- `src/shared/lib/widget-styles.ts` · `src/shared/types/widget-base.types.ts` · `src/_packages/fs-api/types/builder/entities.ts`
+
 ## v001.1271.0
 
 > 통합일: 2026-07-02
