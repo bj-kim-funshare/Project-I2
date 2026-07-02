@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1233.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스1
+
+**빈 페이지 번개 아이콘 — 레몬 색조·세로 확장·"빈 페이지" 제목 우측 이동 (핫픽스1).** 직전(v001.1232.0)에 안내 문장 끝에 배치한 번개 아이콘을 마스터 피드백에 따라 조정: (1) 색을 노랑→주황에서 더 밝은 레몬(#fde047→#facc15)으로, (2) 가로로 퍼져 보이던 형태를 `scaleY(1.3)` 세로 확장으로, (3) 위치를 안내 문장 끝에서 "빈 페이지" 제목 텍스트 우측으로 이동.
+
+### 핫픽스 결과
+- **Phase 2 (핫픽스1·fix)** `12dfb424`: `EmptySectionGuide.tsx` 에서 `ZapGradientIcon` 을 안내 문장 `<Trans>` 슬롯에서 제목 `<p>` 우측으로 이동(제목 텍스트 뒤 렌더). 그라데이션 stop 을 `#facc15`→`#f97316` 에서 `#fde047`→`#facc15`(레몬)으로 변경. `<Zap>` style 에 `transform: scaleY(1.3)` · `transformOrigin: center` · `marginLeft: 0.3em` 추가(세로 확장 + 제목과 간격). `emptySection.hint`(ko/en)에서 `<0/>` 슬롯 제거 → 안내 문장은 `t()` 평문으로 환원, 미사용 `Trans` import 제거.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. **정적 diff + lint 게이트 기준** 검증 — 시각 렌더 미확인. 참고(비차단, PENDING 조정 후보): `scaleY(1.3)` 은 균일 글리프가 아닌 비균일 세로 확장이라 비율 왜곡 가능, 레몬 그라데이션 범위가 좁아(yellow-300→yellow-400) 거의 단색으로 보일 수 있음 — 실제 렌더 확인 후 필요 시 재조정.
+
+### 영향 파일
+data-craft:
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1232.0
 
 > 통합일: 2026-07-02
