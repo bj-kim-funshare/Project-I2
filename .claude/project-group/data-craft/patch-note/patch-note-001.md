@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1240.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스8
+
+**테마 선택 오버레이 "기본" 우측 βeta 안내 노트 추가 (핫픽스8).** 설정→앱 설정→테마 선택 오버레이 상단 "기본" 헤딩 우측에 파란색 안내 문구 `* 테마는 βeta 기능입니다.`("B"=그리스 문자 β) 추가.
+
+### 핫픽스 결과
+- **Phase 9 (핫픽스8·fix)** `4c576c30`: `ThemeGrid.tsx` 의 `theme.groupBasic`("기본") 헤딩 `<p>` 안에 `<span className="ml-1.5 text-blue-600 dark:text-blue-400">` 로 노트 렌더. 신규 로케일 키 `theme.groupBasicNote` — ko `* 테마는 βeta 기능입니다.` / en `* Theme is a βeta feature.` (both β=U+03B2). "컬러"(groupColor) 헤딩·나머지 무변경.
+
+### 검증
+- `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38). 정적 diff + lint 기준 — 렌더 미확인. 참고(비차단): ① en 문구("* Theme is a βeta feature.")는 마스터 미지정으로 하우스 관례(theme.* 전부 양언어)에 따라 자체 작성 — 필요 시 문구 조정. ② `β`(U+03B2)는 코드상 정상이나 앱 폰트 text-xs 렌더에서 모양은 실제 화면 확인 권장.
+
+### 영향 파일
+data-craft:
+- `src/widgets/settings-dialog/ui/ThemeGrid.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1239.0
 
 > 통합일: 2026-07-02
