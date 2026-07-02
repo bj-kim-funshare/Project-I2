@@ -36037,3 +36037,20 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1253.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스8
+
+섹션 컨트롤 바의 위젯추가·세로확장 버튼 높이 소폭 추가 축소 (마스터 지시·FE-only).
+
+### 수정 (DesignHeaderBubble)
+- 위젯 추가 버튼·세로 확장 버튼 `h-8`(32px)→**`h-7`**(28px). 높이 필드(h-8)·아이콘·패딩·색상·꼬리·로직 무변경(surgical).
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기. dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
