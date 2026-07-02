@@ -1,5 +1,24 @@
 # data-craft — Patch Note (001)
 
+## v001.1268.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #568 (funshare-inc/data-craft) · 핫픽스2·3
+
+**섹션 제어 말풍선 꼬리 채움색을 우측 세로확장 영역 배경에 연동 (#568 핫픽스2+3).** 3구획 세그먼트 바(#568 핫픽스1)에서 오른쪽으로 튀어나온 말풍선 꼬리(내부 삼각형)가 흰색으로 하드코딩돼 있어, 우측 세로확장 영역이 연파랑(`#EFF4FF`)이 되는 상태에서 꼬리만 혼자 흰색으로 튀는 문제. 꼬리 채움을 세로확장 영역 배경과 일치시킴 — **활성(섹션 확장) + 호버** 양쪽 모두.
+
+### 결과 (2 핫픽스)
+- **핫픽스2 (fix/style)** `fae2859`: 꼬리 내부 삼각형 색을 고정 `border-l-white` → `cn()` 조건부. `section?.isExpanded` 시 `border-l-[#EFF4FF]`(다크 `#222F44` = `rgba(59,130,246,.14)`를 바 배경 `#1E2127`에 합성한 solid), 아니면 흰색(다크 `#1E2127`). 외곽 아웃라인 삼각형(`#D6D6CF`)은 무변경(말풍선 테두리 연장).
+- **핫픽스3 (fix/style)** `163208e`: 호버 상태도 연동. 꼬리는 overflow-hidden 바 바깥 형제라 CSS 형제 선택자로 버튼 `:hover` 전파 불가 → 세로확장 버튼에 React `expandHovered` 상태(`onMouseEnter`/`onMouseLeave`) 추가, 꼬리 조건을 `section?.isExpanded || expandHovered`로 확장. 색 토큰은 버튼 호버 틴트(`#EFF4FF`/다크 `#222F44`)와 동일해 정확히 일치.
+
+### 검증
+- 각 핫픽스 후 `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 38 warnings).
+- ★**dev 런타임(마스터 몫)**: 세로확장 영역이 활성/호버로 연파랑이 될 때 오른쪽 말풍선 꼬리도 동일 색으로 채워지는지(화이트/다크), 비활성·비호버 시 흰색/바 배경 복귀.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
 ## v001.1267.0
 
 > 통합일: 2026-07-02
