@@ -36107,3 +36107,23 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1256.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스10
+
+위젯 추가 피커에 모달식 dark backdrop 추가 (경계 구분 강화·마스터 지시·FE-only).
+
+### 수정 (DesignHeaderBubble)
+- 위젯 추가 피커 오픈(`pickerOpen`) 시 **전체 뷰포트 다크 오버레이**(`createPortal`로 body에 `fixed inset-0 z-40 bg-black/50`) 삽입 → 나머지 영역 전부 어둡게. 오버레이 클릭 시 피커 닫힘.
+- **위젯 추가 버튼**(`pickerOpen && relative z-50`)과 **피커 팝오버**(PopoverContent `z-50`, 포털)만 오버레이(z-40) 위로 부각 → 밝게 유지. 바의 나머지(높이 입력·세로확장 토글)는 미상승이라 오버레이에 어두워짐.
+- 헤더에 z-index 캡 없음 확인(버튼 z-lift 유효 전제). 로직/배선 무변경.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기(버튼 z-lift는 조상 stacking-context 없음 전제이므로 시각 재확인 권장).
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
