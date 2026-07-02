@@ -36054,3 +36054,22 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+
+## v001.1254.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스9
+
+섹션 컨트롤 바 좌측 여백 + 말풍선 꼬리 마감 개선 (마스터 지시·FE-only).
+
+### 수정 (DesignHeaderBubble)
+- **① 위젯추가 좌측 여백 확대**: 루트 `pl-1`→`pl-2.5`(우측도 `pr-2.5`로 균형, 신 꼬리는 바 바깥이라 기존 pr-3 클리어런스 불필요).
+- **② 말풍선 꼬리 안쪽 선 제거**: 회전 사각(rotate-45) 꼬리는 안쪽 절반이 바 내부로 선을 비추던 문제 → **CSS border 삼각형 2겹**(외곽 7px #D6D6CF + 내부 6px white·다크 #363C44/#1E2127)으로 교체. 삼각형은 사각 내부가 없어 안쪽 선이 원천 소거되고, 바 바깥에 위치해 버튼과 무겹침. z-index 트릭 미사용.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 로직 무변경. 정적 통과·마스터 재캡처 대기(삼각형 1px 정렬은 재캡처 시 미세 조정 가능).
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
