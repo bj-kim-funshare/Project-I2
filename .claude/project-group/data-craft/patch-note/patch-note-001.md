@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1235.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스3
+
+**빈 페이지 번개 아이콘 가시성 강화 (핫픽스3).** 렌더 스크린샷 확인 결과 "빈 페이지" 제목 옆 번개 아이콘이 작고 옅어 눈에 잘 안 띄어, 크기·채도·세로 길이를 강화.
+
+### 핫픽스 결과
+- **Phase 4 (핫픽스3·fix)** `2f2582c9`: `EmptySectionGuide.tsx` `ZapGradientIcon` 에서 (1) 크기 `width/height 1em→1.2em` 확대, (2) 그라데이션 하단 `#facc15→#f59e0b`(레몬→앰버) 채도 강화, (3) `scaleY 1.3→1.5` 세로 확장. 위치(`top -0.1em`)·간격(`marginLeft 0.3em`)·제목/힌트 텍스트 무변경.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev 반영. 스크린샷(실 렌더) 기반 조정 — 단, 이번 반영 자체의 렌더는 미확인. 현재 파라미터: `size 1.2em`·`scaleY 1.5`·`top -0.1em`·`marginLeft 0.3em`·그라데이션 `#fde047→#f59e0b`(가로 방향). 추가 가시성 필요 시 후보: 색 심화(주황 `#ea580c` 계열)·세로 그라데이션(`y1 0→y2 100%`)·드롭섀도.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+
 ## v001.1234.0
 
 > 통합일: 2026-07-02
