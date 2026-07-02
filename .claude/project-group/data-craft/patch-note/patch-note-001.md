@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1242.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스10
+
+**테마 Beta 태그를 위젯 설정 드로어 "β Beta" 디자인으로 통일 (핫픽스10).** 마스터 지시로 테마 오버레이 Beta 태그를 기존 위젯 설정 드로어의 태그 디자인과 일치시킴.
+
+### 핫픽스 결과
+- **Phase 11 (핫픽스10·fix)** `2bb7a685`: `ThemeGrid.tsx` "기본" 헤딩 Beta 태그를 소프트-틴트 `bg-blue-100` 원형 pill("βeta") → 위젯 드로어(`WidgetTypeSelector.tsx:165-170`)와 동일한 `bg-sky-50 text-sky-700 border border-sky-200 rounded-md text-[10px] font-medium` + `<span class="font-serif italic">β</span> Beta` 로 교체. 공유 컴포넌트 부재라 인라인 마크업 1:1 복제(인라인 배치용 `inline-flex`·`ml-1.5`·`align-middle`만 조정, 다크 변형 미추가 = 레퍼런스 1:1).
+
+### 검증
+- `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38). 프로덕션에 이미 존재하는 디자인 복제라 시각 리스크 낮음(`bg-sky-50` 자체 배경 보유로 다크 popover에서도 판독). 참고: 두 인라인 사본(WidgetTypeSelector/ThemeGrid) 향후 드리프트 가능은 surgical 매칭의 의도된 tradeoff(공유 컴포넌트 추출은 범위 밖).
+
+### 영향 파일
+data-craft:
+- `src/widgets/settings-dialog/ui/ThemeGrid.tsx`
+
 ## v001.1241.0
 
 > 통합일: 2026-07-02
