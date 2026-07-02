@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1269.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #566 (funshare-inc/data-craft) · 핫픽스1
+
+**textDesign 위젯 최초 콘텐츠를 현재 페이지 이름으로 시드 (#566 핫픽스1).** 기존엔 `DEFAULT_TEXT_DESIGN_PROPERTIES.content=''`(빈 값) 이라 설정 폼 내용 필드가 비어 있고 렌더러 폴백으로만 페이지명이 보였다. 마스터 요구="텍스트가 최초에 페이지 명을 실제 값으로 사용" → 생성 시 draft content 를 현재 페이지명으로 시드.
+
+### 결과 (1 핫픽스)
+- **핫픽스1 (fix)** `310549e`: `useModalDraft.ts` `buildInitialDraft(subtype)` — subtype='textDesign' 이고 defaultProperties.content 가 비어있을 때 `usePageStore.getState().getCurrentPage()?.name`(비반응형)으로 페이지명을 `properties.content` 에 시드. useState 초기값·initialSnapshot 이 동일 `buildInitialDraft` 경유라 모달 열기 시 draft===snapshot → dirty=false 보장. 빈 페이지명이면 시드 생략(렌더러 폴백 유지). 타 subtype 무영향.
+
+### 검증
+- 정적 게이트 `pnpm typecheck:all && pnpm lint` exit0(신규 오류 0·기존 38 warning 무관).
+- ★dev 런타임(마스터 몫): 신규 textDesign 생성 시 설정 폼 내용 필드에 현재 페이지명이 실제 편집값으로 채워지는지·dirty 배지 없이 열리는지.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/widget-settings-modal/lib/useModalDraft.ts`
+
 ## v001.1268.0
 
 > 통합일: 2026-07-02
