@@ -35906,3 +35906,31 @@ data-craft(FE):
 ### 영향 파일
 data-craft-server(BE):
 - `src/types/builder.types.ts`, `src/models/builder.model.ts`, `src/services/builder/builder.layout.ts`
+
+## v001.1247.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #560 (funshare-inc/data-craft)
+
+R16 위젯 설정 모달 병렬착수(계약 `Documents/data-craft-위젯모달-병렬착수-계약-20260702.md`) **Track C (보조4)** — textDesign 위젯 콘텐츠 모듈을 계약2 registry seam 인터페이스에 맞춰 자족 신규 모듈로 제작. 기존 '일반'+'화면 타이틀' 2종을 **통합 1종**(textType 모드 토글 제거·옵션 상시 제공). 셸/공통 섹션/registry 인터페이스/`WidgetType` union/render registry/공유 locale **전부 무접촉**(읽기전용 import만).
+
+### 페이즈 결과
+- **Phase 1** (`e6c8336e8`): `model/contract.ts` — 계약2 로컬 미러 `WidgetContentEntry`(필드명 verbatim) + `TextDesignProperties`(content·showIcon·showBreadcrumb·showDescription, textType 제거). `model/textDesignEntry.ts` 상수 — 기본값(content='' → 렌더 시 라이브 페이지명 폴백)·`TEXT_DESIGN_MIN_GRID` 16×4(잠정).
+- **Phase 2** (`3b3fbf416`): `ui/TextDesignPreview.tsx` — 통합 렌더러. title 폴백 체인 content→currentPage.name→i18n placeholder(빈 렌더 금지), content 다행 pre-line, 아이콘/경로(sidebar.home)/설명 상시 토글. `@/shared/lib` 헬퍼·usePageStore 재사용(레거시 컴포넌트 미임포트). currentPage null 안전.
+- **Phase 3** (`6515f7fe2`): `ui/TextDesignWidgetSettings.tsx`(content Textarea+스위치 3종 상시·`emit(key,value)` 단일 깔때기) + `ui/TextDesignStyleSettings.tsx`(fontSize 8~72·fontWeight·textColor, 평면). 기존 `propertyDrawer.*` 키 재사용(신규 i18n 0).
+- **Phase 4** (`b780cc660`): `model/textDesignEntry.ts` entry 배선(`textDesignContentEntry`: subtype·dataBinding=WIDGET_GROUP_SOURCE['textDesign']('none')·conditionalStyle=false·컴포넌트 3종·기본값·minGrid·PreviewRender) + `index.ts` barrel.
+
+### ⚠️ B→C 훅업 통합 노트 (advisor #2 봉인)
+1. **캔버스 렌더 배선 갭**: PreviewRender는 컴포넌트로만 존재 — 저장된 textDesign을 **본문 격자에 실제 렌더**하는 경로(render registry 등록/`WidgetType` union 'textDesign')는 A 정수매핑+B registry 의존으로 **의도적 스코프아웃**. 통합 시 필수 배선(가정 금지).
+2. **인터페이스 superset 대조**: B 캐노니컬 엔트리가 8필드 초과(LABELS/CAPABILITY/카테고리) 요구 시 훅업 1줄 초과 — 훅업 전 필드집합 대조.
+3. **`WidgetGroupSource` index 미재수출** → `widgetType.ts` 직접 import 우회(재수출 추가 고려). **minGrid 16×4 잠정**.
+
+### 검증
+- 정적 게이트 페이즈별 `pnpm typecheck:all && pnpm lint` — 직접 실측 typecheck 0·lint 0 errors(38 warnings 전부 기존 fs-data-viewer·신규 파일 0건). advisor 계획/완료 PASS. 런타임 왕복은 계약상 A+B 통합 후.
+- dev 전용·i-dev 로컬 머지·origin 미푸시·prod 무접촉.
+
+### 영향 파일
+data-craft(FE) — 전부 신규 `src/features/text-design-widget/`:
+- `model/contract.ts`, `model/textDesignEntry.ts`
+- `ui/TextDesignPreview.tsx`, `ui/TextDesignWidgetSettings.tsx`, `ui/TextDesignStyleSettings.tsx`
+- `index.ts`
