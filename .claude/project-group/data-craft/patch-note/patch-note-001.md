@@ -1,5 +1,39 @@
 # data-craft — Patch Note (001)
 
+## v001.1255.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #562 (funshare-inc/data-craft) · Track B
+
+**R16 위젯 설정 모달 셸 + 공통 섹션(데이터/배경/조건부 스타일) + 위젯 콘텐츠 registry seam 구축 (빈 페이지 빠른-추가 진입).** 위젯 피커 leaf 선택 시 여는 90%×90% 통합 설정 모달(옛 property-drawer + 뷰어 열 스타일 + 외부 스타일 합병)의 셸·공통 섹션·거동·registry 인터페이스를 FE에 구축하고 빈 페이지 피커 진입을 배선. 3세션 병렬(A 저장·BE / **B 모달셸·FE(본 항목)** / C 텍스트 콘텐츠·FE) 중 Track B.
+
+### 결과 (8 페이즈)
+- **Phase 1 (feat)** `7c4c69c`: subtype-keyed 위젯 설정 registry(계약2 8필드 인터페이스: subtype·dataBinding·conditionalStyle·WidgetSettings·StyleSettings·defaultProperties/Style·minGrid·PreviewRender)·widgetMetadata(dataBinding=WIDGET_GROUP_SOURCE 파생·conditionalStyle allowlist[blockWidget+보드5]·minGrid 표·subtype→WidgetType FE 맵)·WidgetConfig에 additive optional `subtype?` 필드.
+- **Phase 2 (feat)** `d1296fe` (+lint 핫픽스 `3ab2ea6`): 90% Dialog 셸 프레임(헤더[위젯명+타입배지+확대/X]·좌 레일[4분류/none-data 3분류]·푸터["설정 초기화" 제거·위젯 삭제/취소·저장 및 적용]·우 LIVE 미리보기[빌더 경로·draft 렌더])·create-modal 상태·useModalDraft(draft+dirty)·BuilderPage 병존 렌더(SettingsModalShell 유지). lint 핫픽스=dirty 계산 ref-during-render→useState.
+- **Phase 3 (feat)** `d3603bd`: 빈 페이지 피커 leaf→모달 진입 배선(onPickSubtype 스레딩)·create-save 스파인(createWidget→updateWidgetProperties/Style→updateWidget[subtype+격자]→setAreaWidget→닫힘·**캔버스 반영·BE 무접촉**).
+- **Phase 4 (feat)** `2502c7e`: dirty-aware 닫기 3종(취소/X/외부클릭: dirty→미저장 경고 모달→버림/clean 즉시)·dirty 우상단 빨강 배지·위젯 삭제 확인 모달(edit 전용)·환경(system) 테마 토큰(기존 'system' OS-auto 소비).
+- **Phase 5 (feat)** `313f5c1`: 공통 배경 설정(격자 크기 min 표기+max 동적 빈공간 상호의존 클램프·박스모델 테두리 4면 일괄↔개별·배경색).
+- **Phase 6 (feat)** `d6961fb`: 공통 데이터 설정(그룹·열·통합 필터+기간)+필수 데이터 게이팅(dataGroupId 미설정→위젯/스타일/배경 레일 잠금+저장 및 적용 비활성).
+- **Phase 7 (feat)** `c42bb3c`: 공통 조건부 스타일(보드5=열 선택→규칙/블록=1:1 규칙·기본+외부 스타일 합병[ExternalStyleControl+hasExternalStyle]·draft 보관).
+- **Phase 8 (feat)** `10bc663`: gridBoard 메인/서브 토글(각 4분류=8구획)+게이팅 캐스케이드(메인 데이터 해제→서브 이동 비활성·서브 OFF).
+
+### 검증
+- 페이즈별 + 머지 후 i-dev `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38). ★런타임 실행 가능 범위 = textDesign 설계 위젯 create 플로우(leaf→모달→저장→캔버스)뿐이나 **dev 미기동으로 실제 실행은 아님**(정적 typecheck + 배선 확인). 데이터·조건부·gridBoard 메인/서브·필수 게이팅 캐스케이드는 미존재 위젯 대상 구조 스캐폴드 → 셸 시각·거동은 **마스터 라이브 검증 대상**.
+
+### 후속 / 지휘 승인 (cross-track)
+- **canonical-subtype 저장 seam**: canonical은 신 optional `subtype?`에 실음(type=FE WidgetType 유지·계약 "type=canonical" 이탈). A(saveLayout)가 subtype→int 매핑 + FE 직렬화기(`layoutPersistence.ts`) payload 포함 배선 소유 = 지휘 확정 요. 본 항목은 캔버스 subtype 세팅까지만·BE 왕복 무접촉.
+- **per-side 박스모델 테두리**: `WidgetStyleProps`가 단일 border 값만 → 4면 개별 두께/색/둥글기는 shared 타입+렌더러 변경 필요(별도 트랙·현재 일괄 동작).
+- 데이터 열 목록 API·draft-scoped 기간·columnProperties 캔버스 필드·edit 진입점·헤더 피커·textDesign 콘텐츠(Track C)·블록 leaf→subtype 매핑.
+
+### 영향 파일
+data-craft:
+- `src/widgets/widget-settings-modal/**` (신규 디렉토리: registry seam·모달 셸·공통 섹션·거동·gridBoard 토글)
+- `src/widgets/empty-section-guide/ui/{EmptySectionGuide,CategoryExpandRow}.tsx`
+- `src/widgets/layout-canvas/ui/{Section,LayoutCanvas}.tsx`
+- `src/entities/layout/model/{layoutStore,layoutTypes}.ts`
+- `src/shared/types/widget-base.types.ts` · `src/_packages/fs-api/types/builder/entities.ts` (WidgetConfig `subtype?`)
+- `src/pages/builder/BuilderPage.tsx`
+
 ## v001.1242.0
 
 > 통합일: 2026-07-02
