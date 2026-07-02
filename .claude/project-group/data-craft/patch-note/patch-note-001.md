@@ -1,5 +1,27 @@
 # data-craft — Patch Note (001)
 
+## v001.1241.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #558 (funshare-inc/data-craft) · 핫픽스9
+
+**테마 βeta 파란 태그화 + "위젯" 서비스색 밑줄 (핫픽스9).** 두 마스터 요청 묶음: (A) 테마 오버레이 βeta 노트를 별표 제거·"βeta"만 남긴 파란 태그로, (B) 빈 페이지 "위젯" 키워드에 서비스색 밑줄 추가.
+
+### 핫픽스 결과
+- **Phase 10 (핫픽스9·fix)** `64f98291` (4파일):
+  - **Part A** `ThemeGrid.tsx`: "기본" 헤딩 우측 노트를 평문 span → **파란 pill 태그** `<span className="…rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">βeta</span>` 로 교체(별표 제거, 문구 "βeta"만). 고정 태그화로 `theme.groupBasicNote` 로케일 키(ko/en) 삭제(repo-wide 참조 0 확인).
+  - **Part B** `EmptySectionGuide.tsx`: "위젯" 키워드 span에 `underline decoration-sky-400 underline-offset-2` 추가 — 밑줄색 = 서비스 sky-400(#38bdf8), 텍스트색과 동일.
+
+### 검증
+- `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 warning 38) + 병합 후 i-dev grep 확인(βeta pill·밑줄 present, groupBasicNote 0). 정적 diff + lint 기준, 렌더 미확인. 참고(비차단): ① "βeta"는 핫픽스8의 "B=베타문자 β" 지시 계승 — 리터럴 "Beta" 원하면 조정. ② 태그는 소프트-틴트(bg-blue-100) — 진한 솔리드(bg-blue-500/white) 원하면 1줄 조정. ③ `β` text-[10px] 렌더 모양 실제 화면 확인 권장.
+
+### 영향 파일
+data-craft:
+- `src/widgets/settings-dialog/ui/ThemeGrid.tsx`
+- `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`
+- `src/shared/i18n/locales/ko.ts`
+- `src/shared/i18n/locales/en.ts`
+
 ## v001.1240.0
 
 > 통합일: 2026-07-02
