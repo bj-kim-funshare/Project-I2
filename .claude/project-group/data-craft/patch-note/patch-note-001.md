@@ -1,5 +1,23 @@
 # data-craft — Patch Note (001)
 
+## v001.1231.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #551 (funshare-inc/data-craft) · 핫픽스6
+
+**세부항목 한글 표시명 full 형 (canonical widgetType.ts · FE+BE byte-identical).** 핫픽스4 정합으로 비-블록 한글 라벨이 canonical의 짧은 형(텍스트·막대·긴 텍스트)이 되어 블록('…블록')과 비대칭 → 마스터 결정 (나) full 형. canonical `WIDGET_SUBTYPE_LABELS.ko` 18개(디자인5·차트7·확장6)에 카테고리 접미 추가. hotfix4가 이 라벨을 소비하므로 말풍선 세부항목이 full 형으로 자동 표시.
+
+### 핫픽스 결과 (2-repo)
+- **Phase 12 (핫픽스6·fix)** — FE `4a0e840` (`data-craft/src/_packages/fs-api/types/contract/widgetType.ts`) + BE `2306875` (`data-craft-server/src/types/contract/widgetType.ts`): `WIDGET_SUBTYPE_LABELS[id].ko` 18개에 접미 추가 — design→'…디자인'(텍스트 디자인·이미지 디자인·비디오 디자인·탭 디자인·바로가기 디자인)·chart→'…차트'(막대 차트·선 차트·파이 차트·산점도 차트·카드 차트·게이지 차트·멤버 차트)·extended→'…확장'(긴 텍스트 확장·코드 확장·투표 확장·로그 확장·마지막 업데이트 확장·노트 확장). en·id·board/file/explorer/automatic/block 무변경. **FE↔BE ko 18값 byte-identical 확인.**
+
+### 검증
+- FE `pnpm typecheck:all && pnpm lint` exit0 + 병합후 typecheck0 · BE `pnpm build`(tsc)`&& pnpm lint` exit0 + 병합후 build0. FE/BE diff ko값 완전일치.
+- 참고(별개·미포함): canonical '비디오'/'선'이 스펙§A '동영상'/'꺽은선'과, `blockType.ts` ko 무공백('긴텍스트')이 각각 불일치 — 필요 시 후속.
+
+### 영향 파일
+- data-craft: `src/_packages/fs-api/types/contract/widgetType.ts`
+- data-craft-server: `src/types/contract/widgetType.ts`
+
 ## v001.1230.0
 
 > 통합일: 2026-07-02
