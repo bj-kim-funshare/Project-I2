@@ -35852,3 +35852,24 @@ data-craft(FE):
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/empty-section-guide/ui/EmptySectionGuide.tsx`, `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`
+
+## v001.1245.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스2
+
+핫픽스1의 Radix Popover 전환 후속 — 빈페이지 말풍선이 아래 공간 부족 시 위로 뒤집히던 문제 및 헤더 피커 가독성 (마스터 지시·FE-only).
+
+### 수정 항목
+- **① 빈페이지 확장 말풍선 = 무조건 아래로 + 화면 초과 시 높이 줄이고 스크롤**(CategoryExpandRow): 핫픽스1에서 Radix Popover 전환 시 기본 `avoidCollisions`가 843px 블록 패널이 아래 공간에 안 들어가면 **위로 flip** 하던 것이 원인. `avoidCollisions={false}`(위로 flip 금지·항상 아래) + `collisionPadding={8}` 추가. 내부 버블 높이를 `max-h-[80vh]`(고정) → `var(--radix-popover-content-available-height, var(--radix-popper-available-height, 80vh))`(트리거 하단~뷰포트 하단 가용공간)로 교체 + `overflow-y-auto` → 섹션 초과는 허용(포털)·화면 초과분만 높이 줄이고 스크롤. (var는 grep으로 실 node_modules에서 확인, 중첩 폴백.)
+- **② 헤더 피커 화면-인지 높이**(WidgetAddPicker): 우측 body `maxHeight: 80vh` → 동일 Radix available-height 중첩 var. ★헤더 피커는 상단 개구형이라 `avoidCollisions`는 **기본값 유지**(false로 끄면 가로 shift도 꺼져 724px 팝오버가 우측 이탈 위험 — 세로 캡만 적용).
+- **③ 헤더 피커 말풍선 테두리 명확화**(DesignHeaderBubble·WidgetAddPicker): 위젯추가 PopoverContent에 `border border-border shadow-2xl` 추가 + 피커 컨테이너 `bg-popover`(불투명) → 흰 캔버스 배경과의 경계 명확.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. Radix available-height var literal은 node_modules(@radix-ui/react-popover) grep으로 `--radix-popover-content-available-height` + base `--radix-popper-available-height` 확인.
+- ⚠️ 시각/포지셔닝 behavior → **정적 통과·마스터 재캡처 대기**. ①의 `avoidCollisions={false}`는 가로 shift도 끄므로 가장자리 분류·좁은 창에서 가로 넘칠 수 있음(세로 "무조건 아래로" 규칙 우선·재캡처 확인).
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
