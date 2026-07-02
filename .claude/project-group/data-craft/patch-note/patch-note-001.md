@@ -36251,3 +36251,23 @@ data-craft-server(BE):
 
 data-craft(FE):
 - `src/shared/types/user.types.ts`, `src/_packages/fs-api/types/entities.ts`, `src/_packages/fs-api/types/requests/account.ts`, `src/_packages/fs-api/types/requests/auth.ts`, `src/_packages/fs-api/api/account.ts`, `src/entities/tenant/model/tenantStore.ts`, `src/features/logo-upload/ui/LogoUploadDialog.tsx`, `src/features/logo-upload/ui/CompanyLogo.tsx`, `src/shared/i18n/locales/ko.ts`, `src/shared/i18n/locales/en.ts`
+
+## v001.1262.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #565 (funshare-inc/data-craft) — 핫픽스1
+
+#565 Phase 1이 AccountInfo에 required `logoText`를 추가했으나 BE 일부 호출부 미갱신으로 **BE 부팅 크래시(TS2741)** — 수정 (마스터 보고·FE-only 아님·BE dev).
+
+### 원인 / 수정
+- **원인**: Phase 1이 `AccountInfo.logoText: string | null`(required) 신설. `AccountInfo` 객체를 직접 생성하는 2개 호출부(auth.middleware `loadFullAccount`:88·init.service `initBundle`:107)가 미갱신 → tsc TS2741 → ts-node 런타임 크래시. ★**BE lint 게이트가 eslint 단독이라 타입 오류 미검출**(memory: BE는 pnpm build/tsc 별도 필요) → 검증 갭.
+- **수정**(data-craft-server): 두 호출부 객체에 `logoText: client.logoText ?? null` 추가(logoUrl 다음). + auth.middleware 인라인 company SELECT에 `logo_text AS "logoText"` + 로컬 ClientRow에 logoText 추가(그 쿼리만 logoText를 null로 반환하던 잠재 "복합 로고 텍스트 새로고침 시 소실" 버그 제거·모든 account 쿼리 정합).
+- 검증: **`pnpm build`(tsc) 0 errors**(로드베어링·이번엔 tsc 게이트)·eslint 0·dev psql로 인라인 SELECT logo_text 반환 확인.
+
+### 후속 / 주의
+- ★**BE 페이즈 검증은 eslint만으로 부족 — `pnpm build`(tsc) 필수**(memory feedback_data_craft_server_lint_no_tsc). 본 크래시가 그 갭의 사례.
+- tsc 0 = 모든 AccountInfo 리터럴이 logoText 보유(컴파일 오류 클래스라 소진적). dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft-server(BE):
+- `src/middlewares/auth.middleware.ts`, `src/services/init.service.ts`
