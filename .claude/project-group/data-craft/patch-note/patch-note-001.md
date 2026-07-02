@@ -1,5 +1,22 @@
 # data-craft — Patch Note (001)
 
+## v001.1230.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #551 (funshare-inc/data-craft) · 핫픽스5
+
+**빈 페이지 빠른-추가 세부항목 아이콘↔텍스트 간격 (핫픽스5).** 말풍선 세부 항목(정사각 카드) 내부에서 아이콘과 텍스트가 붙어 있어 약 5px 간격을 추가. 정사각 카드 크기는 유지.
+
+### 핫픽스 결과
+- **Phase 11 (핫픽스5·fix)** `3bed7a1`: `SubtypeItem` 정사각 카드 내부 flex gap을 `gap-1`(4px)→`gap-[5px]`으로 변경 — 아이콘↔텍스트 ~5px 간격. `aspect-square`·`p-1.5`·`rounded-lg`·배경·테두리·그림자·선택링·준비중 전부 무변경.
+
+### 검증
+- `pnpm typecheck:all && pnpm lint` exit0 + **병합 후 i-dev typecheck/lint exit0**.
+
+### 영향 파일
+data-craft:
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
+
 ## v001.1229.0
 
 > 통합일: 2026-07-01
