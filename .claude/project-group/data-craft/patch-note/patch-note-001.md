@@ -35934,3 +35934,25 @@ data-craft(FE) — 전부 신규 `src/features/text-design-widget/`:
 - `model/contract.ts`, `model/textDesignEntry.ts`
 - `ui/TextDesignPreview.tsx`, `ui/TextDesignWidgetSettings.tsx`, `ui/TextDesignStyleSettings.tsx`
 - `index.ts`
+
+## v001.1248.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스3
+
+디자인 모드 피커 시각 다듬기 4항목 (마스터 지시·FE-only).
+
+### 수정 항목
+- **① 빈페이지 말풍선 화면 여백**(CategoryExpandRow): 화면 초과 스크롤 시 뷰포트 경계에 딱 붙던 것 → `collisionPadding` 8→16(available-height var 계산에 반영되어 하단 16px 여백 확보).
+- **② 빈페이지 말풍선 흰색 모서리·꼬리 제거**(CategoryExpandRow): shadcn PopoverContent 기본 흰 배경/테두리/그림자가 rounded-xl 파스텔 div 뒤로 모서리에 비치고 PopoverArrow가 흰색(`bg/fill-popover`)이던 문제 → PopoverContent `bg-transparent border-0 shadow-none`(투명화)·내부 파스텔 div `shadow-lg`·PopoverArrow에 `cat.bgColor`+파생 `fill-` 클래스+`border-transparent` 적용해 꼬리·모서리를 카테고리 파스텔색으로 통일.
+- **③ 헤더 피커 둥근 모서리 + 최대 700px + 화면 초과 여백**(DesignHeaderBubble·WidgetAddPicker): PopoverArrow 클리핑 방지 위해 border/shadow/rounding을 PopoverContent→WidgetAddPicker 루트로 이동(`rounded-xl overflow-hidden border shadow-2xl`), PopoverContent는 투명화+`collisionPadding={16}`. body maxHeight를 `min(700px, var(--radix-popover-content-available-height, …))`로 → 700px 상한·짧은 화면에선 가용공간(여백 포함)까지 캡+스크롤.
+- **④ 위젯추가 버튼 레이블화**(DesignHeaderBubble): `+`(Plus) 아이콘-only 버튼 → `LayoutGrid` 아이콘 + "위젯 추가" 텍스트 size=sm 버튼. Tooltip 제거(텍스트 레이블이 대체)·PopoverAnchor asChild를 Button에 직접 배치.
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. Tooltip import는 높이입력·세로확장 토글에서 계속 사용되어 유지.
+- ⚠️ 시각 behavior → **정적 통과·마스터 재캡처 대기**.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`
