@@ -35956,3 +35956,22 @@ data-craft(FE) — 전부 신규 `src/features/text-design-widget/`:
 ### 영향 파일
 data-craft(FE):
 - `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`, `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`, `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`
+
+## v001.1249.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #559 (funshare-inc/data-craft) — 핫픽스4
+
+빈페이지 말풍선 화살표가 검정으로 렌더되던 버그 수정 (마스터 지시·FE-only).
+
+### 원인 / 수정
+- **원인**: 핫픽스3에서 화살표 색을 `cat.bgColor.replace('bg-', 'fill-')`로 **런타임 조합**했는데, Tailwind JIT는 소스에 리터럴로 존재하는 클래스만 CSS를 생성하므로 `fill-violet-100` 등이 미생성 → PopoverArrow SVG 폴리곤이 기본값(검정)으로 렌더. (사각 배경 `bg-violet-100`은 widgetCategories.ts에 리터럴이라 정상.)
+- **수정**(CategoryExpandRow): 동적 `.replace()`를 8개 카테고리 **리터럴 fill 클래스 맵**(`ARROW_FILL: {block:'fill-violet-100', …}`)으로 교체 → Tailwind가 빌드타임 생성 → 폴리곤이 파스텔색(버블과 일치).
+
+### 검증
+- typecheck:all(tsc)+eslint 0 error. 정적 통과·마스터 재캡처 대기.
+- dev 전용·prod 무접촉·origin 미푸시.
+
+### 영향 파일
+data-craft(FE):
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
