@@ -1,5 +1,41 @@
 # data-craft — Patch Note (001)
 
+## v001.1267.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #566 (funshare-inc/data-craft)
+
+**위젯 타입 int→canonical 문자열 단일-컬럼 컷오버 (BE+FE 앱코드) + textDesign 위젯 end-to-end 배선 (Track γ).** `page_widget.type` 을 정수 코드에서 canonical `WidgetSubtype` 문자열('textDesign' 등) 단일 컬럼으로 컷오버("데이터 없는 지금이 적기"·마스터 정정). 별도 subtype 컬럼 폐기. int↔type 매핑 테이블 전면 은퇴, 소비처를 canonical 문자열 직접 사용으로 rewire, Track C textDesign 모듈(#560)을 settings/render registry 에 실제 배선. dev-only·origin 미푸시. **커플(마스터 승인)**: α(DB int→text 컷오버·data-craft-server 기머지) + 본 γ(코드) 둘 다 머지돼야 앱 정상 — 그 사이 코드↔DB 불일치는 의도된 정상. text→int 롤백 불가(컷오버 본질).
+
+### 결과 (7 페이즈 · 2 repo)
+- **Phase 1 (refactor·BE)** `1f7291b`: `builder.types.ts` int 맵 4종(LayoutWidgetTypeFromIndex/Index·CANONICAL_TO_LAYOUT_TYPE·resolveWidgetTypeToIndex) 은퇴. `builder.layout.ts` READ 경로 `type: w.type` **verbatim 패스스루**(★`||'text'` 재오염 제거)·WRITE 경로 resolver 제거. `createPageWidget` param number→string·INSERT canonical. Form 맵·AREA_TYPE 무접촉.
+- **Phase 2 (fix·BE)** `610f2ae`: `getRecentUsage` — controller `parseInt(type)` 제거·`ALL_WIDGET_SUBTYPE_IDS` 멤버십 검증, `findRecentWidgetUsage` param string·`WHERE w.type=?` text 비교.
+- **Phase 3 (refactor·FE)** `87de63d`: text-design-widget 모듈을 셸 `WidgetSettingsRegistryEntry` 인터페이스에 정합(치환) — onChange `(patch)`·StyleSettings `Record` style·PreviewRender `{properties,style}`(폴백 체인 보존). TextDesignProperties type 별칭.
+- **Phase 4 (refactor·FE)** `11972ae`: FE dead int 맵/converter 순수 삭제(zero-live-consumer·-201줄) — WidgetTypeIndex/FromIndex·getValidWidgetType·fs-api base 맵·dead converter + re-export 체인.
+- **Phase 5 (refactor·FE)** `8977bf3`: `WidgetConfig.type`→`WidgetType|WidgetSubtype` 완화·fs-api 변형 `string`·`SaveLayoutWidgetItem.type` number→string·serializer `as never` 제거. 파급 6소비처 타입-only 관용(마스터 승인 확장) — ★LayoutCanvas 는 콜백 param 타입 캐스트 1줄만(chrome 무변경).
+- **Phase 6 (feat·FE)** `539b179`: 모달 type-flow 컷오버 — handleSaveApply 가 `createWidget(area, draft.subtype)` canonical 직접·영속 subtype 필드 기록 제거(type 단일 진실)·PreviewPane canonical·SUBTYPE_TO_WIDGET_TYPE 매핑 은퇴.
+- **Phase 7 (feat·FE)** `5007ddc`: `WidgetRegistryProvider` 에 `registerWidgetSettings(textDesignContentEntry)`(모달 실제 설정) + `registerWidget('textDesign', …)`(캔버스 렌더) — textDesign 배선 완결. `WidgetActions.createWidget` 선언 `WidgetType|WidgetSubtype` 확장으로 Phase 6 의 `as unknown as WidgetType` 캐스트 제거(정직 타입 복원)·배럴 dead 재수출 정리.
+
+### 검증
+- 정적 게이트(페이즈별 실측): FE 7페이즈 `pnpm typecheck:all && pnpm lint` exit0 · BE 2페이즈 `pnpm lint` + **`pnpm build`(tsc) 보강** exit0(BE eslint 은 타입 미검출). 전 페이즈 파일 경계·소비처 커버리지·advisor 계획/완료 PASS.
+- 사일런트 실패 차단 실측: 영속 `subtype` 필드 제거 후 저장된 `widget.subtype` 를 읽는 렌더/편집/`getWidgetSettings` 경로 **0건**(grep 확인) — 모달 subtype 은 항상 피커 공급값(`widgetCreateModalSubtype`). 편집-진입(§6.9)은 미배선(ε 후속).
+- ★**런타임 de-ref 게이트 = REQUIRED-and-UNRUN(마스터 몫)**: tsc/eslint 는 SQL 문자열·산술 소비처를 못 잡는다(메모리 `feedback_rename_cutover_runtime_is_gate`). 정적 green 은 "열거된 소비처 rewire 완료"이지 "컷오버 런타임 검증"이 아님. 마스터가 dev 원문 실행으로 확인해야 할 소비처: **saveLayout write · getLayout read · getRecentUsage · 모달 실제 설정 표시 · 캔버스 textDesign 렌더 · 새로고침 유지**. 시나리오: 빈 페이지→피커→디자인→텍스트→모달 설정(준비중 아님)→저장 및 적용→상단 저장→격자 TextDesignPreview→새로고침 유지.
+- ★**copyPage(§2-E) 크로스테이블 파손 = γ 밖·플래그**: `duplicateSinglePageContent` 는 이미 broken(설계 §7 후속). 컷오버가 실패 모드만 변경(dropped-table read → 레거시 `page_layout_widget.type CHECK(≥0)` 문자열 위반). γ 는 `createLayoutWidget` param 을 `number|string` widening 으로 빌드만 통과·런타임 미수정. 후속 격자 이관에서 처리.
+
+### 영향 파일
+data-craft-server(BE):
+- `src/types/builder.types.ts` · `src/services/builder/builder.layout.ts` · `src/models/builder.model.ts` · `src/controllers/builder.controller.ts`
+
+data-craft(FE):
+- `src/features/text-design-widget/{model/contract.ts,model/textDesignEntry.ts,ui/TextDesignWidgetSettings.tsx,ui/TextDesignStyleSettings.tsx,ui/TextDesignPreview.tsx,index.ts}`
+- `src/shared/types/{widget-base.types.ts,widget.types.ts}` · `src/shared/lib/widget-registry.ts`
+- `src/_packages/fs-api/{index.ts,types/builder/entities.ts,types/builder/requests.ts,types/builder/index.ts}`
+- `src/entities/layout/{lib/converterWidgets.ts,lib/converter.ts,lib/index.ts,index.ts,model/types.ts,model/layoutPersistence.ts}`
+- `src/entities/widget/model/{types.ts,widgetCrudActions.ts,widgetPageQuery.ts,widgetTypes.ts}`
+- `src/app/providers/WidgetRegistryProvider.tsx`
+- `src/widgets/widget-settings-modal/{ui/WidgetSettingsModal.tsx,model/widgetMetadata.ts,ui/PreviewPane.tsx,index.ts}`
+- `src/pages/mobile/MobileWidgetDispatcher.tsx` · `src/widgets/property-drawer/ui/WidgetTypeSelector.tsx` · `src/widgets/layout-canvas/ui/LayoutCanvas.tsx`(타입 캐스트 1줄)
+
 ## v001.1266.0
 
 > 통합일: 2026-07-02
