@@ -1,5 +1,29 @@
 # data-craft — Patch Note (001)
 
+## v001.1257.0
+
+> 통합일: 2026-07-02
+> 플랜 이슈: #563 (funshare-inc/data-craft) · Track β
+
+**위젯 추가 진입 배선 — 헤더 "위젯 추가" 피커 + 빈 페이지 "빠른 위젯 추가" 피커의 모든 leaf(블록 포함) 클릭 시 말풍선 닫힘 + 위젯 설정 모달 오픈.** #562(Track B) 모달 셸의 남은 진입 갭 2개를 배선. 빈 페이지 정상 패턴(`onPickSubtype`→`openWidgetCreateModal`)을 헤더에 복제하고, 빈 페이지 block leaf skip 가드를 제거.
+
+### 결과 (2 페이즈)
+- **Phase 1 (feat)** `476d7de`: 헤더 피커 배선 — `WidgetAddPicker` prop을 `onLeafSelect`(미식별)→`onPickSubtype(subtypeId, categoryId)`로 교체(내부 `BubbleContent`의 `(catId, typeId)` 인자 반전 surface)·`DesignHeaderBubble`이 `openWidgetCreateModal(subtype as WidgetSubtype, section?.id ?? null)` 오픈 후 `setPickerOpen(false)`. block 가드 미도입(헤더도 block leaf 오픈).
+- **Phase 2 (feat)** `b4febb3`: 빈 페이지 block leaf 개방 — `CategoryExpandRow.handleLeafSelect`의 `if (catId !== 'block')` 스킵 가드 제거 → 전 카테고리 leaf가 `onPickSubtype` 발화. 소비측(LayoutCanvas/Section) 무변경(param `string`).
+
+### 검증
+- 머지 후 i-dev `pnpm typecheck:all` exit0 · `pnpm lint` exit0 (0 errors, 기존 38 warnings). ★dev 미기동 — 정적 typecheck + 배선 확인. 런타임(헤더 leaf→닫힘+열림 / 빈 페이지 block leaf→열림)은 **마스터 라이브 게이트**.
+- 헤더 말풍선 닫힘=명시(`setPickerOpen(false)`). 빈 페이지 말풍선 닫힘=#562 패턴 상속(Dialog 마운트 시 focus-steal)·본 작업은 open-modal 절반만 추가.
+
+### 후속 / 지휘 (cross-track)
+- **block leaf center 화면**: block typeId는 canonical `WidgetSubtype` 아님(BlockTypeId·미매핑) → `getDataBinding` undefined → 게이팅이 data-bound로 degrade → 모달이 "준비 중" placeholder가 아니라 **'데이터 설정' 패널(그룹 선택 드롭다운 + 위젯/스타일/배경 탭 잠금 + 저장 비활성)** 으로 열림. 비-crash·클린 렌더이나 마스터 명령의 "준비중 placeholder"와는 다른 화면. 정합 지점 = Track C의 block→`blockWidget` 매핑(또는 block `dataBinding='none'`). 본 작업 경계 밖.
+
+### 영향 파일
+data-craft:
+- `src/widgets/widget-add-picker/ui/WidgetAddPicker.tsx`
+- `src/widgets/design-header-bubble/ui/DesignHeaderBubble.tsx`
+- `src/widgets/empty-section-guide/ui/CategoryExpandRow.tsx`
+
 ## v001.1255.0
 
 > 통합일: 2026-07-02
